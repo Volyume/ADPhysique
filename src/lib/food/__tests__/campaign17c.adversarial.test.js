@@ -174,7 +174,11 @@ describe('WORK 2: repeat logging and serving confirmation contracts', () => {
     expect(screen).not.toMatch(/function quickLogRelogMeal\(/);
     expect(screen).toMatch(/confirmMealId: food\.savedMealId/);
     expect(meals).toMatch(/visible=\{!!confirming\}/);
-    expect(meals).toMatch(/title="Add meal"[\s\S]*onPress=\{confirmLog\}/);
+    // RE-POINTED (D230 R15, food level-up 2026-10-16): the confirm sheet's
+    // button is "Add this meal" (it shared a label with the Diary's "Add
+    // another meal"). Same truth: a repeated saved meal logs only from the
+    // explicit button on the confirm sheet.
+    expect(meals).toMatch(/title="Add this meal"[\s\S]*onPress=\{confirmLog\}/);
   });
 
   test('diary usuals log the DISCLOSED remembered portion in one tap, with undo; hold still opens the picker (D138)', () => {
@@ -210,7 +214,11 @@ describe('WORK 2: repeat logging and serving confirmation contracts', () => {
     expect(db).toMatch(/getRecentLoggedDays\(userId, asOfDate/);
     expect(db).toMatch(/entry_date < \?/);
     expect(diary).toMatch(/getFoodEntriesForDay\(userId, sourceDate\)/);
-    expect(diary).toMatch(/entryDate: selectedDate/);
+    // RE-POINTED (D230 R10, lane 3A): the copy writes through the batched
+    // copyEntriesToDate, handed the day in view (it used to build the payload
+    // inline with `entryDate: selectedDate`; that string now survives only in
+    // the usual chip's write, so it no longer pins the copy).
+    expect(diary).toMatch(/copyEntriesToDate\(userId, srcEntries, selectedDate\)/);
   });
 
   test('repeated barcode identity is canonicalised before serving memory sees it', () => {

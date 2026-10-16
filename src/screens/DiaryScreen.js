@@ -62,7 +62,7 @@ import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   applyCuratedMealToDiary,
   adjustWaterMl, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
-  getSlotRecents, logFoodEntry, upsertSlotRecent,
+  getSlotRecents, logFoodEntry, upsertSlotRecent, deleteFoodEntries,
 } from '../lib/food/db';
 // D138 one-tap usual: the SAME payload builders FoodSearchScreen's confirmLog
 // uses, so a chip-logged entry and a sheet-logged entry are byte-identical.
@@ -918,23 +918,31 @@ export default function DiaryScreen({ navigation, route }) {
     return out;
   }, [yesterdayEntries]);
 
-  // Copy ONE of yesterday's meals into the same meal today. Same per-entry
-  // primitive as every other copy path (copyEntriesToDate -> logFoodEntry), so
-  // rollups, sync and telemetry stay consistent; the created ids drive a
-  // single Undo that removes every copied row (MyMealsScreen's saved-meal
-  // undo pattern).
+  // Copy ONE of yesterday's meals into the same meal today. Same batched
+  // primitive as every other copy path (copyEntriesToDate -> logFoodEntries,
+  // one transaction; D230 R10), so rollups, sync and telemetry stay
+  // consistent; the created ids drive a single Undo that removes every copied
+  // row in one transaction (MyMealsScreen's saved-meal undo pattern).
   const copyYesterdaySlot = useCallback(async (slotKey, slotLabel) => {
     const rows = yesterdaySlotEntries[slotKey] ?? [];
     if (!userId || !rows.length) return;
     try {
-      const ids = await copyEntriesToDate(userId, rows, selectedDate, { mealSlot: slotKey });
+      // A row that could never be logged is left out and counted (`skipped`);
+      // the rest land together. Nothing here is retried: if every row was left
+      // out, trying again will not help, so the sentence says so.
+      const { ids, skipped } = await copyEntriesToDate(userId, rows, selectedDate, { mealSlot: slotKey });
       await load();
-      toast.show(`${slotLabel} copied from yesterday, ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'}.`, {
+      if (ids.length === 0) {
+        if (skipped > 0) toast.show('Those entries could not be copied.', { variant: 'error' });
+        return;
+      }
+      const left = skipped > 0 ? ` ${skipped} could not be copied.` : '';
+      toast.show(`${slotLabel} copied from yesterday, ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'}.${left}`, {
         variant: 'undo',
         action: {
           label: 'Undo',
           onPress: async () => {
-            try { await Promise.all(ids.map((id) => deleteFoodEntry(id, userId))); } catch (_) { /* already gone */ }
+            try { await deleteFoodEntries(userId, ids); } catch (_) { /* already gone */ }
             await load();
           },
         },
@@ -1213,19 +1221,42 @@ export default function DiaryScreen({ navigation, route }) {
     });
   }, [selectedEntries, userId, exitSelection, load, toast]);
 
+  // "To today" (D230 R9/R10): the batched copy, one transaction. It used to
+  // duplicate in silence while today was in view; now every day shows the
+  // toast, and its Undo removes every row this copy wrote. A planned row in
+  // the selection is not copied (the lib filters it), so the toast counts what
+  // was written, not what was selected.
   const doCopySelectedToToday = useCallback(async () => {
     const sel = selectedEntries();
     if (sel.length === 0) return;
     const today = isoDate(new Date());
-    await copyEntriesToDate(userId, sel, today);
-    exitSelection();
-    if (selectedDate === today) {
-      await load();
-    } else {
-      toast.show(`${sel.length} ${sel.length === 1 ? 'entry' : 'entries'} added to today.`, { variant: 'success' });
+    try {
+      const { ids, skipped } = await copyEntriesToDate(userId, sel, today);
+      exitSelection();
+      if (selectedDate === today) await load();
+      if (ids.length === 0) {
+        // Every eaten row was unloggable (retrying will not help), or the
+        // selection held only planned meals (never copied).
+        if (skipped > 0) toast.show('Those entries could not be copied.', { variant: 'error' });
+        else toast.show('Nothing was added. Planned meals are not copied.', { variant: 'info' });
+        return;
+      }
+      const left = skipped > 0 ? ` ${skipped} could not be copied.` : '';
+      toast.show(`${ids.length} ${ids.length === 1 ? 'entry' : 'entries'} added to today.${left}`, {
+        variant: 'undo',
+        action: {
+          label: 'Undo',
+          onPress: async () => {
+            try { await deleteFoodEntries(userId, ids); } catch (e) { logError('DiaryScreen.undoCopyToToday', e, { userId, count: ids.length }); }
+            await load();
+          },
+        },
+      });
+    } catch (e) {
+      logError('DiaryScreen.copyToToday', e, { userId, count: sel.length });
+      toast.show('Those entries were not copied. Try again in a moment.', { variant: 'error' });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEntries, userId, selectedDate, exitSelection, load]);
+  }, [selectedEntries, userId, selectedDate, exitSelection, load, toast]);
 
   const doMoveSelected = useCallback(async (slot) => {
     const sel = selectedEntries();
@@ -1378,10 +1409,14 @@ export default function DiaryScreen({ navigation, route }) {
   }, [userId, load, toast]);
 
   // Shared copy core: replay a source day's entries into the day in view.
-  // Re-uses logFoodEntry (via the food-domain layer) so the rollup trigger and
-  // sync queue stay consistent, and surfaces partial failures rather than
-  // swallowing them (food review U-M6). Used by both "Copy yesterday" and the
-  // "copy a previous day" picker (food audit F-3).
+  // D230 R9/R10: one batched, all-or-nothing write (copyEntriesToDate ->
+  // logFoodEntries) of every row that CAN be logged. A source row that never
+  // can be (a legacy row failing validation) is left out before the batch and
+  // reported ("Copied 3 entries. 1 could not be copied."), so one rogue row
+  // never blocks the day and the write itself has no half-state. The lib
+  // leaves planned meals out and keeps each row's time of day. The toast's
+  // Undo removes exactly the rows this copy wrote. Used by both "Copy yesterday" and
+  // the "copy a previous day" picker (food audit F-3).
   const copyFromDate = useCallback(async (sourceDate) => {
     if (!userId || !sourceDate) return;
     const srcEntries = await getFoodEntriesForDay(userId, sourceDate).catch(() => []);
@@ -1389,39 +1424,36 @@ export default function DiaryScreen({ navigation, route }) {
       toast.show('Nothing logged that day to copy.', { variant: 'info' });
       return;
     }
-    // eslint-disable-next-line global-require
-    const { logFoodEntry } = require('../lib/food/db');
-    let ok = 0;
-    let failed = 0;
-    for (const e of srcEntries) {
-      try {
-        await logFoodEntry(userId, {
-          entryDate: selectedDate,
-          mealSlot: e.meal_slot,
-          foodRef: e.food_ref,
-          quantityG: e.quantity_g,
-          kcal: e.kcal,
-          proteinG: e.protein_g,
-          carbsG: e.carbs_g,
-          fatG: e.fat_g,
-          fibreG: e.fibre_g ?? null,
-          weightState: e.weight_state,
-        });
-        ok++;
-      } catch (_) {
-        failed++;
+    try {
+      const { ids, skipped } = await copyEntriesToDate(userId, srcEntries, selectedDate);
+      await load();
+      if (ids.length === 0) {
+        if (skipped > 0) {
+          // Every eaten row on that day is one that can never be logged, so
+          // "try again" would be a dead end; say plainly that it cannot.
+          toast.show('That day could not be copied.', { variant: 'error' });
+        } else {
+          // The day held only planned meals, which are never copied.
+          toast.show('Nothing logged that day to copy.', { variant: 'info' });
+        }
+        return;
       }
-    }
-    await load();
-    if (failed > 0) {
-      toast.show(
-        ok > 0 ? `Copied ${ok}; ${failed} couldn't be added.` : "Couldn't copy. Try again.",
-        { variant: ok > 0 ? 'info' : 'error' },
-      );
-    } else {
       // D88: one word for one thing. These rows are "entries" when deleted and
       // added, so they are entries here too.
-      toast.show(`Copied ${ok} ${ok === 1 ? 'entry' : 'entries'}.`, { variant: 'success' });
+      const left = skipped > 0 ? ` ${skipped} could not be copied.` : '';
+      toast.show(`Copied ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'}.${left}`, {
+        variant: 'undo',
+        action: {
+          label: 'Undo',
+          onPress: async () => {
+            try { await deleteFoodEntries(userId, ids); } catch (e) { logError('DiaryScreen.undoCopyFromDate', e, { userId, count: ids.length }); }
+            await load();
+          },
+        },
+      });
+    } catch (e) {
+      logError('DiaryScreen.copyFromDate', e, { userId, sourceDate });
+      toast.show('That day was not copied. Try again in a moment.', { variant: 'error' });
     }
   }, [userId, selectedDate, load, toast]);
 
@@ -1429,8 +1461,11 @@ export default function DiaryScreen({ navigation, route }) {
   const copyYesterday = useCallback(async () => {
     if (!userId) return;
     const yesterday = shiftDate(selectedDate, -1);
-    const yEntries = await getFoodEntriesForDay(userId, yesterday).catch(() => []);
-    if (!yEntries || yEntries.length === 0) {
+    // Planned meals are never copied (copyEntriesToDate leaves them out), so
+    // the question counts only what was eaten.
+    const yEntries = (await getFoodEntriesForDay(userId, yesterday).catch(() => []) ?? [])
+      .filter((e) => !e.is_planned);
+    if (yEntries.length === 0) {
       toast.show('Nothing logged yesterday to copy.', { variant: 'info' });
       return;
     }

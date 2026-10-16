@@ -81,6 +81,11 @@ jest.mock('../../components/AppAlert', () => ({
 const mockGetFoodEntriesForDay = jest.fn(() => Promise.resolve([]));
 const mockGetSlotRecents = jest.fn(() => Promise.resolve([]));
 const mockLogFoodEntry = jest.fn(() => Promise.resolve('entry-new'));
+// D230 R10: the copy paths write through the ONE batched call; it returns the new ids in order.
+const mockLogFoodEntries = jest.fn(async (userId, entries) => entries.map((_, i) => `copied-${i + 1}`));
+const mockDeleteFoodEntries = jest.fn(() => Promise.resolve(2));
+// The copy pre-screens its source rows with the write's own validator; a row of 6000 g stands in for a legacy row that can never be logged.
+const mockIsLoggableFoodEntry = jest.fn((payload) => payload.quantityG <= 5000);
 const mockAdjustWaterMl = jest.fn(() => Promise.resolve(0));
 const mockGetWater = jest.fn(() => Promise.resolve(0));
 const mockGetRecentLoggedDays = jest.fn(() => Promise.resolve([]));
@@ -101,6 +106,9 @@ jest.mock('../../lib/food/db', () => ({
   clearPlannedDay: jest.fn(() => Promise.resolve()),
   getSlotRecents: (...a) => mockGetSlotRecents(...a),
   logFoodEntry: (...a) => mockLogFoodEntry(...a),
+  logFoodEntries: (...a) => mockLogFoodEntries(...a),
+  deleteFoodEntries: (...a) => mockDeleteFoodEntries(...a),
+  isLoggableFoodEntry: (...a) => mockIsLoggableFoodEntry(...a),
   upsertSlotRecent: jest.fn(() => Promise.resolve()),
 }));
 
@@ -320,14 +328,82 @@ describe('D230 R1: the workspace is the same on every day', () => {
     expect(title).toBe('Copy 2 entries from yesterday?');
     await act(async () => { await buttons.find((b) => b.text === 'Copy').onPress(); });
     await flush();
-    expect(mockLogFoodEntry).toHaveBeenCalledTimes(2);
-    mockLogFoodEntry.mock.calls.forEach(([, payload]) => expect(payload.entryDate).toBe(TODAY));
+    // RE-POINTED (D230 R10, lane 3A): the whole day is ONE batched write of
+    // both rows (it was one logFoodEntry per row), each dated to the day in
+    // view; the toast that follows carries an Undo removing both new rows.
+    expect(mockLogFoodEntry).not.toHaveBeenCalled();
+    expect(mockLogFoodEntries).toHaveBeenCalledTimes(1);
+    const [, copied] = mockLogFoodEntries.mock.calls[0];
+    expect(copied).toHaveLength(2);
+    copied.forEach((payload) => expect(payload.entryDate).toBe(TODAY));
+    const [message, options] = mockToastShow.mock.calls.at(-1);
+    expect(message).toBe('Copied 2 entries.');
+    expect(options.variant).toBe('undo');
+    await act(async () => { await options.action.onPress(); });
+    expect(mockDeleteFoodEntries).toHaveBeenCalledWith('u1', ['copied-1', 'copied-2']);
 
     // A started day never offers the whole-day door, even with yesterday.
     dayWith({ today: [entry({ id: 't1', meal_slot: 'meal_3' })], yesterday: [entry({ id: 'y1', entry_date: YESTERDAY })] });
     const started = await mountDiary();
     expect(byLabel(started, "Copy yesterday's entries")).toHaveLength(0);
     expect(byLabel(started, 'Open meal builder for this day or week')).toHaveLength(1);
+  });
+
+  // Lead ruling (D33): the whole-day copy leaves out a source row that can
+  // never be logged and says so; it never blocks the day on one rogue row.
+  test('"Copy yesterday" with one unloggable row: "Copied 1 entry. 1 could not be copied." and Undo removes only the written row', async () => {
+    dayWith({ today: [], yesterday: [
+      entry({ id: 'y1', entry_date: YESTERDAY }),
+      entry({ id: 'y2', entry_date: YESTERDAY, meal_slot: 'meal_2', food_ref: 'global:legacy', quantity_g: 6000 }),
+    ] });
+    mockLogFoodEntries.mockResolvedValueOnce(['copied-1']);
+    const tree = await mountDiary();
+    await act(async () => { await byLabel(tree, "Copy yesterday's entries")[0].props.onPress(); });
+    const [, , buttons] = mockAppAlert.mock.calls.at(-1);
+    await act(async () => { await buttons.find((b) => b.text === 'Copy').onPress(); });
+    await flush();
+    const [, written] = mockLogFoodEntries.mock.calls.at(-1);
+    expect(written).toHaveLength(1);
+    expect(written[0].foodRef).toBe('global:oats');
+    const [message, options] = mockToastShow.mock.calls.at(-1);
+    expect(message).toBe('Copied 1 entry. 1 could not be copied.');
+    expect(options.variant).toBe('undo');
+    await act(async () => { await options.action.onPress(); });
+    expect(mockDeleteFoodEntries).toHaveBeenLastCalledWith('u1', ['copied-1']);
+  });
+
+  test('"Copy yesterday" with several copied and two unloggable: "Copied 3 entries. 2 could not be copied."', async () => {
+    dayWith({ today: [], yesterday: [
+      entry({ id: 'y1', entry_date: YESTERDAY }),
+      entry({ id: 'y2', entry_date: YESTERDAY, quantity_g: 6000 }),
+      entry({ id: 'y3', entry_date: YESTERDAY, meal_slot: 'meal_2' }),
+      entry({ id: 'y4', entry_date: YESTERDAY, meal_slot: 'meal_3', quantity_g: 6000 }),
+      entry({ id: 'y5', entry_date: YESTERDAY, meal_slot: 'meal_4' }),
+    ] });
+    mockLogFoodEntries.mockResolvedValueOnce(['c1', 'c2', 'c3']);
+    const tree = await mountDiary();
+    await act(async () => { await byLabel(tree, "Copy yesterday's entries")[0].props.onPress(); });
+    const [, , buttons] = mockAppAlert.mock.calls.at(-1);
+    await act(async () => { await buttons.find((b) => b.text === 'Copy').onPress(); });
+    await flush();
+    expect(mockToastShow.mock.calls.at(-1)[0]).toBe('Copied 3 entries. 2 could not be copied.');
+  });
+
+  test('"Copy yesterday" when every row is unloggable: "That day could not be copied." as an error, no Undo, no "try again", nothing written', async () => {
+    dayWith({ today: [], yesterday: [
+      entry({ id: 'y1', entry_date: YESTERDAY, quantity_g: 6000 }),
+      entry({ id: 'y2', entry_date: YESTERDAY, meal_slot: 'meal_2', quantity_g: 6000 }),
+    ] });
+    const tree = await mountDiary();
+    await act(async () => { await byLabel(tree, "Copy yesterday's entries")[0].props.onPress(); });
+    const [, , buttons] = mockAppAlert.mock.calls.at(-1);
+    await act(async () => { await buttons.find((b) => b.text === 'Copy').onPress(); });
+    await flush();
+    expect(mockLogFoodEntries).not.toHaveBeenCalled();
+    const [message, options] = mockToastShow.mock.calls.at(-1);
+    expect(message).toBe('That day could not be copied.');
+    expect(message).not.toMatch(/try again/i);
+    expect(options).toEqual({ variant: 'error' });
   });
 
   test('an open ED flag removes the higher-calorie door and nothing else (the gate is unchanged)', async () => {

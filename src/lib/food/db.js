@@ -81,6 +81,80 @@ function _standDownMealReminders(userId, entryDate, slots, { plannedConfirm = fa
   } catch (_) { /* notifications unavailable (tests): nothing to stand down */ }
 }
 
+// D230 R10: the ONE validator and the ONE insert behind logFoodEntry and
+// logFoodEntries, so a row written in a batch is held to exactly what a row
+// written alone is held to, and lands in exactly the same columns.
+//
+// Defence in depth (FOOD-001): the amount eaten must reconcile with the
+// scaled macros. A quick-add carries no grams by design (foodRef 'quick:*',
+// a deliberate quantity of 0 with macros entered directly), so 0 is allowed
+// for it alone. Every real food must fall inside the shared 1 to 5000 g
+// safety bound (isValidEntryGrams), the same gate FoodDetailSheet and the
+// custom-food screen enforce. Anything else (negative, zero, blank, NaN, or
+// over 5000 g) is rejected here so a corrupt weight can never be persisted as
+// a diary row whose grams and macros disagree. Clamping is deliberately NOT
+// used: the macros are already scaled by the caller for the passed grams, so
+// silently changing the grams here would re-introduce the very mismatch.
+//
+// `label` names the caller in the thrown message ('logFoodEntry', or
+// 'logFoodEntries (row 3)'). Returns what the insert needs beyond the entry.
+function _prepareDiaryEntry(label, entry, now) {
+  const isQuickAdd = typeof entry.foodRef === 'string' && entry.foodRef.startsWith('quick:');
+  const qtyIn = entry.quantityG;
+  if (isQuickAdd) {
+    if (qtyIn !== 0 && !isValidEntryGrams(qtyIn)) {
+      throw new Error(`${label}: quick-add quantity must be 0 or between 1 and 5000 g`);
+    }
+  } else if (!isValidEntryGrams(qtyIn)) {
+    throw new Error(`${label}: quantity must be between 1 and 5000 g`);
+  }
+  if (!validFoodIdentity(entry.entryDate, entry.mealSlot, entry.foodRef)
+    || !validDiaryNumbers(entry, { allowQuickZero: isQuickAdd })
+    || !isPersistedEpochMs(now)
+    || (entry.eatenAt !== undefined && entry.eatenAt !== null && !isPersistedEpochMs(entry.eatenAt))) {
+    throw new TypeError(`${label}: invalid food values`);
+  }
+  // is_planned=1 marks a meal-plan entry as scaffolding: excluded from the
+  // rollup/adherence/FFM/sync until the user confirms they ate it (adherence
+  // model 2026-06-15). Defaults to an actual (0).
+  const isPlanned = entry.isPlanned ? 1 : 0;
+  // Ultimate-Audit item 15 (D22 15b): a real (non-planned) log is an honest
+  // "I ate this now" act, so it earns eaten_at = now unless the caller
+  // explicitly supplies one. A planned meal-plan row has not been eaten yet
+  // -- eaten_at stays NULL until it is confirmed (confirmPlannedEntry /
+  // confirmPlannedDay), which is what stamps the real moment.
+  return {
+    isPlanned,
+    weightState: _normaliseWeightState(entry.weightState),
+    eatenAt: isPlanned ? null : (Number.isFinite(entry.eatenAt) ? entry.eatenAt : now),
+  };
+}
+
+function _insertDiaryRow(d, userId, id, entry, prepared, loggedAt, now) {
+  return d.runAsync(
+    `INSERT INTO food_entries (
+      id, user_id, entry_date, meal_slot, food_ref, quantity_g,
+      kcal, protein_g, carbs_g, fat_g, fibre_g, logged_at,
+      is_planned, weight_state, eaten_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
+      entry.quantityG, entry.kcal, entry.proteinG,
+      entry.carbsG, entry.fatG,
+      entry.fibreG ?? null, loggedAt,
+      prepared.isPlanned, prepared.weightState, prepared.eatenAt, now, now,
+    ]
+  );
+}
+
+// HP-2: source + slot only. The amount eaten (quantity_g) is the user's
+// dietary content and does not belong in product telemetry.
+function _foodRefSource(foodRef) {
+  return foodRef?.startsWith('quick:') ? 'quick_add'
+    : foodRef?.startsWith('custom:') ? 'custom'
+      : 'global';
+}
+
 /**
  * Log a food entry for a user on a specific date and meal slot.
  * Macros are denormalised at log time so future edits to the
@@ -110,58 +184,14 @@ function _standDownMealReminders(userId, entryDate, slots, { plannedConfirm = fa
  */
 export async function logFoodEntry(userId, entry) {
   const now = Date.now();
-  // Defence in depth (FOOD-001): the amount eaten must reconcile with the
-  // scaled macros. A quick-add carries no grams by design (foodRef 'quick:*',
-  // a deliberate quantity of 0 with macros entered directly), so 0 is allowed
-  // for it alone. Every real food must fall inside the shared 1 to 5000 g
-  // safety bound (isValidEntryGrams) — the same gate FoodDetailSheet and the
-  // custom-food screen enforce. Anything else (negative, zero, blank, NaN, or
-  // over 5000 g) is rejected here so a corrupt weight can never be persisted as
-  // a diary row whose grams and macros disagree. Clamping is deliberately NOT
-  // used: the macros are already scaled by the caller for the passed grams, so
-  // silently changing the grams here would re-introduce the very mismatch.
-  const isQuickAdd = typeof entry.foodRef === 'string' && entry.foodRef.startsWith('quick:');
-  const qtyIn = entry.quantityG;
-  if (isQuickAdd) {
-    if (qtyIn !== 0 && !isValidEntryGrams(qtyIn)) {
-      throw new Error('logFoodEntry: quick-add quantity must be 0 or between 1 and 5000 g');
-    }
-  } else if (!isValidEntryGrams(qtyIn)) {
-    throw new Error('logFoodEntry: quantity must be between 1 and 5000 g');
-  }
-  if (!validFoodIdentity(entry.entryDate, entry.mealSlot, entry.foodRef)
-    || !validDiaryNumbers(entry, { allowQuickZero: isQuickAdd })
-    || !isPersistedEpochMs(now)
-    || (entry.eatenAt !== undefined && entry.eatenAt !== null && !isPersistedEpochMs(entry.eatenAt))) {
-    throw new TypeError('logFoodEntry: invalid food values');
-  }
+  // The validation is _prepareDiaryEntry's (shared with logFoodEntries, so a
+  // batch can never be looser than a single write); nothing is written until
+  // it passes.
+  const prepared = _prepareDiaryEntry('logFoodEntry', entry, now);
+  const { isPlanned } = prepared;
   const d = await db();
   const id = uid();
-  // is_planned=1 marks a meal-plan entry as scaffolding: excluded from the
-  // rollup/adherence/FFM/sync until the user confirms they ate it (adherence
-  // model 2026-06-15). Defaults to an actual (0).
-  const isPlanned = entry.isPlanned ? 1 : 0;
-  const weightState = _normaliseWeightState(entry.weightState);
-  // Ultimate-Audit item 15 (D22 15b): a real (non-planned) log is an honest
-  // "I ate this now" act, so it earns eaten_at = now unless the caller
-  // explicitly supplies one. A planned meal-plan row has not been eaten yet
-  // -- eaten_at stays NULL until it is confirmed (confirmPlannedEntry /
-  // confirmPlannedDay), which is what stamps the real moment.
-  const eatenAt = isPlanned ? null : (Number.isFinite(entry.eatenAt) ? entry.eatenAt : now);
-  await d.runAsync(
-    `INSERT INTO food_entries (
-      id, user_id, entry_date, meal_slot, food_ref, quantity_g,
-      kcal, protein_g, carbs_g, fat_g, fibre_g, logged_at,
-      is_planned, weight_state, eaten_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
-      entry.quantityG, entry.kcal, entry.proteinG,
-      entry.carbsG, entry.fatG,
-      entry.fibreG ?? null, now,
-      isPlanned, weightState, eatenAt, now, now,
-    ]
-  );
+  await _insertDiaryRow(d, userId, id, entry, prepared, now, now);
   await recomputeRollup(userId, entry.entryDate);
   // Per TELEMETRY_DASHBOARDS_LOCKED.md Panel 3 (food layer health).
   // Fire-and-forget; the track() call writes locally first so a
@@ -172,11 +202,7 @@ export async function logFoodEntry(userId, entry) {
     // eslint-disable-next-line global-require
     const { track } = require('../engineTelemetry');
     track(userId, 'food_logged', {
-      // HP-2: source + slot only. The amount eaten (quantity_g) is the
-      // user's dietary content and does not belong in product telemetry.
-      food_ref_source: entry.foodRef?.startsWith('quick:') ? 'quick_add'
-        : entry.foodRef?.startsWith('custom:') ? 'custom'
-          : 'global',
+      food_ref_source: _foodRefSource(entry.foodRef),
       meal_slot: entry.mealSlot,
     }).catch(() => {});
     // E7.2 activation funnel: first-ever food logged (durable, once per user).
@@ -190,6 +216,111 @@ export async function logFoodEntry(userId, entry) {
   if (!isPlanned) _standDownMealReminders(userId, entry.entryDate, [entry.mealSlot]); // D215
   _scheduleSync();
   return id;
+}
+
+/**
+ * D230 R10: log N entries in ONE transaction.
+ *
+ * Built for the plate ("Log 3"), the copy paths (a meal, a day, "To today")
+ * and anything else that writes several rows as one deed. Each row is held to
+ * exactly what logFoodEntry holds a single row to (the shared
+ * _prepareDiaryEntry: the 1 to 5000 g bound, the quick-add zero, the finite
+ * macros, the identity, the planned row's NULL eaten_at; no clamping), and ALL
+ * rows are validated BEFORE anything is written, so one bad row throws and
+ * the diary is untouched. The inserts and the rollups then run in one
+ * transaction, so a failure part-way rolls the whole write back: a person
+ * never sees "2 of 3 foods were added".
+ *
+ * Once per deed, not once per row: ONE rollup recompute per distinct
+ * entry_date (inside the transaction, so the rollup can never disagree with
+ * the rows), ONE first-food telemetry, ONE meal-reminder stand-down per date
+ * covering every actual slot written (a planned row stands nothing down,
+ * D215), ONE sync schedule. The per-row `food_logged` telemetry event stays
+ * per row: it is the dashboard's contract (Panel 3).
+ *
+ * `logged_at` is `now + index`, so the rows keep their write order exactly as
+ * they had when each was its own write (the serving memory and the in-meal
+ * order read logged_at). `created_at`/`updated_at` are `now`.
+ *
+ * @param {string} userId
+ * @param {object[]} entries - each as logFoodEntry's `entry`
+ * @returns {Promise<string[]>} the new ids, in the order of `entries`
+ */
+export async function logFoodEntries(userId, entries) {
+  if (!Array.isArray(entries)) throw new TypeError('logFoodEntries: entries must be an array');
+  if (entries.length === 0) return [];
+  const now = Date.now();
+  const prepared = entries.map((entry, i) => {
+    const label = `logFoodEntries (row ${i + 1})`;
+    if (!entry || typeof entry !== 'object') throw new TypeError(`${label}: invalid food values`);
+    return _prepareDiaryEntry(label, entry, now);
+  });
+  const dates = [];
+  for (const entry of entries) if (!dates.includes(entry.entryDate)) dates.push(entry.entryDate);
+  const d = await db();
+  const ids = [];
+  await runInTransaction(d, async () => {
+    for (let i = 0; i < entries.length; i += 1) {
+      const id = uid();
+      // eslint-disable-next-line no-await-in-loop
+      await _insertDiaryRow(d, userId, id, entries[i], prepared[i], now + i, now);
+      ids.push(id);
+    }
+    for (const date of dates) {
+      // eslint-disable-next-line no-await-in-loop
+      await recomputeRollup(userId, date);
+    }
+  });
+  // Committed. Everything below is best-effort and subtractive, as in
+  // logFoodEntry: it can never fail the write.
+  try {
+    // eslint-disable-next-line global-require
+    const { track } = require('../engineTelemetry');
+    entries.forEach((entry) => {
+      try {
+        track(userId, 'food_logged', {
+          food_ref_source: _foodRefSource(entry.foodRef),
+          meal_slot: entry.mealSlot,
+        }).catch(() => {});
+      } catch (_) { /* one row's telemetry never blocks the next */ }
+    });
+    if (prepared.some((p) => !p.isPlanned)) {
+      // eslint-disable-next-line global-require
+      const { trackFirst } = require('../telemetry/firsts');
+      trackFirst(userId, 'first_food_logged').catch(() => {});
+    }
+  } catch (_) { /* tolerate test env without telemetry */ }
+  for (const date of dates) {
+    const slots = [];
+    entries.forEach((entry, i) => {
+      if (entry.entryDate === date && !prepared[i].isPlanned && !slots.includes(entry.mealSlot)) slots.push(entry.mealSlot);
+    });
+    if (slots.length > 0) _standDownMealReminders(userId, date, slots); // D215
+  }
+  _scheduleSync();
+  return ids;
+}
+
+/**
+ * Would this entry pass the diary's write validation? (D230 R9/R10 ruling.)
+ *
+ * The same shared validator logFoodEntry and logFoodEntries run, asked as a
+ * yes or no instead of thrown, with no write and no side effect. A copy uses
+ * it to leave out a source row that could never be logged (a legacy row from
+ * an older build) BEFORE it hands the rest to the all-or-nothing batch, so
+ * one rogue row can never make a whole day uncopyable. Anything that is not an
+ * entry object is simply not loggable.
+ *
+ * @param {object} entry - as logFoodEntry's `entry`
+ * @returns {boolean}
+ */
+export function isLoggableFoodEntry(entry) {
+  try {
+    _prepareDiaryEntry('isLoggableFoodEntry', entry, Date.now());
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 /**
@@ -233,23 +364,22 @@ async function _rebuildSlotRecentFromActuals(d, userId, mealSlot, foodRef) {
   );
 }
 
-export async function updateFoodEntry(id, userId, patch) {
-  if (!isBoundedString(id, 300) || !isBoundedString(userId, 300)
-    || !validDiaryNumbers(patch, { allowQuickZero: patch?.foodRef?.startsWith?.('quick:') })
-    || !isBoundedString(patch?.mealSlot, 80)
-    || !isBoundedString(patch?.foodRef, 500)
-    || (patch?.entryDate !== undefined && !isLocalDayKey(patch.entryDate))
-    || (patch?.eatenAt !== undefined && patch.eatenAt !== null && !isPersistedEpochMs(patch.eatenAt))) {
-    throw new TypeError('updateFoodEntry: invalid food values');
-  }
-  const d = await db();
-  const now = Date.now();
-  const existing = await d.getFirstAsync(
-    `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at
-     FROM food_entries WHERE id = ? AND user_id = ?`,
-    [id, userId]
-  );
-  if (!existing) return false;
+// D230 R10: the validator and the UPDATE behind updateFoodEntry and
+// updateFoodEntries (the bulk "move"), shared so a row moved in a batch is
+// held to exactly what a row edited alone is held to.
+function _validEntryPatch(id, userId, patch) {
+  return isBoundedString(id, 300) && isBoundedString(userId, 300)
+    && validDiaryNumbers(patch, { allowQuickZero: patch?.foodRef?.startsWith?.('quick:') })
+    && isBoundedString(patch?.mealSlot, 80)
+    && isBoundedString(patch?.foodRef, 500)
+    && (patch?.entryDate === undefined || isLocalDayKey(patch.entryDate))
+    && (patch?.eatenAt === undefined || patch.eatenAt === null || isPersistedEpochMs(patch.eatenAt));
+}
+
+// Writes `patch` over the row `existing` describes and returns the entry_date
+// the row now sits on. The caller recomputes the rollups and the serving
+// memory; this is the one UPDATE.
+async function _writeEntryPatch(d, userId, id, patch, existing, now) {
   const newDate = patch.entryDate ?? existing.entry_date;
   const weightState = _normaliseWeightState(patch.weightState);
   // Ultimate-Audit item 15 (D22 15b): the edit sheet offers a calm optional
@@ -273,6 +403,22 @@ export async function updateFoodEntry(id, userId, patch) {
       patch.fibreG ?? null, weightState, eatenAt, now, id, userId,
     ]
   );
+  return newDate;
+}
+
+export async function updateFoodEntry(id, userId, patch) {
+  if (!_validEntryPatch(id, userId, patch)) {
+    throw new TypeError('updateFoodEntry: invalid food values');
+  }
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at
+     FROM food_entries WHERE id = ? AND user_id = ?`,
+    [id, userId]
+  );
+  if (!existing) return false;
+  const newDate = await _writeEntryPatch(d, userId, id, patch, existing, now);
   await recomputeRollup(userId, newDate);
   if (existing.entry_date !== newDate) {
     await recomputeRollup(userId, existing.entry_date);
@@ -285,6 +431,65 @@ export async function updateFoodEntry(id, userId, patch) {
   }
   _scheduleSync();
   return true;
+}
+
+/**
+ * D230 R10: update N entries in ONE transaction (the Diary's bulk "Move to
+ * another meal"). `updates` is `[{ id, patch }]`, each patch exactly what
+ * updateFoodEntry takes; every patch is validated first (the same
+ * _validEntryPatch), so one bad patch throws and nothing is written. Then the
+ * UPDATEs run in one transaction with ONE rollup recompute per touched date
+ * (the new day and the one it left), ONE serving-memory rebuild per distinct
+ * (meal, food) an actual row left or joined, and ONE sync schedule. A row
+ * that no longer exists is skipped, as updateFoodEntry returns false for it.
+ * Returns how many rows were written.
+ */
+export async function updateFoodEntries(userId, updates) {
+  if (!Array.isArray(updates)) throw new TypeError('updateFoodEntries: updates must be an array');
+  if (updates.length === 0) return 0;
+  for (const u of updates) {
+    if (!u || !_validEntryPatch(u.id, userId, u.patch)) {
+      throw new TypeError('updateFoodEntries: invalid food values');
+    }
+  }
+  const d = await db();
+  const now = Date.now();
+  let written = 0;
+  await runInTransaction(d, async () => {
+    const dates = new Set();
+    const memory = new Map();
+    const remember = (slot, ref) => memory.set(`${slot}\u0000${ref}`, { slot, ref });
+    for (const { id, patch } of updates) {
+      // eslint-disable-next-line no-await-in-loop
+      const existing = await d.getFirstAsync(
+        `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at
+         FROM food_entries WHERE id = ? AND user_id = ?`,
+        [id, userId]
+      );
+      if (!existing) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const newDate = await _writeEntryPatch(d, userId, id, patch, existing, now);
+      written += 1;
+      dates.add(newDate);
+      dates.add(existing.entry_date);
+      if (!existing.is_planned) {
+        remember(existing.meal_slot, existing.food_ref);
+        if (existing.meal_slot !== patch.mealSlot || existing.food_ref !== patch.foodRef) {
+          remember(patch.mealSlot, patch.foodRef);
+        }
+      }
+    }
+    for (const date of dates) {
+      // eslint-disable-next-line no-await-in-loop
+      await recomputeRollup(userId, date);
+    }
+    for (const { slot, ref } of memory.values()) {
+      // eslint-disable-next-line no-await-in-loop
+      await _rebuildSlotRecentFromActuals(d, userId, slot, ref);
+    }
+  });
+  if (written > 0) _scheduleSync();
+  return written;
 }
 
 export async function deleteFoodEntry(id, userId) {
@@ -333,12 +538,82 @@ export async function restoreFoodEntry(id, userId) {
   return true;
 }
 
+// D230 R10: soft-delete (deleted = true) or restore (deleted = false) N
+// entries in ONE transaction. The per-row statements are deleteFoodEntry's and
+// restoreFoodEntry's own, so a row behaves exactly as when it was written
+// alone; what is shared is the deed: ONE rollup recompute per touched date,
+// ONE serving-memory rebuild per distinct (meal, food) an ACTUAL row carried
+// (planned scaffolding never touches it), ONE sync schedule. Ids that no
+// longer exist are skipped (the single form returns false for them).
+async function _setEntriesDeleted(userId, ids, deleted) {
+  const list = [...new Set((Array.isArray(ids) ? ids : []).filter((id) => typeof id === 'string' && id))];
+  if (list.length === 0) return 0;
+  const d = await db();
+  const now = Date.now();
+  let changed = 0;
+  await runInTransaction(d, async () => {
+    const dates = new Set();
+    const memory = new Map();
+    for (const id of list) {
+      // eslint-disable-next-line no-await-in-loop
+      const existing = await d.getFirstAsync(
+        `SELECT entry_date, meal_slot, food_ref, is_planned
+         FROM food_entries WHERE id = ? AND user_id = ?`,
+        [id, userId]
+      );
+      if (!existing) continue;
+      if (deleted) {
+        // eslint-disable-next-line no-await-in-loop
+        await d.runAsync(
+          `UPDATE food_entries SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+          [now, now, id, userId]
+        );
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        await d.runAsync(
+          `UPDATE food_entries SET deleted_at = NULL, updated_at = ? WHERE id = ? AND user_id = ?`,
+          [now, id, userId]
+        );
+      }
+      changed += 1;
+      dates.add(existing.entry_date);
+      if (!existing.is_planned) {
+        memory.set(`${existing.meal_slot}\u0000${existing.food_ref}`, { slot: existing.meal_slot, ref: existing.food_ref });
+      }
+    }
+    for (const date of dates) {
+      // eslint-disable-next-line no-await-in-loop
+      await recomputeRollup(userId, date);
+    }
+    for (const { slot, ref } of memory.values()) {
+      // eslint-disable-next-line no-await-in-loop
+      await _rebuildSlotRecentFromActuals(d, userId, slot, ref);
+    }
+  });
+  if (changed > 0) _scheduleSync();
+  return changed;
+}
+
+/** Soft-delete N entries in one transaction (see _setEntriesDeleted). Returns how many were deleted. */
+export function deleteFoodEntries(userId, ids) {
+  return _setEntriesDeleted(userId, ids, true);
+}
+
+/** Undo of deleteFoodEntries: restore N soft-deleted entries in one transaction. Returns how many came back. */
+export function restoreFoodEntries(userId, ids) {
+  return _setEntriesDeleted(userId, ids, false);
+}
+
+// D230 R9: a meal reads in the order it was eaten. Within a meal: the time
+// eaten first (a row with no eaten_at, such as a bulk-confirmed plan row, is
+// last), then the order it was written. (eaten_at IS NULL) is the portable
+// "NULLS LAST".
 export async function getFoodEntriesForDay(userId, entryDate) {
   const d = await db();
   return d.getAllAsync(
     `SELECT * FROM food_entries
      WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL
-     ORDER BY meal_slot, logged_at`,
+     ORDER BY meal_slot, (eaten_at IS NULL), eaten_at, logged_at`,
     [userId, entryDate]
   );
 }

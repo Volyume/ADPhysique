@@ -74,8 +74,16 @@ describe('FF-007: food logging surfaces failures', () => {
   // RE-POINTED (D230 R15/R18, food level-up 2026-10-16): the same two
   // failures are reported, now as full sentences that say what happened and
   // what to do, and each is logged with its cause first.
-  test('source guard: plate reports partial progress; curated meal warns on failure', () => {
-    expect(FOOD).toMatch(/\$\{logged\} of \$\{total\} foods were added to \$\{mealName\}\. The rest were not\. Try again in a moment\./);
+  // RE-POINTED (D230 R10, lane 3A): the plate is one transaction
+  // (logFoodEntries), so a mid-plate failure can no longer leave some foods
+  // written: the failure is all-or-nothing and is reported as such, in full
+  // sentences, with its cause logged. The "N of M foods were added" sentence
+  // described a half-state that cannot happen now and is retired with it.
+  test('source guard: the plate reports a failed write (all or nothing); curated meal warns on failure', () => {
+    expect(FOOD).toMatch(/'That food was not added\. Try again in a moment\.'/);
+    expect(FOOD).toMatch(/'Those foods were not added\. Try again in a moment\.'/);
+    expect(FOOD).toMatch(/await logFoodEntries\(userId, plate\.map\(/);
+    expect(FOOD).not.toMatch(/foods were added to \$\{mealName\}\. The rest were not/);
     expect(FOOD).toMatch(/'That meal was not added\. Try again in a moment\.'/);
     expect(FOOD).toMatch(/logError\('FoodSearchScreen\.logPlate', e/);
     expect(FOOD).toMatch(/logError\('FoodSearchScreen\.logCuratedMeal', e/);

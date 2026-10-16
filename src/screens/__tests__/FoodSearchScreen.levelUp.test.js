@@ -20,6 +20,11 @@
  *  - R6 logging the plate shows ONE undo toast naming the meal ("2 foods added
  *    to Brekkie.", one food: "Oats added to Brekkie."), and its Undo deletes
  *    EVERY row the plate wrote, not just the first.
+ *    RE-POINTED (D230 R10, lane 3A): the plate is ONE logFoodEntries call and
+ *    its Undo is ONE deleteFoodEntries call (both were one call per food). A
+ *    failed write is all-or-nothing, so the "1 of 2 foods were added"
+ *    half-state is gone: the failure says nothing was added and the plate
+ *    stays up.
  *  - R4/R16 every tab is a 48 dp target by its own height with no hit slop,
  *    and the selected tab is drawn in ink (textPrimary label and rule), never
  *    amber.
@@ -81,10 +86,14 @@ jest.mock('@react-native-community/netinfo', () => ({
 const mockGetSlotRecents = jest.fn(() => Promise.resolve([]));
 const mockGetEntriesForClockWindow = jest.fn(() => Promise.resolve([]));
 const mockLogFoodEntry = jest.fn();
+const mockLogFoodEntries = jest.fn();
 const mockDeleteFoodEntry = jest.fn(() => Promise.resolve(true));
+const mockDeleteFoodEntries = jest.fn(() => Promise.resolve(2));
 jest.mock('../../lib/food/db', () => ({
   logFoodEntry: (...a) => mockLogFoodEntry(...a),
+  logFoodEntries: (...a) => mockLogFoodEntries(...a),
   deleteFoodEntry: (...a) => mockDeleteFoodEntry(...a),
+  deleteFoodEntries: (...a) => mockDeleteFoodEntries(...a),
   getFavourites: jest.fn(() => Promise.resolve([])),
   getDislikes: jest.fn(() => Promise.resolve([])),
   cycleFoodPreference: jest.fn(),
@@ -320,12 +329,16 @@ describe('R6: the plate closes with one undo toast that removes every row it wro
   }
 
   test('two foods: "2 foods added to Brekkie." and Undo deletes both rows', async () => {
-    mockLogFoodEntry.mockResolvedValueOnce('entry-a').mockResolvedValueOnce('entry-b');
+    mockLogFoodEntries.mockResolvedValueOnce(['entry-a', 'entry-b']);
     const { nav } = await plateOf([OATS, MILK]);
 
-    // The per-food write is unchanged: one logFoodEntry per food, in order.
-    expect(mockLogFoodEntry).toHaveBeenCalledTimes(2);
-    expect(mockLogFoodEntry.mock.calls.map(([, e]) => e.foodRef)).toEqual(['off:oats', 'off:milk']);
+    // D230 R10: the whole plate is ONE batched write, the foods in plate order.
+    expect(mockLogFoodEntry).not.toHaveBeenCalled();
+    expect(mockLogFoodEntries).toHaveBeenCalledTimes(1);
+    const [userId, written] = mockLogFoodEntries.mock.calls[0];
+    expect(userId).toBe('u1');
+    expect(written.map((e) => e.foodRef)).toEqual(['off:oats', 'off:milk']);
+    written.forEach((e) => expect(e).toEqual(expect.objectContaining({ entryDate: '2026-07-03', mealSlot: 'meal_1' })));
     expect(mockToastShow).toHaveBeenCalledTimes(1);
     const [message, opts] = mockToastShow.mock.calls[0];
     expect(message).toBe('2 foods added to Brekkie.');
@@ -336,30 +349,37 @@ describe('R6: the plate closes with one undo toast that removes every row it wro
     expect(nav.goBack).toHaveBeenCalledTimes(1);
 
     await act(async () => { await opts.action.onPress(); });
-    expect(mockDeleteFoodEntry).toHaveBeenCalledTimes(2);
-    expect(mockDeleteFoodEntry).toHaveBeenNthCalledWith(1, 'entry-a', 'u1');
-    expect(mockDeleteFoodEntry).toHaveBeenNthCalledWith(2, 'entry-b', 'u1');
+    // Every row the plate wrote, removed in one call.
+    expect(mockDeleteFoodEntries).toHaveBeenCalledTimes(1);
+    expect(mockDeleteFoodEntries).toHaveBeenCalledWith('u1', ['entry-a', 'entry-b']);
+    expect(mockDeleteFoodEntry).not.toHaveBeenCalled();
     // One toast for the whole Undo, no toast per food.
     expect(mockToastShow).toHaveBeenCalledTimes(1);
   });
 
   test('one food names the food: "Oats added to Brekkie."', async () => {
-    mockLogFoodEntry.mockResolvedValueOnce('entry-only');
+    mockLogFoodEntries.mockResolvedValueOnce(['entry-only']);
     await plateOf([OATS]);
     const [message, opts] = mockToastShow.mock.calls[0];
     expect(message).toBe('Oats added to Brekkie.');
     await act(async () => { await opts.action.onPress(); });
-    expect(mockDeleteFoodEntry).toHaveBeenCalledWith('entry-only', 'u1');
+    expect(mockDeleteFoodEntries).toHaveBeenCalledWith('u1', ['entry-only']);
   });
 
   test('a failed write says what happened and what to do, and offers no Undo', async () => {
-    mockLogFoodEntry.mockResolvedValueOnce('entry-a').mockRejectedValueOnce(new Error('disk'));
+    // The batch is one transaction: a failure writes nothing, so the person
+    // is told nothing was added (never "1 of 2"), the screen stays up with the
+    // plate intact for a retry, and no Undo is offered for rows that do not exist.
+    mockLogFoodEntries.mockRejectedValueOnce(new Error('disk'));
     const { nav } = await plateOf([OATS, MILK]);
     expect(nav.goBack).not.toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalledTimes(1);
     expect(mockToastShow).toHaveBeenCalledWith(
-      '1 of 2 foods were added to Brekkie. The rest were not. Try again in a moment.',
+      'Those foods were not added. Try again in a moment.',
       expect.objectContaining({ variant: 'error' }),
     );
+    expect(mockToastShow.mock.calls[0][1].action).toBeUndefined();
+    expect(mockDeleteFoodEntries).not.toHaveBeenCalled();
   });
 });
 

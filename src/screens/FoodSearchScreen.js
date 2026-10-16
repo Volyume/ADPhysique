@@ -36,7 +36,7 @@ import { logError } from '../lib/errorLog';
 import { SkeletonRow } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import {
-  logFoodEntry, deleteFoodEntry, getFavourites,
+  logFoodEntry, logFoodEntries, deleteFoodEntry, deleteFoodEntries, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
   upsertSlotRecent, getSlotRecents, getSlotRecentQuantities, resolveSlotRecentRefs,
@@ -499,34 +499,33 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Log every plate item to the meal, then return to the diary.
   // D230 R6: the plate closes with the house undo toast ("3 foods added to
   // Breakfast.", one food: "Oats added to Breakfast."), and its Undo removes
-  // every row this log wrote: the ids logFoodEntry returns are collected as
-  // they land. The per-food write itself is unchanged (lane 3A batches it).
+  // every row this log wrote: the ids come back from the one write.
+  // D230 R10: the whole plate is ONE logFoodEntries call (one transaction, one
+  // rollup, one sync schedule, each row validated as a single write is), so it
+  // is all or nothing. A failure leaves the diary and the plate exactly as
+  // they were, which is why the old "2 of 3 foods were added" sentence is gone:
+  // that half-state can no longer happen.
   async function logPlate() {
     if (!plate.length) return;
     // CALC-3: in-flight guard so a double-tap can't log the whole plate twice
-    // (each logFoodEntry mints a fresh id, so duplicates can't be deduped).
+    // (each write mints fresh ids, so duplicates can't be deduped).
     if (loggingPlateRef.current) return;
     loggingPlateRef.current = true;
     const total = plate.length;
     const mealName = mealSlotLabel(mealSlot);
-    const writtenIds = [];
-    let logged = 0;
     try {
+      const writtenIds = await logFoodEntries(userId, plate.map((it) => ({
+        entryDate,
+        mealSlot,
+        foodRef: it.food.food_ref,
+        quantityG: it.quantityG,
+        kcal: it.kcal,
+        proteinG: it.proteinG,
+        carbsG: it.carbsG,
+        fatG: it.fatG,
+        fibreG: it.fibreG,
+      })));
       for (const it of plate) {
-        // eslint-disable-next-line no-await-in-loop
-        const entryId = await logFoodEntry(userId, {
-          entryDate,
-          mealSlot,
-          foodRef: it.food.food_ref,
-          quantityG: it.quantityG,
-          kcal: it.kcal,
-          proteinG: it.proteinG,
-          carbsG: it.carbsG,
-          fatG: it.fatG,
-          fibreG: it.fibreG,
-        });
-        writtenIds.push(entryId);
-        logged++;
         // eslint-disable-next-line no-await-in-loop
         await upsertSlotRecent(userId, {
           mealSlot,
@@ -546,32 +545,26 @@ export default function FoodSearchScreen({ navigation, route }) {
       setShowPlate(false);
       navigation.goBack();
     } catch (e) {
-      // FF-007: a mid-plate write failure used to leave the plate up with no
-      // feedback. Tell the user what actually logged, drop the logged items so a
-      // retry can't double-log them (entries are sequential), and stay on screen.
-      logError('FoodSearchScreen.logPlate', e, { mealSlot, logged, total });
+      // FF-007: a failed plate write must be reported, never silent. Nothing
+      // was written (one transaction), so the plate stays up for a retry
+      // that cannot double-log.
+      logError('FoodSearchScreen.logPlate', e, { mealSlot, total });
       toast.show(
-        logged > 0
-          ? `${logged} of ${total} foods were added to ${mealName}. The rest were not. Try again in a moment.`
-          : total === 1
-            ? 'That food was not added. Try again in a moment.'
-            : 'Those foods were not added. Try again in a moment.',
+        total === 1
+          ? 'That food was not added. Try again in a moment.'
+          : 'Those foods were not added. Try again in a moment.',
         { variant: 'error', duration: 5000 },
       );
-      if (logged > 0) setPlate((p) => p.slice(logged));
     } finally {
       loggingPlateRef.current = false;
     }
   }
 
-  // The plate toast's Undo: the existing delete path for every row the log
-  // wrote, in one loop, under the one toast.
+  // The plate toast's Undo: every row the log wrote, removed in one
+  // transaction (D230 R10), under the one toast.
   async function undoPlate(ids) {
     try {
-      for (const id of ids) {
-        // eslint-disable-next-line no-await-in-loop
-        await deleteFoodEntry(id, userId);
-      }
+      await deleteFoodEntries(userId, ids);
     } catch (e) {
       logError('FoodSearchScreen.undoPlate', e, { count: ids.length });
       toast.show('Some of those foods were not removed. You can remove them from the diary.', { variant: 'error', duration: 5000 });

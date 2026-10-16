@@ -130,7 +130,11 @@ describe('the diary itself still SEES planned rows, because it has to render the
     // planned scaffolding with its confirm/clear banner. The read-only view
     // filters in the view model instead (diaryViewModel), not in SQL.
     await food.getFoodEntriesForDay('u1', '2026-08-14');
-    const sql = flat(sqlMatching(/ORDER BY meal_slot, logged_at/));
+    // RE-POINTED (D230 R9, lane 3A): the day reads in the order it was eaten
+    // (meal, then eaten_at with the untimed last, then write order), so the
+    // query is located by that ORDER BY. The truth is unchanged: the diary's
+    // own reader never filters planned rows out.
+    const sql = flat(sqlMatching(/ORDER BY meal_slot, \(eaten_at IS NULL\), eaten_at, logged_at/));
     expect(sql).toBeTruthy();
     expect(sql).not.toContain('is_planned');
   });
