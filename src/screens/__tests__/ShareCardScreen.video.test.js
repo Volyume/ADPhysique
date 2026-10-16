@@ -297,6 +297,9 @@ describe('the Video source', () => {
     await press(hostsByLabel(tree, 'Open camera')[0]);
     expect(navigation.navigate).toHaveBeenCalledWith('ClipCamera', {
       workoutId: 'w1', exerciseId: null, exerciseName: null, setNumber: null, source: 'share',
+      // Addendum 12: the pattern and equipment ride along for the camera's
+      // setup line; the share has no exercise, so null.
+      exercisePattern: null, exerciseEquipment: null,
     });
     // Seen now: the next tap goes straight to the camera.
     navigation.navigate.mockClear();
