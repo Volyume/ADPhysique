@@ -9,8 +9,9 @@
 -- Applied locally:  YES, via the schema step in src/lib/database.js that adds
 --                   food_entries.note (ALTER TABLE ADD COLUMN, no default, no
 --                   backfill: every existing row reads NULL).
--- Applied remotely: NO. HELD for the founder's exact phrase "run against
---                   production" for 194. The app never applies it. Until it is
+-- Applied remotely: YES, 2026-10-16 21:01:33 UTC, under the founder's "run against
+--                   production 194 195" (Claude-run, checksum protocol; README).
+--                   Before that it was HELD for the phrase. The app never applies it. Until it is
 --                   applied the push omits the column (FOOD_ENTRY_NOTE_PUSH in
 --                   src/lib/sync/featureFlags.js is false), because a push of
 --                   a column the cloud lacks fails the whole food_entries

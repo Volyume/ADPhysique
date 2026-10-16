@@ -143,27 +143,30 @@ describe('source guards', () => {
   const root = path.join(__dirname, '..', '..', '..', '..');
   const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
-  test('the shipped flag is false (migrate_195 is HELD)', () => {
-    expect(read('src/lib/sync/featureFlags.js')).toMatch(/export const CUSTOM_FOOD_PORTIONS_PUSH = false;/);
+  test('the shipped flag is on (migrate_195 is APPLIED)', () => {
+    // Re-pinned 2026-10-16: 195 is applied to production and verified, so the
+    // portions now sync (the landing that applied it turned the flag on).
+    expect(read('src/lib/sync/featureFlags.js')).toMatch(/export const CUSTOM_FOOD_PORTIONS_PUSH = true;/);
   });
 
-  test('migrate_195 exists, says HELD, is additive and idempotent, and names its dependency and rollback', () => {
+  test('migrate_195 exists, says APPLIED, is additive and idempotent, and names its dependency and rollback', () => {
     const sql = read('supabase/migrate_195_custom_foods_portions.sql');
     const header = sql.slice(0, sql.indexOf('\nALTER TABLE public.custom_foods\n  ADD COLUMN'));
     for (const word of ['Purpose', 'Applied locally', 'Applied remotely', 'Safe to re-run', 'Rollback', 'Depends on']) {
       expect(header).toContain(word);
     }
-    expect(header).toMatch(/Applied remotely: NO\. HELD/);
+    // Re-pinned 2026-10-16: applied to production under the founder's phrase.
+    expect(header).toMatch(/Applied remotely: YES, 2026-10-16 21:05:44 UTC/);
     expect(header).toContain('migrate_194');
     expect(header).toContain('RE-ISSUES food_sync_push');
     expect(sql).toContain('ADD COLUMN IF NOT EXISTS portions_json jsonb');
     expect(sql).not.toMatch(/^\s*(DROP COLUMN|DROP TABLE|TRUNCATE)/im);
   });
 
-  test('the README row says HELD', () => {
+  test('the README row says APPLIED', () => {
     const readme = read('supabase/README.md');
     const row = readme.split('\n').find((l) => l.startsWith('| 195 |'));
     expect(row).toBeTruthy();
-    expect(row).toContain('HELD');
+    expect(row).toContain('APPLIED 2026-10-16 21:05:44 UTC');
   });
 });
