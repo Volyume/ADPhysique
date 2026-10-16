@@ -69,10 +69,10 @@ describe('the Record a video of this set row', () => {
   });
 
   test.each([
-    [0, 'Up to 15 seconds, no sound. Stays on this phone.'],
-    [1, '1 saved. Up to 3 for each workout.'],
-    [2, '2 saved. Up to 3 for each workout.'],
-    [3, '3 saved, the most for one workout.'],
+    [0, 'Up to 15 seconds, with no sound.'],
+    [1, 'You have 1 saved. A workout can hold up to 3.'],
+    [2, 'You have 2 saved. A workout can hold up to 3.'],
+    [3, 'You have 3 saved, the most one workout can hold.'],
   ])('with %i clips saved the second line reads "%s"', (clipCount, line) => {
     const json = JSON.stringify(render({ clipsSuppressed: false, clipCount }).toJSON());
     expect(json).toContain('Record a video of this set');
@@ -94,10 +94,10 @@ describe('the Record a video of this set row', () => {
   });
 
   test.each([
-    [0, 'This set would be a PR. Up to 15 seconds, no sound.'],
-    [1, 'This set would be a PR. 1 saved. Up to 3 for each workout.'],
-    [2, 'This set would be a PR. 2 saved. Up to 3 for each workout.'],
-    [3, '3 saved, the most for one workout.'],
+    [0, 'This set would be a new PR. Up to 15 seconds, with no sound.'],
+    [1, 'This set would be a new PR. You have 1 saved. A workout can hold up to 3.'],
+    [2, 'This set would be a new PR. You have 2 saved. A workout can hold up to 3.'],
+    [3, 'You have 3 saved, the most one workout can hold.'],
   ])('when the next set would be a PR, with %i saved, the second line reads "%s"', (clipCount, line) => {
     const json = JSON.stringify(render({ clipsSuppressed: false, clipCount, nextSetWouldBePR: true }).toJSON());
     expect(json).toContain('Record a video of this set');
@@ -106,7 +106,7 @@ describe('the Record a video of this set row', () => {
 
   test.each([[false], [undefined], [null], ['true']])('anything but an explicit true (%p) keeps the usual line', (nextSetWouldBePR) => {
     const json = JSON.stringify(render({ clipsSuppressed: false, clipCount: 1, nextSetWouldBePR }).toJSON());
-    expect(json).toContain('1 saved. Up to 3 for each workout.');
+    expect(json).toContain('You have 1 saved. A workout can hold up to 3.');
     expect(json).not.toContain('would be a PR');
   });
 

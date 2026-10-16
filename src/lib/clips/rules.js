@@ -65,78 +65,85 @@ export const CAMERA_SOURCES = Object.freeze(['workout', 'summary', 'share']);
 export const LEAD_IN_KEY = '@volyume_clip_leadin';
 export const LENGTH_KEY = '@volyume_clip_length';
 export const PRIMER_SEEN_KEY = '@volyume_clip_primer_seen';
+/** Whether the guide lines show while setting the camera up (on until turned off). */
+export const GUIDES_KEY = '@volyume_clip_guides';
 
 export const CLIP_STRINGS = Object.freeze({
   // The exercise menu row (it records the set the person is on).
   rowLabel: 'Record a video of this set',
   rowA11y: 'Record a video of this set',
-  rowDescNone: 'Up to 15 seconds, no sound. Stays on this phone.',
-  rowDescThree: '3 saved, the most for one workout.',
+  rowDescNone: 'Up to 15 seconds, with no sound.',
+  rowDescThree: 'You have 3 saved, the most one workout can hold.',
 
-  // D229 addendum 9: the PR moment. Before the set, on the exercise card's
-  // record row (the action opens the primer or the camera for that set) and
-  // as the More row's second line when the numbers in the box would be a PR.
-  prOfferText: 'A PR if you hit it',
-  prOfferAction: 'Record it',
-  rowDescPRLead: 'This set would be a PR.',
-  rowDescPRNone: 'This set would be a PR. Up to 15 seconds, no sound.',
+  // D229 addendum 9 (words corrected in addendum 10): the PR moment. Before
+  // the set, on the exercise card's record row (the action opens the primer
+  // or the camera for that set) and as the More row's second line when the
+  // numbers in the box would be a PR.
+  prOfferText: 'This set would be a new PR',
+  prOfferAction: 'Film it',
+  rowDescPRLead: 'This set would be a new PR.',
+  rowDescPRNone: 'This set would be a new PR. Up to 15 seconds, with no sound.',
   // After the set, on the record row, when a video of that set is saved.
   prShareAction: 'Share',
   prShareA11y: 'Share this PR with its video',
 
-  // The summary row, in its two forms.
+  // The summary row, in its three forms.
   summaryLabelNone: 'Record a video',
-  summarySubNone: "Up to 15 seconds, no sound. You can also record a set during a workout from an exercise's menu.",
+  summarySubNone: "Up to 15 seconds, with no sound. You can also film a set during a workout, from an exercise's menu.",
   summaryLabelUse: 'Use your video on the share',
-  // The third form (D229 addendum 9): a video of a PR set was recorded.
   summaryLabelPR: 'Use your PR video on the share',
-  summarySubPRTail: ', a PR',
-  summarySubPRUnnamed: 'You recorded a video of a PR set',
+  summarySubPRTail: ', a new PR',
+  summarySubPRUnnamed: 'You recorded a video of a new PR',
 
   // The privacy primer, once per device before the first camera open. It is
   // the only explanation a person is ever given.
   primerTitle: 'Videos stay on this phone',
-  primerBody: 'Prop your phone up, tap the button and get into position. Recording starts after the countdown and stops by itself. Up to 15 seconds, no sound. Kept with this workout, never uploaded, deleted when you delete the workout.',
+  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded.',
   primerOpen: 'Open camera',
   primerNotNow: 'Not now',
 
-  // The camera.
-  recordHint: 'Tap to start with a countdown. Hold to record while you hold.',
+  // The camera. Setting up first (addendum 10): the line at the top while the
+  // camera is idle, with the guide lines over the live view.
+  setupHint: 'Line up the rack or machine first, then step back until your whole body fits in the frame.',
+  recordHint: 'Tap the button to start after a countdown, or press and hold it to record for as long as you hold.',
   // The hint while recording: after a tap, the square stops it early; during
   // a hold, letting go stops it.
-  recordingHintTap: 'Tap the square to stop.',
-  recordingHintHold: 'Let go to stop.',
-  // The two small controls each carry a word, so nobody has to guess what a
-  // bare "3 s" or "15 s" changes.
+  recordingHintTap: 'Tap the square when you want to stop.',
+  recordingHintHold: 'Let go when you want to stop.',
+  // The small controls each carry a word, so nobody has to guess what a bare
+  // "3 s", "15 s" or "On" changes.
   countdownCaption: 'Countdown',
   lengthCaption: 'Length',
-  permissionDenied: 'Camera access is needed to record a video',
+  guidesCaption: 'Guides',
+  guidesOn: 'On',
+  guidesOff: 'Off',
+  permissionDenied: 'Volyume needs camera access to record a video.',
   closeA11y: 'Cancel recording',
   stopA11y: 'Stop recording',
   flipA11y: 'Flip camera',
-  saved: 'Video saved to this workout',
+  saved: 'Your video is saved with this workout',
   undo: 'Undo',
-  undoFailed: "Couldn't remove that video. Try again.",
-  saveFailed: "Couldn't save that video. Try again.",
+  undoFailed: "That video couldn't be removed. You can try again.",
+  saveFailed: "That video couldn't be saved. You can try again.",
   // Said when the workout already holds the most clips. Nothing is replaced
   // silently, so the person is shown the clips and can delete one.
-  full: 'This workout already has 3 videos. Delete one to record another.',
+  full: 'This workout already has 3 videos, the most it can hold. Delete one if you want to record another.',
 
   // The clips sheet.
   sheetTitle: 'Your videos',
   afterWorkout: 'After the workout',
   sheetWorkoutName: 'Workout',
-  sheetEmpty: 'No videos saved for this workout.',
+  sheetEmpty: 'There are no videos saved for this workout yet.',
   deleteLabel: 'Delete',
   // A person's own video goes only after one plain question (the house
   // confirms before deleting a progress photo too).
   deleteConfirmTitle: 'Delete this video?',
-  deleteConfirmBody: 'It will be removed from this phone.',
+  deleteConfirmBody: 'It will be removed from your phone.',
   deleteConfirmKeep: 'Keep',
   playA11y: 'Play video',
   playStopA11y: 'Stop video',
-  deleted: 'Video deleted',
-  deleteFailed: "Couldn't delete that video. Try again.",
+  deleted: 'That video has been deleted',
+  deleteFailed: "That video couldn't be deleted. You can try again.",
 
   // The history row.
   historyLabel: 'Videos',
@@ -168,6 +175,19 @@ export function lengthLabel(lengthSeconds) {
 export function lengthA11yLabel(lengthSeconds) {
   const n = Number(lengthSeconds) || DEFAULT_LENGTH_SECONDS;
   return `Recording length, ${n} seconds`;
+}
+
+/** The guides control's own text ("On" / "Off") and its accessibility label. */
+export function guidesLabel(on) {
+  return on ? CLIP_STRINGS.guidesOn : CLIP_STRINGS.guidesOff;
+}
+export function guidesA11yLabel(on) {
+  return `Guide lines, ${on ? 'on' : 'off'}`;
+}
+
+/** A stored guides flag back to a boolean: only an explicit 'false' turns them off. */
+export function parseGuides(raw) {
+  return raw !== 'false';
 }
 
 function nextInCycle(options, current, fallback) {
@@ -202,21 +222,20 @@ export function parseLength(raw) {
 
 /**
  * The More-sheet row's second line for a workout holding `count` clips:
- * none "Up to 15 seconds, no sound. Shared from the summary afterwards.", one
- * or two "1 saved. Up to 3 for each workout.", three "3 saved, the most for one
- * workout.". Anything that is not a count reads as none.
+ * none "Up to 15 seconds, with no sound.", one or two "You have 1 saved. A
+ * workout can hold up to 3.", three "You have 3 saved, the most one workout
+ * can hold.". Anything that is not a count reads as none.
  * With `wouldBePR` (D229 addendum 9: the numbers in the next set's box would be
- * a PR, judged by the logger) the line leads with it: none "This set would be
- * a PR. Up to 15 seconds, no sound.", one or two "This set would be a PR. 1
- * saved. Up to 3 for each workout."; at three the full line stays, since
- * another video cannot be recorded. Only an explicit true says PR.
+ * a PR, judged by the logger) the line leads with it: "This set would be a
+ * new PR. Up to 15 seconds, with no sound."; at three the full line stays,
+ * since another video cannot be recorded. Only an explicit true says PR.
  */
 export function clipRowDescription(count, options) {
   const wouldBePR = options?.wouldBePR === true;
   const n = Math.floor(Number(count));
   if (!Number.isFinite(n) || n <= 0) return wouldBePR ? CLIP_STRINGS.rowDescPRNone : CLIP_STRINGS.rowDescNone;
   if (n >= MAX_CLIPS_PER_WORKOUT) return CLIP_STRINGS.rowDescThree;
-  const saved = `${n} saved. Up to ${MAX_CLIPS_PER_WORKOUT} for each workout.`;
+  const saved = `You have ${n} saved. A workout can hold up to ${MAX_CLIPS_PER_WORKOUT}.`;
   return wouldBePR ? `${CLIP_STRINGS.rowDescPRLead} ${saved}` : saved;
 }
 

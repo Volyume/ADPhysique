@@ -1,6 +1,6 @@
 /**
  * RecordLine, the PR moment's two video actions (D229 addendum 9, items 1 and
- * 2: "A PR if you hit it" with Record it before the set; Share after it).
+ * 2: "This set would be a new PR" with Record it before the set; Share after it).
  * The row is still ONE row of the exercise card (D220 addendum 36: "No
  * floating surface of any kind"), so the actions live in it, not beside it.
  *
@@ -68,12 +68,12 @@ function render(props) {
 const buttons = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityRole === 'button');
 const hasText = (tree, text) => tree.root.findAll((n) => n.props.children === text).length > 0;
 
-describe('the offer: "A PR if you hit it", then Record it', () => {
+describe('the offer: "This set would be a new PR", then Record it', () => {
   test('renders the words, the flag glyph and the action after a middle dot, and the action records', () => {
     const onAction = jest.fn();
     const tree = render({ record: null, offer: offer(onAction) });
-    expect(hasText(tree, 'A PR if you hit it')).toBe(true);
-    expect(hasText(tree, 'Record it')).toBe(true);
+    expect(hasText(tree, 'This set would be a new PR')).toBe(true);
+    expect(hasText(tree, 'Film it')).toBe(true);
     expect(hasText(tree, '·')).toBe(true);
     expect(tree.root.findByType('Ionicons').props.name).toBe('flag-outline');
     const [action] = buttons(tree);
@@ -109,7 +109,7 @@ describe('the offer: "A PR if you hit it", then Record it', () => {
     expect(hit.minWidth).toBeGreaterThanOrEqual(touchTarget.minimum);
     expect(touchTarget.minimum).toBe(48);
     const words = tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessible === true && n.props.accessibilityRole === 'text');
-    expect(words.map((n) => n.props.accessibilityLabel)).toEqual(['A PR if you hit it']);
+    expect(words.map((n) => n.props.accessibilityLabel)).toEqual(['This set would be a new PR']);
     // The middle dot is decoration, never read aloud.
     const dot = tree.root.findAll((n) => n.props.children === '·' && n.props.importantForAccessibility === 'no');
     expect(dot.length).toBeGreaterThan(0);
@@ -129,7 +129,7 @@ describe('the offer: "A PR if you hit it", then Record it', () => {
   test('an earned record wins: the offer is not shown beside it', () => {
     const tree = render({ record: RECORD, offer: offer() });
     expect(hasText(tree, RECORD_TEXT)).toBe(true);
-    expect(hasText(tree, 'A PR if you hit it')).toBe(false);
+    expect(hasText(tree, 'This set would be a new PR')).toBe(false);
     expect(buttons(tree)).toHaveLength(0);
     act(() => { tree.unmount(); });
   });
@@ -150,7 +150,7 @@ describe('the offer: "A PR if you hit it", then Record it', () => {
     act(() => { tree.update(<RecordLine record={RECORD} offer={null} celebrate reduceMotion={false} />); });
     expect(timing.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(hasText(tree, RECORD_TEXT)).toBe(true);
-    expect(hasText(tree, 'A PR if you hit it')).toBe(false);
+    expect(hasText(tree, 'This set would be a new PR')).toBe(false);
     timing.mockRestore();
     act(() => { tree.unmount(); });
   });
@@ -214,6 +214,6 @@ describe('source', () => {
     // The row draws only what it is given: its code holds no video words.
     const code = SOURCE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     expect(code).toContain("'flag-outline'");
-    expect(code).not.toMatch(/['"`][^'"`\n]*\b(video|Record it|Share)\b[^'"`\n]*['"`]/);
+    expect(code).not.toMatch(/['"`][^'"`\n]*\b(video|Film it|Share)\b[^'"`\n]*['"`]/);
   });
 });

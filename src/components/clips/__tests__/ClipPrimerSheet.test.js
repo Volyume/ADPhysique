@@ -37,7 +37,7 @@ describe('ClipPrimerSheet', () => {
   test('says what a clip is, in the ruled words', () => {
     const json = JSON.stringify(render().toJSON());
     expect(json).toContain('Videos stay on this phone');
-    expect(json).toContain('Prop your phone up, tap the button and get into position. Recording starts after the countdown and stops by itself. Up to 15 seconds, no sound. Kept with this workout, never uploaded, deleted when you delete the workout.');
+    expect(json).toContain('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded.');
   });
 
   test('"Open camera" and "Not now" each fire their own handler once', () => {

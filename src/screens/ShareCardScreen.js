@@ -968,7 +968,7 @@ export default function ShareCardScreen({ navigation, route }) {
     const cannotOpen = () => {
       if (cancelled) return;
       setBarThumbs(null);
-      toast.show("Couldn't open that video, try another", { variant: 'error' });
+      toast.show("That video couldn't be opened. You could try another one.", { variant: 'error' });
       clearPhoto();
     };
     extractClipThumbnails(clip.uri, { count: BAR_FRAME_COUNT, thumbWidth: VIDEO_FRAME_W })
@@ -1120,7 +1120,7 @@ export default function ShareCardScreen({ navigation, route }) {
         let probe = null;
         try { probe = await shareVideoEngine.probeVideo(asset.uri); } catch (_e) { probe = null; }
         const durationMs = Number(probe?.durationMs ?? asset.duration) || 0;
-        if (!durationMs) { toast.show("Couldn't open that video, try another", { variant: 'error' }); return; }
+        if (!durationMs) { toast.show("That video couldn't be opened. You could try another one.", { variant: 'error' }); return; }
         acceptClip({
           id: null, uri: asset.uri, durationMs,
           width: probe?.width ?? asset.width ?? null, height: probe?.height ?? asset.height ?? null,
@@ -1267,7 +1267,7 @@ export default function ShareCardScreen({ navigation, route }) {
       uri: clip.uri, window: clipWindow, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H, tone: clipTone,
     });
     if (videoCacheRef.current[signature]) return videoCacheRef.current[signature];
-    if (!layoutFrame) { toast.show("Couldn't open that video, try another", { variant: 'error' }); return null; }
+    if (!layoutFrame) { toast.show("That video couldn't be opened. You could try another one.", { variant: 'error' }); return null; }
     setMakingVideo(true);
     makingVideoRef.current = true;
     keepAwake(true);
@@ -1638,7 +1638,7 @@ export default function ShareCardScreen({ navigation, route }) {
         <View style={styles.section}>
           {liveClip ? (
             <View style={styles.clipControls}>
-              <Text style={[styles.photoHint, live.photoHint]}>{clipPaused ? 'Drag to move. Pinch to resize. Tap to play.' : 'Drag to move. Pinch to resize. Tap to pause.'}</Text>
+              <Text style={[styles.photoHint, live.photoHint]}>{clipPaused ? 'Drag to move your video, pinch to resize it, and tap it to play.' : 'Drag to move your video, pinch to resize it, and tap it to pause.'}</Text>
               <TrimBar
                 width={previewW}
                 durationMs={Math.max(clipWindow.endMs, Number(clip.durationMs) || 0)}
@@ -1653,8 +1653,8 @@ export default function ShareCardScreen({ navigation, route }) {
               />
               <Text style={[styles.photoHint, live.photoHint]}>
                 {(Number(clip.durationMs) || 0) > MAX_VIDEO_MS
-                  ? `${Math.round((clipWindow.endMs - clipWindow.startMs) / 1000)} seconds of ${Math.round((Number(clip.durationMs) || 0) / 1000)}. Slide to choose where it starts. Drag the ends to shorten it.`
-                  : 'Drag the ends to shorten it.'}
+                  ? `${Math.round((clipWindow.endMs - clipWindow.startMs) / 1000)} seconds of ${Math.round((Number(clip.durationMs) || 0) / 1000)}. Slide the strip to choose where it starts, or drag its ends to use less of the video.`
+                  : 'You can drag the ends of the strip to use less of the video.'}
               </Text>
             </View>
           ) : null}

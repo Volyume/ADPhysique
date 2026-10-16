@@ -138,7 +138,7 @@ describe('at three clips: the clips sheet, never the camera', () => {
     await act(async () => { await api.openRecorder({ source: 'workout' }); });
     expect(navigation.navigate).not.toHaveBeenCalled();
     const json = JSON.stringify(tree.toJSON());
-    expect(json).toContain('This workout already has 3 videos. Delete one to record another.');
+    expect(json).toContain('This workout already has 3 videos, the most it can hold. Delete one if you want to record another.');
     expect(json).not.toContain('Videos stay on this phone');
   });
 

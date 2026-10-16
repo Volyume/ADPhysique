@@ -355,7 +355,7 @@ describe('From this workout', () => {
 
     expect(trimBars(tree).length).toBe(1);
     expect(trimBars(tree)[0].props).toMatchObject({ startMs: 0, endMs: 12000, maxWindowMs: 15000, durationMs: 12000 });
-    expect(texts(tree)).toContain('Drag to move. Pinch to resize. Tap to pause.');
+    expect(texts(tree)).toContain('Drag to move your video, pinch to resize it, and tap it to pause.');
     expect(buttonTitled(tree, 'Share video').length).toBe(1);
     expect(buttonTitled(tree, 'Share image').length).toBe(0);
     expect(buttonTitled(tree, 'Post to Community').length).toBe(0);
@@ -368,7 +368,7 @@ describe('From this workout', () => {
     await press(hostsByLabel(tree, 'After the workout, 22 seconds')[0]);
     await waitFor(() => trimBars(tree).length === 1);
     expect(trimBars(tree)[0].props).toMatchObject({ startMs: 0, endMs: 15000, durationMs: 22000 });
-    expect(texts(tree)).toContain('15 seconds of 22. Slide to choose where it starts. Drag the ends to shorten it.');
+    expect(texts(tree)).toContain('15 seconds of 22. Slide the strip to choose where it starts, or drag its ends to use less of the video.');
     // The frames: the trim bar's across the whole video, the scrim's inside the window.
     await waitFor(() => mockThumbs.mock.calls.length >= 2);
     const windows = mockThumbs.mock.calls.map((c) => c[1]);
@@ -579,7 +579,7 @@ describe('a video from the phone', () => {
     const { tree } = await mount(SESSION);
     await press(hostsByLabel(tree, 'Gallery, choose a photo or video')[0]);
     await waitFor(() => mockToastShow.mock.calls.length === 1);
-    expect(mockToastShow).toHaveBeenCalledWith("Couldn't open that video, try another", { variant: 'error' });
+    expect(mockToastShow).toHaveBeenCalledWith("That video couldn't be opened. You could try another one.", { variant: 'error' });
     expect(framers(tree).length).toBe(0);
   });
 });

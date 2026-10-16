@@ -76,8 +76,8 @@ const UNNAMED_PR_VIDEO = { exerciseId: 'e1', exerciseName: null, setNumber: 2, s
 const UNNAMED_PR = { exerciseId: 'e1', exerciseName: null, setNumber: 2, type: '1rm_estimate' };
 
 // D229 addendum 9 (lead ruling 2026-10-15): the words the founder ruled for the
-// PR moment ("A PR if you hit it", "This set would be a PR.", "Share this PR
-// with its video", "Use your PR video on the share", "..., a PR"). Their "PR"
+// PR moment ("This set would be a new PR", "This set would be a new PR.", "Share this PR
+// with its video", "Use your PR video on the share", "..., a new PR"). Their "PR"
 // is the set's own record, never a claim about the video, so these keys, and
 // only these, are exempt from the PR ban. Every other check scans them.
 const PR_MOMENT_KEYS = Object.freeze([
@@ -260,18 +260,18 @@ describe('the plain-words pins', () => {
   test('the exercise menu row', () => {
     expect(CLIP_STRINGS.rowLabel).toBe('Record a video of this set');
     expect(CLIP_STRINGS.rowA11y).toBe('Record a video of this set');
-    expect(CLIP_STRINGS.rowDescNone).toBe('Up to 15 seconds, no sound. Stays on this phone.');
+    expect(CLIP_STRINGS.rowDescNone).toBe('Up to 15 seconds, with no sound.');
   });
 
   test('the primer says it all, once', () => {
     expect(CLIP_STRINGS.primerTitle).toBe('Videos stay on this phone');
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button and get into position. Recording starts after the countdown and stops by itself. Up to 15 seconds, no sound. Kept with this workout, never uploaded, deleted when you delete the workout.');
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded.');
   });
 
   test('the summary row, in its two forms', () => {
     expect(summaryClipRowCopy([])).toMatchObject({
       label: 'Record a video',
-      sub: "Up to 15 seconds, no sound. You can also record a set during a workout from an exercise's menu.",
+      sub: "Up to 15 seconds, with no sound. You can also film a set during a workout, from an exercise's menu.",
     });
     expect(summaryClipRowCopy([ONE_VIDEO])).toMatchObject({
       label: 'Use your video on the share', sub: 'You recorded Bench press, set 3',

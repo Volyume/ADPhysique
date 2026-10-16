@@ -79,6 +79,7 @@ import useTheme from '../hooks/useTheme';
 import { useToast } from '../components/Toast';
 import ClipsSheet from '../components/clips/ClipsSheet';
 import RecordingProgress from '../components/clips/RecordingProgress';
+import CameraGuides from '../components/clips/CameraGuides';
 import { CAM } from '../components/clips/cameraInk';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
@@ -86,9 +87,10 @@ import { spacing, radius, circle, iconSize, withAlpha, alpha, fontScaleCaps } fr
 import { touchTarget } from '../styles/layout';
 import { saveClip, deleteClip, countClipsForWorkout } from '../lib/clips/store';
 import {
-  CLIP_STRINGS, LEAD_IN_KEY, LENGTH_KEY, DEFAULT_LEAD_IN_SECONDS, DEFAULT_LENGTH_SECONDS,
+  CLIP_STRINGS, LEAD_IN_KEY, LENGTH_KEY, GUIDES_KEY, DEFAULT_LEAD_IN_SECONDS, DEFAULT_LENGTH_SECONDS,
   MAX_CLIP_MS, MIN_CLIP_MS, isFull, nextLeadIn, nextLength, parseLeadIn,
-  parseLength, leadInLabel, leadInA11yLabel, lengthLabel, lengthA11yLabel, startA11yLabel,
+  parseLength, parseGuides, leadInLabel, leadInA11yLabel, lengthLabel, lengthA11yLabel, startA11yLabel,
+  guidesLabel, guidesA11yLabel,
 } from '../lib/clips/rules';
 
 // expo-camera is a native module (config plugin). Lazy-require at module load
@@ -160,6 +162,9 @@ export default function ClipCameraScreen({ navigation, route }) {
   const [facing, setFacing] = useState('back');
   const [leadIn, setLeadIn] = useState(DEFAULT_LEAD_IN_SECONDS);
   const [lengthSec, setLengthSec] = useState(DEFAULT_LENGTH_SECONDS);
+  // Setting up first (addendum 10): the guide lines over the live view,
+  // on until turned off, remembered on the phone.
+  const [guides, setGuides] = useState(true);
   // ready | starting | countdown | recording | saving
   const [phase, setPhaseState] = useState('ready');
   const [countdownN, setCountdownN] = useState(0);
@@ -243,6 +248,10 @@ export default function ClipCameraScreen({ navigation, route }) {
       lengthRef.current = n;
       setLengthSec(n);
     }).catch((e) => { logError('ClipCamera.lengthRead', e); });
+    AsyncStorage.getItem(GUIDES_KEY).then((raw) => {
+      if (!aliveRef.current || raw == null) return;
+      setGuides(parseGuides(raw));
+    }).catch((e) => { logError('ClipCamera.guidesRead', e); });
   }, []);
 
   // The phone's back button while a finished recording is being saved: the
@@ -523,6 +532,17 @@ export default function ClipCameraScreen({ navigation, route }) {
     });
   }, []);
 
+  const handleGuides = useCallback(() => {
+    if (phaseRef.current !== 'ready') return;
+    setGuides((on) => {
+      const next = !on;
+      AsyncStorage.setItem(GUIDES_KEY, String(next)).catch((e) => {
+        logError('ClipCamera.guidesWrite', e);
+      });
+      return next;
+    });
+  }, []);
+
   const handleLength = useCallback(() => {
     if (phaseRef.current !== 'ready') return;
     const next = nextLength(lengthRef.current);
@@ -559,6 +579,10 @@ export default function ClipCameraScreen({ navigation, route }) {
         />
       ) : null}
 
+      {/* Setting up first: the thirds grid and the level, over the live view
+          until the recording starts (they are not in the video). */}
+      <CameraGuides visible={guides && ready && !isRecording && phase !== 'saving'} reduceMotion={!!reduceMotion} />
+
       {isRecording ? (
         <RecordingProgress
           startedAtMs={recording.startedAtMs}
@@ -579,7 +603,18 @@ export default function ClipCameraScreen({ navigation, route }) {
         >
           <Ionicons name="close" size={iconSize.lg} color={CAM.textPrimary} style={styles.shadow} />
         </Pressable>
-        <View style={styles.topSpacer} />
+        <View style={styles.topSpacer}>
+          <ValueControl
+            caption={CLIP_STRINGS.guidesCaption}
+            value={guidesLabel(guides)}
+            onPress={handleGuides}
+            disabled={!idle}
+            accessibilityLabel={guidesA11yLabel(guides)}
+            testID="clip-camera-guides-control"
+            captionStyle={live.caption}
+            valueStyle={live.value}
+          />
+        </View>
         <Pressable
           onPress={handleFlip}
           disabled={isRecording || phase === 'saving'}
@@ -592,6 +627,20 @@ export default function ClipCameraScreen({ navigation, route }) {
           <Ionicons name="camera-reverse-outline" size={iconSize.lg} color={CAM.textPrimary} style={styles.shadow} />
         </Pressable>
       </View>
+
+      {/* The setup line, while the camera waits: what to line up and where
+          to stand. It goes once the countdown starts. */}
+      {idle && ready ? (
+        <View style={[styles.setupRow, { top: topOffset + GLYPH + spacing.sm }]} pointerEvents="none">
+          <Text
+            style={[styles.hint, live.hint]}
+            maxFontSizeMultiplier={fontScaleCaps.chrome}
+            testID="clip-camera-setup"
+          >
+            {CLIP_STRINGS.setupHint}
+          </Text>
+        </View>
+      ) : null}
 
       {counting && countdownN > 0 ? (
         <View style={styles.countdownWrap} pointerEvents="none">
@@ -688,7 +737,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  topSpacer: { flex: 1 },
+  topSpacer: { flex: 1, alignItems: 'center' },
+  setupRow: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   glyph: { width: GLYPH, height: GLYPH, alignItems: 'center', justifyContent: 'center' },
   dimmed: { opacity: alpha.strong },
   shadow: SHADOW,

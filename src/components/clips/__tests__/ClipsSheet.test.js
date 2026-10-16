@@ -75,8 +75,8 @@ describe('ClipsSheet', () => {
   test('it explains nothing beyond its rows: no privacy caption (the primer says it, once), only the notice when given one', async () => {
     const plain = JSON.stringify((await render()).toJSON());
     expect(plain).not.toMatch(/stay on this phone|never uploaded|unless you share/i);
-    const withNotice = JSON.stringify((await render({ notice: 'This workout already has 3 videos. Delete one to record another.' })).toJSON());
-    expect(withNotice).toContain('Delete one to record another.');
+    const withNotice = JSON.stringify((await render({ notice: 'This workout already has 3 videos, the most it can hold. Delete one if you want to record another.' })).toJSON());
+    expect(withNotice).toContain('Delete one if you want to record another.');
   });
 
   test('each row has a Delete button; it asks once, then deletes through the store, refreshes and tells the caller', async () => {
@@ -93,12 +93,12 @@ describe('ClipsSheet', () => {
     expect(mockDelete).not.toHaveBeenCalled();
     expect(mockAlerts).toHaveLength(1);
     expect(mockAlerts[0].title).toBe('Delete this video?');
-    expect(mockAlerts[0].message).toBe('It will be removed from this phone.');
+    expect(mockAlerts[0].message).toBe('It will be removed from your phone.');
     expect(mockAlerts[0].buttons.map((b) => [b.text, b.style])).toEqual([['Keep', 'cancel'], ['Delete', 'destructive']]);
     await act(async () => { mockAlerts[0].buttons[1].onPress(); });
     expect(mockDelete).toHaveBeenCalledWith('c3');
     expect(onChanged).toHaveBeenCalledTimes(1);
-    expect(mockShow).toHaveBeenCalledWith('Video deleted');
+    expect(mockShow).toHaveBeenCalledWith('That video has been deleted');
     const json = JSON.stringify(tree.toJSON());
     expect(json).not.toContain('Back squat, set 2');
   });
@@ -122,7 +122,7 @@ describe('ClipsSheet', () => {
       && n.props.accessibilityLabel.startsWith('Delete video') && typeof n.props.onPress === 'function')[0];
     await act(async () => { button.props.onPress(); });
     await act(async () => { mockAlerts[0].buttons[1].onPress(); });
-    expect(mockShow).toHaveBeenCalledWith("Couldn't delete that video. Try again.", { variant: 'error' });
+    expect(mockShow).toHaveBeenCalledWith("That video couldn't be deleted. You can try again.", { variant: 'error' });
     expect(onChanged).not.toHaveBeenCalled();
   });
 
@@ -153,7 +153,7 @@ describe('ClipsSheet', () => {
   test('an empty workout reads as empty rather than blank', async () => {
     mockList.mockResolvedValue([]);
     const json = JSON.stringify((await render()).toJSON());
-    expect(json).toContain('No videos saved for this workout.');
+    expect(json).toContain('There are no videos saved for this workout yet.');
   });
 
   test('it loads nothing until it is opened', async () => {

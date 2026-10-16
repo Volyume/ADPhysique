@@ -11,7 +11,7 @@
  *     "After the workout" when it was made on the summary;
  *   - the summary row's two forms, and when it is shown at all;
  *   - D229 addendum 9, the PR moment: the More row's second line leads with
- *     "This set would be a PR." only on an explicit wouldBePR (and never at
+ *     "This set would be a new PR." only on an explicit wouldBePR (and never at
  *     three videos, when no video can be recorded); the summary row's third
  *     form, "Use your PR video on the share", names the newest video of a PR
  *     set and hands THAT video to the share screen, and only with the PRs the
@@ -58,10 +58,10 @@ describe('the rulings, as numbers', () => {
 
 describe('the exercise menu row, by how many videos the workout holds', () => {
   test.each([
-    [0, 'Up to 15 seconds, no sound. Stays on this phone.'],
-    [1, '1 saved. Up to 3 for each workout.'],
-    [2, '2 saved. Up to 3 for each workout.'],
-    [3, '3 saved, the most for one workout.'],
+    [0, 'Up to 15 seconds, with no sound.'],
+    [1, 'You have 1 saved. A workout can hold up to 3.'],
+    [2, 'You have 2 saved. A workout can hold up to 3.'],
+    [3, 'You have 3 saved, the most one workout can hold.'],
   ])('%i videos', (count, line) => {
     expect(clipRowDescription(count)).toBe(line);
   });
@@ -74,10 +74,10 @@ describe('the exercise menu row, by how many videos the workout holds', () => {
   });
 
   test.each([
-    [0, 'This set would be a PR. Up to 15 seconds, no sound.'],
-    [1, 'This set would be a PR. 1 saved. Up to 3 for each workout.'],
-    [2, 'This set would be a PR. 2 saved. Up to 3 for each workout.'],
-    [3, '3 saved, the most for one workout.'],
+    [0, 'This set would be a new PR. Up to 15 seconds, with no sound.'],
+    [1, 'This set would be a new PR. You have 1 saved. A workout can hold up to 3.'],
+    [2, 'This set would be a new PR. You have 2 saved. A workout can hold up to 3.'],
+    [3, 'You have 3 saved, the most one workout can hold.'],
   ])('when the next set would be a PR, %i videos', (count, line) => {
     expect(clipRowDescription(count, { wouldBePR: true })).toBe(line);
   });
@@ -146,7 +146,7 @@ describe('the two small controls', () => {
   test('each carries a plain word above its value, and the line under the button says both ways', () => {
     expect(CLIP_STRINGS.countdownCaption).toBe('Countdown');
     expect(CLIP_STRINGS.lengthCaption).toBe('Length');
-    expect(CLIP_STRINGS.recordHint).toBe('Tap to start with a countdown. Hold to record while you hold.');
+    expect(CLIP_STRINGS.recordHint).toBe('Tap the button to start after a countdown, or press and hold it to record for as long as you hold.');
   });
 });
 
@@ -198,7 +198,7 @@ describe('the summary row changes with the workout', () => {
     const copy = summaryClipRowCopy([]);
     expect(copy).toEqual({
       label: 'Record a video',
-      sub: "Up to 15 seconds, no sound. You can also record a set during a workout from an exercise's menu.",
+      sub: "Up to 15 seconds, with no sound. You can also film a set during a workout, from an exercise's menu.",
       newest: null,
     });
     expect(summaryClipRowCopy(undefined).label).toBe('Record a video');
@@ -240,7 +240,7 @@ describe('the summary row names a PR set\'s video (addendum 9)', () => {
     const summary = { id: 'after', exerciseName: null, source: 'summary', createdAt: 90 };
     expect(summaryClipRowCopy([prVideo, newer, summary], [squat, bench])).toEqual({
       label: 'Use your PR video on the share',
-      sub: 'You recorded Bench press, set 3, a PR',
+      sub: 'You recorded Bench press, set 3, a new PR',
       newest: prVideo,
     });
   });
@@ -251,7 +251,7 @@ describe('the summary row names a PR set\'s video (addendum 9)', () => {
     for (const list of [[a, b], [b, a]]) {
       const copy = summaryClipRowCopy(list, [bench, squat]);
       expect(copy.newest.id).toBe('b');
-      expect(copy.sub).toBe('You recorded Squat, set 1, a PR');
+      expect(copy.sub).toBe('You recorded Squat, set 1, a new PR');
     }
   });
 
@@ -267,10 +267,10 @@ describe('the summary row names a PR set\'s video (addendum 9)', () => {
 
   test('a PR video without a name of its own takes the PR\'s, and with neither says so plainly', () => {
     const unnamed = { id: 'u', exerciseId: 'e1', exerciseName: null, setNumber: 3, createdAt: 5 };
-    expect(summaryClipRowCopy([unnamed], [bench]).sub).toBe('You recorded Bench press, set 3, a PR');
+    expect(summaryClipRowCopy([unnamed], [bench]).sub).toBe('You recorded Bench press, set 3, a new PR');
     const bare = { id: 'x', exerciseId: 'e1', setNumber: 2, createdAt: 5 };
     expect(summaryClipRowCopy([bare], [{ exerciseId: 'e1', setNumber: 2 }])).toEqual({
-      label: 'Use your PR video on the share', sub: 'You recorded a video of a PR set', newest: bare,
+      label: 'Use your PR video on the share', sub: 'You recorded a video of a new PR', newest: bare,
     });
     // A record with no set number (a history reopen) never claims a video.
     expect(summaryClipRowCopy([bare], [{ exerciseId: 'e1', setNumber: null }]).label).toBe('Use your video on the share');
@@ -364,14 +364,14 @@ describe('a video and the PR set it was recorded for (addendum 9)', () => {
 describe('the ruled words', () => {
   test('the primer, exactly: the only explanation anywhere', () => {
     expect(CLIP_STRINGS.primerTitle).toBe('Videos stay on this phone');
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button and get into position. Recording starts after the countdown and stops by itself. Up to 15 seconds, no sound. Kept with this workout, never uploaded, deleted when you delete the workout.');
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded.');
     expect(CLIP_STRINGS.primerOpen).toBe('Open camera');
     expect(CLIP_STRINGS.primerNotNow).toBe('Not now');
   });
 
   test('the camera words', () => {
-    expect(CLIP_STRINGS.permissionDenied).toBe('Camera access is needed to record a video');
-    expect(CLIP_STRINGS.saved).toBe('Video saved to this workout');
+    expect(CLIP_STRINGS.permissionDenied).toBe('Volyume needs camera access to record a video.');
+    expect(CLIP_STRINGS.saved).toBe('Your video is saved with this workout');
     expect(CLIP_STRINGS.undo).toBe('Undo');
     expect(CLIP_STRINGS.closeA11y).toBe('Cancel recording');
     expect(CLIP_STRINGS.stopA11y).toBe('Stop recording');
@@ -384,8 +384,8 @@ describe('the ruled words', () => {
   });
 
   test('the PR moment, as the founder ruled it (addendum 9)', () => {
-    expect(CLIP_STRINGS.prOfferText).toBe('A PR if you hit it');
-    expect(CLIP_STRINGS.prOfferAction).toBe('Record it');
+    expect(CLIP_STRINGS.prOfferText).toBe('This set would be a new PR');
+    expect(CLIP_STRINGS.prOfferAction).toBe('Film it');
     expect(CLIP_STRINGS.prShareAction).toBe('Share');
     expect(CLIP_STRINGS.prShareA11y).toBe('Share this PR with its video');
     expect(CLIP_STRINGS.summaryLabelPR).toBe('Use your PR video on the share');
