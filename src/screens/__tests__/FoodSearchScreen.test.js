@@ -70,7 +70,13 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 // Sheets: captured on every render so the test can invoke onSave directly,
 // the same call the real sheet makes on its own "Save" / "Add to diary" tap.
 let mockSheetProps = null;
-jest.mock('../../components/food/FoodDetailSheet', () => (props) => { mockSheetProps = props; return null; });
+jest.mock('../../components/food/FoodDetailSheet', () => (props) => {
+  // Lane 3C (D230 R13): the screen mounts a second FoodDetailSheet for the
+  // typed line's review, closed here (no food). This suite is about the
+  // picker's sheet, so only an OPEN sheet is captured, as before.
+  if (props.visible) mockSheetProps = props;
+  return null;
+});
 let mockQuickAddProps = null;
 jest.mock('../../components/food/QuickAddSheet', () => (props) => { mockQuickAddProps = props; return null; });
 

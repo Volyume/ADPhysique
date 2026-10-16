@@ -36,7 +36,13 @@ jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() 
 jest.mock('../../components/Skeleton', () => ({ SkeletonRow: () => null }));
 jest.mock('../../components/food/CuratedMealSheet', () => () => null);
 let capturedDetailProps = null;
-jest.mock('../../components/food/FoodDetailSheet', () => (props) => { capturedDetailProps = props; return null; });
+jest.mock('../../components/food/FoodDetailSheet', () => (props) => {
+  // Lane 3C (D230 R13): the screen mounts a second FoodDetailSheet for the
+  // typed line's review, closed here (no food). This suite is about the
+  // picker's sheet, so only an OPEN sheet is captured, as before.
+  if (props.visible) capturedDetailProps = props;
+  return null;
+});
 jest.mock('../../components/food/QuickAddSheet', () => () => null);
 jest.mock('../../lib/observability', () => ({ audit: jest.fn() }));
 jest.mock('../../components/food/FoodRow', () => () => null);

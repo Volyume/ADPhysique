@@ -111,11 +111,15 @@ const gramsWord = (n) => (n === 1 ? 'gram' : 'grams');
  *                    entering selection state (DiaryScreen's enterSelection);
  *                    this sheet only asks for it.
  *   onClose          () => void
+ *   saveTitle        optional: the save button's words when the sheet is
+ *                    changing an amount for a caller that writes later (the
+ *                    typed line's review, D230 R13: "Use this amount"), so
+ *                    it never says "Add to Breakfast" when nothing is added.
  */
 export default function FoodDetailSheet({
   visible, food, mode = 'add',
   initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState, initialEatenAt = null,
-  onSave, onDelete, onSelectEntries, onClose,
+  onSave, onDelete, onSelectEntries, onClose, saveTitle = null,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -604,7 +608,7 @@ export default function FoodDetailSheet({
             {/* D230 R5: the button names the meal it adds to, and follows
                 the meal chips above. */}
             <Button
-              title={mode === 'edit' ? 'Save changes' : `Add to ${mealSlotLabel(mealSlot)}`}
+              title={saveTitle ?? (mode === 'edit' ? 'Save changes' : `Add to ${mealSlotLabel(mealSlot)}`)}
               onPress={handleSave}
               state={saved ? 'success' : submitting ? 'loading' : 'idle'}
               onSettled={handleClose}

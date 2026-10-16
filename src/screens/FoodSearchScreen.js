@@ -68,6 +68,7 @@ import { useToast } from '../components/Toast';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
+import FoodLineReviewSheet from '../components/food/FoodLineReviewSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import CuratedMealSheet from '../components/food/CuratedMealSheet';
 import BottomSheet from '../components/BottomSheet';
@@ -77,6 +78,7 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
+import { parseFoodLine, isFoodLine, portionFor, matchFoodLineParts } from '../lib/food/foodLine';
 
 const EMPTY_COPY = {
   recents: 'Your recent foods will appear here after you log them.',
@@ -506,15 +508,24 @@ export default function FoodSearchScreen({ navigation, route }) {
   // they were, which is why the old "2 of 3 foods were added" sentence is gone:
   // that half-state can no longer happen.
   async function logPlate() {
-    if (!plate.length) return;
+    await writeItems(plate, () => { setPlate([]); setShowPlate(false); });
+  }
+
+  // The one write behind the plate AND the typed-line review (D230 R13): the
+  // same single logFoodEntries call, the same slot-recent memory, the same
+  // toast with its Undo, the same failure copy. `items` carry
+  // { food, quantityG, kcal, proteinG, carbsG, fatG, fibreG }; `onWritten`
+  // clears whatever the rows came from, after a successful write only.
+  async function writeItems(items, onWritten) {
+    if (!items.length) return;
     // CALC-3: in-flight guard so a double-tap can't log the whole plate twice
     // (each write mints fresh ids, so duplicates can't be deduped).
     if (loggingPlateRef.current) return;
     loggingPlateRef.current = true;
-    const total = plate.length;
+    const total = items.length;
     const mealName = mealSlotLabel(mealSlot);
     try {
-      const writtenIds = await logFoodEntries(userId, plate.map((it) => ({
+      const writtenIds = await logFoodEntries(userId, items.map((it) => ({
         entryDate,
         mealSlot,
         foodRef: it.food.food_ref,
@@ -525,7 +536,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         fatG: it.fatG,
         fibreG: it.fibreG,
       })));
-      for (const it of plate) {
+      for (const it of items) {
         // eslint-disable-next-line no-await-in-loop
         await upsertSlotRecent(userId, {
           mealSlot,
@@ -534,15 +545,14 @@ export default function FoodSearchScreen({ navigation, route }) {
         }).catch((e) => logError('FoodSearchScreen.logPlate.slotRecent', e, { mealSlot })); // derived memory only; never fail the log
       }
       const message = total === 1
-        ? `${plate[0].food?.name ?? 'Food'} added to ${mealName}.`
+        ? `${items[0].food?.name ?? 'Food'} added to ${mealName}.`
         : `${total} foods added to ${mealName}.`;
       // The toast provider is app-level, so it survives the goBack below.
       toast.show(message, {
         variant: 'undo',
         action: { label: 'Undo', onPress: () => undoPlate(writtenIds) },
       });
-      setPlate([]);
-      setShowPlate(false);
+      onWritten?.();
       navigation.goBack();
     } catch (e) {
       // FF-007: a failed plate write must be reported, never silent. Nothing
@@ -568,6 +578,91 @@ export default function FoodSearchScreen({ navigation, route }) {
     } catch (e) {
       logError('FoodSearchScreen.undoPlate', e, { count: ids.length });
       toast.show('Some of those foods were not removed. You can remove them from the diary.', { variant: 'error', duration: 5000 });
+    }
+  }
+
+  // ---- D230 R13: several foods in one typed line -------------------------
+  // The search box's text, split into parts (foodLine.js, pure). With two or
+  // more parts the screen offers to turn them into separate foods; the review
+  // sheet lists each part's best match and portion, and nothing is written
+  // until its one button.
+  const lineParts = useMemo(() => (isFoodLine(query) ? parseFoodLine(query) : []), [query]);
+  const [lineReview, setLineReview] = useState(null); // null | [{ key, part, food, grams, basis }]
+  const [lineEdit, setLineEdit] = useState(null); // the review row open in the food's own sheet
+  const [lineMatching, setLineMatching] = useState(false);
+  const [lineAdding, setLineAdding] = useState(false);
+
+  // The existing search, then the person's own history first (the same two
+  // steps the search results use), for one part's name. The first food it
+  // returns is the match.
+  async function searchForLinePart(name) {
+    const rows = await searchFoods(userId, name, { limit: 25 });
+    return rankByPersonalHistory(
+      mergePersonalMatches(rows, { personal: personalPool, query: name }),
+      { favouriteRefs, recentRefs, frequentRefs },
+    );
+  }
+
+  async function openLineReview() {
+    if (lineMatching || lineParts.length < 2) return;
+    setLineMatching(true);
+    try {
+      const matches = await matchFoodLineParts(lineParts, searchForLinePart);
+      setLineReview(matches.map(({ part, food }, i) => {
+        const portion = food ? portionFor(part, food) : null;
+        return {
+          key: `line-${i}-${part.name}`,
+          part,
+          food,
+          grams: portion ? portion.grams : 0,
+          basis: portion ? portion.basis : 'default',
+        };
+      }));
+    } catch (e) {
+      logError('FoodSearchScreen.openLineReview', e, { parts: lineParts.length });
+      toast.show('Those foods could not be checked. Try again in a moment.', { variant: 'error', duration: 5000 });
+    } finally {
+      setLineMatching(false);
+    }
+  }
+
+  function onLineRowPress(item) {
+    if (item.food) { setLineEdit(item); return; }
+    // No match: close the review and put the part's name in the box.
+    setLineReview(null);
+    setQuery(item.part.name);
+  }
+
+  function removeLineRow(key) {
+    setLineReview((rows) => {
+      const next = (rows || []).filter((r) => r.key !== key);
+      return next.length ? next : null;
+    });
+  }
+
+  // The food's own sheet changed this row's amount: the row takes it. The
+  // sheet's meal and day choices do not apply here, the whole line goes to
+  // the meal this screen is logging to.
+  async function onLineEditSave({ quantityG }) {
+    const editing = lineEdit;
+    if (!editing) return;
+    setLineReview((rows) => (rows || []).map((r) => (
+      r.key === editing.key ? { ...r, grams: quantityG, basis: 'typed_g' } : r
+    )));
+  }
+
+  async function addLineReview() {
+    const rows = (lineReview || []).filter((r) => r.food);
+    if (!rows.length || lineAdding) return;
+    setLineAdding(true);
+    try {
+      await writeItems(rows.map((r) => ({
+        food: r.food,
+        quantityG: r.grams,
+        ...scaleMacros(r.food, r.grams),
+      })), () => { setLineReview(null); setQuery(''); });
+    } finally {
+      setLineAdding(false);
     }
   }
 
@@ -1064,6 +1159,21 @@ export default function FoodSearchScreen({ navigation, route }) {
         style={styles.searchBar}
       />
 
+      {/* D230 R13: a line of several foods ("2 eggs, toast and a tea") is
+          offered as separate foods; the review sheet below lists them and
+          nothing is written until its one button. Not in recipe pick mode,
+          which returns a single ingredient. */}
+      {!isRecipePick && lineParts.length >= 2 ? (
+        <Button
+          title={`Add these ${lineParts.length} as separate foods`}
+          onPress={openLineReview}
+          variant="secondary"
+          loading={lineMatching}
+          style={styles.lineOfferBtn}
+          accessibilityLabel={`Add these ${lineParts.length} as separate foods`}
+        />
+      ) : null}
+
       {/* D230 R3: the standing provenance line that sat here ("Saved foods
           work offline...") is gone; the offline fact is said where it
           matters, in the offline empty state of a search. */}
@@ -1180,6 +1290,32 @@ export default function FoodSearchScreen({ navigation, route }) {
         onClose={() => setPicker(null)}
       />
 
+      {/* D230 R13: the typed line's review. It steps aside while one food's
+          own sheet is open to change an amount, then returns with the row
+          updated; the line's rows are kept the whole time. */}
+      <FoodLineReviewSheet
+        visible={!!lineReview && !lineEdit}
+        mealName={mealSlotLabel(mealSlot)}
+        items={lineReview || []}
+        energyUnit={energyUnit}
+        adding={lineAdding}
+        onRowPress={onLineRowPress}
+        onRemove={removeLineRow}
+        onAdd={addLineReview}
+        onClose={() => setLineReview(null)}
+      />
+      <FoodDetailSheet
+        visible={!!lineEdit}
+        mode="add"
+        food={lineEdit?.food}
+        initialQuantityG={lineEdit?.grams}
+        initialMealSlot={mealSlot}
+        initialEntryDate={entryDate}
+        saveTitle="Use this amount"
+        onSave={onLineEditSave}
+        onClose={() => setLineEdit(null)}
+      />
+
       <QuickAddSheet
         visible={showQuickAdd}
         initialMealSlot={mealSlot}
@@ -1249,6 +1385,13 @@ const styles = StyleSheet.create({
 
   searchBar: {
     margin: spacing.md,
+  },
+
+  // D230 R13: the typed line's offer, a full 48 dp row under the box.
+  lineOfferBtn: {
+    minHeight: touchTarget.minimum,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
   },
 
   sectionLabel: {
