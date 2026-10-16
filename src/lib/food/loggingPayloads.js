@@ -1,6 +1,6 @@
 import { scaleMacros } from './macros';
 
-export function buildFoodEntryPayload({ entryDate, mealSlot, foodRef, quantityG, food, weightState }) {
+export function buildFoodEntryPayload({ entryDate, mealSlot, foodRef, quantityG, food, weightState, note }) {
   return {
     entryDate,
     mealSlot,
@@ -11,6 +11,9 @@ export function buildFoodEntryPayload({ entryDate, mealSlot, foodRef, quantityG,
     // (e.g. quick relog, no sheet shown); logFoodEntry defaults it to
     // 'as_weighed', today's behaviour.
     weightState,
+    // D230 R20: only present when the caller has a note, so a payload without
+    // one is exactly what it was before the column existed.
+    ...(note !== undefined && note !== null && note !== '' ? { note } : null),
   };
 }
 

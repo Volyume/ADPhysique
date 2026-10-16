@@ -1173,7 +1173,7 @@ export default function DiaryScreen({ navigation, route }) {
     navigation.navigate(routeName, { mealSlot, entryDate: selectedDate });
   }
 
-  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot }) {
+  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot, note }) {
         // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
     // as "Quick add" with no gram weight.
     // eslint-disable-next-line global-require
@@ -1188,6 +1188,7 @@ export default function DiaryScreen({ navigation, route }) {
       carbsG: carbs,
       fatG: fat,
       fibreG: null,
+      note, // D230 R20: the name a quick add never had
     });
     await load();
   }
@@ -1373,7 +1374,7 @@ export default function DiaryScreen({ navigation, route }) {
     });
   }
 
-  async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState, eatenAt }) {
+  async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState, eatenAt, note }) {
         const { entry, food } = editSheet;
     const scaled = scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
     const written = await updateFoodEntry(entry.id, userId, {
@@ -1391,6 +1392,8 @@ export default function DiaryScreen({ navigation, route }) {
       // undefined leaves the stored value untouched (updateFoodEntry
       // preserves omitted fields); an explicit value or null writes through.
       ...(eatenAt !== undefined ? { eatenAt } : null),
+      // D230 R20: the note ('' clears it; undefined leaves it).
+      ...(note !== undefined ? { note } : null),
     });
     // D230 R17: update the row and the ring in place (a row moved to another
     // day leaves this one), then reconcile once in the background.
@@ -1407,6 +1410,7 @@ export default function DiaryScreen({ navigation, route }) {
         fibre_g: scaled.fibreG ?? null,
         weight_state: weightState ?? entry.weight_state,
         ...(eatenAt !== undefined ? { eaten_at: eatenAt } : null),
+        ...(note !== undefined ? { note: note === '' ? null : note } : null),
       }, selectedDate));
     }
     reconcileInBackground();
@@ -2101,6 +2105,7 @@ export default function DiaryScreen({ navigation, route }) {
         initialEntryDate={editSheet?.entry?.entry_date ?? selectedDate}
         initialWeightState={editSheet?.entry?.weight_state}
         initialEatenAt={editSheet?.entry?.eaten_at ?? null}
+        initialNote={editSheet?.entry?.note ?? null}
         onSave={saveEditSheet}
         onDelete={deleteFromEditSheet}
         // Phase 10 finding #2 (discoverability audit 2026-08-10): the only

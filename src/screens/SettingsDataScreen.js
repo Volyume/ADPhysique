@@ -22,6 +22,7 @@ import { withAlpha, alpha, colors, radius, spacing, type } from '../styles/theme
 import useTheme from '../hooks/useTheme';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import Chip from '../components/Chip';
+import ImportHistorySheet from '../components/food/ImportHistorySheet';
 import {
   getClipsStorage, getKeepDays, setKeepDays, sweepExpiredClips, deleteAllClipsForUser, countExpiredClips,
 } from '../lib/clips/store';
@@ -72,6 +73,10 @@ export default function SettingsDataScreen({ navigation }) {
   const [videos, setVideos] = useState(null); // { count, bytes } | null
   const [keepDays, setKeepDaysState] = useState(null);
   const [deletingVideos, setDeletingVideos] = useState(false);
+  // D230 R21: the food-history import. `importPlan` is the read-and-planned
+  // file, shown in a summary sheet before anything is written.
+  const [importing, setImporting] = useState(false);
+  const [importPlan, setImportPlan] = useState(null);
 
   const refreshVideos = useCallback(async () => {
     if (!user?.id) return;
@@ -411,6 +416,27 @@ export default function SettingsDataScreen({ navigation }) {
     );
   }
 
+  // D230 R21: pick a MyFitnessPal or Cronometer file, read and plan it, then
+  // show the summary sheet. Nothing is written here.
+  async function handleImportFood() {
+    if (importing || !user?.id) return;
+    setImporting(true);
+    try {
+      // Lazy: the picker and the food database load only when this is used.
+      const flow = require('../lib/food/importHistoryFlow');
+      const picked = await flow.pickHistoryFile();
+      if (picked.cancelled) return;
+      const result = await flow.planFromText(user.id, picked.text);
+      if (result.error) { appAlert('Import food history', result.error); return; }
+      setImportPlan(result.plan);
+    } catch (e) {
+      logError('SettingsData.importFood', e);
+      toast.show('That file could not be read. Try a different file.', { variant: 'error' });
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <SettingsPage title="Your data">
       <View style={[styles.section, live.section]}>
@@ -460,6 +486,13 @@ export default function SettingsDataScreen({ navigation }) {
           label="Import from another app"
           sub="Bring sessions over from Hevy or Strong"
           onPress={() => navigation.navigate('Import')}
+        />
+        <SettingRow
+          icon="nutrition-outline"
+          label={importing ? 'Reading the file...' : 'Import food history'}
+          sub="From a MyFitnessPal or Cronometer export file."
+          onPress={importing ? null : handleImportFood}
+          showArrow={!importing}
         />
         <SettingRow
           icon="save-outline"

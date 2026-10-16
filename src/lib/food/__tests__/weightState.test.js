@@ -193,8 +193,10 @@ describe('updateFoodEntry: weight_state default and per-entry scoping', () => {
       kcal: 234, proteinG: 5, carbsG: 50, fatG: 1, weightState: 'raw',
     });
     const p = updateParams();
-    expect(p[12]).toBe('fe1'); // id
-    expect(p[13]).toBe('u1'); // user_id
+    // D230 R20: the UPDATE gained `note = ?` after eaten_at, so id and user_id
+    // moved from positions 12 and 13 to 13 and 14 (the same scoping truth).
+    expect(p[13]).toBe('fe1'); // id
+    expect(p[14]).toBe('u1'); // user_id
   });
 });
 

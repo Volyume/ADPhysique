@@ -1,3 +1,7 @@
+// 2026-10-16 (D230 R20, custom_foods.portions_json): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
+// 2026-10-16 (D230 R20, food_entries.note): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
 // 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
 // after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
 // window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
@@ -76,6 +80,8 @@ function freshDb() {
   // Exercise library expansion 2026-09-05 (EL-9/EL-7) now runs alongside
   // v72 in this window and ALTERs workout_sets (evidence_class); empty
   // here, so it is a no-op against this fixture.
+  raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
+  raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
   raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT);');
   // D219 lane S1 (2026-10-04): programmes.plan_facts was appended after the
   // window above, so the window widens by one (runLast 19 -> 20, rerun 17 ->
@@ -111,7 +117,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
   // the memo plus its audit remediation, so this window widens by four to
   // keep testing the SAME v72 migration rather than a later pair. CC26
   // appended the capability tables, widening it by one more.
-  return runLast(raw, 23).then(() => {
+  return runLast(raw, 25).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -126,9 +132,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 23); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
+  await runLast(raw, 25); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 21}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 23}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });
