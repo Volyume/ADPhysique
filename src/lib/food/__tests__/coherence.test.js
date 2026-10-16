@@ -169,12 +169,12 @@ describe('the words agree across the surfaces', () => {
   test('the meal plan asks in the same language the search row answers in', () => {
     expect(MEAL_PLAN).toContain("'Stop suggesting this?'");
     expect(MEAL_PLAN).toContain('"Don\'t suggest it"');
-    expect(SEARCH).toContain('We will not suggest this.');
+    expect(SEARCH).toContain('This will not be suggested again.');
   });
 
   test('and every one of them says the history is kept', () => {
     expect(MEAL_PLAN).toMatch(/You can still search for it and log it whenever you like/);
-    expect(SEARCH).toMatch(/It stays in your search and diary/);
+    expect(SEARCH).toMatch(/It stays in your search and your diary/);
     expect(EDITOR).toMatch(/You can still search for them and log them whenever you like/);
     expect(FAQ).toMatch(/The food stays in your search and your diary/);
   });

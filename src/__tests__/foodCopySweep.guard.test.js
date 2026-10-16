@@ -54,6 +54,7 @@ const FILES = [
   'src/components/food/RecipeDetailSheet.js',
   // D230 review sweep (#6): the files the first sweep did not cover.
   'src/screens/DiaryScreen.js',
+  'src/screens/FoodSearchScreen.js',
   'src/screens/FoodInsightsScreen.js',
   'src/components/food/WeeklyMicronutrientsCard.js',
   'src/components/food/FoodRow.js',

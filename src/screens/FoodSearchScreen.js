@@ -243,7 +243,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       // Preselected only - never auto-submitted; the sheet still confirms.
       getSlotRecentQuantities(userId, mealSlot)
         .then((m) => setSlotPortions(m))
-        .catch((e) => logError('FoodSearchScreen.loadSlotPortions', e, { mealSlot }));
+        .catch((e) => { logError('FoodSearchScreen.loadSlotPortions', e, { mealSlot }); });
 
       setFavouriteRefs(new Set(favRows.map((f) => f.food_ref)));
       // D138 latency ruling: one batched resolve instead of one round-trip
@@ -542,7 +542,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           mealSlot,
           foodRef: it.food.food_ref,
           quantityG: it.quantityG,
-        }).catch((e) => logError('FoodSearchScreen.logPlate.slotRecent', e, { mealSlot })); // derived memory only; never fail the log
+        }).catch((e) => { logError('FoodSearchScreen.logPlate.slotRecent', e, { mealSlot }); }); // derived memory only; never fail the log
       }
       const message = total === 1
         ? `${items[0].food?.name ?? 'Food'} added to ${mealName}.`
@@ -759,7 +759,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       mealSlot: chosenSlot,
       foodRef: food.food_ref,
       quantityG,
-    })).catch((e) => logError('FoodSearchScreen.confirmLog.slotRecent', e, { mealSlot: chosenSlot })); // derived memory only; never fail the log
+    })).catch((e) => { logError('FoodSearchScreen.confirmLog.slotRecent', e, { mealSlot: chosenSlot }); }); // derived memory only; never fail the log
     // A2 (first-week trust): the FIRST food log (and every log after) gets the
     // same success + Undo toast as a re-log or a diary "usual", previously
     // this path (the sheet's "Add to diary") showed nothing at all. Exact
@@ -820,7 +820,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         mealSlot,
         foodRef: s.foodRef,
         quantityG: s.quantityG,
-      })).catch((err) => logError('FoodSearchScreen.logSuggestedFood.slotRecent', err, { mealSlot })); // derived memory only; never fail the log
+      })).catch((err) => { logError('FoodSearchScreen.logSuggestedFood.slotRecent', err, { mealSlot }); }); // derived memory only; never fail the log
       navigation.goBack();
     } catch (e) {
       logError('FoodSearchScreen.logSuggestedFood', e, { foodRef: s.foodRef });
@@ -849,7 +849,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       // Campaign 17B job 8: the same words the meal plan uses for the same
       // instruction, and the reassurance that the food itself is still here.
       const msg = next === 'fav' ? 'Added to favourites'
-        : next === 'dislike' ? 'We will not suggest this. It stays in your search and diary.'
+        : next === 'dislike' ? 'This will not be suggested again. It stays in your search and your diary.'
         : 'Preference cleared';
       toast.show(msg);
       loadBrowse();
