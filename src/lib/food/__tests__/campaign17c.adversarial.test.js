@@ -446,7 +446,7 @@ describe('WORK 5: calorie-bank arithmetic over the real display target', () => {
     expect(apply.indexOf('resyncBankedPlannedFood')).toBeLessThan(apply.indexOf('setCalorieBank(bank)'));
     expect(apply).toMatch(/catch[\s\S]*Your higher-calorie day was not planned\. Nothing has changed\. Try again in a moment\.[\s\S]*return/);
     expect(clear.indexOf('restoreUnbankedPlannedFood')).toBeLessThan(clear.indexOf('setCalorieBank(null)'));
-    expect(clear).toMatch(/catch[\s\S]*Couldn't undo your higher-calorie day[\s\S]*return/);
+    expect(clear).toMatch(/catch[\s\S]*Your higher-calorie day was not undone\. It is still planned\. Try again in a moment\.[\s\S]*return/);
   });
 });
 
