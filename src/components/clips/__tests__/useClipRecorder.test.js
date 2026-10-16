@@ -86,6 +86,9 @@ describe('the first time: the privacy primer, then the camera', () => {
     expect(navigation.navigate).toHaveBeenCalledTimes(1);
     expect(navigation.navigate).toHaveBeenCalledWith('ClipCamera', {
       workoutId: 'w1', exerciseId: 'e1', exerciseName: 'Back squat', setNumber: 3, source: 'workout',
+      // Addendum 12: the pattern and equipment ride along for the camera's
+      // setup line; absent here, so null.
+      exercisePattern: null, exerciseEquipment: null,
     });
     expect(JSON.stringify(tree.toJSON())).not.toContain('Videos stay on this phone');
   });
@@ -108,6 +111,7 @@ describe('after the primer has been seen: straight to the camera, once per devic
     await act(async () => { await api.openRecorder({ source: 'summary' }); });
     expect(navigation.navigate).toHaveBeenCalledWith('ClipCamera', {
       workoutId: 'w1', exerciseId: null, exerciseName: null, setNumber: null, source: 'summary',
+      exercisePattern: null, exerciseEquipment: null,
     });
     expect(JSON.stringify(tree.toJSON())).not.toContain('Videos stay on this phone');
   });

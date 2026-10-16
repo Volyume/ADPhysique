@@ -30,6 +30,7 @@ import fs from 'fs';
 import path from 'path';
 import { create, act } from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CAMERA_TIPS } from '../../lib/clips/cameraTips';
 
 let mockPermission = { granted: true, canAskAgain: true };
 const mockRequestPermission = jest.fn(async () => mockPermission);
@@ -357,7 +358,9 @@ describe('setting the camera up first (addendum 10)', () => {
   test('the guide lines and the setup line show while the camera waits; the line goes at the countdown, the lines when recording starts', async () => {
     const tree = await mount();
     expect(guides(tree)).toBeDefined();
-    expect(setup(tree).props.children).toBe('Line up the rack or machine first, then step back until your whole body fits in the frame.');
+    // Addendum 12: the line is the exercise's own camera tip (the mount's
+    // exercise is "Back squat").
+    expect(setup(tree).props.children).toBe(CAMERA_TIPS.squat);
     await press(tree, 'clip-camera-record');
     await flush();
     expect(setup(tree)).toBeUndefined();
@@ -365,6 +368,19 @@ describe('setting the camera up first (addendum 10)', () => {
     await advance(3000);
     await flush();
     expect(guides(tree)).toBeUndefined(); // recording: the live view is clean
+  });
+
+  test('the setup line is the exercise\'s own camera tip, from its name, pattern and equipment; the general line without an exercise (addendum 12)', async () => {
+    let tree = await mount({ exerciseName: 'Deadlift', exercisePattern: 'hinge', exerciseEquipment: 'barbell' });
+    expect(setup(tree).props.children).toBe(CAMERA_TIPS.hinge);
+    // The pattern and equipment settle a name that says nothing.
+    tree = await mount({ exerciseName: 'Pendlay', exercisePattern: 'pull', exerciseEquipment: 'barbell' });
+    expect(setup(tree).props.children).toBe(CAMERA_TIPS.row);
+    tree = await mount({ exerciseName: 'Mystery', exercisePattern: null, exerciseEquipment: 'machine' });
+    expect(setup(tree).props.children).toBe(CAMERA_TIPS.machine);
+    // From the summary or the share, no exercise: the general line.
+    tree = await mount({ exerciseId: null, exerciseName: null, setNumber: null, source: 'summary' });
+    expect(setup(tree).props.children).toBe(CAMERA_TIPS.general);
   });
 
   test('"Guides" reads On and turns Off on tap, remembered on the phone; Off hides the lines', async () => {

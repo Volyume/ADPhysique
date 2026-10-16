@@ -7,17 +7,23 @@
  * Drawn over the live view while the camera is idle and during the
  * countdown, never while recording (the lines are not in the video; hiding
  * them keeps the live view clean once it no longer matters):
- *   - a thirds grid, the plain framing aid every camera app uses, so the
- *     rack or machine and the person can be placed on it;
- *   - a horizon level through the middle, the SAME level the progress-photo
- *     capture has used on device since 2026-07 (ProgressGhostCapture.js):
- *     expo-sensors' accelerometer, roll from atan2(x, y), a sample that is
- *     not a number dropped (sensorSampleGuard), amber once within 1.5 deg of
- *     level, and flattened under Reduce Motion so nothing rotates on screen.
- *     expo-sensors is already installed; if it ever is not, the level is
- *     simply absent and the grid stays.
- * Decorative to a screen reader: the setup line on the camera says the same
- * thing in words.
+ *   - the share card's word bands (addendum 12, founder: "in line with what
+ *     the share shows optimally"): a light shade over the top 30% and the
+ *     bottom half of the picture, where the card's words sit over the video
+ *     (drawShareCard's `bands`: headBottom 0.3, bodyTop 0.5), so the clear
+ *     band between them is seen for what it is, the part of the picture the
+ *     share shows best. The live view then looks the way the share will;
+ *   - the two vertical thirds, the plain framing aid every camera app uses,
+ *     so the rack or machine and the person can be placed on them;
+ *   - a horizon level through the clear band, the SAME level the
+ *     progress-photo capture has used on device since 2026-07
+ *     (ProgressGhostCapture.js): expo-sensors' accelerometer, roll from
+ *     atan2(x, y), a sample that is not a number dropped (sensorSampleGuard),
+ *     amber once within 1.5 deg of level, and flattened under Reduce Motion
+ *     so nothing rotates on screen. expo-sensors is already installed; if it
+ *     ever is not, the level is simply absent and the rest stays.
+ * Decorative to a screen reader: the setup line on the camera says where to
+ * put the phone in words, and the primer says once what the clear band is.
  */
 import { useEffect, useState } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
@@ -26,6 +32,13 @@ import { CAM } from './cameraInk';
 
 const LEVEL_WITHIN_DEG = 1.5;
 const SAMPLE_EVERY_MS = 120;
+// Where the share card's words sit over the video, as fractions of the
+// picture's height (drawShareCard.js `bands` defaults: the heading band ends
+// at 0.3, the body band starts at 0.5). The level sits in the middle of the
+// clear band between them.
+export const WORD_BAND_TOP = 0.3;
+export const WORD_BAND_BOTTOM = 0.5;
+const LEVEL_AT = (WORD_BAND_TOP + WORD_BAND_BOTTOM) / 2;
 
 export default function CameraGuides({ visible, reduceMotion }) {
   const [tilt, setTilt] = useState(null); // degrees; null means no level sensor
@@ -64,10 +77,10 @@ export default function CameraGuides({ visible, reduceMotion }) {
       importantForAccessibility="no-hide-descendants"
       testID="clip-camera-guides"
     >
+      <View style={[styles.band, styles.bandTop]} testID="clip-camera-band-top" />
+      <View style={[styles.band, styles.bandBottom]} testID="clip-camera-band-bottom" />
       <View style={[styles.vertical, styles.oneThird]} />
       <View style={[styles.vertical, styles.twoThirds]} />
-      <View style={[styles.horizontal, styles.oneThirdDown]} />
-      <View style={[styles.horizontal, styles.twoThirdsDown]} />
       {tilt != null ? (
         <View
           style={[styles.level, aligned && styles.levelAligned, { transform: levelTransform }]}
@@ -79,19 +92,23 @@ export default function CameraGuides({ visible, reduceMotion }) {
 }
 
 const LINE = withAlpha(CAM.textPrimary, alpha.mid);
+// The word bands: the viewfinder's black at the lightest alpha the theme
+// names, so the live view reads through and the clear band reads lighter,
+// the way the card's scrim sits over the video on the share.
+const BAND = withAlpha(CAM.camera, alpha.soft);
 
 const styles = StyleSheet.create({
   vertical: { position: 'absolute', top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: LINE },
-  horizontal: { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: LINE },
   oneThird: { left: '33.33%' },
   twoThirds: { left: '66.67%' },
-  oneThirdDown: { top: '33.33%' },
-  twoThirdsDown: { top: '66.67%' },
-  // The level: a line through the middle, three fifths of the width, white
-  // until the phone is level, then the amber of the drain line.
+  band: { position: 'absolute', left: 0, right: 0, backgroundColor: BAND },
+  bandTop: { top: 0, height: `${WORD_BAND_TOP * 100}%` },
+  bandBottom: { top: `${WORD_BAND_BOTTOM * 100}%`, bottom: 0 },
+  // The level: a line through the clear band, three fifths of the width,
+  // white until the phone is level, then the amber of the drain line.
   level: {
     position: 'absolute',
-    top: '50%',
+    top: `${LEVEL_AT * 100}%`,
     left: '20%',
     right: '20%',
     height: 2,

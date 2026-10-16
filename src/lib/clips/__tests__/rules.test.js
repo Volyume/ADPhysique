@@ -316,7 +316,8 @@ describe('a video and the PR set it was recorded for (addendum 9)', () => {
 describe('the ruled words', () => {
   test('the primer, exactly: the only explanation anywhere', () => {
     expect(CLIP_STRINGS.primerTitle).toBe('Videos stay on this phone');
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded.');
+    // Addendum 12: the light line and the clear band are said once, here.
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
     expect(CLIP_STRINGS.primerOpen).toBe('Open camera');
     expect(CLIP_STRINGS.primerNotNow).toBe('Not now');
   });

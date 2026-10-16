@@ -92,6 +92,7 @@ import {
   parseLength, parseGuides, leadInLabel, leadInA11yLabel, lengthLabel, lengthA11yLabel, startA11yLabel,
   guidesLabel, guidesA11yLabel,
 } from '../lib/clips/rules';
+import { cameraTipFor } from '../lib/clips/cameraTips';
 
 // expo-camera is a native module (config plugin). Lazy-require at module load
 // like ProgressGhostCapture, so a stale or rebuild-pending binary takes the
@@ -150,7 +151,17 @@ function ValueControl({
 export default function ClipCameraScreen({ navigation, route }) {
   const {
     workoutId, exerciseId = null, exerciseName = null, setNumber = null, source = 'workout',
+    // Addendum 12: the exercise's movement pattern and equipment, when the
+    // opener knows them, so the setup line can be the exercise's own camera
+    // tip (the name alone picks most of them; these settle the rest).
+    exercisePattern = null, exerciseEquipment = null,
   } = route?.params || {};
+  // The camera's setup line for THIS exercise: pure, from the name, pattern
+  // and equipment (cameraTips.js). Without an exercise it is the general line.
+  const setupLine = useMemo(
+    () => cameraTipFor({ name: exerciseName, movementPattern: exercisePattern, equipment: exerciseEquipment }),
+    [exerciseName, exercisePattern, exerciseEquipment],
+  );
   const userId = useAppStore((s) => s.user?.id);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const t = useTheme();
@@ -637,7 +648,7 @@ export default function ClipCameraScreen({ navigation, route }) {
             maxFontSizeMultiplier={fontScaleCaps.chrome}
             testID="clip-camera-setup"
           >
-            {CLIP_STRINGS.setupHint}
+            {setupLine}
           </Text>
         </View>
       ) : null}

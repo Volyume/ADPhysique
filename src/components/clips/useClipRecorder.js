@@ -82,6 +82,10 @@ export default function useClipRecorder({ navigation, userId, workoutId }) {
 
   const openRecorder = useCallback(async ({
     source = 'workout', exerciseId = null, exerciseName = null, setNumber = null,
+    // Addendum 12: the exercise's movement pattern and equipment, for the
+    // camera's setup line (cameraTips.js). Optional; the name alone picks
+    // most lines.
+    exercisePattern = null, exerciseEquipment = null,
   } = {}) => {
     if (!userId || !workoutId) return;
     // Read the count fresh: the number on screen may be a moment stale.
@@ -92,7 +96,7 @@ export default function useClipRecorder({ navigation, userId, workoutId }) {
       return;
     }
 
-    const params = { workoutId, exerciseId, exerciseName, setNumber, source };
+    const params = { workoutId, exerciseId, exerciseName, setNumber, source, exercisePattern, exerciseEquipment };
     let seen = false;
     try {
       seen = (await AsyncStorage.getItem(PRIMER_SEEN_KEY)) === 'true';

@@ -5314,6 +5314,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       exerciseId: exercise?.id ?? null,
       exerciseName: exercise?.name ?? null,
       setNumber: workingLogged + 1,
+      // Addendum 12: the camera's setup line is the exercise's own tip.
+      exercisePattern: exercise?.movementPattern ?? exercise?.movement_pattern ?? null,
+      exerciseEquipment: exercise?.equipment ?? null,
     });
   }
   function bandFor(index) {

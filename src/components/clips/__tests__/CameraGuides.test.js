@@ -24,7 +24,7 @@ jest.mock('expo-sensors', () => ({
   },
 }), { virtual: false });
 
-import CameraGuides from '../CameraGuides';
+import CameraGuides, { WORD_BAND_TOP, WORD_BAND_BOTTOM } from '../CameraGuides';
 
 const sample = (x, y) => act(() => { listeners.forEach((fn) => fn({ x, y })); });
 const byId = (tree, id) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === id);
@@ -32,7 +32,7 @@ const flat = (style) => Object.assign({}, ...[].concat(style).flat(Infinity).fil
 
 beforeEach(() => { listeners.length = 0; mockRemove.mockClear(); });
 
-test('nothing unless visible; the grid is four hairlines, decorative to a screen reader', () => {
+test('nothing unless visible; two word bands and two vertical hairlines, decorative to a screen reader', () => {
   let tree;
   act(() => { tree = create(<CameraGuides visible={false} reduceMotion={false} />); });
   expect(tree.toJSON()).toBeNull();
@@ -41,9 +41,27 @@ test('nothing unless visible; the grid is four hairlines, decorative to a screen
   const root = byId(tree, 'clip-camera-guides')[0];
   expect(root.props.pointerEvents).toBe('none');
   expect(root.props.accessibilityElementsHidden).toBe(true);
-  // Four lines (host views) under the root, and no level yet.
+  // Two bands and two lines (host views) under the root, and no level yet.
   expect(tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'View' && n !== root)).toHaveLength(4);
   expect(listeners).toHaveLength(1);
+});
+
+test('the word bands sit where the share card\'s words do: the top 30% and from 50% down (addendum 12)', () => {
+  let tree;
+  act(() => { tree = create(<CameraGuides visible reduceMotion={false} />); });
+  const top = flat(byId(tree, 'clip-camera-band-top')[0].props.style);
+  const bottom = flat(byId(tree, 'clip-camera-band-bottom')[0].props.style);
+  expect(top.top).toBe(0);
+  expect(top.height).toBe('30%');
+  expect(bottom.top).toBe('50%');
+  expect(bottom.bottom).toBe(0);
+  // The same translucent shade on both, so the clear band reads lighter.
+  expect(top.backgroundColor).toBe(bottom.backgroundColor);
+  expect(WORD_BAND_TOP).toBe(0.3);
+  expect(WORD_BAND_BOTTOM).toBe(0.5);
+  // The level runs through the middle of the clear band, not the picture.
+  sample(0, 1);
+  expect(flat(byId(tree, 'clip-camera-level-aligned')[0].props.style).top).toBe('40%');
 });
 
 test('the level: hidden until a sample, rotated by the roll, amber within 1.5 degrees', () => {

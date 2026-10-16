@@ -33,6 +33,8 @@
  */
 
 /** The most clips one workout can hold. */
+import { CAMERA_TIPS } from './cameraTips';
+
 export const MAX_CLIPS_PER_WORKOUT = 3;
 
 /** A clip is 15 seconds at the longest, in whole milliseconds. */
@@ -93,15 +95,19 @@ export const CLIP_STRINGS = Object.freeze({
   summarySubPRUnnamed: 'You recorded a video of a new PR',
 
   // The privacy primer, once per device before the first camera open. It is
-  // the only explanation a person is ever given.
+  // the only explanation a person is ever given (addendum 12 added the two
+  // sentences about light and the clear band: said once, here, never on the
+  // camera itself).
   primerTitle: 'Videos stay on this phone',
-  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded.',
+  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.',
   primerOpen: 'Open camera',
   primerNotNow: 'Not now',
 
   // The camera. Setting up first (addendum 10): the line at the top while the
-  // camera is idle, with the guide lines over the live view.
-  setupHint: 'Line up the rack or machine first, then step back until your whole body fits in the frame.',
+  // camera is idle, with the guide lines over the live view. Addendum 12:
+  // the line is the exercise's own camera tip (cameraTips.js) when the
+  // camera knows the exercise; this is the general line it falls back to.
+  setupHint: CAMERA_TIPS.general,
   recordHint: 'Tap the button to start after a countdown, or press and hold it to record for as long as you hold.',
   // The hint while recording: after a tap, the square stops it early; during
   // a hold, letting go stops it.

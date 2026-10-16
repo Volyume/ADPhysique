@@ -257,7 +257,8 @@ describe('the plain-words pins', () => {
 
   test('the primer says it all, once', () => {
     expect(CLIP_STRINGS.primerTitle).toBe('Videos stay on this phone');
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded.');
+    // Addendum 12: the light line and the clear band, said once, here.
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
   });
 
   test('the summary row, in its two forms', () => {
