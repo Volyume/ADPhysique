@@ -62,6 +62,7 @@ import {
   parsePortions, MAX_EXTRA_PORTIONS, PORTION_LABEL_MAX, PORTION_GRAMS_MIN, PORTION_GRAMS_MAX,
 } from '../lib/food/portions';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { MICRONUTRIENTS } from '../lib/food/micronutrients';
 import CollapsibleSection from '../components/CollapsibleSection';
 
@@ -225,10 +226,10 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   const food = useMemo(() => ({
     name: name.trim(),
     brand: brand.trim() || null,
-    servingG: Number(servingG) || 0,
+    servingG: parseDecimalInput(servingG) || 0,
     servingLabel: servingLabel.trim() || null,
     portions: extraPortions.filter((p) => portionRowState(p) === 'ok')
-      .map((p) => ({ label: p.label.trim(), grams: Number(p.grams) })),
+      .map((p) => ({ label: p.label.trim(), grams: parseDecimalInput(p.grams) })),
     kcal100g: Number(kcal) || 0,
     protein100g: Number(protein) || 0,
     carbs100g: Number(carbs) || 0,
@@ -245,9 +246,14 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   // coerced to a silent 0-calorie diary entry downstream. "Save anyway" is only
   // for finite-but-unusual values (handled by checkFoodSanity in onSave).
   const fin = (s) => Number.isFinite(Number(s));
+  // Wave 4 review, item 10: the serving weight is read as the amount sheet
+  // reads it ("12,5" from a comma-decimal keyboard is 12.5), and a weight the
+  // save refuses says why under the field rather than only greying the button.
+  const servingGrams = parseDecimalInput(servingG);
+  const servingError = servingState(servingG);
   const canSave = name.trim().length > 0
     && fin(kcal) && Number(kcal) >= 0
-    && fin(servingG) && Number(servingG) > 0 && Number(servingG) <= PORTION_GRAMS_MAX
+    && servingError === undefined
     && extraPortions.every((p) => portionRowState(p) !== 'bad')
     && fin(protein) && Number(protein) >= 0
     && fin(carbs) && Number(carbs) >= 0
@@ -268,8 +274,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     // into the existing preview as a multiple ("2 x slice") alongside the
     // grams, rather than adding a second preview line.
     const label = servingLabel.trim();
-    const sG = Number(servingG);
-    const unitPrefix = (label && fin(servingG) && sG > 0)
+    const sG = servingGrams;
+    const unitPrefix = (label && Number.isFinite(sG) && sG > 0)
       ? ` (${round1(qty / sG)} x ${label})`
       : '';
     return {
@@ -279,7 +285,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       fat: round1((Number(fat) || 0) * factor),
       unitPrefix,
     };
-  }, [quantityG, kcal, protein, carbs, fat, servingG, servingLabel]);
+  }, [quantityG, kcal, protein, carbs, fat, servingGrams, servingLabel]);
 
   // D138: editing an existing custom food only ever updates the food row --
   // it never logs a new diary entry, so this skips the eaten-amount gate and
@@ -556,7 +562,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           onChange={setServingLabel}
           placeholder="e.g. slice, cup, tin"
         />
-        <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" />
+        <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" error={servingError} />
         {extraPortions.map((p, index) => (
           <PortionRow
             key={index}
@@ -646,6 +652,17 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   );
 }
 
+// Wave 4 review, item 10: the reason the first portion's weight blocks the
+// save, or undefined when it is fine (more than 0 and at most 5000 g).
+function servingState(text) {
+  const grams = parseDecimalInput(text);
+  if (Number.isFinite(grams) && grams > PORTION_GRAMS_MAX) {
+    return `Enter a serving of ${PORTION_GRAMS_MAX} g or less.`;
+  }
+  if (!Number.isFinite(grams) || grams <= 0) return 'Enter the serving\'s weight in grams.';
+  return undefined;
+}
+
 // D230 R20: one extra portion row's state. 'blank' (both halves empty, ignored
 // on save), 'ok' (a name of 1 to 24 characters and whole or decimal grams from
 // 1 to 5000) or 'bad' (anything in between, which blocks the save).
@@ -653,7 +670,8 @@ function portionRowState(p) {
   const label = (p?.label ?? '').trim();
   const gramsText = String(p?.grams ?? '').trim();
   if (!label && !gramsText) return 'blank';
-  const grams = Number(gramsText);
+  // Wave 4 review, item 10: "12,5" is 12.5 g, as the amount sheet reads it.
+  const grams = parseDecimalInput(gramsText);
   if (label.length >= 1 && label.length <= PORTION_LABEL_MAX
     && gramsText !== '' && Number.isFinite(grams)
     && grams >= PORTION_GRAMS_MIN && grams <= PORTION_GRAMS_MAX) return 'ok';
@@ -665,7 +683,7 @@ function PortionRow({ number, portion, onChange, onRemove }) {
   const state = portionRowState(portion);
   const labelError = state === 'bad' && !portion.label.trim()
     ? 'Give this portion a name, such as 1 slice.' : undefined;
-  const gramsNumber = Number(portion.grams);
+  const gramsNumber = parseDecimalInput(portion.grams);
   const gramsError = state === 'bad' && portion.label.trim()
     && !(Number.isFinite(gramsNumber) && gramsNumber >= PORTION_GRAMS_MIN && gramsNumber <= PORTION_GRAMS_MAX && String(portion.grams).trim() !== '')
     ? `Enter a weight between ${PORTION_GRAMS_MIN} and ${PORTION_GRAMS_MAX} g.` : undefined;
@@ -698,7 +716,7 @@ function PortionRow({ number, portion, onChange, onRemove }) {
             containerStyle={styles.portionGramsField}
             inputStyle={styles.portionGramsInput}
             value={portion.grams}
-            onChangeText={(v) => onChange({ ...portion, grams: v.replace(/[^0-9.]/g, '') })}
+            onChangeText={(v) => onChange({ ...portion, grams: v.replace(/[^0-9.,]/g, '') })}
             keyboardType="decimal-pad"
             selectTextOnFocus
             placeholder="0"
@@ -741,7 +759,7 @@ function Field({ label, value, onChange, placeholder, autoFocus }) {
   );
 }
 
-function NumField({ label, value, onChange, suffix, unsure }) {
+function NumField({ label, value, onChange, suffix, unsure, error }) {
   // CP-10 batch D (2026-07-10): same rationale as Field above, own useTheme()
   // call rather than prop-drilling.
   const t = useTheme();
@@ -768,6 +786,7 @@ function NumField({ label, value, onChange, suffix, unsure }) {
       accessibilityLabel={suffix === 'g' ? `${label}, grams` : label}
       accessibilityHint={unsure ? 'Hard to read. Check this value.' : undefined}
       surface={t.colors.inputBg}
+      error={error}
       containerStyle={[styles.field, styles.numField]}
       fieldStyle={unsure && [styles.numWrapUnsure, live.numWrapUnsure]}
       trailing={<Text style={[styles.numSuffix, live.numSuffix]}>{suffix}</Text>}

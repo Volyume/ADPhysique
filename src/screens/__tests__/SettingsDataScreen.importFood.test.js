@@ -117,7 +117,9 @@ describe('the row', () => {
     expect(i).toBeGreaterThanOrEqual(0);
     expect(labels[i + 1]).toBe('Import food history');
     const r = row(tree, 'Import food history');
-    expect(r.props.sub).toBe('Bring your diary over from MyFitnessPal or Cronometer');
+    // Wave 4 review, item 10b: MyFitnessPal emails a zip, so the row says to
+    // unzip it and which file inside to choose; true for Cronometer too.
+    expect(r.props.sub).toBe('Bring your diary over from MyFitnessPal or Cronometer. MyFitnessPal emails a zip: unzip it, then choose the file starting Nutrition-Summary');
     expect(r.props.sub).not.toMatch(/\.$/);
     expect(r.props.icon).toBe('restaurant-outline');
     expect(typeof r.props.onPress).toBe('function');
@@ -171,6 +173,18 @@ describe('pressing it', () => {
     expect(mockToastShow).toHaveBeenCalledWith('That file is larger than 10 MB. Export a shorter date range and try again.', { variant: 'error' });
     expect(mockLogError).toHaveBeenCalledWith('ImportHistory.read', err, { stage: 'pick', code: 'too_large' });
     expect(sheet(tree)).toBeUndefined();
+  });
+
+  test('a picked zip gets the calm alert saying to unzip it, no sheet, no error toast and no error log (Wave 4 review, item 10b)', async () => {
+    const sentence = 'That is a zip file. Unzip it first, then choose the file starting Nutrition-Summary.';
+    mockPick.mockRejectedValueOnce(Object.assign(new Error('import read failed: zip'), { code: 'zip', sentence }));
+    const tree = await mount();
+    await pressImport(tree);
+    expect(mockAlerts).toEqual([{ title: 'Import food history', message: sentence, buttons: undefined }]);
+    expect(mockToastShow).not.toHaveBeenCalled();
+    expect(mockLogError.mock.calls.filter(([where]) => String(where).startsWith('ImportHistory'))).toEqual([]);
+    expect(sheet(tree)).toBeUndefined();
+    expect(row(tree, 'Import food history')).toBeDefined();
   });
 
   test('an unexpected failure while planning says the file could not be read', async () => {

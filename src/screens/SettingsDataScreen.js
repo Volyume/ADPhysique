@@ -434,6 +434,10 @@ export default function SettingsDataScreen({ navigation }) {
       if (result.error) { appAlert('Import food history', result.error); return; }
       setImportPlan(result.plan);
     } catch (e) {
+      // Wave 4 review, item 10b: a zip is the person's choice of file, not a
+      // fault, so it gets the same calm alert as a file that is neither
+      // export, and no error log.
+      if (e?.code === 'zip' && e?.sentence) { appAlert('Import food history', e.sentence); return; }
       logError('ImportHistory.read', e, { stage, code: e?.code ?? null });
       toast.show(e?.sentence || 'That file could not be read. Try exporting it again.', { variant: 'error' });
     } finally {
@@ -494,7 +498,10 @@ export default function SettingsDataScreen({ navigation }) {
         <SettingRow
           icon="restaurant-outline"
           label={importing ? 'Reading the file...' : 'Import food history'}
-          sub="Bring your diary over from MyFitnessPal or Cronometer"
+          // Wave 4 review, item 10b: MyFitnessPal emails a zip, which the
+          // picker cannot open, so the row says what to do first. Cronometer's
+          // servings export is a plain CSV.
+          sub="Bring your diary over from MyFitnessPal or Cronometer. MyFitnessPal emails a zip: unzip it, then choose the file starting Nutrition-Summary"
           onPress={importing ? null : handleImportFood}
           showArrow={!importing}
         />

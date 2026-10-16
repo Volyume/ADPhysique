@@ -43,6 +43,20 @@ export const IMPORT_FILE_TYPES = [
 export const NOT_A_FOOD_EXPORT = 'That file does not look like a MyFitnessPal or Cronometer export. Export the nutrition file from MyFitnessPal, or the servings from Cronometer, and try again.';
 export const FILE_TOO_LARGE = 'That file is larger than 10 MB. Export a shorter date range and try again.';
 export const FILE_NOT_READ = 'That file could not be read. Try exporting it again.';
+// Wave 4 review, item 10b: MyFitnessPal emails its export as a zip of three
+// CSVs, and a zip is not a file this can read. Said plainly, with the file
+// inside to choose.
+export const ZIP_PICKED = 'That is a zip file. Unzip it first, then choose the file starting Nutrition-Summary.';
+const ZIP_TYPES = ['application/zip', 'application/x-zip-compressed', 'application/x-zip', 'multipart/x-zip'];
+// The local file header every zip starts with: "PK", 3, 4.
+const ZIP_SIGNATURE = 'PK\u0003\u0004';
+
+/** True when a picked file is a zip, by its name, its type or its first bytes. */
+export function looksLikeZip({ name, mimeType, text } = {}) {
+  if (typeof name === 'string' && /\.zip$/i.test(name.trim())) return true;
+  if (typeof mimeType === 'string' && ZIP_TYPES.includes(mimeType.trim().toLowerCase())) return true;
+  return typeof text === 'string' && text.startsWith(ZIP_SIGNATURE);
+}
 
 /** A reading failure with a calm sentence the person can be shown. */
 export class ImportReadError extends Error {
@@ -61,6 +75,9 @@ export async function pickHistoryFile() {
   const asset = picked.assets?.[0];
   const uri = asset?.uri || picked.uri;
   if (!uri) throw new ImportReadError('no_uri', FILE_NOT_READ);
+  const name = asset?.name ?? picked.name;
+  const mimeType = asset?.mimeType ?? picked.mimeType;
+  if (looksLikeZip({ name, mimeType })) throw new ImportReadError('zip', ZIP_PICKED);
   const declared = Number(asset?.size ?? picked.size);
   if (Number.isFinite(declared) && declared > MAX_IMPORT_BYTES) throw new ImportReadError('too_large', FILE_TOO_LARGE);
   const info = await FileSystem.getInfoAsync(uri, { size: true });
@@ -68,6 +85,8 @@ export async function pickHistoryFile() {
     throw new ImportReadError('too_large', FILE_TOO_LARGE);
   }
   const text = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType?.UTF8 ?? 'utf8' });
+  // A zip a file provider labelled as text still starts with its signature.
+  if (looksLikeZip({ text })) throw new ImportReadError('zip', ZIP_PICKED);
   return { text };
 }
 

@@ -10,38 +10,134 @@
 --                   the push sends the parsed array). One additive, nullable
 --                   jsonb column on custom_foods, and food_sync_push taught
 --                   to store it.
+--                   Widened by the Wave 4 hostile review (2026-10-16), still
+--                   unapplied, three more changes, all in the custom_foods
+--                   branch of food_sync_push:
+--                   (1) custom_foods `updated` is read: it goes through the
+--                       same upsert as `created`. Since migrate_118 only
+--                       `created` was read, so an edit to a custom food, or a
+--                       food edited before its first push, never reached the
+--                       cloud.
+--                   (2) custom_foods `deleted` is read, as a soft delete
+--                       (deleted_at and updated_at from the record, else now),
+--                       the tombstone convention of this function's
+--                       food_favourites and daily_water branches (migrate_090).
+--                   (3) a tombstone is final: the upsert's DO UPDATE carries
+--                       `WHERE custom_foods.deleted_at IS NULL`, so a
+--                       `created` or `updated` record for a food deleted in
+--                       the cloud changes nothing (deleted_at is never
+--                       cleared, the figures and updated_at are not touched).
+--                   The food_entries branch is 194's exactly: `updated` stays
+--                   a plain UPDATE (lead ruling 2026-10-16). food_entries
+--                   deletes are hard deletes, so an upsert there would let a
+--                   stale device re-create a deleted entry and put deleted
+--                   calories back on someone's day; an entry edited before
+--                   its first push is fixed on the client instead.
+--                   A guard at the top stops the file, before it changes
+--                   anything, when migrate_194 has not been applied.
 -- Applied locally:  YES, via the schema step in src/lib/database.js that adds
 --                   custom_foods.portions_json (ALTER TABLE ADD COLUMN as TEXT,
 --                   no default, no backfill: every existing row reads NULL).
+--                   The three push changes have no local counterpart (they
+--                   are the cloud's reading of what the app already sends).
 -- Applied remotely: NO. HELD for the founder's exact phrase "run against
 --                   production" for 195. The app never applies it. Until it is
 --                   applied the push omits the column
 --                   (CUSTOM_FOOD_PORTIONS_PUSH in src/lib/sync/featureFlags.js
 --                   is false). Flip the flag to true only after this is
---                   applied and verified read-only.
--- Safe to re-run:   YES. ADD COLUMN IF NOT EXISTS; DROP FUNCTION IF EXISTS
---                   then CREATE OR REPLACE FUNCTION are idempotent.
+--                   applied and verified read-only. The three push changes
+--                   need no flag: they read records the app already sends.
+-- Safe to re-run:   YES. The guard only reads the catalogue; ADD COLUMN IF
+--                   NOT EXISTS; the DROP FUNCTION loop then CREATE OR REPLACE
+--                   FUNCTION leave the same single function each time. The
+--                   function's writes are themselves repeatable: a second
+--                   push of the same `created` or `updated` record lands the
+--                   same row (ON CONFLICT), and a second `deleted` record
+--                   rewrites the same tombstone.
 -- Rollback:         ALTER TABLE public.custom_foods
 --                     DROP COLUMN IF EXISTS portions_json;
 --                   then re-apply migrate_194's food_sync_push definition
---                   verbatim (the custom_foods branch loses portions_json
---                   again; the food_entries branch keeps 194's note).
---                   food_sync_pull is NOT re-issued: its custom_foods branch
---                   uses to_jsonb(t) (migrate_115), so it returns
---                   portions_json automatically once the column exists.
+--                   verbatim. That removes all of 195's push changes
+--                   together: custom_foods loses portions_json, `updated`
+--                   and `deleted` are ignored again (as under 118 and 194),
+--                   and a `created` record may again rewrite a tombstoned
+--                   row's figures; the food_entries branch is 194's either
+--                   way. Rows written under 195 stay: a custom food upserted
+--                   or tombstoned is ordinary data in columns that existed
+--                   before 195.
+--                   food_sync_pull is NOT re-issued: it was last defined in
+--                   migrate_090 (reproduced from migrate_016), and its
+--                   custom_foods and food_entries branches select
+--                   to_jsonb(t), so it returns portions_json automatically
+--                   once the column exists.
 -- Depends on:       migrate_194_food_entries_note.sql, which must be applied
---                   FIRST. THIS FILE RE-ISSUES food_sync_push: its body is
---                   migrate_194's body verbatim (which is migrate_118's with
---                   194's note handling in the food_entries branch), changed
---                   ONLY in the custom_foods branch (portions_json added to
---                   the insert column list, its value, and the ON CONFLICT
---                   update). Applied before 194, it would leave a function that
---                   names food_entries.note, a column the cloud would lack, so
---                   every food_entries push would fail. Whichever of 194 and
---                   195 applies last wins, so this later file is built on the
---                   earlier file's body, and 194 must not be re-applied after
---                   195 (that would drop portions_json from the function; if
---                   it is, re-apply 195).
+--                   FIRST (the guard below refuses to run without its
+--                   food_entries.note column).
+--                   THIS FILE RE-ISSUES food_sync_push: its body is
+--                   migrate_194's body verbatim
+--                   (which is migrate_118's with 194's note handling in the
+--                   food_entries branch), changed ONLY in the custom_foods
+--                   branch (portions_json in the insert column list, its
+--                   value and the ON CONFLICT update; `updated` read with
+--                   `created`; the tombstone condition on the DO UPDATE; the
+--                   `deleted` soft delete). Every other branch is byte for
+--                   byte 194's. Whichever of 194 and 195 applies last wins,
+--                   so this later file is built on the earlier file's body,
+--                   and 194 must not be re-applied after 195 (that would drop
+--                   all of 195's push changes from the function; if it is,
+--                   re-apply 195).
+--
+-- WHY EACH CHANGE IS SAFE FOR THE BUILDS ALREADY IN THE STORES (2.17.0 and
+-- earlier, which push no note and no portions_json key), at the SQL level:
+--   * Payload shape. Those builds already send `created`, `updated` and
+--     `deleted` for custom_foods (the client buckets every changed row by
+--     deleted_at, then created_at = updated_at), one food_sync_push call per
+--     table. Under 118 the function silently ignored custom_foods `updated`
+--     and `deleted`. 195 reads them; it adds no key the old builds must send
+--     and removes none they do send. Their food_entries pushes meet exactly
+--     194's function.
+--   * custom_foods `updated`. The old client maps `updated` rows with the
+--     SAME mapper as `created` rows (same keys: id, name, brand, barcode_ean,
+--     kcal/protein/carbs/fat/fibre_100g, serving_g, serving_label, created_at,
+--     updated_at, deleted_at), so every cast in the shared upsert is one a
+--     `created` record from the same build already passes today. No
+--     portions_json key: the insert writes NULL (jsonb_typeof of a missing
+--     key is NULL, so the CASE gives NULL) and the ON CONFLICT keeps the
+--     stored portions (`v_row ? 'portions_json'` is false). sodium_100g,
+--     sugar_100g: absent, so NULLIF gives NULL, which is exactly what the
+--     `created` upsert has always written for these builds.
+--   * The tombstone condition. It only ever skips an update, never raises:
+--     a record for a food deleted in the cloud is accepted and changes
+--     nothing, so no old-build push can fail on it. The one behaviour it
+--     changes for them: a `created` re-push for a food deleted in the cloud
+--     no longer rewrites that dead row's figures (it never cleared
+--     deleted_at, so the food never came back; now the row is not touched).
+--   * custom_foods `deleted`. Only id, deleted_at and updated_at are read;
+--     the old mapper sends id and ISO-8601 (or null) timestamps, which the
+--     ::timestamptz casts accept (null falls to now() through COALESCE).
+--     A food never pushed matches no row: zero rows updated, no error.
+--   * What does change for them, deliberately: every custom food edit or
+--     delete now reaches the cloud instead of being dropped without an
+--     error. A record that the shared casts would refuse fails the same way
+--     a `created` record from the same build already would.
+--   * Edits the old builds made before 195 is applied are not re-sent: the
+--     client's push watermark has already passed them. Only later edits and
+--     deletes reach the cloud.
+
+-- Guard: 195's function names food_entries.note in its food_entries branch.
+-- Without migrate_194 every food_entries push would fail, so stop here,
+-- before anything is changed, and say why.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'food_entries'
+      AND column_name = 'note'
+  ) THEN
+    RAISE EXCEPTION 'migrate_195: public.food_entries.note does not exist. Apply migrate_194_food_entries_note.sql first, then re-run 195.';
+  END IF;
+END $$;
 
 ALTER TABLE public.custom_foods
   ADD COLUMN IF NOT EXISTS portions_json jsonb;
@@ -80,7 +176,14 @@ BEGIN
   END IF;
 
   IF changes ? 'custom_foods' THEN
-    FOR v_row IN SELECT jsonb_array_elements(COALESCE(changes->'custom_foods'->'created', '[]'::jsonb))
+    -- 195: `created` AND `updated` go through this one upsert. Before 195 only
+    -- `created` was read, so an edited food (and a food edited before its
+    -- first push, which the client sends as `updated`) never reached the
+    -- cloud. The client maps both buckets with the same mapper, so an
+    -- `updated` record carries exactly the keys a `created` one does.
+    FOR v_row IN SELECT jsonb_array_elements(
+      COALESCE(changes->'custom_foods'->'created', '[]'::jsonb)
+      || COALESCE(changes->'custom_foods'->'updated', '[]'::jsonb))
     LOOP
       INSERT INTO custom_foods (
         id, user_id, name, brand, serving_g, serving_label,
@@ -119,7 +222,27 @@ BEGIN
             portions_json = CASE WHEN v_row ? 'portions_json'
                                  THEN EXCLUDED.portions_json
                                  ELSE custom_foods.portions_json END,
-            updated_at = v_now;
+            updated_at = v_now
+        -- 195: a food tombstoned in the cloud stays exactly as it is. A
+        -- `created` or `updated` record for it (a stale device, a re-push)
+        -- changes nothing: deleted_at is never cleared here, and the row's
+        -- figures and updated_at are not touched either.
+        WHERE custom_foods.deleted_at IS NULL;
+    END LOOP;
+
+    -- 195: `deleted` is a soft delete, the tombstone convention this
+    -- function's food_favourites and daily_water branches use (migrate_090):
+    -- deleted_at from the record, else now, and the change time likewise.
+    -- custom_foods has carried deleted_at since migrate_015, and
+    -- food_sync_pull (migrate_090) already returns a custom food whose
+    -- deleted_at is newer than the caller's cursor in its `deleted` slice.
+    -- A food not yet in the cloud matches nothing and is left alone.
+    FOR v_row IN SELECT jsonb_array_elements(COALESCE(changes->'custom_foods'->'deleted', '[]'::jsonb))
+    LOOP
+      UPDATE custom_foods
+        SET deleted_at = COALESCE((v_row->>'deleted_at')::timestamptz, v_now),
+            updated_at = COALESCE((v_row->>'updated_at')::timestamptz, v_now)
+      WHERE id = (v_row->>'id')::uuid AND user_id = v_uid;
     END LOOP;
   END IF;
 
@@ -335,3 +458,8 @@ GRANT EXECUTE ON FUNCTION public.food_sync_push(jsonb) TO authenticated;
 --   SELECT prosrc LIKE '%portions_json%' AND prosrc LIKE '%left(v_row->>''note'', 120)%'
 --   FROM pg_proc WHERE proname = 'food_sync_push' AND pronamespace = 'public'::regnamespace;
 --   -- expect true (the function carries both 194's note and 195's portions)
+--   SELECT prosrc LIKE '%changes->''custom_foods''->''updated''%'
+--      AND prosrc LIKE '%changes->''custom_foods''->''deleted''%'
+--      AND prosrc LIKE '%WHERE custom_foods.deleted_at IS NULL%'
+--   FROM pg_proc WHERE proname = 'food_sync_push' AND pronamespace = 'public'::regnamespace;
+--   -- expect true (custom_foods updated and deleted read; a tombstone is final)

@@ -18,19 +18,25 @@
 --                   the flag to true only after this is applied and verified.
 -- Safe to re-run:   YES. ADD COLUMN IF NOT EXISTS; DROP FUNCTION IF EXISTS
 --                   then CREATE OR REPLACE FUNCTION are idempotent.
--- Rollback:         ALTER TABLE public.food_entries DROP COLUMN IF EXISTS note;
+-- Rollback:         If migrate_195 is applied, roll it back first (its
+--                   header), since its function names this column.
+--                   ALTER TABLE public.food_entries DROP COLUMN IF EXISTS note;
 --                   then re-apply migrate_118's food_sync_push definition
 --                   verbatim (the food_entries branch loses note again).
---                   food_sync_pull is NOT re-issued: its food_entries branch
---                   uses to_jsonb(t) (migrate_115), so it returns note
---                   automatically once the column exists.
--- Depends on:       the migration that created food_entries (migrate_016) and
+--                   food_sync_pull is NOT re-issued: it was last defined in
+--                   migrate_090 (reproduced from migrate_016; 114 and 115 did
+--                   not re-issue it), and its food_entries branch selects
+--                   to_jsonb(t), so it returns note automatically once the
+--                   column exists.
+-- Depends on:       the migration that created food_entries (migrate_015) and
 --                   migrate_118, the latest that re-issued food_sync_push.
 --                   Only the food_entries branch of the function changes; every
 --                   other branch is byte-for-byte migrate_118's.
--- Note for the lead: lane 4B's migrate_195 may also re-issue food_sync_push
---                   (custom_foods). Whichever applies last wins, so the later
---                   file must be built on the earlier file's body.
+-- Note for the lead: migrate_195 re-issues food_sync_push on THIS file's
+--                   body, changed only in the custom_foods branch (its
+--                   food_entries branch is this file's). Apply 194, then 195;
+--                   never re-apply 194 after 195 (if it is, re-apply 195).
+--                   195 refuses to run until this file's column exists.
 
 ALTER TABLE public.food_entries
   ADD COLUMN IF NOT EXISTS note text;

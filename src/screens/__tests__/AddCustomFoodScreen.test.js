@@ -895,3 +895,66 @@ describe('AddCustomFoodScreen portions (D230 R20)', () => {
     }));
   });
 });
+
+// Wave 4 hostile review (2026-10-16), item 10. Each pin fails on the code
+// before it:
+//  (a) a portion weight typed with a decimal comma ("12,5", the decimal-pad on
+//      a comma-region phone) was stripped to "125" and saved as 125 g; it is
+//      now read as the amount sheet reads it (parseDecimalInput), 12.5 g. The
+//      first portion's weight is read the same way.
+//  (c) a serving over 5000 g greyed the save with no reason anywhere; the
+//      reason now sits under the field, and goes when the weight is fixed.
+describe('AddCustomFoodScreen portion weights (Wave 4 review, item 10)', () => {
+  async function mountNew() {
+    let tree;
+    await act(async () => {
+      tree = create(<AddCustomFoodScreen navigation={makeNav()} route={{ params: { mealSlot: 'snack', entryDate: '2026-10-16' } }} />);
+    });
+    await flush();
+    setInput(tree, 'Name', 'Toast');
+    setInput(tree, 'Eaten (g), grams', '36');
+    return tree;
+  }
+  const errorOf = (tree, label) => tree.root.findAll(
+    (n) => n.props && n.props.accessibilityLabel === label && typeof n.props.onChangeText === 'function',
+  )[0].props.error;
+
+  test('"12,5" in an extra portion is 12.5 g, never 125 g', async () => {
+    const tree = await mountNew();
+    act(() => { mockAddPortionButton.onPress(); });
+    setInput(tree, 'Portion 2 name', '1 tbsp');
+    setInput(tree, 'Portion 2 weight, grams', '12,5');
+    const field = tree.root.findAll((n) => n.props && n.props.accessibilityLabel === 'Portion 2 weight, grams')[0];
+    expect(field.props.value).toBe('12,5');
+    expect(errorOf(tree, 'Portion 2 weight, grams')).toBeUndefined();
+    expect(mockSaveButton.disabled).toBe(false);
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({
+      portions: [{ label: '1 tbsp', grams: 12.5 }],
+    }));
+  });
+
+  test('"36,5" as the serving weight saves 36.5 g', async () => {
+    const tree = await mountNew();
+    setInput(tree, 'Serving (g), grams', '36,5');
+    expect(mockSaveButton.disabled).toBe(false);
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({ servingG: 36.5 }));
+  });
+
+  test('a serving over 5000 g says why under the field, and the reason goes when it is fixed', async () => {
+    const tree = await mountNew();
+    expect(errorOf(tree, 'Serving (g), grams')).toBeUndefined();
+    setInput(tree, 'Serving (g), grams', '6000');
+    expect(mockSaveButton.disabled).toBe(true);
+    expect(errorOf(tree, 'Serving (g), grams')).toBe('Enter a serving of 5000 g or less.');
+    setInput(tree, 'Serving (g), grams', '');
+    expect(mockSaveButton.disabled).toBe(true);
+    expect(errorOf(tree, 'Serving (g), grams')).toBe('Enter the serving\'s weight in grams.');
+    setInput(tree, 'Serving (g), grams', '5000');
+    expect(mockSaveButton.disabled).toBe(false);
+    expect(errorOf(tree, 'Serving (g), grams')).toBeUndefined();
+  });
+});

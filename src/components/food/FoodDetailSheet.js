@@ -65,6 +65,15 @@ const NBSP = '\u00A0';
 const keepTogether = (part) => part.replace(/ /g, NBSP);
 const gramsWord = (n) => (n === 1 ? 'gram' : 'grams');
 
+// Wave 4 review, item 12: a portion is often named with its own count of one
+// ("1 slice", "1 mug"). The chip's spoken label reads "Per slice", never
+// "Per 1 slice". Only a leading "1 " goes; any other label is kept whole.
+export function portionNoun(label) {
+  const text = String(label ?? '').trim();
+  const noun = text.replace(/^1\s+(?=\S)/, '');
+  return noun || text;
+}
+
 /**
  * Bottom sheet for adding or editing a food entry. Replaces the
  * centred Modal pattern in FoodSearchScreen and the long-press-delete
@@ -121,11 +130,20 @@ const gramsWord = (n) => (n === 1 ? 'gram' : 'grams');
  *                    changing an amount for a caller that writes later (the
  *                    typed line's review, D230 R13: "Use this amount"), so
  *                    it never says "Add to Breakfast" when nothing is added.
+ *   fixedMacros      optional, edit mode: { kcal, protein, carbs, fat, fibre }
+ *                    for an entry with no food behind it (a quick add or an
+ *                    imported day, food_ref 'quick:*'). Such an entry has no
+ *                    grams to scale (its quantity_g is 0), so the Amount block
+ *                    and "More about this food" are not shown, the summary
+ *                    reads these figures, and onSave sends quantityG
+ *                    undefined: only the meal, the time and the note change.
+ *                    (Wave 4 review, item 3: scaling a quick add from 100 g of
+ *                    a 0 kcal stand-in food saved it as 0 kcal.)
  */
 export default function FoodDetailSheet({
   visible, food, mode = 'add',
   initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState, initialEatenAt = null, initialNote = null,
-  onSave, onDelete, onSelectEntries, onClose, saveTitle = null,
+  onSave, onDelete, onSelectEntries, onClose, saveTitle = null, fixedMacros = null,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -280,7 +298,11 @@ export default function FoodDetailSheet({
   // typed 1.25 reads as 1.25, and floating-point noise never shows).
   function formatAmount(v) {
     const n = Math.round(v * 100) / 100;
-    if (unitKey.startsWith('portion:')) return `${n} x ${unit.label}`;
+    // Wave 4 review, item 12: "2 × 1 slice", the times sign of the logger's
+    // own amount grammar ("72.5 kg × 8"), which a screen reader says as
+    // "times". A typed label is not pluralised: "1 tbsp" or "1 glass of milk"
+    // has no reliable plural.
+    if (unitKey.startsWith('portion:')) return `${n} × ${unit.label}`;
     if (isServing) return `${n} ${n === 1 ? 'serving' : 'servings'}`;
     return `${n} g`;
   }
@@ -290,8 +312,10 @@ export default function FoodDetailSheet({
   }
 
   async function handleSave() {
-    const qty = Math.round(quantityG);
-    if (!isValidEntryGrams(qty)) {
+    // A fixed entry (fixedMacros) has no amount here: nothing to check, and
+    // quantityG goes as undefined so the caller keeps the entry's own.
+    const qty = fixedMacros ? undefined : Math.round(quantityG);
+    if (!fixedMacros && !isValidEntryGrams(qty)) {
       toast.show('Enter an amount that works out between 1 and 5000 g.', { variant: 'warning' });
       return;
     }
@@ -338,7 +362,16 @@ export default function FoodDetailSheet({
     );
   }
 
-  const macros = macrosFor(food, quantityG);
+  const macros = fixedMacros
+    ? {
+      kcal: Math.round(Number(fixedMacros.kcal) || 0),
+      protein: Math.round((Number(fixedMacros.protein) || 0) * 10) / 10,
+      carbs: Math.round((Number(fixedMacros.carbs) || 0) * 10) / 10,
+      fat: Math.round((Number(fixedMacros.fat) || 0) * 10) / 10,
+      fibre: Number.isFinite(Number(fixedMacros.fibre)) && fixedMacros.fibre != null
+        ? Math.round(Number(fixedMacros.fibre) * 10) / 10 : null,
+    }
+    : macrosFor(food, quantityG);
   // D230 R8: the one line of what this amount is, replacing the four macro
   // pills. Fibre joins it when the food carries the datum (null = "no data",
   // never a fake 0) and the Display toggle is on. The spoken label says the
@@ -400,7 +433,13 @@ export default function FoodDetailSheet({
           </View>
 
           {/* (2) Amount. The common case, one named serving, needs zero
-              keystrokes: step it, type it, or just add it. */}
+              keystrokes: step it, type it, or just add it. An entry with no
+              food behind it (fixedMacros) has no amount to change. */}
+          {fixedMacros ? (
+            <Text style={[styles.gramHint, live.gramHint]} testID="food-sheet-fixed">
+              This entry keeps the figures it was added with.
+            </Text>
+          ) : (
           <View style={styles.block} testID="food-sheet-amount">
             <SectionLabel>Amount</SectionLabel>
             {units.length > 1 ? (
@@ -415,7 +454,7 @@ export default function FoodDetailSheet({
                     labelStyle={[styles.unitBtnText, live.unitBtnText]}
                     selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
                     accessibilityRole="radio"
-                    accessibilityLabel={u.key !== 'g' ? `Per ${u.label}` : 'Grams'}
+                    accessibilityLabel={u.key !== 'g' ? `Per ${portionNoun(u.label)}` : 'Grams'}
                     numberOfLines={2}
                   />
                 ))}
@@ -455,6 +494,7 @@ export default function FoodDetailSheet({
               <Text style={[styles.gramHint, live.gramHint]}>= {Math.round(quantityG)} g</Text>
             ) : null}
           </View>
+          )}
 
           {/* (3) What this amount is, on one wrapping line. */}
           <View
@@ -469,6 +509,7 @@ export default function FoodDetailSheet({
           {/* D230 R8: the rest, on demand, closed on every open. It sits before
               the meal and the actions (the lead's ruling on lane 2B's note 4):
               content first, the action last, as every house sheet reads. */}
+          {fixedMacros ? null : (
           <View testID="food-sheet-more">
             <CollapsibleSection
               title="More about this food"
@@ -530,6 +571,7 @@ export default function FoodDetailSheet({
               <MicronutrientDetail food={food} quantityG={quantityG} />
             </CollapsibleSection>
           </View>
+          )}
 
           {/* (4) Where it goes: the day when it is not today, the meal, and
               in edit mode the time it was eaten. Not shown when the sheet

@@ -67,6 +67,7 @@ export function EntryRow({
   // spoken label says the same thing in words, never the letters.
   const spokenMacros = `${p} grams protein, ${c} carbs, ${f} fat`;
   const energy = `${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}`;
+  const spokenNote = noteLine ? ` Note: ${noteLine}${/[.!?]$/.test(noteLine) ? '' : '.'}` : '';
   // Item 9 (campaign 2026-07-10): weight_state (raw/cooked/as_weighed) only
   // showed in FoodDetailSheet's edit sheet before. A quiet inline chip on
   // the row itself surfaces the weighing basis without opening the sheet --
@@ -100,12 +101,15 @@ export function EntryRow({
       onAccessibilityAction={!readOnly && onAccessibilityDelete
         ? (e) => { if (e.nativeEvent.actionName === 'delete') onAccessibilityDelete(); }
         : undefined}
+      // D230 R20 (Wave 4 review, item 11): the note line is said too, so a
+      // screen reader hears what a sighted person reads under the meta line.
+      // A quick add's note is already its name, so it is not said twice.
       accessibilityLabel={
         readOnly
-          ? `${name}, ${energy}, ${spokenMacros}.`
+          ? `${name}, ${energy}, ${spokenMacros}.${spokenNote}`
           : selectionMode
-            ? `${name}, ${energy}, ${spokenMacros}. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
-            : `${name}, ${energy}, ${spokenMacros}. Tap to edit.`
+            ? `${name}, ${energy}, ${spokenMacros}.${spokenNote} ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
+            : `${name}, ${energy}, ${spokenMacros}.${spokenNote} Tap to edit.`
       }
       // D94 (Campaign 3, Phase 10): the long press is now an accelerator
       // (the edit sheet carries the visible route), but screen-reader users
