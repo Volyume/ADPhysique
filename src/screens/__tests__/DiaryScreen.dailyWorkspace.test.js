@@ -615,6 +615,43 @@ describe('D138 items 5 and 6: load cost', () => {
   });
 });
 
+describe('D230 R17: a single write updates in place and reconciles once in the background', () => {
+  const todayCalls = () => mockGetFoodEntriesForDay.mock.calls.filter(([, d]) => d === TODAY).length;
+
+  test('after a usual-chip log, load runs once and is not awaited; the row and the ring show the entry before it resolves', async () => {
+    dayWith({ today: [] });
+    mockGetSlotRecents.mockImplementation((userId, slotKey) => Promise.resolve(
+      slotKey === 'meal_1' ? [{ food_ref: 'global:oats', last_quantity_g: 60, log_count: 9 }] : [],
+    ));
+    const tree = await mountDiary();
+    expect(textOf(tree)).toContain('Porridge oats · 60 g');
+    const before = todayCalls();
+    const slotReadsBefore = mockGetSlotRecents.mock.calls.length;
+
+    // The reconcile load never resolves: if the write awaited it, the toast
+    // below would never fire and the rows could not have changed.
+    let releaseLoad;
+    mockGetFoodEntriesForDay.mockImplementation((userId, date) => (
+      date === TODAY ? new Promise((resolve) => { releaseLoad = resolve; }) : Promise.resolve([])
+    ));
+    await act(async () => { await byLabel(tree, 'Log Porridge oats, 60 grams')[0].props.onPress(); });
+
+    expect(todayCalls() - before).toBe(1); // exactly one background load
+    expect(mockToastShow).toHaveBeenCalledWith('Porridge oats logged, 60 g.', expect.objectContaining({ variant: 'undo' }));
+    const text = textOf(tree);
+    expect(text).not.toContain('Porridge oats · 60 g'); // the meal is no longer empty
+    expect(text).toContain('Porridge oats'); // the new row
+    expect(text).toContain('227'); // the row's kcal, and the ring's eaten total
+    // The write filled meal_1, so the per-meal usuals ran once for the new empty set.
+    expect(mockGetSlotRecents.mock.calls.length - slotReadsBefore).toBeLessThanOrEqual(3);
+
+    // The reconcile lands later and replaces the in-place rows with the stored ones.
+    await act(async () => { releaseLoad([entry({ id: 'entry-new', entry_date: TODAY, meal_slot: 'meal_1' })]); });
+    await act(async () => { for (let i = 0; i < 15; i++) await Promise.resolve(); });
+    expect(textOf(tree)).toContain('Porridge oats');
+  });
+});
+
 describe('D228 item 9: the mark-all toast counts meals, as the banner does', () => {
   const planned = (id, slot) => entry({ id, entry_date: TODAY, meal_slot: slot, is_planned: 1 });
 

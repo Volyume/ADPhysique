@@ -123,7 +123,7 @@ export default function FoodDetailSheet({
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const toast = useToast();
   const userId = useAppStore((s) => s.user?.id ?? null);
   // Energy DISPLAY unit (kcal | kj). Display-only: macros.kcal stays kcal (the

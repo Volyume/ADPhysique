@@ -146,7 +146,7 @@ function barRowCount(tree) {
 // Tap a window chip by its accessibility label and flush the refetch.
 async function tapWindow(tree, n) {
   const chip = tree.root.findAll(
-    (node) => node.props?.accessibilityLabel === `Last ${n} days` && typeof node.props.onPress === 'function',
+    (node) => node.props?.accessibilityLabel === `Nutrition window: ${n} days` && typeof node.props.onPress === 'function',
   )[0];
   await act(async () => { chip.props.onPress(); });
   await flush();
@@ -181,7 +181,8 @@ describe('FoodInsightsScreen — protein-consistency headline (ULTIMATE-NUT-04)'
     ];
     const text = await mountWith(rollups);
     expect(text).toContain('You hit your protein on 3 of 5 days you logged.');
-    expect(text).toContain('Hit = within target range.');
+    // D230 (4.8): the rule is stated once, so the footnote that restated it is gone.
+    expect(text).not.toContain('Hit = within target range.');
   });
 
   test('reads in the singular for a single logged day', async () => {
@@ -212,9 +213,9 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
   test('defaults to the 7-day window with one bar per day', async () => {
     const tree = await render(lastN(90).map((d) => rollup(d, true)));
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('LAST 7 DAYS - CALORIES');
+    expect(text).toContain('Calories');
     expect(barRowCount(tree)).toBe(7);
-    expect(text).toContain('Bars within 10% turn green.');
+    expect(text).not.toContain('Bars within 10% turn green.');
     expect(text).not.toContain('weekly average'); // 7d stays per-day
   });
 
@@ -223,14 +224,14 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
 
     await tapWindow(tree, 30);
     let text = flattenText(tree.toJSON());
-    expect(text).toContain('LAST 30 DAYS - CALORIES');
+    expect(text).toContain('Last 30 days');
     expect(barRowCount(tree)).toBe(5); // 30 days → 5 weekly bars, not 30 rows
     expect(text).toContain('Each bar is a weekly average');
     expect(text).not.toContain('Bars within 10% turn green.');
 
     await tapWindow(tree, 90);
     text = flattenText(tree.toJSON());
-    expect(text).toContain('LAST 90 DAYS - CALORIES');
+    expect(text).toContain('Last 90 days');
     expect(barRowCount(tree)).toBe(13); // 90 days → 13 weekly bars, not 90 rows
   });
 
@@ -283,7 +284,7 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
     await act(async () => { newLoad.resolve(lastN(30).map((d) => rollup(d, true, 2222))); });
     await flush();
     text = flattenText(tree.toJSON());
-    expect(text).toContain('LAST 30 DAYS');
+    expect(text).toContain('Last 30 days');
     expect(text).toContain('2222');
     expect(text).not.toContain('1111');
   });
@@ -319,7 +320,8 @@ describe('FoodInsightsScreen - quiet valence under the safety state (D228 item 2
 
   const VALENCE = [
     'You hit your protein on',
-    'MACRO ADHERENCE',
+    'Macro balance',
+    'on target',
     'Hit = within target range',
     'Out of 7 days logged',
     'vs the week before',
@@ -335,12 +337,14 @@ describe('FoodInsightsScreen - quiet valence under the safety state (D228 item 2
     const tree = await render(fortnight());
     const text = flattenText(tree.toJSON());
     expect(text).toContain('You hit your protein on 7 of 7 days you logged.');
-    expect(text).toContain('MACRO ADHERENCE');
-    expect(text).toContain('Out of 7 days logged. Hit = within target range.');
+    expect(text).toContain('Macro balance');
+    expect(text).toContain('Out of 7 days logged.');
+    expect(text).not.toContain('Hit = within target range');
     expect(text).toContain('Same as the week before.');
     expect(text).toContain('Protein was close to target on 7 of your last 7 logged days.');
     expect(text).toContain('Calories were close to target on 7 of your last 7 logged days.');
-    expect(text).toContain('Bars within 10% turn green.');
+    expect(text).not.toContain('Bars within 10% turn green.');
+    expect(text).toContain('on target'); // D230: the cue is text as well as colour
     expect(tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.includes(', on target')).length).toBeGreaterThan(0);
     expect(barFillColours(tree)).toHaveLength(1); // every day on target: all drawn in the success colour
   });
@@ -358,14 +362,14 @@ describe('FoodInsightsScreen - quiet valence under the safety state (D228 item 2
     for (const phrase of VALENCE) expect(text).not.toContain(phrase);
     expect(tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.includes(', on target'))).toHaveLength(0);
     // The totals and averages stay.
-    expect(text).toContain('THIS WEEK');
+    expect(text).toContain('This week');
     expect(text).toMatch(/2,?400 kcal\/day/);
     expect(text).toContain('Average over 7 days logged this week.');
-    expect(text).toContain('LAST 7 DAYS - CALORIES');
+    expect(text).toContain('Calories');
     expect(barRowCount(tree)).toBe(7);
     expect(text).toContain('Target: 2400 kcal.'); // the target line stays
     expect(text).toContain('Faint line is your 2,400 kcal target.');
-    expect(text).toContain('NUTRIENT AVERAGES');
+    expect(text).toContain('Averages');
     expect(text).toContain('You have logged 7 of the last 7 days.'); // what the diary covers is a fact about the diary
     // The bars are drawn plain: one colour, and not the one an on-target bar wears.
     const quiet = barFillColours(tree);
@@ -377,7 +381,7 @@ describe('FoodInsightsScreen - quiet valence under the safety state (D228 item 2
   test('the protein chart stays (grams over time), without its hit count, under the quiet state', async () => {
     mockSafety.current = STATES.calm;
     const tree = await render(fortnight());
-    expect(flattenText(tree.toJSON())).toContain('PROTEIN');
+    expect(flattenText(tree.toJSON())).toContain('Protein');
     expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Daily protein trend in grams').length).toBeGreaterThan(0);
   });
 
@@ -389,7 +393,7 @@ describe('FoodInsightsScreen - quiet valence under the safety state (D228 item 2
     expect(text).toContain('Each bar is a weekly average.');
     expect(text).not.toContain('turns green');
     expect(text).not.toContain('vs the 30 days before');
-    expect(text).not.toContain('MACRO ADHERENCE');
+    expect(text).not.toContain('Macro balance');
     expect(barRowCount(tree)).toBe(5);
   });
 
@@ -408,16 +412,62 @@ describe('FoodInsightsScreen - quiet valence under the safety state (D228 item 2
     mockSafety.real = true;
     getOpenEdPatternFlag.mockRejectedValue(new Error('sqlite'));
     let text = flattenText((await render(fortnight())).toJSON());
-    expect(text).not.toContain('MACRO ADHERENCE');
+    expect(text).not.toContain('Macro balance');
     expect(text).not.toContain('You hit your protein on');
 
     getOpenEdPatternFlag.mockResolvedValue(null);
     text = flattenText((await render(fortnight())).toJSON());
-    expect(text).toContain('MACRO ADHERENCE');
+    expect(text).toContain('Macro balance');
     expect(text).toContain('You hit your protein on 7 of 7 days you logged.');
 
     getOpenEdPatternFlag.mockResolvedValue({ id: 'f1' });
     text = flattenText((await render(fortnight())).toJSON());
-    expect(text).not.toContain('MACRO ADHERENCE');
+    expect(text).not.toContain('Macro balance');
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// D230 (4.8, R4, R16): the house chrome. The window is the house WindowChips,
+// every block title is a heading in sentence case, the footnotes that restated
+// a rule are gone, and "on target" is text beside the colour. Nothing is added.
+// ---------------------------------------------------------------------------
+describe('FoodInsightsScreen - house chrome (D230 4.8)', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  test('the window selector is the house WindowChips, labelled, with the active window selected', async () => {
+    const tree = await render(lastN(14).map((d) => rollup(d, true)));
+    const WindowChips = require('../../components/WindowChips').default;
+    const chips = tree.root.findByType(WindowChips);
+    expect(chips.props.windows.map((w) => w.key)).toEqual([7, 14, 30, 90]);
+    expect(chips.props.selectedKey).toBe(7);
+    expect(chips.props.inkSelected).toBe(true);
+    expect(chips.props.accessibilityPrefix).toBe('Nutrition window');
+    const group = tree.root.findAll((n) => n.props?.accessibilityRole === 'tablist');
+    expect(group.length).toBeGreaterThan(0);
+  });
+
+  test('block titles are headers in sentence case, with no literal capitals', async () => {
+    const tree = await render(lastN(14).map((d) => rollup(d, true)));
+    const headers = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'header')
+      .map((n) => flattenText(n)).filter(Boolean);
+    const titles = [...new Set(headers)];
+    for (const want of ['What we can see', 'This week', 'Calorie trend', 'Calories', 'Protein', 'Macro balance', 'Averages', 'Vitamins and minerals']) {
+      expect(titles).toContain(want);
+    }
+    for (const title of titles) expect(title).not.toMatch(/[A-Z]{3,}/);
+  });
+
+  test('the footnotes that restate a rule are retired', async () => {
+    const tree = await render(lastN(14).map((d) => rollup(d, true)));
+    const text = flattenText(tree.toJSON());
+    expect(text).not.toContain('Hit = within target range');
+    expect(text).not.toMatch(/turns? green/);
+  });
+
+  test('"on target" is visible text beside the green bar, not only colour and speech', async () => {
+    const tree = await render(lastN(7).map((d) => rollup(d, true)));
+    const cues = tree.root.findAll((n) => typeof n.type === 'string' && n.children?.length === 1 && n.children[0] === 'on target');
+    expect(cues.length).toBe(7);
   });
 });

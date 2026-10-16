@@ -193,7 +193,9 @@ describe('WORK 2: repeat logging and serving confirmation contracts', () => {
     const start = diary.indexOf('const onLogUsual');
     const usual = diary.slice(start, diary.indexOf('// D138 item 2', start));
     expect(usual).toMatch(/if \(!\(quantityG > 0\)\) \{ onEditUsual\(food, slotKey\); return; \}/);
-    expect(usual).toMatch(/logFoodEntry\(userId, buildFoodEntryPayload\(/);
+    // D230 R17: the payload is built first (the in-place row needs it), then written.
+    expect(usual).toMatch(/payload = buildFoodEntryPayload\(/);
+    expect(usual).toMatch(/logFoodEntry\(userId, payload\)/);
     expect(usual).toMatch(/variant: 'undo'/);
     const edit = diary.slice(diary.indexOf('const onEditUsual'), start);
     expect(edit).toMatch(/preselectedFood: food/);

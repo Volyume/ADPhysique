@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Text from '../Text';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -35,7 +35,7 @@ export function EntryRow({
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const kcal = Math.round(entry.kcal ?? 0);
   const p = Math.round(entry.protein_g ?? 0);
@@ -152,7 +152,7 @@ export function SwipeableEntryRow({
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const ref = useRef(null);
   const renderRightActions = useCallback(() => (
     <TouchableOpacity

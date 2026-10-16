@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -112,7 +113,7 @@ export default function MealSection({
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const hasEntries = entries.length > 0;
   const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
@@ -148,10 +149,18 @@ export default function MealSection({
   // R1 (D28): additions are filtered by the profile's allergen excludes at
   // every render site - an excluded allergen is never suggested, silently.
   // Reads the profile here (like CuratedMealSheet) so no caller can forget.
-  const userProfile = useAppStore((s) => s.userProfile);
-  const rawSeasonAdds = hasEntries && !selectionMode ? getMealAdditionsForEntries(entries) : null;
-  const filteredSeasonAdds = rawSeasonAdds ? filterAdditionsForProfile(rawSeasonAdds, userProfile) : null;
-  const seasonAdds = filteredSeasonAdds && filteredSeasonAdds.length ? filteredSeasonAdds : null;
+  // D230 R17: the only profile field filterAdditionsForProfile reads is
+  // `mealPlanExcludeTags` (mealAdditions.js), so that is all this selects: an
+  // unrelated profile change no longer re-renders every meal card. The
+  // curated-meal match and the filter run in a memo keyed on the entries.
+  const excludeTags = useAppStore((s) => s.userProfile?.mealPlanExcludeTags);
+  const seasonAdds = useMemo(() => {
+    const rawSeasonAdds = hasEntries && !selectionMode ? getMealAdditionsForEntries(entries) : null;
+    const filteredSeasonAdds = rawSeasonAdds
+      ? filterAdditionsForProfile(rawSeasonAdds, { mealPlanExcludeTags: excludeTags })
+      : null;
+    return filteredSeasonAdds && filteredSeasonAdds.length ? filteredSeasonAdds : null;
+  }, [hasEntries, selectionMode, entries, excludeTags]);
   // L05-D1/D6 (design-usability audit 2026-07-09, founder-gated build): a
   // logged row already opens for edit on tap (EntryRow's own accessibility
   // label says "Tap to edit"), but a sighted user had no visual cue at all.

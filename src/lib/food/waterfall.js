@@ -205,12 +205,18 @@ async function _promoteAll(rows, userId = null) {
  * @param {number} [options.limit=25]
  * @returns {Promise<Array>} array of food rows
  */
-export async function searchFoods(userId, query, { limit = 25 } = {}) {
+export async function searchFoods(userId, query, { limit = 25, localOnly = false } = {}) {
   const q = (query || '').trim();
   if (q.length < MIN_QUERY_LEN) return [];
   const t0 = Date.now();
 
   const local = await searchLocalByName(userId, q, limit);
+  // D230 R17: `localOnly` returns whatever the local step found (possibly
+  // nothing) and never touches the network, so a caller with many queries can
+  // answer the ones the device already knows at once and spend live lookups
+  // only on the misses. No telemetry: the caller's live follow-up is the
+  // attempt that counts.
+  if (localOnly) return local;
   // Local-first stays: a confident local answer returns immediately with no
   // network touch. E3 defect fix: a WEAK local answer (few hits / no prefix
   // match) no longer suppresses live results — it renders first and the live

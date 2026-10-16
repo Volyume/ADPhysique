@@ -47,6 +47,7 @@ import {
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { importRecipeFromUrl } from '../lib/food/recipeImport';
 import { searchFoods } from '../lib/food/waterfall';
+import { mapWithConcurrency } from '../lib/food/concurrency';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
@@ -210,26 +211,46 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       const MAX_IMPORT_INGREDIENTS = 30;
       const lines = allLines.slice(0, MAX_IMPORT_INGREDIENTS);
       const overflow = allLines.length - lines.length;
-      const matched = [];
       let failedLookups = 0;
-      for (const line of lines) {
+      // One bad lookup shouldn't sink the whole import. Only the first cause
+      // is logged (noteFailure says whether this is the first): a dead
+      // connection would otherwise write thirty identical errors.
+      const noteFailure = () => {
+        failedLookups += 1;
+        return failedLookups === 1;
+      };
+      // D230 R17: every line is answered from the device first (the local
+      // step only, no network); live lookups run only for the lines that found
+      // nothing locally, and at most four at a time, so a thirty-line recipe
+      // is no longer thirty network timeouts in a row.
+      const IMPORT_LOOKUP_CONCURRENCY = 4;
+      const localHits = await mapWithConcurrency(lines, IMPORT_LOOKUP_CONCURRENCY, async (line) => {
         try {
-          const hits = await searchFoods(userId, line, { limit: 1 });
-          const food = hits && hits[0];
-          if (!food) continue;
-          matched.push({
-            food_ref: food.food_ref,
-            quantity_g: Number(food.serving_g) > 0 ? Number(food.serving_g) : 100,
-            food,
-          });
+          const hits = await searchFoods(userId, line, { limit: 1, localOnly: true });
+          return (hits && hits[0]) || null;
         } catch (e) {
-          // One bad lookup shouldn't sink the whole import. Only the first
-          // cause is logged: a dead connection would otherwise write thirty
-          // identical errors for one import.
-          failedLookups += 1;
-          if (failedLookups === 1) logError('RecipeBuilder.importLookup', e, { lines: lines.length });
+          if (noteFailure()) logError('RecipeBuilder.importLookup', e, { lines: lines.length });
+          return null;
         }
-      }
+      });
+      const missIdx = lines.map((_, i) => i).filter((i) => !localHits[i]);
+      const liveHits = await mapWithConcurrency(missIdx, IMPORT_LOOKUP_CONCURRENCY, async (i) => {
+        try {
+          const hits = await searchFoods(userId, lines[i], { limit: 1 });
+          return (hits && hits[0]) || null;
+        } catch (e) {
+          if (noteFailure()) logError('RecipeBuilder.importLookup', e, { lines: lines.length });
+          return null;
+        }
+      });
+      const foods = localHits.slice();
+      missIdx.forEach((lineIndex, n) => { foods[lineIndex] = liveHits[n]; });
+      // Line order is kept, whatever order the lookups finished in.
+      const matched = foods.filter(Boolean).map((food) => ({
+        food_ref: food.food_ref,
+        quantity_g: Number(food.serving_g) > 0 ? Number(food.serving_g) : 100,
+        food,
+      }));
       if (matched.length > 0) {
         setIngredients((prev) => [...prev, ...matched]);
       }

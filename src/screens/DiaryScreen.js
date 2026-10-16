@@ -68,6 +68,10 @@ import {
 // uses, so a chip-logged entry and a sheet-logged entry are byte-identical.
 import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
+import {
+  entryRowFromPayload, insertEntry, removeEntry, patchEntry, rollupFromEntries,
+  emptySlotKey, emptySlotKeysFromKey,
+} from '../lib/food/diaryInPlace';
 import { createRaceGuard } from '../lib/food/loadRaceGuard';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 // resolveFoodRefs batches the diary's list reads (D138 item 6); resolveFoodRef
@@ -177,7 +181,7 @@ export default function DiaryScreen({ navigation, route }) {
   // FlatList/FlashList/SectionList), so an unmemoised call matches
   // AddCustomFoodScreen's/FoodInsightsScreen's own precedent (batch D/E).
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   // COMP-004's "Your trend" card was removed from the Diary (founder decision
   // 2026-06-16: a weight trend has nothing to do with the food diary). The
@@ -352,6 +356,30 @@ export default function DiaryScreen({ navigation, route }) {
       if (loadGuardRef.current.isCurrent(loadToken)) setLoaded(true);
     }
   }, [userId, selectedDate, sex]);
+
+  // D230 R17, "load once, update in place". After a SINGLE-entry write (a usual
+  // chip, a swipe delete and its Undo, the edit sheet's save) the rows and the
+  // day's rollup on screen are updated from the write's own result, then ONE
+  // load() runs in the background (never awaited) to reconcile. The bulk
+  // paths and a date change keep the full awaited load(). `rowsRef` mirrors
+  // what is on screen so two quick writes chain; a write for a day that is no
+  // longer in view is not painted onto the day that is (the reconcile load
+  // reads the day in view anyway). The rollup is the same plain sum the
+  // database stores (diaryInPlace.rollupFromEntries).
+  const rowsRef = useRef({ entries: [], date: selectedDate });
+  rowsRef.current.entries = entries;
+  rowsRef.current.date = selectedDate;
+  const applyInPlace = useCallback((day, edit) => {
+    const cur = rowsRef.current;
+    if (day !== cur.date) return;
+    const next = edit(cur.entries);
+    cur.entries = next;
+    setEntries(next);
+    setRollup((prev) => rollupFromEntries(next, { userId, entryDate: day, base: prev }));
+  }, [userId]);
+  const reconcileInBackground = useCallback(() => {
+    load().catch(() => {}); // best-effort reconcile; load() reports its own failure
+  }, [load]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
   // confirm banner so it counts towards adherence only once the user says they
@@ -796,6 +824,10 @@ export default function DiaryScreen({ navigation, route }) {
     return keys[0] ?? null;
   }, [mealSlots, selectedDate]);
   const visibleSlots = mealSlots;
+  // D230 R17: which meals are empty, as a stable string. The two per-meal
+  // query effects below key on it, not on the ladder: a write that fills a
+  // meal changes it once, a write that does not leaves it alone.
+  const emptyKey = emptySlotKey(mealSlots.map((m) => m.key), entriesBySlot);
   // Assigned during render (derived purely from the memo above) so load()'s
   // conditional yesterday read always tests the ladder that is actually on
   // screen, without making load() depend on it.
@@ -813,15 +845,17 @@ export default function DiaryScreen({ navigation, route }) {
     if (!userId) { setSlotUsuals({}); return; }
     let active = true;
     (async () => {
+      // Usuals only ever show on an EMPTY meal, so only those are read.
+      const emptyKeys = emptySlotKeysFromKey(emptyKey);
       const rowsPerSlot = await Promise.all(
-        mealSlots.map((slot) => getSlotRecents(userId, slot.key, 3).catch(() => [])),
+        emptyKeys.map((key) => getSlotRecents(userId, key, 3).catch(() => [])),
       );
       // D138 item 6: one batched resolve for every slot's recents together,
       // instead of a resolve per row per slot (up to 3 x slots round trips).
       const refs = rowsPerSlot.flat().map((row) => row?.food_ref).filter(Boolean);
       const foodMap = await resolveRefsBatched(userId, refs).catch(() => new Map());
       const next = {};
-      mealSlots.forEach((slot, i) => {
+      emptyKeys.forEach((slotKey, i) => {
         const foods = (rowsPerSlot[i] ?? []).map((row) => {
           const food = foodMap?.get?.(row.food_ref) ?? null;
           if (!food) return null;
@@ -830,12 +864,12 @@ export default function DiaryScreen({ navigation, route }) {
           // when the user holds the chip to change it).
           return { ...food, food_ref: row.food_ref, last_quantity_g: row.last_quantity_g };
         }).filter(Boolean);
-        if (foods.length) next[slot.key] = foods;
+        if (foods.length) next[slotKey] = foods;
       });
       if (active) setSlotUsuals(next);
     })();
     return () => { active = false; };
-  }, [userId, selectedDate, mealSlots]);
+  }, [userId, selectedDate, emptyKey]);
 
   // Hold a usual chip (or tap one with no remembered portion): the food is
   // only a preselection, and the shared detail sheet still confirms grams,
@@ -874,19 +908,25 @@ export default function DiaryScreen({ navigation, route }) {
         fromScan: false,
         surface: 'diary_usual',
       });
-      const entryId = await logFoodEntry(userId, buildFoodEntryPayload({
+      const payload = buildFoodEntryPayload({
         entryDate: selectedDate,
         mealSlot: slotKey,
         foodRef: food.food_ref,
         quantityG,
         food,
-      }));
+      });
+      const entryId = await logFoodEntry(userId, payload);
       await upsertSlotRecent(userId, buildSlotRecentPayload({
         mealSlot: slotKey,
         foodRef: food.food_ref,
         quantityG,
       })).catch(() => {}); // derived memory only; never fail the log
-      await load();
+      // D230 R17: the row and the ring show the new entry now; one background
+      // load() reconciles.
+      applyInPlace(payload.entryDate, (rows) => insertEntry(rows, entryRowFromPayload({
+        id: entryId, userId, payload, food, now: Date.now(),
+      })));
+      reconcileInBackground();
       const portion = usualPortionText({ ...food, last_quantity_g: quantityG });
       toast.show(`${food.name ?? 'Food'} logged, ${portion ?? `${quantityG} g`}.`, {
         variant: 'undo',
@@ -894,7 +934,8 @@ export default function DiaryScreen({ navigation, route }) {
           label: 'Undo',
           onPress: async () => {
             try { await deleteFoodEntry(entryId, userId); } catch (_) { /* already gone */ }
-            await load();
+            applyInPlace(payload.entryDate, (rows) => removeEntry(rows, entryId));
+            reconcileInBackground();
           },
         },
       });
@@ -904,7 +945,7 @@ export default function DiaryScreen({ navigation, route }) {
     } finally {
       loggingUsualRef.current = false;
     }
-  }, [userId, selectedDate, load, toast, onEditUsual]);
+  }, [userId, selectedDate, applyInPlace, reconcileInBackground, toast, onEditUsual]);
 
   // D138 item 2: yesterday's rows for THIS day's view, bucketed by meal and
   // limited to real intake. A planned-but-unconfirmed row was never eaten, so
@@ -969,9 +1010,9 @@ export default function DiaryScreen({ navigation, route }) {
   const [slotMealSuggestion, setSlotMealSuggestion] = useState({});
   useEffect(() => {
     if (!userId) { setSlotMealSuggestion({}); return; }
-    const periSlots = mealSlots.filter(
-      (s) => (s.key === 'preworkout' || s.key === 'postworkout') && !(entriesBySlot[s.key]?.length),
-    );
+    const periSlots = emptySlotKeysFromKey(emptyKey)
+      .filter((k) => k === 'preworkout' || k === 'postworkout')
+      .map((key) => ({ key }));
     if (!periSlots.length) { setSlotMealSuggestion({}); return; }
     let active = true;
     (async () => {
@@ -1014,8 +1055,12 @@ export default function DiaryScreen({ navigation, route }) {
       }
     })();
     return () => { active = false; };
+    // D230 R17: keyed on the set of empty meals (emptyKey), not on the rows, so
+    // a write re-ranks the suggestion only when it fills a meal. viewEntries
+    // and the rollup are read when the effect runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    userId, selectedDate, mealSlots, entriesBySlot, viewEntries, mealsPerDay,
+    userId, selectedDate, emptyKey, mealsPerDay,
     dietPreference, mealPlanExcludeFoods, mealPlanExcludeTags,
   ]);
 
@@ -1320,12 +1365,13 @@ export default function DiaryScreen({ navigation, route }) {
 
   async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState, eatenAt }) {
         const { entry, food } = editSheet;
-    await updateFoodEntry(entry.id, userId, {
+    const scaled = scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
+    const written = await updateFoodEntry(entry.id, userId, {
       entryDate,
       mealSlot,
       foodRef: entry.food_ref,
       quantityG,
-      ...scaleMacros(food, quantityG), // { kcal, proteinG, carbsG, fatG, fibreG }
+      ...scaled,
       // Ultimate-Audit item 12: the sheet always sends the current basis label
       // (untouched or user-chosen); falls back to the entry's existing value
       // so a food with no raw/cooked choice never loses its prior label.
@@ -1336,17 +1382,42 @@ export default function DiaryScreen({ navigation, route }) {
       // preserves omitted fields); an explicit value or null writes through.
       ...(eatenAt !== undefined ? { eatenAt } : null),
     });
-    await load();
+    // D230 R17: update the row and the ring in place (a row moved to another
+    // day leaves this one), then reconcile once in the background.
+    // updateFoodEntry returns false for a row that no longer exists.
+    if (written !== false) {
+      applyInPlace(selectedDate, (rows) => patchEntry(rows, entry.id, {
+        entry_date: entryDate,
+        meal_slot: mealSlot,
+        quantity_g: quantityG,
+        kcal: scaled.kcal,
+        protein_g: scaled.proteinG,
+        carbs_g: scaled.carbsG,
+        fat_g: scaled.fatG,
+        fibre_g: scaled.fibreG ?? null,
+        weight_state: weightState ?? entry.weight_state,
+        ...(eatenAt !== undefined ? { eaten_at: eatenAt } : null),
+      }, selectedDate));
+    }
+    reconcileInBackground();
   }
 
   async function deleteFromEditSheet() {
     if (!editSheet?.entry) return;
     const removed = editSheet.entry;
     await deleteFoodEntry(removed.id, userId);
-    await load();
+    applyInPlace(selectedDate, (rows) => removeEntry(rows, removed.id));
+    reconcileInBackground();
     toast.show(`${friendlyFoodName(removed)} deleted.`, {
       variant: 'undo',
-      action: { label: 'Undo', onPress: async () => { await restoreFoodEntry(removed.id, userId); await load(); } },
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          await restoreFoodEntry(removed.id, userId);
+          applyInPlace(selectedDate, (rows) => insertEntry(rows, removed));
+          reconcileInBackground();
+        },
+      },
     });
   }
 
@@ -1392,21 +1463,32 @@ export default function DiaryScreen({ navigation, route }) {
       // selection tick. Fires AFTER the delete succeeds so a thrown delete
       // never gives a felt commit with nothing deleted (hostile review).
       haptics.commit();
-      await load();
+      // D230 R17: the row leaves the list and the ring moves now; one
+      // background load() reconciles.
+      applyInPlace(selectedDate, (rows) => removeEntry(rows, entry.id));
+      reconcileInBackground();
       toast.show(`${friendlyFoodName(entry)} deleted.`, {
         variant: 'undo',
-        action: { label: 'Undo', onPress: async () => { haptics.selection(); await restoreFoodEntry(entry.id, userId); await load(); } },
+        action: {
+          label: 'Undo',
+          onPress: async () => {
+            haptics.selection();
+            await restoreFoodEntry(entry.id, userId);
+            applyInPlace(selectedDate, (rows) => insertEntry(rows, entry));
+            reconcileInBackground();
+          },
+        },
       });
     } catch (e) {
       // D138 contract: no optimistic removal happened above (the row only
-      // leaves the list once `load()` re-reads the deleted state after a
-      // successful delete), so on failure there is nothing to revert - the
-      // row is still in the list and the swipe panel just needs to close.
+      // leaves the list after the delete has SUCCEEDED, in place since D230
+      // R17), so on failure there is nothing to revert - the row is still in
+      // the list and the swipe panel just needs to close.
       logError('DiaryScreen.deleteFoodEntry', e, { entryId: entry?.id, mealSlot: entry?.mealSlot ?? 'unknown' });
       closeSwipe?.();
       toast.show('That entry was not deleted. Try again in a moment.', { variant: 'error' });
     }
-  }, [userId, load, toast]);
+  }, [userId, selectedDate, applyInPlace, reconcileInBackground, toast]);
 
   // Shared copy core: replay a source day's entries into the day in view.
   // D230 R9/R10: one batched, all-or-nothing write (copyEntriesToDate ->

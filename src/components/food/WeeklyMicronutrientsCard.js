@@ -18,12 +18,12 @@
  * states, no supplement suggestions, no per-day view, no NRV percentage here
  * (deliberately quieter than the per-food detail sheet — this mirrors the
  * plain "value + unit/day" convention this exact screen already uses for its
- * macro-level NUTRIENT AVERAGES card, so the two sit consistently side by
+ * macro-level Averages card, so the two sit consistently side by
  * side). Never fed to the coaching engine (no import here reaches
  * nutritionEngine.js / weeklyCoach.js / coachApply.js or any other engine
  * module — display layer only).
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Text from '../Text';
 import { colors, fontSize, fontWeight, spacing, type, letterSpacing, fontFamily } from '../../styles/theme';
@@ -32,7 +32,7 @@ import Card from '../Card';
 import SectionLabel from '../SectionLabel';
 import { SkeletonRow } from '../Skeleton';
 import { getFoodEntriesForRange } from '../../lib/food/db';
-import { resolveFoodRef } from '../../lib/food/sources/localCache';
+import { resolveFoodRefs } from '../../lib/food/sources/localCache';
 import { MICRONUTRIENTS } from '../../lib/food/micronutrients';
 import { computeWeeklyMicronutrientAverages } from '../../lib/food/micronutrientCoverage';
 import { logError } from '../../lib/errorLog';
@@ -45,7 +45,7 @@ import { logError } from '../../lib/errorLog';
 export default function WeeklyMicronutrientsCard({ userId, startDate, endDate }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   // { averages, loggedDays, hasEntries } | null
@@ -72,9 +72,16 @@ export default function WeeklyMicronutrientsCard({ userId, startDate, endDate })
       // (db.js recomputeRollup: "AND is_planned = 0").
       const entries = (rawEntries || []).filter((e) => !e.is_planned);
       const loggedDayKeys = new Set(entries.map((e) => e.entry_date));
-      const items = await Promise.all(entries.map(async (e) => {
-        const food = await resolveFoodRef(userId, e.food_ref);
-        return { kcal: e.kcal, grams: e.quantity_g, food: food || {} };
+      // D230 R17: every entry's food in ONE batched read (the resolver the
+      // Diary uses, D138), not one round trip per entry. An unresolvable ref
+      // maps to null in the Map and reads as {} here, as before.
+      const foods = entries.length > 0
+        ? await resolveFoodRefs(userId, entries.map((e) => e.food_ref))
+        : new Map();
+      const items = entries.map((e) => ({
+        kcal: e.kcal,
+        grams: e.quantity_g,
+        food: foods.get(String(e.food_ref)) || {},
       }));
       if (loadTokenRef.current !== token) return; // superseded, drop
       const averages = computeWeeklyMicronutrientAverages(items, loggedDayKeys.size);
@@ -96,7 +103,7 @@ export default function WeeklyMicronutrientsCard({ userId, startDate, endDate })
 
   return (
     <>
-      <SectionLabel style={styles.sectionLabelSpacing}>VITAMINS AND MINERALS</SectionLabel>
+      <SectionLabel heading style={styles.sectionLabelSpacing}>Vitamins and minerals</SectionLabel>
       <Card style={styles.card}>
         {loading ? (
           <View accessibilityLabel="Loading vitamins and minerals">

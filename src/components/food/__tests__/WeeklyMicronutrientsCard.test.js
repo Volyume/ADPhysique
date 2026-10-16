@@ -10,10 +10,10 @@ import { act } from 'react-test-renderer';
 const { create } = require('react-test-renderer');
 
 jest.mock('../../../lib/food/db', () => ({ getFoodEntriesForRange: jest.fn() }));
-jest.mock('../../../lib/food/sources/localCache', () => ({ resolveFoodRef: jest.fn() }));
+jest.mock('../../../lib/food/sources/localCache', () => ({ resolveFoodRefs: jest.fn() }));
 
 import { getFoodEntriesForRange } from '../../../lib/food/db';
-import { resolveFoodRef } from '../../../lib/food/sources/localCache';
+import { resolveFoodRefs } from '../../../lib/food/sources/localCache';
 import WeeklyMicronutrientsCard from '../WeeklyMicronutrientsCard';
 
 async function flush() {
@@ -33,21 +33,21 @@ async function mount(props) {
 
 beforeEach(() => {
   getFoodEntriesForRange.mockReset();
-  resolveFoodRef.mockReset();
+  resolveFoodRefs.mockReset();
 });
 
 describe('WeeklyMicronutrientsCard', () => {
   test('no userId -> nothing loads, no crash', async () => {
     const tree = await mount({ userId: null, startDate: '2026-07-01', endDate: '2026-07-07' });
     expect(getFoodEntriesForRange).not.toHaveBeenCalled();
-    expect(flatten(tree)).toContain('VITAMINS AND MINERALS');
+    expect(flatten(tree)).toContain('Vitamins and minerals');
   });
 
   test('no entries in the window -> the calm "log food" empty state, not a grid', async () => {
     getFoodEntriesForRange.mockResolvedValue([]);
     const tree = await mount({ userId: 'u1', startDate: '2026-07-01', endDate: '2026-07-07' });
     expect(flatten(tree)).toContain('Log food across the week to see a picture build here.');
-    expect(resolveFoodRef).not.toHaveBeenCalled();
+    expect(resolveFoodRefs).not.toHaveBeenCalled();
   });
 
   test('planned-but-unconfirmed entries (is_planned=1) never count towards the average', async () => {
@@ -55,7 +55,7 @@ describe('WeeklyMicronutrientsCard', () => {
       { entry_date: '2026-07-01', food_ref: 'global:1', quantity_g: 100, kcal: 200, is_planned: 1 },
     ]);
     const tree = await mount({ userId: 'u1', startDate: '2026-07-01', endDate: '2026-07-07' });
-    expect(resolveFoodRef).not.toHaveBeenCalled();
+    expect(resolveFoodRefs).not.toHaveBeenCalled();
     expect(flatten(tree)).toContain('Log food across the week to see a picture build here.');
   });
 
@@ -63,7 +63,7 @@ describe('WeeklyMicronutrientsCard', () => {
     getFoodEntriesForRange.mockResolvedValue([
       { entry_date: '2026-07-01', food_ref: 'global:1', quantity_g: 100, kcal: 500, is_planned: 0 },
     ]);
-    resolveFoodRef.mockResolvedValue({}); // no micro data at all
+    resolveFoodRefs.mockImplementation(async (_uid, refs) => new Map(refs.map((r) => [r, {}]))); // no micro data at all
     const tree = await mount({ userId: 'u1', startDate: '2026-07-01', endDate: '2026-07-07' });
     expect(flatten(tree)).toContain('Not enough foods with known values yet to show an average.');
     expect(flatten(tree)).not.toContain('mg/day');
@@ -76,10 +76,10 @@ describe('WeeklyMicronutrientsCard', () => {
       // Day 2: 200 kcal food carries NO iron, and NO vitC either -> both unknown here.
       { entry_date: '2026-07-02', food_ref: 'global:2', quantity_g: 100, kcal: 200, is_planned: 0 },
     ]);
-    resolveFoodRef.mockImplementation(async (_uid, ref) => {
+    resolveFoodRefs.mockImplementation(async (_uid, refs) => { const lookup = (ref) => {
       if (ref === 'global:1') return { iron_100g: 5, vit_c_100g: 10 };
       return {}; // global:2 carries nothing
-    });
+    }; return new Map(refs.map((r) => [r, lookup(r)])); });
     const tree = await mount({ userId: 'u1', startDate: '2026-07-01', endDate: '2026-07-07' });
     const text = flatten(tree);
     // Iron known on 200 of 400 total kcal = exactly 50% = the floor -> included.
@@ -96,14 +96,26 @@ describe('WeeklyMicronutrientsCard', () => {
       { entry_date: '2026-07-02', food_ref: 'global:2', quantity_g: 100, kcal: 200, is_planned: 0 }, // no zinc
       { entry_date: '2026-07-03', food_ref: 'global:3', quantity_g: 100, kcal: 200, is_planned: 0 }, // no zinc
     ]);
-    resolveFoodRef.mockImplementation(async (_uid, ref) => {
+    resolveFoodRefs.mockImplementation(async (_uid, refs) => { const lookup = (ref) => {
       if (ref === 'global:1') return { zinc_100g: 3 };
       return {};
-    });
+    }; return new Map(refs.map((r) => [r, lookup(r)])); });
     const tree = await mount({ userId: 'u1', startDate: '2026-07-01', endDate: '2026-07-07' });
     const text = flatten(tree);
     // Zinc known on 100 of 500 kcal = 20%, below the 50% floor -> omitted entirely.
     expect(text).not.toContain('Zinc');
+  });
+
+  test('R17: every entry\'s food resolves in ONE resolveFoodRefs call, never one call per entry', async () => {
+    getFoodEntriesForRange.mockResolvedValue([
+      { entry_date: '2026-07-01', food_ref: 'global:1', quantity_g: 100, kcal: 200, is_planned: 0 },
+      { entry_date: '2026-07-01', food_ref: 'global:2', quantity_g: 100, kcal: 200, is_planned: 0 },
+      { entry_date: '2026-07-02', food_ref: 'global:1', quantity_g: 100, kcal: 200, is_planned: 0 },
+    ]);
+    resolveFoodRefs.mockImplementation(async (_uid, refs) => new Map(refs.map((r) => [r, { iron_100g: 5 }])));
+    await mount({ userId: 'u1', startDate: '2026-07-01', endDate: '2026-07-07' });
+    expect(resolveFoodRefs).toHaveBeenCalledTimes(1);
+    expect(resolveFoodRefs.mock.calls[0][1]).toEqual(['global:1', 'global:2', 'global:1']);
   });
 
   test('load failure -> a calm retry-less error line, never a crash', async () => {

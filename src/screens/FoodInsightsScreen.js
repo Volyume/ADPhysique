@@ -27,7 +27,7 @@
  */
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
-  View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions,
+  View, StyleSheet, ScrollView, useWindowDimensions,
 } from 'react-native';
 import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,6 +39,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
+import WindowChips from '../components/WindowChips';
 import EmptyState from '../components/EmptyState';
 import { SkeletonCard } from '../components/Skeleton';
 import VolyumeChart from '../components/VolyumeChart';
@@ -50,7 +51,7 @@ import {
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { getNutritionTargets } from '../lib/database';
 import { exportDiaryCsv, exportDiaryPdf } from '../lib/food/csvExport';
-import { ADHERENCE_TOLERANCE, pctLabel, within } from '../lib/food/adherence';
+import { ADHERENCE_TOLERANCE, within } from '../lib/food/adherence';
 import { summariseNutrients, NUTRIENT_ROWS } from '../lib/food/nutrientSummary';
 // Campaign 17B job 7: insights that answer "so what", and that say plainly
 // when the diary does not cover enough of the window to support a claim.
@@ -81,6 +82,7 @@ function lastNDayIsoList(n) {
 // per-day bar list is illegible, so 30/90 render weekly-aggregated bars
 // (NA-nutrition-9, founder decision 2026-06-14: weekly-aggregated bars).
 const WINDOWS = [7, 14, 30, 90];
+const WINDOW_OPTIONS = WINDOWS.map((n) => ({ key: n, label: `${n} days` }));
 const WEEKLY_THRESHOLD = 14; // windows beyond this aggregate into weekly bars
 
 // Fibre has no per-user target in nutrition_targets (kcal/P/C/F only), so we
@@ -342,7 +344,7 @@ export default function FoodInsightsScreen({ navigation }) {
   }, [rollupByDate, windowDays]);
   const periodIsWeek = windowDays === 7;
   const periodPhrase = periodIsWeek ? 'this week' : `over the last ${windowDays} days`;
-  const periodHeadline = periodIsWeek ? 'THIS WEEK' : `LAST ${windowDays} DAYS`;
+  const periodHeadline = periodIsWeek ? 'This week' : `Last ${windowDays} days`;
 
   async function onExport(kind = 'csv') {
     if (!userId || exporting) return;
@@ -370,6 +372,12 @@ export default function FoodInsightsScreen({ navigation }) {
     }
   }
 
+  const onSelectWindow = useCallback((n) => {
+    if (n === windowDays) return;
+    haptics.selection();
+    setWindowDays(n);
+  }, [windowDays]);
+
   // Scale to the bars actually rendered (daily values, or weekly averages),
   // so longer windows scale correctly rather than against daily peaks.
   const maxKcal = useMemo(() => {
@@ -383,25 +391,17 @@ export default function FoodInsightsScreen({ navigation }) {
       <BackHeader title="Insights" onBack={() => navigation.goBack()} />
 
       {/* Window selector (ULTIMATE-NUT-05). Pinned below the header so it stays
-          visible while the cards scroll. Segmented pill convention from PrefRow. */}
-      <View style={[styles.windowBar, { paddingHorizontal: t.screenPadding }]} accessibilityRole="radiogroup">
-        {WINDOWS.map((n) => {
-          const selected = n === windowDays;
-          return (
-            <TouchableOpacity
-              key={n}
-              style={[styles.windowChip, live.windowChip, selected && [styles.windowChipOn, live.windowChipOn]]}
-              onPress={() => { if (!selected) { haptics.selection(); setWindowDays(n); } }}
-              disabled={selected}
-              hitSlop={8}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              accessibilityLabel={`Last ${n} days`}
-            >
-              <Text style={[styles.windowChipText, live.windowChipText, selected && [styles.windowChipTextOn, live.windowChipTextOn]]}>{n}d</Text>
-            </TouchableOpacity>
-          );
-        })}
+          visible while the cards scroll. D230 (R4, 4.8): the house WindowChips,
+          ink-selected because the window is a control, not the screen's one
+          amber. The accessibility prefix names the group (R16). */}
+      <View style={[styles.windowBar, { paddingHorizontal: t.screenPadding }]}>
+        <WindowChips
+          windows={WINDOW_OPTIONS}
+          selectedKey={windowDays}
+          onSelect={onSelectWindow}
+          accessibilityPrefix="Nutrition window"
+          inkSelected
+        />
       </View>
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: t.screenPadding }]}>
@@ -427,7 +427,7 @@ export default function FoodInsightsScreen({ navigation }) {
             no score, no streak, no nagging to log more. */}
         {insights.length > 0 ? (
           <>
-            <SectionLabel style={styles.sectionLabelSpacing}>WHAT WE CAN SEE</SectionLabel>
+            <SectionLabel heading style={styles.sectionLabelSpacing}>What we can see</SectionLabel>
             <Card style={styles.card}>
               {insights.map((ins, i) => (
                 <View
@@ -449,7 +449,7 @@ export default function FoodInsightsScreen({ navigation }) {
             colour). Above the chart so the headline number reads first. */}
         {periodAvg ? (
           <>
-            <SectionLabel style={styles.sectionLabelSpacing}>{periodHeadline}</SectionLabel>
+            <SectionLabel heading style={styles.sectionLabelSpacing}>{periodHeadline}</SectionLabel>
             <Card style={styles.card}>
               <Text
                 style={[styles.summaryValue, live.summaryValue]}
@@ -473,7 +473,7 @@ export default function FoodInsightsScreen({ navigation }) {
           </>
         ) : null}
 
-        <SectionLabel style={styles.sectionLabelSpacing}>LAST {windowDays} DAYS - CALORIE TREND</SectionLabel>
+        <SectionLabel heading style={styles.sectionLabelSpacing}>Calorie trend</SectionLabel>
         <Card style={styles.card}>
           {calorieLine.length >= 2 ? (
             <>
@@ -525,7 +525,7 @@ export default function FoodInsightsScreen({ navigation }) {
           )}
         </Card>
 
-        <SectionLabel style={styles.sectionLabelSpacing}>LAST {windowDays} DAYS - CALORIES</SectionLabel>
+        <SectionLabel heading style={styles.sectionLabelSpacing}>Calories</SectionLabel>
         <Card style={styles.card}>
           {chartBars.map((b) => {
             const pct = Math.min(1, b.kcal / maxKcal);
@@ -548,6 +548,9 @@ export default function FoodInsightsScreen({ navigation }) {
                   ]} />
                 </View>
                 <Text style={[styles.barValue, live.barValue]}>{toEnergy(b.kcal, energyUnit)}</Text>
+                {/* D230 (4.8): the cue is text as well as colour. Absent in quiet
+                    mode, where targetMet is never true. */}
+                {targetMet ? <Text style={[styles.barOnTarget, live.barOnTarget]}>on target</Text> : null}
               </View>
             );
           })}
@@ -558,8 +561,8 @@ export default function FoodInsightsScreen({ navigation }) {
                   ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average.`
                   : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`)
                 : (isWeekly
-                  ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average; within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turns green.`
-                  : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`)}
+                  ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average.`
+                  : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`)}
             </Text>
           ) : quiet ? null : (
             <Text
@@ -580,7 +583,7 @@ export default function FoodInsightsScreen({ navigation }) {
             mirroring the macro block's guard. */}
         {adherence && adherence.logged > 0 && (!quiet || proteinLine.length >= 2) ? (
           <>
-            <SectionLabel style={styles.sectionLabelSpacing}>PROTEIN</SectionLabel>
+            <SectionLabel heading style={styles.sectionLabelSpacing}>Protein</SectionLabel>
             <Card style={styles.card}>
               {/* Quiet (D228 item 2, tier c): the hit count goes; the grams
                   over time and the target line stay. */}
@@ -625,11 +628,11 @@ export default function FoodInsightsScreen({ navigation }) {
                   </Text>
                 ) : null
               ) : (
-                <Text style={[styles.cardFootnote, live.cardFootnote]}>
-                  {targets?.proteinG
-                    ? `Hit = within target range. Faint line is your ${targets.proteinG} g target.`
-                    : 'Hit = within target range.'}
-                </Text>
+                targets?.proteinG ? (
+                  <Text style={[styles.cardFootnote, live.cardFootnote]}>
+                    {`Faint line is your ${targets.proteinG} g target.`}
+                  </Text>
+                ) : null
               )}
             </Card>
           </>
@@ -641,7 +644,7 @@ export default function FoodInsightsScreen({ navigation }) {
             below. */}
         {quiet ? null : (
         <>
-        <SectionLabel style={styles.sectionLabelSpacing}>MACRO ADHERENCE</SectionLabel>
+        <SectionLabel heading style={styles.sectionLabelSpacing}>Macro balance</SectionLabel>
         <Card style={styles.card}>
           {adherence && adherence.logged > 0 ? (
             <>
@@ -651,7 +654,7 @@ export default function FoodInsightsScreen({ navigation }) {
               <AdherenceRow label="Fat"      hit={adherence.fDays}     total={adherence.logged} />
               <AdherenceRow label="Fibre"    hit={adherence.fibreDays} total={adherence.logged} />
               <Text style={[styles.cardFootnote, live.cardFootnote]}>
-                Out of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} logged. Hit = within target range.
+                Out of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} logged.
                 {adherence.logged < MIN_DAYS_FOR_ADHERENCE_BAR
                   ? ' The bars fill in once there are a few days to read a pattern from.'
                   : ''}
@@ -683,7 +686,7 @@ export default function FoodInsightsScreen({ navigation }) {
             over the window. Adherence-NEUTRAL by design, value in textPrimary,
             label in textMuted, no good/bad colour, no target, no streak. Macro-
             level only (no sodium/sugar on the rollup; micronutrients gated). */}
-        <SectionLabel style={styles.sectionLabelSpacing}>NUTRIENT AVERAGES</SectionLabel>
+        <SectionLabel heading style={styles.sectionLabelSpacing}>Averages</SectionLabel>
         <Card style={styles.card}>
           {nutrientAverages.days > 0 ? (
             <>
@@ -772,15 +775,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   loadingStack: { gap: spacing.lg },
 
-  windowBar: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-  windowChip: {
-    flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center',
-    paddingVertical: spacing.sm, borderRadius: radius.full,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
-  },
-  windowChipOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },
-  windowChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
-  windowChipTextOn: { color: colors.primary },
+  windowBar: { paddingTop: spacing.md },
 
   sectionLabelSpacing: { marginBottom: spacing.sm },
   card: {
@@ -816,6 +811,7 @@ const styles = StyleSheet.create({
   },
   barFill: { height: '100%', backgroundColor: colors.primary, borderRadius: radius.sm },
   barValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 56, textAlign: 'right' },
+  barOnTarget: { ...type.caption, color: colors.textMuted, marginLeft: spacing.xs },
 
   adherenceRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   adherenceLabel: { color: colors.textSecondary, fontSize: fontSize.sm, width: 72 },
@@ -855,10 +851,6 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    windowChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    windowChipOn: { borderColor: t.colors.primary, backgroundColor: t.colors.surface2 },
-    windowChipText: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
-    windowChipTextOn: { color: t.colors.primary },
     cardFootnote: { ...t.type.caption, color: t.colors.textMuted },
     cardFootnoteLink: { color: t.colors.primary },
     proteinHeadline: { ...t.type.title, color: t.colors.textPrimary },
@@ -872,6 +864,7 @@ function buildLiveStyles(t) {
     barTrack: { backgroundColor: t.colors.surface2 },
     barFill: { backgroundColor: t.colors.primary },
     barValue: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+    barOnTarget: { ...t.type.caption, color: t.colors.textMuted },
     adherenceLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     adherenceTrack: { backgroundColor: t.colors.surface2 },
     adherenceFill: { backgroundColor: t.colors.primary },

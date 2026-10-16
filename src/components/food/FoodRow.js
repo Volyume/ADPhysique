@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -120,7 +121,7 @@ export default function FoodRow({
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const sourceTag = SOURCE_LABEL[food.source] ?? null;
   // Energy DISPLAY unit (kcal | kj) is applied here, at the render sites
   // only; the maths stays in kcal.

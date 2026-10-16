@@ -149,3 +149,22 @@ test('the merged list respects the limit, local rows first', async () => {
   expect(rows[0].name).toBe('Local a');
   expect(rows[1].name).toBe('Local b');
 });
+
+// D230 R17 (lane 3D): `localOnly` is a pure option that returns after the local
+// step. It never touches the network, whatever the local answer, and the
+// default (no option) is exactly as before.
+test('localOnly returns the local rows after the local step and never touches the network', async () => {
+  searchLocalByName.mockResolvedValue([localRow('a')]); // WEAK: normally live would merge in
+  const rows = await searchFoods('u1', 'chicken', { localOnly: true });
+  expect(rows).toHaveLength(1);
+  expect(searchOff).not.toHaveBeenCalled();
+  expect(searchUsda).not.toHaveBeenCalled();
+  expect(track).not.toHaveBeenCalled();
+});
+
+test('localOnly with no local rows is an empty answer, not a live lookup', async () => {
+  searchLocalByName.mockResolvedValue([]);
+  expect(await searchFoods('u1', 'chicken', { localOnly: true })).toEqual([]);
+  expect(searchOff).not.toHaveBeenCalled();
+  expect(searchUsda).not.toHaveBeenCalled();
+});

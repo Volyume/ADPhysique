@@ -222,6 +222,35 @@ describe('RecipeBuilderScreen sentences, logged causes and the 48 dp remove icon
     expect(mockToastShow).toHaveBeenCalledWith(SENTENCE, { variant: 'warning' });
   });
 
+  // D230 R17 (lane 3D): the import answers every line from the device first
+  // and spends live lookups only on the misses, at most four at once.
+  test('the URL import is local-first, then live only for the misses, four at a time', async () => {
+    const { searchFoods } = require('../../lib/food/waterfall');
+    searchFoods.mockReset();
+    const lines = Array.from({ length: 10 }, (_, i) => `ingredient ${i}`);
+    importRecipeFromUrl.mockResolvedValueOnce({ name: 'Big stew', servings: 4, ingredients: lines });
+    const known = new Set(['ingredient 0', 'ingredient 1', 'ingredient 2', 'ingredient 3', 'ingredient 4', 'ingredient 5']); // 6 on the device, 4 misses
+    let inFlight = 0; let peak = 0;
+    searchFoods.mockImplementation(async (_uid, line, opts = {}) => {
+      if (opts.localOnly) return known.has(line) ? [{ food_ref: `global:${line}`, name: line }] : [];
+      inFlight += 1; peak = Math.max(peak, inFlight);
+      await new Promise((r) => setImmediate(r));
+      inFlight -= 1;
+      return [{ food_ref: `live:${line}`, name: line }];
+    });
+    const { tree } = await mountWith({});
+    setInput(tree, 'Recipe web address', 'https://example.com/stew');
+    await act(async () => { await tree.root.findAll((n) => n.props?.accessibilityLabel === 'Import from web' && typeof n.props.onPress === 'function')[0].props.onPress(); });
+    await flush();
+
+    const localCalls = searchFoods.mock.calls.filter(([, , o]) => o?.localOnly);
+    const liveCalls = searchFoods.mock.calls.filter(([, , o]) => !o?.localOnly);
+    expect(localCalls).toHaveLength(10); // every line is tried locally first
+    expect(liveCalls.map(([, l]) => l).sort()).toEqual(['ingredient 6', 'ingredient 7', 'ingredient 8', 'ingredient 9']); // live only for the misses
+    expect(peak).toBeLessThanOrEqual(4);
+    expect(mockToastShow).toHaveBeenCalledWith(expect.stringContaining('Imported 10 of 10 ingredients.'), { variant: 'success' });
+  });
+
   test('the import hint no longer says "we"', async () => {
     const { tree } = await mountWith({});
     const text = JSON.stringify(tree.toJSON());
