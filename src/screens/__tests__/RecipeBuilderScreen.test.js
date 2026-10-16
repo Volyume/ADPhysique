@@ -146,7 +146,10 @@ describe('RecipeBuilderScreen edit load recovery', () => {
     });
     await flush();
 
-    const retryText = tree.root.findAll((n) => n.props?.children === "Couldn't load this recipe");
+    // RE-POINTED (D230 R15, food level-up 2026-10-16): the load-error title is
+    // a full sentence ("This recipe did not load"); same truth, a retry state
+    // stands in place of the blank form.
+    const retryText = tree.root.findAll((n) => n.props?.children === 'This recipe did not load');
     expect(retryText.length).toBeGreaterThan(0);
     expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Name')).toHaveLength(0);
     expect(createRecipe).not.toHaveBeenCalled();
@@ -163,5 +166,76 @@ describe('RecipeBuilderScreen polish guards', () => {
     expect(RECIPE_BUILDER_SOURCE).toMatch(/addIngredientBtn: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(RECIPE_BUILDER_SOURCE).toContain('addLink: { ...type.label, color: colors.textPrimary }');
     expect(RECIPE_BUILDER_SOURCE).not.toContain('title="+ Add ingredient"');
+  });
+});
+
+// D230 R15, R16 and R18 (food level-up 2026-10-16): full-sentence failures
+// with the cause logged first, no "we" in the import hint, and a remove icon
+// that is a 48 dp target.
+describe('RecipeBuilderScreen sentences, logged causes and the 48 dp remove icon (D230)', () => {
+  const { logError } = require('../../lib/errorLog');
+  const { importRecipeFromUrl } = require('../../lib/food/recipeImport');
+  const INGREDIENT = {
+    food_ref: 'global:f1', name: 'Chicken breast', quantity_g: 200,
+    food: { name: 'Chicken breast', food_ref: 'global:f1' },
+  };
+
+  async function mountWith(params) {
+    const nav = makeNav();
+    let tree;
+    await act(async () => {
+      tree = create(<RecipeBuilderScreen navigation={nav} route={{ params: { mealSlot: 'dinner', entryDate: '2026-10-16', ...params } }} />);
+    });
+    await flush();
+    return { nav, tree };
+  }
+
+  test('a failed save says what happened and what to do, and logs the cause first', async () => {
+    createRecipe.mockRejectedValueOnce(new Error('disk full'));
+    const { nav, tree } = await mountWith({ addedIngredient: INGREDIENT });
+    setInput(tree, 'Name', 'Sunday chilli');
+    await act(async () => { await pressSave(tree)(); });
+    await flush();
+
+    expect(logError).toHaveBeenCalledWith('RecipeBuilder.save', expect.any(Error), { isEdit: false, ingredients: 1 });
+    expect(mockToastShow).toHaveBeenCalledWith('That recipe was not saved. Try again in a moment.', { variant: 'error' });
+    expect(nav.goBack).not.toHaveBeenCalled();
+  });
+
+  test('a link that gives no recipe, and a link that throws, say the same calm sentence', async () => {
+    const SENTENCE = 'A recipe could not be read from that link. Check the link and try again.';
+    const { tree } = await mountWith({});
+
+    importRecipeFromUrl.mockResolvedValueOnce(null);
+    setInput(tree, 'Recipe web address', 'https://example.com/a');
+    await act(async () => { await tree.root.findAll((n) => n.props?.accessibilityLabel === 'Import from web' && typeof n.props.onPress === 'function')[0].props.onPress(); });
+    await flush();
+    expect(mockToastShow).toHaveBeenCalledWith(SENTENCE, { variant: 'warning' });
+    expect(logError).not.toHaveBeenCalledWith('RecipeBuilder.importFromUrl', expect.anything(), expect.anything());
+
+    mockToastShow.mockClear();
+    importRecipeFromUrl.mockRejectedValueOnce(new Error('network'));
+    setInput(tree, 'Recipe web address', 'https://example.com/b');
+    await act(async () => { await tree.root.findAll((n) => n.props?.accessibilityLabel === 'Import from web' && typeof n.props.onPress === 'function')[0].props.onPress(); });
+    await flush();
+    expect(logError).toHaveBeenCalledWith('RecipeBuilder.importFromUrl', expect.any(Error));
+    expect(mockToastShow).toHaveBeenCalledWith(SENTENCE, { variant: 'warning' });
+  });
+
+  test('the import hint no longer says "we"', async () => {
+    const { tree } = await mountWith({});
+    const text = JSON.stringify(tree.toJSON());
+    expect(text).toContain('Each ingredient is matched to a food with a rough amount. Check the amounts after importing.');
+    expect(text).not.toContain('We match');
+  });
+
+  test('the remove icon is a 48 dp target: a 24 dp glyph plus the house 12 dp hit slop', async () => {
+    const { tree } = await mountWith({ addedIngredient: INGREDIENT });
+    const remove = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Remove Chicken breast' && typeof n.props.onPress === 'function')[0];
+    expect(remove).toBeTruthy();
+    const glyph = remove.findAll((n) => n.type === 'Ionicons')[0];
+    const slop = remove.props.hitSlop;
+    expect(glyph.props.size + slop.top + slop.bottom).toBeGreaterThanOrEqual(48);
+    expect(glyph.props.size + slop.left + slop.right).toBeGreaterThanOrEqual(48);
   });
 });

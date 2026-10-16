@@ -85,12 +85,19 @@ describe('FeatureRow (the diary doors, D230 R1 and R2)', () => {
 });
 
 describe('SourceChip', () => {
+  // RE-POINTED (D230 R15, food level-up 2026-10-16): the one source vocabulary.
+  // The chip said "OFF", "OCR" and "Custom" and had no name for a curated
+  // staple or a recipe; it now says what FoodRow says. Same truth: every
+  // source the chip knows renders its plain label. (SourceChip.test.js pins
+  // the full set against FoodRow's SOURCE_LABEL and the unknown-source case.)
   test.each([
-    ['off',      'OFF'],
+    ['off',      'Food Facts'],
     ['usda',     'USDA'],
     ['cofid',    'CoFID'],
-    ['user_ocr', 'OCR'],
-    ['custom',   'Custom'],
+    ['user_ocr', 'From a label'],
+    ['custom',   'Yours'],
+    ['curated',  'Volyume'],
+    ['recipe',   'Recipe'],
   ])('source %s renders label %s', (source, label) => {
     const tree = create(<SourceChip source={source} />).toJSON();
     expect(JSON.stringify(tree)).toContain(label);

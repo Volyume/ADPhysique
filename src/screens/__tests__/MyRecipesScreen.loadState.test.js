@@ -96,7 +96,10 @@ describe('MyRecipesScreen load states', () => {
 
     let text = flattenText(tree.toJSON());
     expect(text).toContain('Recipes');
-    expect(text).toContain("Couldn't load recipes");
+    // RE-POINTED (D230 R15, food level-up 2026-10-16): the load-error title is
+    // a full sentence; same truth, a retryable error stands in for the empty
+    // recipe prompt.
+    expect(text).toContain('Your recipes did not load');
     // L05-MM2 (2026-07-09 design audit): this is a local SQLite read failure,
     // not a network failure — "Check your connection and try again." ->
     // "Something went wrong loading these. Your saved recipes have not been changed."
@@ -113,7 +116,7 @@ describe('MyRecipesScreen load states', () => {
 
     expect(listRecipesWithTotals).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load recipes");
+    expect(text).toContain('Your recipes did not load');
   });
 
   test('keeps the genuine empty state when recipes load successfully but none exist', async () => {
@@ -129,7 +132,7 @@ describe('MyRecipesScreen load states', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Recipes');
     expect(text).toContain('Create your first recipe');
-    expect(text).not.toContain("Couldn't load recipes");
+    expect(text).not.toContain('Your recipes did not load');
 
     const build = tree.root.findByProps({ accessibilityLabel: 'Create a recipe' });
     await act(async () => {

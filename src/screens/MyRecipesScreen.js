@@ -12,6 +12,12 @@
  * and labelled "per serving" (L05-MR1 2026-07-09). The cloud sync layer
  * keeps the table in step with the cloud `recipes` table (migration 015 + 046).
  *
+ * D230 R12, R15, R16 and R18 (food level-up 2026-10-16): logging a recipe
+ * shows the house undo toast ("Chilli added to Breakfast.") and its Undo
+ * deletes the one row the write returned (it used to close in silence);
+ * every failure is a full sentence and logs its cause first; the row icons
+ * reach 48 dp; the servings sheet's title carries the header role.
+ *
  * Voice rules from CLAUDE.md and COACHING_VOICE_SYNTHESIS_LOCKED.
  * No em dashes; plain spoken voice; British English.
  */
@@ -36,12 +42,22 @@ import RecipeDetailSheet from '../components/food/RecipeDetailSheet';
 import { useToast } from '../components/Toast';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { perServingTotals } from '../lib/food/macros';
-import { listRecipesWithTotals, deleteRecipe, applyRecipeToDiary, getRecipeWithIngredients } from '../lib/food/db';
+import {
+  listRecipesWithTotals, deleteRecipe, applyRecipeToDiary, getRecipeWithIngredients, deleteFoodEntry,
+} from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
+import { mealSlotLabel } from '../lib/food/mealSlots';
+import { touchTarget } from '../styles/layout';
 import * as haptics from '../lib/haptics';
+
+// D230 R16: the row's icon buttons are 40 dp boxes; this slop on each side
+// brings them to the 48 dp minimum (and no further, so neighbouring buttons
+// do not take each other's touches).
+const ACTION_BOX = 40;
+const ACTION_SLOP = (touchTarget.minimum - ACTION_BOX) / 2;
 
 export default function MyRecipesScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -166,6 +182,12 @@ export default function MyRecipesScreen({ navigation, route }) {
     try {
       const id = await applyRecipeToDiary(userId, recipe.id, { mealSlot, entryDate, servings });
       if (id) {
+        // The house undo toast (R12). The toast provider is app-level, so it
+        // survives the goBack below; Undo deletes the one row this log wrote.
+        toast.show(`${recipe.name ?? 'Recipe'} added to ${mealSlotLabel(mealSlot)}.`, {
+          variant: 'undo',
+          action: { label: 'Undo', onPress: () => undoRecipeLog(id) },
+        });
         setServePrompt(null);
         navigation.goBack();
         return;
@@ -173,10 +195,21 @@ export default function MyRecipesScreen({ navigation, route }) {
       setLoggingId(null);
       setServePrompt(null);
       toast.show('Add at least one ingredient first.', { variant: 'info' });
-    } catch (_) {
+    } catch (e) {
+      logError('MyRecipes.applyRecipe', e, { mealSlot });
       setLoggingId(null);
       setServePrompt(null);
-      toast.show('Couldn\'t log.', { variant: 'error' });
+      toast.show('That recipe was not logged. Try again in a moment.', { variant: 'error' });
+    }
+  }
+
+  // The recipe toast's Undo: the existing single-row delete path.
+  async function undoRecipeLog(entryId) {
+    try {
+      await deleteFoodEntry(entryId, userId);
+    } catch (e) {
+      logError('MyRecipes.undoRecipeLog', e);
+      toast.show('That recipe was not removed. You can remove it from the diary.', { variant: 'error' });
     }
   }
 
@@ -194,7 +227,7 @@ export default function MyRecipesScreen({ navigation, route }) {
               await deleteRecipe(userId, recipe.id);
             } catch (e) {
               logError('MyRecipes.deleteRecipe', e, { hasId: !!recipe.id });
-              toast.show('Couldn\'t delete that recipe.', { variant: 'error' });
+              toast.show('That recipe was not deleted. Try again in a moment.', { variant: 'error' });
               return;
             }
             // Haptics completion pass (2026-07-10): data-first, this
@@ -257,7 +290,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => { haptics.selection(); setInspecting(item); }}
             disabled={!!loggingId}
-            hitSlop={12}
+            hitSlop={ACTION_SLOP}
             accessibilityRole="button"
             accessibilityLabel={`View ${item.name}`}
             style={styles.actionBtn}
@@ -267,7 +300,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => { haptics.selection(); onEdit(item); }}
             disabled={!!loggingId}
-            hitSlop={12}
+            hitSlop={ACTION_SLOP}
             accessibilityRole="button"
             accessibilityLabel={`Edit ${item.name}`}
             style={styles.actionBtn}
@@ -277,7 +310,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => onDelete(item)}
             disabled={!!loggingId}
-            hitSlop={12}
+            hitSlop={ACTION_SLOP}
             accessibilityRole="button"
             accessibilityLabel={`Delete ${item.name}`}
             style={styles.actionBtn}
@@ -314,7 +347,7 @@ export default function MyRecipesScreen({ navigation, route }) {
       ) : loadError ? (
         <EmptyState
           icon="warning-outline"
-          title="Couldn't load recipes"
+          title="Your recipes did not load"
           text="Something went wrong loading these. Your saved recipes have not been changed."
           actionLabel="Try again"
           onAction={reload}
@@ -342,7 +375,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         accessibilityLabel="Choose recipe servings"
         sheetStyle={styles.servingsSheet}
       >
-        <Text style={[styles.sheetTitle, live.sheetTitle]} numberOfLines={1}>{servePrompt?.name}</Text>
+        <Text style={[styles.sheetTitle, live.sheetTitle]} numberOfLines={1} accessibilityRole="header">{servePrompt?.name}</Text>
         <Text style={[styles.sheetSub, live.sheetSub]}>How many servings did you eat?</Text>
         <Stepper
           value={servings}
@@ -413,11 +446,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   actionBtn: {
-    width: 40,
-    height: 40,
+    width: ACTION_BOX,
+    height: ACTION_BOX,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: circle(40),
+    borderRadius: circle(ACTION_BOX),
   },
   // Servings picker bottom sheet (food audit F-4)
   servingsSheet: { alignItems: 'center' },

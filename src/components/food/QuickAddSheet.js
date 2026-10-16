@@ -6,6 +6,7 @@ import useTheme from '../../hooks/useTheme';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
 import BottomSheet from '../BottomSheet';
+import SectionLabel from '../SectionLabel';
 // M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
 // idle → loading → success morph; the commit haptic is its success beat.
 import Button from '../Button';
@@ -15,6 +16,7 @@ import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
 import { fromEnergy, toEnergy, energyUnitLabel } from '../../lib/format';
 import { parseDecimalInput } from '../../lib/parseDecimalInput';
+import { logError } from '../../lib/errorLog';
 import { touchTarget } from '../../styles/layout';
 
 /**
@@ -93,18 +95,21 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
     try {
       await onSave({ kcal: Math.round(k), protein: num(protein), carbs: num(carbs), fat: num(fat), mealSlot });
       setSaved(true);
-    } catch (_e) {
+    } catch (e) {
+      // D230 R18: the cause is logged (no amounts, no names), then the person
+      // gets the calm full sentence that says what was being saved.
+      logError('QuickAddSheet.save', e, { mealSlot });
       setSubmitting(false);
-      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
+      toast.show('That quick add was not saved. Try again in a moment.', { variant: 'error' });
     }
   }
 
   return (
     <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel="Quick add">
-          <Text style={[styles.title, live.title]}>Quick add</Text>
+          <Text style={[styles.title, live.title]} accessibilityRole="header">Quick add</Text>
           <Text style={[styles.subtitle, live.subtitle]}>Log energy now, with macros if you have them.</Text>
 
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>{`Energy (${unitLabel})`}</Text>
+          <SectionLabel style={styles.fieldLabel}>{`Energy (${unitLabel})`}</SectionLabel>
           <TextField
             value={kcal}
             onChangeText={setKcal}
@@ -137,7 +142,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
             ))}
           </View>
 
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
+          <SectionLabel style={styles.fieldLabel}>Meal</SectionLabel>
           <View style={styles.mealRow}>
             {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
               <Chip
@@ -177,11 +182,9 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
-  fieldLabel: {
-    fontSize: fontSize.xs, color: colors.textSecondary,
-    textTransform: 'uppercase', fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    marginTop: spacing.xs,
-  },
+  // D230 R15: the label is the house SectionLabel (it sets its own overline
+  // type and capitals); only the spacing above it is local.
+  fieldLabel: { marginTop: spacing.xs },
   calorieInput: {
     fontSize: fontSize.lg,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
@@ -209,6 +212,5 @@ function buildLiveStyles(t) {
   return {
     title: { color: t.colors.textPrimary },
     subtitle: { color: t.colors.textMuted },
-    fieldLabel: { color: t.colors.textSecondary },
   };
 }

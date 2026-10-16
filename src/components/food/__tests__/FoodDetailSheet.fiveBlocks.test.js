@@ -191,7 +191,7 @@ describe('(a) five blocks at open, the rest on demand', () => {
     const title = hostByTestID(tree, 'food-sheet-title');
     expect(blockText(title)).toContain('Plain bagel');
     expect(blockText(title)).toContain('Bakery Co');
-    expect(title.findAll((n) => n.props.accessibilityLabel === 'Source: OFF').length).toBeGreaterThan(0);
+    expect(title.findAll((n) => n.props.accessibilityLabel === 'Source: Food Facts').length).toBeGreaterThan(0);
 
     const amount = blockText(hostByTestID(tree, 'food-sheet-amount'));
     expect(amount).toContain('Amount');

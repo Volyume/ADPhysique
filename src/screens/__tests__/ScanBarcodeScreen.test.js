@@ -104,7 +104,11 @@ describe('ScanBarcodeScreen lookup failure (ST-2)', () => {
     expect(close.length).toBeGreaterThan(0);
   });
 
-  test('a thrown lookup shows a "couldn\'t reach" error toast and resets the scanner while online', async () => {
+  // RE-POINTED (D230 R15, food level-up 2026-10-16): the reachability toast is
+  // a full sentence that says what happened and what to do. Same truth: a
+  // thrown lookup online reads as "could not be reached" (not "offline", not a
+  // miss) and the scanner resets.
+  test('a thrown lookup shows a "could not be reached" error toast and resets the scanner while online', async () => {
     resolveBarcode.mockRejectedValue(new Error('boom'));
     const nav = makeNav();
     const tree = await mount(nav);
@@ -112,7 +116,7 @@ describe('ScanBarcodeScreen lookup failure (ST-2)', () => {
     await scan();
 
     expect(mockToastShow).toHaveBeenCalledWith(
-      "Couldn't reach the food library. Try again.",
+      'The food library could not be reached. Try again in a moment.',
       expect.objectContaining({ variant: 'error' }),
     );
     expect(nav.replace).not.toHaveBeenCalled();

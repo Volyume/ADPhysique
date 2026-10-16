@@ -42,12 +42,16 @@ jest.mock('../../lib/engineTelemetry', () => ({ track: jest.fn(() => Promise.res
 
 // Save button: captured on every render so the test can invoke onPress directly,
 // the same call the real "Save and add to diary" / "Save changes to food" tap makes.
+// "Save the food" (D230 4.11) is the second action, captured the same way.
 let mockSaveButton = null;
+let mockSaveOnlyButton = null;
 jest.mock('../../components/Button', () => (props) => {
   if (props.accessibilityLabel === 'Save food and add to diary'
     || props.accessibilityLabel === 'Save changes to food') mockSaveButton = props;
+  if (props.title === 'Save the food') mockSaveOnlyButton = props;
   return null;
 });
+jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 jest.mock('../../lib/food/db', () => ({
   insertCustomFood: jest.fn(() => Promise.resolve('custom-1')),
@@ -81,6 +85,7 @@ const WARNING = 'Enter an amount between 1 and 5000 g.';
 beforeEach(() => {
   jest.clearAllMocks();
   mockSaveButton = null;
+  mockSaveOnlyButton = null;
   useAppStore.mockImplementation((selector) => selector(store));
 });
 
@@ -111,8 +116,13 @@ async function renderAndSave(eatenValue) {
 }
 
 describe('AddCustomFoodScreen OCR low-confidence highlighting (item 5)', () => {
-  const CONFIDENCE_HINT = 'Not certain, check this value';
-  const BANNER = "Amber figures aren't certain, check them.";
+  // RE-POINTED (D230 R15, food level-up 2026-10-16): the note no longer names
+  // a colour ("Amber figures aren't certain, check them."); it names the dot
+  // that now sits beside each unsure field's label, in full sentences, and the
+  // field's spoken hint matches. Same truth: an unsure field is marked, the
+  // note appears while any is unsure, and editing the field clears both.
+  const CONFIDENCE_HINT = 'Hard to read. Check this value.';
+  const BANNER = 'The figures marked with a dot were hard to read. Check them before you save.';
 
   function ocrRoute(prefillMacros, prefillConfidence) {
     return {
@@ -515,5 +525,242 @@ describe('AddCustomFoodScreen edit mode (D138 item 6)', () => {
     }));
     expect(insertCustomFood).not.toHaveBeenCalled();
     expect(logFoodEntry).not.toHaveBeenCalled();
+  });
+});
+
+// D230 R15 (food level-up 2026-10-16): the unsure-figure mark is a dot beside
+// the field's label as well as the border it always had, so it is never only a
+// colour. The dot is the house Ionicons "ellipse" at 8 dp in the quiet text
+// colour, with the spoken label "hard to read"; a field that was read clearly
+// carries no dot.
+describe('AddCustomFoodScreen hard-to-read dot (D230 R15)', () => {
+  const { colors } = require('../../styles/theme');
+
+  function scanRoute(confidence) {
+    return {
+      params: {
+        mealSlot: 'snack',
+        entryDate: '2026-10-16',
+        from: 'scan',
+        prefillName: 'Scanned food',
+        prefillMacros: { servingG: 100, kcal100g: 105, protein100g: 20, carbs100g: 5, fat100g: 2, fibre100g: 1 },
+        prefillConfidence: confidence,
+      },
+    };
+  }
+
+  function dots(tree) {
+    return tree.root.findAll((n) => n.type === 'Ionicons' && n.props.accessibilityLabel === 'hard to read');
+  }
+
+  test('an unsure field gets a visible dot (ellipse, 8 dp, textSecondary) beside its label and keeps its border', async () => {
+    let tree;
+    await act(async () => {
+      tree = create(<AddCustomFoodScreen
+        navigation={makeNav()}
+        route={scanRoute({ kcal100g: 'low', protein100g: 'high', carbs100g: 'high', fat100g: 'high', fibre100g: 'high' })}
+      />);
+    });
+    await flush();
+
+    const found = dots(tree);
+    expect(found).toHaveLength(1);
+    expect(found[0].props.name).toBe('ellipse');
+    expect(found[0].props.size).toBe(8);
+    expect(found[0].props.color).toBe(colors.textSecondary);
+    // The border it had before the dot is still there: the dot adds to it.
+    expect(tree.root.findByProps({ accessibilityLabel: 'Calories' }).props.fieldStyle).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Protein, grams' }).props.fieldStyle).toBeFalsy();
+  });
+
+  test('each unsure field gets its own dot; clearly read fields and manual entry get none', async () => {
+    let tree;
+    await act(async () => {
+      tree = create(<AddCustomFoodScreen
+        navigation={makeNav()}
+        route={scanRoute({ kcal100g: 'low', protein100g: 'low', carbs100g: 'high', fat100g: 'high', fibre100g: 'high' })}
+      />);
+    });
+    await flush();
+    expect(dots(tree)).toHaveLength(2);
+
+    let manual;
+    await act(async () => {
+      manual = create(<AddCustomFoodScreen navigation={makeNav()} route={{ params: { mealSlot: 'snack', entryDate: '2026-10-16' } }} />);
+    });
+    await flush();
+    expect(dots(manual)).toHaveLength(0);
+  });
+
+  test('editing the flagged value removes its dot', async () => {
+    let tree;
+    await act(async () => {
+      tree = create(<AddCustomFoodScreen
+        navigation={makeNav()}
+        route={scanRoute({ kcal100g: 'low', protein100g: 'high', carbs100g: 'high', fat100g: 'high', fibre100g: 'high' })}
+      />);
+    });
+    await flush();
+    expect(dots(tree)).toHaveLength(1);
+    setInput(tree, 'Calories', '110');
+    expect(dots(tree)).toHaveLength(0);
+  });
+
+  test('the section titles are sentence case (SectionLabel capitalises them itself)', async () => {
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={{ params: {} }} />); });
+    await flush();
+    const text = allText(tree);
+    expect(text).toContain('Per 100 g');
+    expect(text).toContain('Quantity eaten');
+    expect(text).not.toContain('PER 100G');
+    expect(text).not.toContain('QUANTITY EATEN');
+  });
+});
+
+// D230 4.11: "Save the food" is the second action. It saves the custom food
+// (and queues the Open Food Facts contribution as before) without writing a
+// diary entry, then closes. The sanity confirm and the unsure-figures confirm
+// apply to it exactly as to "Save and add to diary".
+describe('AddCustomFoodScreen "Save the food" (D230 4.11)', () => {
+  const { logError } = require('../../lib/errorLog');
+  const { queueContribution, getConsent } = require('../../lib/food/writeback');
+  const { appAlert } = require('../../components/AppAlert');
+
+  async function mount(route) {
+    const nav = makeNav();
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={nav} route={route} />); });
+    await flush();
+    return { nav, tree };
+  }
+
+  const NEW_FOOD = { params: { mealSlot: 'snack', entryDate: '2026-10-16' } };
+
+  test('a new food offers both actions; editing a food offers only "Save changes"', async () => {
+    await mount(NEW_FOOD);
+    expect(mockSaveButton.title).toBe('Save and add to diary');
+    expect(mockSaveOnlyButton).toBeTruthy();
+    expect(mockSaveOnlyButton.variant).toBe('secondary');
+
+    mockSaveOnlyButton = null;
+    getCustomFoodById.mockResolvedValueOnce({
+      id: 'cf-1', name: 'Overnight oats', brand: null, serving_g: 250, serving_label: null,
+      kcal_100g: 150, protein_100g: 6, carbs_100g: 20, fat_100g: 4, fibre_100g: 3,
+    });
+    await mount({ params: { mealSlot: 'snack', entryDate: '2026-10-16', editFoodId: 'cf-1' } });
+    expect(mockSaveButton.title).toBe('Save changes');
+    expect(mockSaveOnlyButton).toBeNull();
+  });
+
+  test('saves the food and closes, with no diary entry and no eaten-amount check', async () => {
+    const { nav, tree } = await mount(NEW_FOOD);
+    setInput(tree, 'Name', 'Home granola');
+    setInput(tree, 'Eaten (g), grams', ''); // a blank eaten amount blocks logging, not saving
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+
+    expect(insertCustomFood).toHaveBeenCalledTimes(1);
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({ name: 'Home granola' }));
+    expect(logFoodEntry).not.toHaveBeenCalled();
+    expect(mockToastShow).not.toHaveBeenCalledWith(WARNING, expect.anything());
+    expect(mockToastShow).toHaveBeenCalledWith('Food saved. You can add it to your diary any time.');
+    expect(nav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('"Save and add to diary" still logs the entry (the other action is unchanged)', async () => {
+    const { tree } = await mount(NEW_FOOD);
+    setInput(tree, 'Name', 'Home granola');
+    setInput(tree, 'Eaten (g), grams', '40');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledTimes(1);
+    expect(logFoodEntry).toHaveBeenCalledTimes(1);
+  });
+
+  test('the sanity confirm applies: "Edit" stops the save, nothing is written', async () => {
+    appAlert.mockImplementationOnce((title, message, buttons) => { buttons.find((b) => b.text === 'Edit').onPress(); });
+    const { nav, tree } = await mount(NEW_FOOD);
+    setInput(tree, 'Name', 'Impossible food');
+    setInput(tree, 'Calories', '950'); // above the 900 kcal per 100 g bound
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+
+    expect(appAlert).toHaveBeenCalledWith('Numbers look off', expect.any(String), expect.any(Array), expect.any(Object));
+    expect(insertCustomFood).not.toHaveBeenCalled();
+    expect(logFoodEntry).not.toHaveBeenCalled();
+    expect(nav.goBack).not.toHaveBeenCalled();
+  });
+
+  test('the unsure-figures confirm applies: "Check first" stops the save', async () => {
+    appAlert.mockImplementationOnce((title, message, buttons) => { buttons.find((b) => b.text === 'Check first').onPress(); });
+    await mount({
+      params: {
+        mealSlot: 'snack', entryDate: '2026-10-16', from: 'scan', prefillName: 'Scanned food',
+        prefillMacros: { servingG: 100, kcal100g: 105, protein100g: 20, carbs100g: 5, fat100g: 2, fibre100g: 1 },
+        prefillConfidence: { kcal100g: 'low', protein100g: 'high', carbs100g: 'high', fat100g: 'high', fibre100g: 'high' },
+      },
+    });
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+    expect(appAlert).toHaveBeenCalledWith("Some figures weren't read clearly", 'Save anyway?', expect.any(Array), expect.any(Object));
+    expect(insertCustomFood).not.toHaveBeenCalled();
+  });
+
+  test('a scanned food still queues the contribution when the person has consented (as before)', async () => {
+    getConsent.mockResolvedValueOnce(true);
+    const { nav, tree } = await mount({
+      params: { mealSlot: 'snack', entryDate: '2026-10-16', from: 'scan_chain', prefillBarcode: '5000000000017', prefillName: 'Scanned food' },
+    });
+    setInput(tree, 'Name', 'Scanned food');
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+
+    expect(logFoodEntry).not.toHaveBeenCalled();
+    expect(queueContribution).toHaveBeenCalledTimes(1);
+    expect(mockToastShow).toHaveBeenCalledWith('Saved. Next time this barcode scans instantly.');
+    expect(nav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('a failed save says what happened and what to do, and logs its cause first', async () => {
+    insertCustomFood.mockRejectedValueOnce(new Error('disk full'));
+    const { nav, tree } = await mount(NEW_FOOD);
+    setInput(tree, 'Name', 'Home granola');
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+
+    expect(logError).toHaveBeenCalledWith('AddCustomFood.save', expect.any(Error), { logged: false, scanned: false });
+    expect(mockToastShow).toHaveBeenCalledWith('That food was not saved. Try again in a moment.', { variant: 'error' });
+    expect(nav.goBack).not.toHaveBeenCalled();
+  });
+
+  test('a failed "Save and add to diary" and a failed edit use the same sentence and log too', async () => {
+    logFoodEntry.mockRejectedValueOnce(new Error('write failed'));
+    const { tree } = await mount(NEW_FOOD);
+    setInput(tree, 'Name', 'Home granola');
+    setInput(tree, 'Eaten (g), grams', '40');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(logError).toHaveBeenCalledWith('AddCustomFood.save', expect.any(Error), { logged: true, scanned: false });
+    expect(mockToastShow).toHaveBeenCalledWith('That food was not saved. Try again in a moment.', { variant: 'error' });
+
+    jest.clearAllMocks();
+    getCustomFoodById.mockResolvedValueOnce({
+      id: 'cf-1', name: 'Overnight oats', brand: null, serving_g: 250, serving_label: null,
+      kcal_100g: 150, protein_100g: 6, carbs_100g: 20, fat_100g: 4, fibre_100g: 3,
+    });
+    updateCustomFood.mockRejectedValueOnce(new Error('update failed'));
+    await mount({ params: { mealSlot: 'snack', entryDate: '2026-10-16', editFoodId: 'cf-1' } });
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(logError).toHaveBeenCalledWith('AddCustomFood.updateFood', expect.any(Error), { hasId: true });
+    expect(mockToastShow).toHaveBeenCalledWith('That food was not saved. Try again in a moment.', { variant: 'error' });
+  });
+
+  test('a food that will not load says so, with a way forward, and logs its cause', async () => {
+    getCustomFoodById.mockRejectedValueOnce(new Error('read failed'));
+    await mount({ params: { mealSlot: 'snack', entryDate: '2026-10-16', editFoodId: 'cf-9' } });
+    expect(logError).toHaveBeenCalledWith('AddCustomFood.loadFood', expect.any(Error), { hasId: true });
+    expect(mockToastShow).toHaveBeenCalledWith('That food did not load. Try again in a moment.', { variant: 'error' });
   });
 });

@@ -390,12 +390,17 @@ export default function MealPlanScreen({ navigation, route }) {
     let active = true;
     AsyncStorage.getItem(DIETARY_CHIP_HINT_KEY).then((v) => {
       if (active && v !== 'true') setShowDietaryChipHint(true);
-    }).catch(() => {});
+    }).catch((e) => {
+      // A failed read only means the hint is not shown; the cause is kept.
+      logError('MealPlanScreen.readChipHint', e);
+    });
     return () => { active = false; };
   }, []);
   const dismissDietaryChipHint = useCallback(() => {
     setShowDietaryChipHint(false);
-    AsyncStorage.setItem(DIETARY_CHIP_HINT_KEY, 'true').catch(() => {});
+    AsyncStorage.setItem(DIETARY_CHIP_HINT_KEY, 'true').catch((e) => {
+      logError('MealPlanScreen.saveChipHint', e);
+    });
   }, []);
 
   const plan = record?.plan || null;
@@ -448,8 +453,9 @@ export default function MealPlanScreen({ navigation, route }) {
       }
       await load();
       toast.show(okMsg, { variant: 'success' });
-    } catch (_) {
-      toast.show("Couldn't create your meals. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.generate', e, { mode: genFn === generateAndSaveDayPlan ? 'day' : 'week' });
+      toast.show('Your meals were not created. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -470,8 +476,9 @@ export default function MealPlanScreen({ navigation, route }) {
       }
       await load();
       toast.show('Meals rebuilt. Your targets are unchanged.', { variant: 'success' });
-    } catch (_) {
-      toast.show("Couldn't refresh the plan. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.regenerate', e);
+      toast.show('The plan was not refreshed. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -497,8 +504,9 @@ export default function MealPlanScreen({ navigation, route }) {
       // meals can be marked eaten one by one or all at once; it consumes and
       // clears the param itself so a later revisit never re-fires it.
       if (n > 0) navigation.navigate('Diary', { justAddedPlan: true });
-    } catch (_) {
-      toast.show("Couldn't log the day. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.logDay', e, { replacing: !!clearPlannedFirst });
+      toast.show('That day was not added to your diary. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -507,7 +515,13 @@ export default function MealPlanScreen({ navigation, route }) {
   const handleLogDay = useCallback(async () => {
     if (!user?.id || !day || busy) return;
     let existing = [];
-    try { existing = (await getFoodEntriesForDay(user.id, planStartDate)) || []; } catch (_) { existing = []; }
+    try {
+      existing = (await getFoodEntriesForDay(user.id, planStartDate)) || [];
+    } catch (e) {
+      // The check falls back to a clean day, as before; the cause is kept.
+      logError('MealPlanScreen.readDayEntries', e);
+      existing = [];
+    }
     const plannedCount = existing.filter((e) => e.is_planned).length;
     const eatenCount = existing.length - plannedCount;
 
@@ -558,8 +572,9 @@ export default function MealPlanScreen({ navigation, route }) {
         // `justAddedPlan` teach signal.
         navigation.navigate('Diary', { justAddedPlan: true });
       }
-    } catch (_) {
-      toast.show("Couldn't schedule the week. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.logWeek', e, { days: plan?.days?.length ?? 0 });
+      toast.show('The week was not added to your diary. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -593,8 +608,9 @@ export default function MealPlanScreen({ navigation, route }) {
               if (res?.error === 'no_plan' || !res?.changed) return;
               setRecord({ ...record, plan: res.plan });
               toast.show(`${targetLabel} now matches ${sourceLabel}.`, { variant: 'success' });
-            } catch (_) {
-              toast.show("Couldn't repeat that day. Try again.", { variant: 'error' });
+            } catch (e) {
+              logError('MealPlanScreen.repeatDay', e, { fromIndex: dayIndex, toIndex });
+              toast.show('That day was not repeated. Try again in a moment.', { variant: 'error' });
             } finally {
               setBusy(false);
             }
@@ -633,9 +649,15 @@ export default function MealPlanScreen({ navigation, route }) {
         try {
           const parsed = JSON.parse(raw);
           setGroceryTicks(parsed && typeof parsed === 'object' ? parsed : {});
-        } catch (_) { setGroceryTicks({}); }
+        } catch (e) {
+          logError('MealPlanScreen.parseGroceryTicks', e);
+          setGroceryTicks({});
+        }
       })
-      .catch(() => setGroceryTicks({}));
+      .catch((e) => {
+        logError('MealPlanScreen.readGroceryTicks', e);
+        setGroceryTicks({});
+      });
   }, [plan, record?.id]);
   const toggleGroceryTick = useCallback((key) => {
     setGroceryTicks((prev) => {
@@ -643,7 +665,9 @@ export default function MealPlanScreen({ navigation, route }) {
       if (next[key]) delete next[key]; else next[key] = true;
       const planId = record?.id;
       if (planId) {
-        AsyncStorage.setItem(`@volyume_grocery_ticks_${planId}`, JSON.stringify(next)).catch(() => {});
+        AsyncStorage.setItem(`@volyume_grocery_ticks_${planId}`, JSON.stringify(next)).catch((e) => {
+          logError('MealPlanScreen.saveGroceryTicks', e);
+        });
       }
       return next;
     });
@@ -680,8 +704,9 @@ export default function MealPlanScreen({ navigation, route }) {
       setRecord({ ...record, plan: nextPlan });
       setSwapSheet(null);
       toast.show(`Swapped for ${meal.name}.`, { variant: 'success' });
-    } catch (_) {
-      toast.show("Couldn't swap that one. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.swapMeal', e, { slotKey });
+      toast.show('That meal was not swapped. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -748,7 +773,7 @@ export default function MealPlanScreen({ navigation, route }) {
       components: slot.components, foodKeyOut, prefs: plan.prefs, preferKey: foodKeyIn,
     });
     if (!res) {
-      toast.show("Couldn't swap that food. Try again.", { variant: 'error' });
+      toast.show('That food was not swapped. Try again in a moment.', { variant: 'error' });
       setFoodSwapSheet(null);
       return;
     }
@@ -766,7 +791,10 @@ export default function MealPlanScreen({ navigation, route }) {
       // successful write and surface a false "couldn't swap" error (food review U-M10).
       const { swap } = res;
       if (isFoodSwapScope(scope)) {
-        await recordFoodSwap(user.id, foodKeyOut, foodKeyIn, scope).catch(() => {});
+        await recordFoodSwap(user.id, foodKeyOut, foodKeyIn, scope).catch((e) => {
+          // The memory is a bonus and never blocks the swap; the cause is kept.
+          logError('MealPlanScreen.recordFoodSwap', e, { scope });
+        });
       }
       const persistent = scope === FOOD_SWAP_SCOPE.PERSISTENT;
       toast.show(
@@ -776,8 +804,9 @@ export default function MealPlanScreen({ navigation, route }) {
             : 'Food swapped.',
         { variant: 'success' },
       );
-    } catch (_) {
-      toast.show("Couldn't swap that food. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.swapFood', e, { slotKey, scope });
+      toast.show('That food was not swapped. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -821,9 +850,10 @@ export default function MealPlanScreen({ navigation, route }) {
                 await updateMealPlan(user.id, record.id, nextPlan);
                 setRecord({ ...record, plan: nextPlan });
               }
-              toast.show(`We will not suggest ${foodName} from now on.`, { variant: 'success' });
-            } catch (_) {
-              toast.show("Couldn't update. Try again.", { variant: 'error' });
+              toast.show(`${foodName} will not be suggested again.`, { variant: 'success' });
+            } catch (e) {
+              logError('MealPlanScreen.flagFood', e, { slotKey });
+              toast.show('That food was not left out of your plans. Try again in a moment.', { variant: 'error' });
             } finally {
               setBusy(false);
             }
@@ -852,8 +882,9 @@ export default function MealPlanScreen({ navigation, route }) {
     try {
       await updateMealPlan(user.id, record.id, nextPlan);
       setRecord({ ...record, plan: nextPlan });
-    } catch (_) {
-      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.setItemWeightState', e, { slotKey });
+      toast.show('That raw or cooked choice was not saved. Try again in a moment.', { variant: 'error' });
     }
   }, [user?.id, record, plan, day, dayIndex, toast]);
 
@@ -872,8 +903,9 @@ export default function MealPlanScreen({ navigation, route }) {
       } else {
         toast.show('Preferences saved.', { variant: 'success' });
       }
-    } catch (_) {
-      toast.show("Couldn't update preferences. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.setPref', e, { keys: Object.keys(patch || {}).join(',') });
+      toast.show('Your preferences were not saved. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -944,7 +976,9 @@ export default function MealPlanScreen({ navigation, route }) {
     if (!user?.id) return;
     setMealCountAsk(null);
     // Remembered so we ask once, not every time they open the screen.
-    await setMealPlanPrefs({ mealCountAskDismissedFor: count }).catch(() => {});
+    await setMealPlanPrefs({ mealCountAskDismissedFor: count }).catch((e) => {
+      logError('MealPlanScreen.dismissMealCount', e);
+    });
   }, [user?.id, setMealPlanPrefs]);
 
   // Campaign 17A closeout: "Keep this meal".
@@ -983,8 +1017,9 @@ export default function MealPlanScreen({ navigation, route }) {
         pinned ? `${mealName} will stay in your plan.` : `${mealName} is no longer kept.`,
         { variant: 'success' },
       );
-    } catch (_) {
-      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('MealPlanScreen.togglePin', e, { pinned });
+      toast.show('That change was not saved. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -1083,8 +1118,8 @@ export default function MealPlanScreen({ navigation, route }) {
         <View style={styles.emptyWrap}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load meal builder"
-            text="Couldn't load this on your device. Try again. Your diary has not been changed."
+            title="The meal builder did not load"
+            text="Something went wrong loading it on your device. Try again in a moment. Your diary has not been changed."
             actionLabel="Try again"
             onAction={load}
           />
@@ -1537,7 +1572,7 @@ export default function MealPlanScreen({ navigation, route }) {
       >
         {swapSheet ? (
           <>
-            <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Swap this meal</Text>
+            <Text style={[styles.swapSheetTitle, live.swapSheetTitle]} accessibilityRole="header">Swap this meal</Text>
             <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
               Pick any one. Each keeps the day close to your target; the first is the closest match.
             </Text>
@@ -1590,7 +1625,7 @@ export default function MealPlanScreen({ navigation, route }) {
                  must not be forgotten the moment the plan regenerates. So we
                  ask, in one tap, in plain words. */
               <>
-                <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Just this once, or from now on?</Text>
+                <Text style={[styles.swapSheetTitle, live.swapSheetTitle]} accessibilityRole="header">Just this once, or from now on?</Text>
                 <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
                   {`You picked ${foodSwapSheet.pending.name}.`}
                 </Text>
@@ -1640,7 +1675,7 @@ export default function MealPlanScreen({ navigation, route }) {
               </>
             ) : (
               <>
-                <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Swap this food</Text>
+                <Text style={[styles.swapSheetTitle, live.swapSheetTitle]} accessibilityRole="header">Swap this food</Text>
                 <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
                   Pick any one. Grams are solved to match, so the meal stays close to target; the first is the closest match.
                 </Text>
@@ -1698,7 +1733,7 @@ export default function MealPlanScreen({ navigation, route }) {
         {grocerySheet ? (
           <>
             <View style={styles.grocerySheetHead}>
-              <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Shopping list</Text>
+              <Text style={[styles.swapSheetTitle, live.swapSheetTitle]} accessibilityRole="header">Shopping list</Text>
               {!grocerySheet.isEmpty ? (
                 <Button
                   title="Share"
@@ -1780,7 +1815,7 @@ export default function MealPlanScreen({ navigation, route }) {
         onClose={() => setRepeatSheet(false)}
         accessibilityLabel="Repeat this day"
       >
-        <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Repeat this day</Text>
+        <Text style={[styles.swapSheetTitle, live.swapSheetTitle]} accessibilityRole="header">Repeat this day</Text>
         <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
           {`Copy ${activeDayLabel}'s meals onto another day. That day's current meals are replaced.`}
         </Text>
@@ -1831,7 +1866,7 @@ export default function MealPlanScreen({ navigation, route }) {
         accessibilityLabel="Dietary needs"
         scroll
       >
-        <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Dietary needs</Text>
+        <Text style={[styles.swapSheetTitle, live.swapSheetTitle]} accessibilityRole="header">Dietary needs</Text>
         <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
           This is the same selection as Settings. A change here updates everywhere.
         </Text>

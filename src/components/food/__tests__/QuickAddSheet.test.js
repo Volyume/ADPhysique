@@ -11,6 +11,7 @@ jest.mock('../../../lib/haptics', () => ({
   selection: jest.fn(),
   commit: jest.fn(),
 }));
+jest.mock('../../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 import QuickAddSheet from '../QuickAddSheet';
 
@@ -82,5 +83,31 @@ describe('QuickAddSheet', () => {
       fat: 9,
       mealSlot: 'dinner',
     });
+  });
+});
+
+// D230 R15, R16 and R18 (food level-up 2026-10-16): a failed save says what
+// was being saved and what to do, with the cause logged first; the title is a
+// heading; the field labels are the house SectionLabel.
+describe('QuickAddSheet failure sentence, heading and labels (D230)', () => {
+  const { logError } = require('../../../lib/errorLog');
+
+  test('a failed save is a full sentence naming the quick add, and logs its cause', async () => {
+    const { tree, props } = render({
+      initialMealSlot: 'lunch',
+      onSave: jest.fn(async () => { throw new Error('disk full'); }),
+    });
+    setInput(tree, 'Energy in kcal', '300');
+    await press(tree, 'Add to diary');
+
+    expect(props.onSave).toHaveBeenCalledTimes(1);
+    expect(logError).toHaveBeenCalledWith('QuickAddSheet.save', expect.any(Error), { mealSlot: 'lunch' });
+    expect(mockToastShow).toHaveBeenCalledWith('That quick add was not saved. Try again in a moment.', { variant: 'error' });
+  });
+
+  test('the sheet title is a heading', () => {
+    const { tree } = render();
+    const headings = tree.root.findAll((n) => n.props?.accessibilityRole === 'header');
+    expect(headings.map((n) => n.props.children)).toContain('Quick add');
   });
 });

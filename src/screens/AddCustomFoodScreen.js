@@ -5,6 +5,19 @@
  * row and log a food_entries row in one flow. Sanity-checks the
  * macros before saving (see sanityChecks.js).
  *
+ * D230 4.11 (food level-up 2026-10-16): two ways to finish a new food.
+ * "Save and add to diary" is the flow above. "Save the food" (secondary)
+ * saves the custom food, and queues the Open Food Facts contribution as
+ * before, without writing a diary entry, then closes. Both go through the
+ * same unsure-figures confirm and the same sanity confirm. Editing an
+ * existing food keeps its single "Save changes" (it never logs).
+ *
+ * D230 R15 and R18: every failure is a full sentence that says what happened
+ * and what to do, and every catch that turns a failure into a toast logs its
+ * cause first (logError). A figure the label scan could not read clearly is
+ * marked by a dot beside its label as well as by its border, so the mark is
+ * never only a colour.
+ *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
 import { todayLocalKey } from '../lib/dayKey';
@@ -12,6 +25,7 @@ import { appAlert } from '../components/AppAlert';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Text from '../components/Text';
+import Ionicons from '@expo/vector-icons/Ionicons';
 // Campaign item 14 (D25): react-native-keyboard-controller outside sheets.
 // KeyboardAwareScrollView replaces the ScrollView + KeyboardAvoidingView
 // pair below (proper avoidance, auto-scroll to the focused field);
@@ -31,6 +45,7 @@ import { queueContribution, getConsent, markScanChainCompleted } from '../lib/fo
 import { checkFoodSanity } from '../lib/food/sanityChecks';
 import { fieldNeedsCheck } from '../lib/food/ocrParser';
 import { audit } from '../lib/observability';
+import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { findLocalByBarcode } from '../lib/food/sources/localCache';
@@ -39,6 +54,9 @@ import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { MICRONUTRIENTS } from '../lib/food/micronutrients';
 import CollapsibleSection from '../components/CollapsibleSection';
 
+// D230 R15: the dot beside a figure the label scan could not read clearly.
+// 8 dp, in the quiet text colour: a mark that is not only a colour.
+const UNSURE_DOT_SIZE = 8;
 
 export default function AddCustomFoodScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -93,7 +111,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     let cancelled = false;
     findLocalByBarcode(prefillBarcode, userId)
       .then((hit) => { if (!cancelled && hit && hit.source === 'custom') setDupeFood(hit); })
-      .catch(() => {});
+      .catch((e) => {
+        // The duplicate hint is a convenience and never blocks the form, but
+        // the cause is kept.
+        logError('AddCustomFood.dupeLookup', e);
+      });
     return () => { cancelled = true; };
   }, [prefillBarcode, userId]);
   // D138: a drink label reads its serving in ml, not g ("Serving size 330
@@ -120,6 +142,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   const [fibre, setFibre] = useState(_num(prefillMacros?.fibre100g));
   const [quantityG, setQuantityG] = useState('100');
   const [saving, setSaving] = useState(false);
+  // Which button is busy, so only the pressed one shows its spinner.
+  const [savingOnly, setSavingOnly] = useState(false);
 
   // MN-1 (audit §15 item 2): optional per-100g vitamin/mineral entry, keyed by
   // nutrient key (MICRONUTRIENTS is the single source of truth for the set).
@@ -173,7 +197,10 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         setMicroInputs(microState);
         setMicrosOpen(Object.keys(microState).length > 0);
       })
-      .catch(() => { if (!cancelled) toast.show("Couldn't load this food. Try again.", { variant: 'error' }); });
+      .catch((e) => {
+        logError('AddCustomFood.loadFood', e, { hasId: !!editFoodId });
+        if (!cancelled) toast.show('That food did not load. Try again in a moment.', { variant: 'error' });
+      });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, editFoodId, userId]);
@@ -262,13 +289,16 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       audit('food.custom.update', { hasFibre: food.fibre100g != null });
       toast.show('Food updated.');
       navigation.goBack();
-    } catch (_err) {
-      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
+    } catch (e) {
+      logError('AddCustomFood.updateFood', e, { hasId: !!editFoodId });
+      toast.show('That food was not saved. Try again in a moment.', { variant: 'error' });
       setSaving(false);
     }
   }
 
-  async function onSave() {
+  // `log: true` is "Save and add to diary"; `log: false` is "Save the food"
+  // (D230 4.11): the same food row, the same confirms, no diary entry.
+  async function saveFood({ log }) {
     if (!canSave || saving) return;
     if (isEditMode) return onSaveEdit();
     // FOOD-001: the amount eaten must fall inside the shared 1 to 5000 g safety
@@ -278,10 +308,12 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     // defence in depth. Blank/0 no longer silently falls back to the serving
     // size; the user is asked for a real amount.
     const qty = Number(quantityG);
-    if (!isValidEntryGrams(qty)) {
+    // Saving the food alone logs nothing, so the amount eaten is not asked for.
+    if (log && !isValidEntryGrams(qty)) {
       toast.show('Enter an amount between 1 and 5000 g.', { variant: 'warning' });
       return;
     }
+    setSavingOnly(!log);
     setSaving(true);
     try {
       // D138: a prefilled low-confidence field the user never touched must
@@ -328,8 +360,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
             require('../lib/engineTelemetry').track(userId, 'food_sanity_check_failed', {
               reason_code: sanity.code ?? 'other',
               action: confirmed ? 'override' : 'edit',
-            }).catch(() => {});
-          } catch (_) {}
+            }).catch(() => {}); // telemetry only, never blocks the save
+          } catch (_) { /* telemetry only, never blocks the save */ }
         }
         if (!confirmed) { setSaving(false); return; }
       }
@@ -350,8 +382,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           track(userId, 'custom_food_created', {
             source: route?.params?.from ?? 'manual',
             has_fibre: food.fibre100g != null,
-          }).catch(() => {});
-        } catch (_) {}
+          }).catch(() => {}); // telemetry only, never blocks the save
+        } catch (_) { /* telemetry only, never blocks the save */ }
       }
       // Food audit D-6: when an OCR-prefilled food is saved with fields still
       // holding their low-confidence read (the user didn't correct them), record
@@ -373,21 +405,23 @@ export default function AddCustomFoodScreen({ navigation, route }) {
             require('../lib/engineTelemetry').track(userId, 'ocr_low_confidence_saved', {
               fields_flagged: flagged,
               from: route?.params?.from ?? 'scan',
-            }).catch(() => {});
-          } catch (_) {}
+            }).catch(() => {}); // telemetry only, never blocks the save
+          } catch (_) { /* telemetry only, never blocks the save */ }
         }
       }
       // Macros for the logged entry are scaled from per-100g to the actual
       // quantity logged (qty, validated above). This denormalises at log time so
       // future edits to the custom food don't rewrite history. Shared helper
       // (food review U-M2).
-      await logFoodEntry(userId, {
-        entryDate,
-        mealSlot,
-        foodRef: `custom:${customId}`,
-        quantityG: qty,
-        ...scaleMacros(food, qty), // { kcal, proteinG, carbsG, fatG, fibreG }
-      });
+      if (log) {
+        await logFoodEntry(userId, {
+          entryDate,
+          mealSlot,
+          foodRef: `custom:${customId}`,
+          quantityG: qty,
+          ...scaleMacros(food, qty), // { kcal, proteinG, carbsG, fatG, fibreG }
+        });
+      }
 
       // OFF contribution (COMP-022): relocated here from ScanLabel capture so
       // it carries the values the user actually confirmed, plus name/brand.
@@ -404,20 +438,35 @@ export default function AddCustomFoodScreen({ navigation, route }) {
               fibre100g: food.fibre100g, servingG: food.servingG,
             });
           }
-        } catch (_) { /* contribution is best-effort, never blocks the save */ }
+        } catch (e) {
+          // Contribution is best-effort and never blocks the save; the cause
+          // is kept (no barcode, no food name).
+          logError('AddCustomFood.queueContribution', e);
+        }
         // A heal chain completed, make the one-time OFF-consent card eligible
         // (offered later on the Diary, never mid-task). Fire-and-forget.
-        markScanChainCompleted().catch(() => {});
+        markScanChainCompleted().catch((e) => {
+          logError('AddCustomFood.markScanChainCompleted', e);
+        });
         // Confirm the healing: the loop-closing reward (COMP-022).
         toast.show('Saved. Next time this barcode scans instantly.');
+      } else if (!log) {
+        // Saving the food alone writes no diary row, so say it is kept.
+        toast.show('Food saved. You can add it to your diary any time.');
       }
       navigation.goBack();
-    } catch (_err) {
-      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
+    } catch (e) {
+      logError('AddCustomFood.save', e, { logged: log, scanned: !!prefillBarcode });
+      toast.show('That food was not saved. Try again in a moment.', { variant: 'error' });
     } finally {
       setSaving(false);
     }
   }
+
+  const onSaveAndLog = () => saveFood({ log: true });
+  const onSaveOnly = () => saveFood({ log: false });
+  const busyLog = saving && !savingOnly;
+  const busyOnly = saving && savingOnly;
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
@@ -459,11 +508,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         <Field label="Name" value={name} onChange={setName} placeholder="Chicken breast, raw" autoFocus />
         <Field label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Tesco" />
 
-        <SectionLabel style={styles.sectionLabelSpacing}>PER 100G</SectionLabel>
+        <SectionLabel style={styles.sectionLabelSpacing}>Per 100 g</SectionLabel>
         {(_unsure('kcal100g', kcal) || _unsure('protein100g', protein)
           || _unsure('carbs100g', carbs) || _unsure('fat100g', fat)
           || _unsure('fibre100g', fibre)) ? (
-          <Text style={[styles.unsureNote, live.unsureNote]}>Amber figures aren't certain, check them.</Text>
+          <Text style={[styles.unsureNote, live.unsureNote]}>The figures marked with a dot were hard to read. Check them before you save.</Text>
         ) : null}
         <View style={styles.row}>
           <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" unsure={_unsure('kcal100g', kcal)} />
@@ -475,7 +524,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </View>
         <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" unsure={_unsure('fibre100g', fibre)} />
 
-        <SectionLabel style={styles.sectionLabelSpacing}>{isEditMode ? 'SERVING' : 'QUANTITY EATEN'}</SectionLabel>
+        <SectionLabel style={styles.sectionLabelSpacing}>{isEditMode ? 'Serving' : 'Quantity eaten'}</SectionLabel>
         {/* L05-ACF1 (2026-07-09 design audit): name the Serving (g) amount as
             a household unit ("slice", "cup", "tin"), stored as
             custom_foods.serving_label alongside the gram figure. Optional;
@@ -536,11 +585,25 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           title={isEditMode ? 'Save changes' : 'Save and add to diary'}
           accessibilityLabel={isEditMode ? 'Save changes to food' : 'Save food and add to diary'}
           size="lg"
-          loading={saving}
-          disabled={!canSave}
-          onPress={onSave}
+          loading={busyLog}
+          disabled={!canSave || busyOnly}
+          onPress={onSaveAndLog}
           style={styles.saveBtn}
         />
+        {/* D230 4.11: the way to keep a new food without logging it (before
+            this, every new food was logged the moment it was saved). */}
+        {isEditMode ? null : (
+          <Button
+            title="Save the food"
+            accessibilityLabel="Save the food without adding it to the diary"
+            variant="secondary"
+            size="lg"
+            loading={busyOnly}
+            disabled={!canSave || busyLog}
+            onPress={onSaveOnly}
+            style={styles.saveOnlyBtn}
+          />
+        )}
       </KeyboardAwareScrollView>
       </KeyboardGestureArea>
     </SafeAreaView>
@@ -575,13 +638,25 @@ function NumField({ label, value, onChange, suffix, unsure }) {
   const live = buildLiveStyles(t);
   return (
     <TextField
-      label={label}
+      label={unsure ? (
+        // D230 R15: a dot beside the label as well as the border, so the mark
+        // is never only a colour.
+        <>
+          {label}{' '}
+          <Ionicons
+            name="ellipse"
+            size={UNSURE_DOT_SIZE}
+            color={t.colors.textSecondary}
+            accessibilityLabel="hard to read"
+          />
+        </>
+      ) : label}
       value={value}
       onChangeText={onChange}
       placeholder="0"
       keyboardType="decimal-pad"
       accessibilityLabel={suffix === 'g' ? `${label}, grams` : label}
-      accessibilityHint={unsure ? 'Not certain, check this value' : undefined}
+      accessibilityHint={unsure ? 'Hard to read. Check this value.' : undefined}
       surface={t.colors.inputBg}
       containerStyle={[styles.field, styles.numField]}
       fieldStyle={unsure && [styles.numWrapUnsure, live.numWrapUnsure]}
@@ -622,6 +697,7 @@ const styles = StyleSheet.create({
   portionPreview: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, marginTop: -spacing.xs, marginBottom: spacing.sm },
 
   saveBtn: { marginTop: spacing.xl },
+  saveOnlyBtn: { marginTop: spacing.md },
 });
 
 // CP-10 batch D (2026-07-10): the frozen `styles` block above stays byte-

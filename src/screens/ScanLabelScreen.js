@@ -23,6 +23,11 @@
  * to AddCustomFood. EAS dev-client builds with the package in
  * dependencies pick it up via autolinking.
  *
+ * D230 R15 and R18 (food level-up 2026-10-16): the screen is titled "Scan the
+ * label" (the barcode screen's own word for the same act), the offline
+ * arrival line is a full sentence, and every catch that used to drop its cause (the capture failure above all,
+ * which routes on without a word) logs it with logError first.
+ *
  * Voice rules: short, no encouragement, no AI tells.
  */
 import { todayLocalKey } from '../lib/dayKey';
@@ -46,6 +51,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
 import { pickProductName } from '../lib/food/labelName';
+import { logError } from '../lib/errorLog';
 
 // C8 (Wave A): remembers a "skip the name step" choice across scans, so a
 // user who never bothers with front-of-pack photos isn't asked every time.
@@ -126,7 +132,10 @@ export default function ScanLabelScreen({ navigation, route }) {
     let cancelled = false;
     NetInfo.fetch()
       .then((s) => { if (!cancelled) setReachable(s?.isConnected !== false && s?.isInternetReachable !== false); })
-      .catch(() => { if (!cancelled) setReachable(true); });
+      .catch((e) => {
+        logError('ScanLabel.netInfo', e);
+        if (!cancelled) setReachable(true);
+      });
     return () => { cancelled = true; };
   }, [prefillBarcode]);
   const offline = reachable === false;
@@ -150,7 +159,11 @@ export default function ScanLabelScreen({ navigation, route }) {
       if (cancelled || getInitialStep(v) !== 'nutrition') return;
       setSkipRemembered(true);
       setStep('nutrition');
-    }).catch(() => {});
+    }).catch((e) => {
+      // A failed read of the remembered choice only means the name step is
+      // offered again; the cause is kept.
+      logError('ScanLabel.readSkipName', e);
+    });
     return () => { cancelled = true; };
   }, []);
 
@@ -164,7 +177,9 @@ export default function ScanLabelScreen({ navigation, route }) {
   // ScanBarcodeScreen.
   useEffect(() => {
     if (permission === 'not-determined') {
-      requestPermission().catch(() => {});
+      requestPermission().catch((e) => {
+        logError('ScanLabel.requestPermission', e);
+      });
     }
   }, [permission, requestPermission]);
 
@@ -220,7 +235,12 @@ export default function ScanLabelScreen({ navigation, route }) {
         prefillConfidence: confidence, prefillName: nameParam,
         from: 'scan_chain',
       });
-    } catch {
+    } catch (e) {
+      // The capture or the read failed. The scan still routes on (the name
+      // step advances with no name; the panel step opens the form to type
+      // into), so the failure is never a dead end, but it is no longer
+      // silent: the cause and the step are logged.
+      logError('ScanLabel.capture', e, { step, hadBarcode: !!prefillBarcode });
       if (step === 'front') {
         setSkipRemembered(false);
         setStep('nutrition');
@@ -239,7 +259,9 @@ export default function ScanLabelScreen({ navigation, route }) {
     if (busy) return;
     setSkipRemembered(true);
     setStep('nutrition');
-    AsyncStorage.setItem(SKIP_NAME_KEY, 'true').catch(() => {});
+    AsyncStorage.setItem(SKIP_NAME_KEY, 'true').catch((e) => {
+      logError('ScanLabel.saveSkipName', e);
+    });
   };
 
   // C8: the quiet way back from the nutrition step to the name step, for
@@ -268,7 +290,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   if (permission !== 'granted') {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-        <ModalHeader title="Snap label" closePosition="left" onClose={() => navigation.goBack()} />
+        <ModalHeader title="Scan the label" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.fallbackWrap}>
           <Ionicons name="camera-outline" size={48} color={t.colors.textMuted} />
           <Text style={[styles.fallbackTitle, live.fallbackTitle]}>Camera access needed</Text>
@@ -289,7 +311,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   if (!device) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-        <ModalHeader title="Snap label" closePosition="left" onClose={() => navigation.goBack()} />
+        <ModalHeader title="Scan the label" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.fallbackWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={t.colors.textMuted} />
           <Text style={[styles.fallbackTitle, live.fallbackTitle]}>No camera available</Text>
@@ -308,7 +330,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ModalHeader
-        title="Snap label"
+        title="Scan the label"
         closePosition="left"
         onClose={() => navigation.goBack()}
         rightAccessory={(
@@ -349,7 +371,7 @@ export default function ScanLabelScreen({ navigation, route }) {
               {!ocrAvailable
                 ? 'Enter the nutrition facts. The barcode is saved with them, so next time it scans straight away.'
                 : onFront
-                  ? 'Snap the front for the name, then the nutrition panel.'
+                  ? 'Scan the front for the name, then the nutrition panel.'
                   : 'Frame the nutrition panel and tap the shutter.'}
             </Text>
           </View>
@@ -404,8 +426,8 @@ export default function ScanLabelScreen({ navigation, route }) {
         <View style={styles.choiceOverlay}>
           <View style={[styles.choiceScrim, live.choiceScrim]} />
           <View style={[styles.choiceCard, live.choiceCard]}>
-            <Text style={[styles.choiceTitle, live.choiceTitle]}>
-              {offline ? "Couldn't check the full food library" : 'Not in the food library yet'}
+            <Text style={[styles.choiceTitle, live.choiceTitle]} accessibilityRole="header">
+              {offline ? 'The full food library could not be checked' : 'Not in the food library yet'}
             </Text>
             <Text style={[styles.choiceBody, live.choiceBody]}>
               {offline

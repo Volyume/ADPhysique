@@ -168,10 +168,13 @@ export default function SettingsDisplayScreen() {
             />
           }
         />
+        {/* D230 R15 and R8: UK packs print salt, not sodium, so the food sheet
+            shows salt (sodium x 2.5) under this same switch. The stored
+            preference key (showSodium) is unchanged. */}
         <SettingRow
           icon="water-outline"
-          label="Sodium"
-          sub="Show milligrams of sodium on a food's detail."
+          label="Show salt"
+          sub="Shown as salt, the way UK packs label it."
           showArrow={false}
           rightElement={
             <Switch

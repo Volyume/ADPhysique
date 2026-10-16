@@ -1,5 +1,5 @@
 /**
- * SourceChip: small badge showing OFF / USDA / CoFID / Custom.
+ * SourceChip: small badge naming where a food's numbers came from.
  *
  * Spec: UI_FLOWS_LOCKED.md lines 18-28 (component list),
  *   line 99 ("Source chip on every result"),
@@ -7,7 +7,15 @@
  *
  * Source values match the foods.source CHECK constraint in
  * DATABASE_SCHEMA_LOCKED.md ('off', 'usda', 'cofid', 'user_ocr')
- * plus 'custom' for user-created entries from custom_foods.
+ * plus 'custom' for user-created entries from custom_foods, 'curated' for a
+ * built-in staple and 'recipe' for one of the person's own recipes.
+ *
+ * D230 R15 (food level-up 2026-10-16): ONE source vocabulary across the food
+ * area, matching FoodRow's SOURCE_LABEL word for word: "Food Facts", "CoFID",
+ * "USDA", "From a label", "Yours", "Volyume", "Recipe". The chip used to say
+ * "OFF", "OCR" and "Custom", and fell back to a raw key in capitals ("CURATE",
+ * "RECIPE") for the two sources it had no name for. A source it does not know
+ * now prints nothing at all, never a key.
  *
  * Wave-1 A6 (UK provenance): CoFID rows are UK government reference data,
  * so the cofid chip carries a quiet verified treatment (success-tinted
@@ -30,11 +38,13 @@ import { colors, fontSize, spacing, radius, withAlpha, alpha } from '../../style
 import useTheme from '../../hooks/useTheme';
 
 const LABELS = {
-  off:      'OFF',
-  usda:     'USDA',
+  off:      'Food Facts',
   cofid:    'CoFID',
-  user_ocr: 'OCR',
-  custom:   'Custom',
+  usda:     'USDA',
+  user_ocr: 'From a label',
+  custom:   'Yours',
+  curated:  'Volyume',
+  recipe:   'Recipe',
 };
 
 export const COFID_TOOLTIP =
@@ -47,15 +57,19 @@ const TOOLTIPS = {
   off: 'Open Food Facts, a community-maintained food database.',
   usda: 'USDA, the United States food-composition database.',
   cofid: COFID_TOOLTIP,
-  user_ocr: 'Read from a label photo you snapped. Check the numbers look right.',
+  user_ocr: 'Read from a photo of a food label. Check the numbers look right.',
   custom: 'A food you created yourself.',
+  curated: "A basic food from Volyume's own list of everyday staples.",
+  recipe: 'A recipe you built yourself.',
 };
 
 export default function SourceChip({ source }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
-  const label = LABELS[source] ?? String(source ?? '').toUpperCase().slice(0, 6);
+  // An unknown source prints nothing: no raw key in capitals, ever.
+  const label = LABELS[source];
+  if (!label) return null;
   const isCofid = source === 'cofid';
   const tooltipText = TOOLTIPS[source] ?? null;
   const chip = (

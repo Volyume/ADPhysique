@@ -34,8 +34,11 @@ jest.mock('../../components/Button', () => {
     )
   );
 });
+// A shared spy (D230 lane 2C) so the failure sentences below can be asserted;
+// every earlier suite here ignores the toast, so nothing else changes.
+const mockToastShow = jest.fn();
 jest.mock('../../components/Toast', () => ({
-  useToast: () => ({ show: jest.fn() }),
+  useToast: () => ({ show: mockToastShow }),
 }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/food/mealPlanService', () => ({
@@ -194,8 +197,10 @@ describe('MealPlanScreen meal-swap sheet', () => {
       tree = create(<MealPlanScreen navigation={nav} />);
     });
     const text = JSON.stringify(tree.toJSON());
-    expect(text).toContain("Couldn't load meal builder");
-    expect(text).toContain("Couldn't load this on your device. Try again.");
+    // RE-POINTED (D230 R15, food level-up 2026-10-16): full-sentence copy,
+    // same truth: a local failure, said as one, with a way to try again.
+    expect(text).toContain('The meal builder did not load');
+    expect(text).toContain('Something went wrong loading it on your device. Try again in a moment.');
     expect(text).not.toContain('Check your connection');
     expect(text).toContain('Your diary has not been changed.');
     expect(text).not.toContain('Build a day or week to your targets');
@@ -711,8 +716,11 @@ describe('MealPlanScreen — dietary needs chip on the primary surface (campaign
     expect(source).toMatch(
       /AsyncStorage\.getItem\(DIETARY_CHIP_HINT_KEY\)\.then\(\(v\) => \{\s*if \(active && v !== 'true'\) setShowDietaryChipHint\(true\);\s*\}\)/,
     );
+    // RE-POINTED (D230 R18, food level-up 2026-10-16): the dismiss write's
+    // catch now logs its cause instead of dropping it. Same truth: the key is
+    // written 'true' once, on dismiss, and a failed write never throws.
     expect(source).toMatch(
-      /const dismissDietaryChipHint = useCallback\(\(\) => \{\s*setShowDietaryChipHint\(false\);\s*AsyncStorage\.setItem\(DIETARY_CHIP_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
+      /const dismissDietaryChipHint = useCallback\(\(\) => \{\s*setShowDietaryChipHint\(false\);\s*AsyncStorage\.setItem\(DIETARY_CHIP_HINT_KEY, 'true'\)\.catch\(\(e\) => \{\s*logError\('MealPlanScreen\.saveChipHint', e\);\s*\}\);\s*\}, \[\]\);/,
     );
     // Neutral tokens only: the new styles read spacing/radius tokens, never a
     // hard-coded hex colour or literal RGB.
@@ -726,5 +734,87 @@ describe('MealPlanScreen — dietary needs chip on the primary surface (campaign
     // No em dash anywhere in the new hint copy.
     expect(source).toContain('Tap to set your diet, your allergens, and foods you do not want suggested.');
     expect(source).not.toMatch(/Tap to set your diet[^"']*—/);
+  });
+});
+
+// D230 R15 and R18 (food level-up 2026-10-16): every failure on this screen is
+// "<What happened>. <What to do>." with the cause logged first (one logError
+// against about twenty-five catches before), "We will not suggest X" is
+// "X will not be suggested again.", and the sheet titles are headings. The
+// screen's copy and logging only: the plan floors and the assembler are not
+// touched by this lane.
+describe('MealPlanScreen — calm failures with a logged cause, sheet headings (D230)', () => {
+  const { logError } = require('../../lib/errorLog');
+  const { swapFoodInMeal } = require('../../lib/food/mealPlanService');
+
+  function planWithOats() {
+    const plan = makePlan();
+    plan.days[0].slots[0].items = [{ foodRef: 'curated:oats', name: 'Porridge oats', quantityG: 60 }];
+    return plan;
+  }
+
+  async function mountWithOats() {
+    loadActiveMealPlan.mockResolvedValue({ id: 'rec1', plan: planWithOats() });
+    let tree;
+    await act(async () => { tree = create(<MealPlanScreen navigation={nav} />); });
+    return tree;
+  }
+
+  test('a failed meal swap says what happened and what to do, and logs the cause', async () => {
+    updateMealPlan.mockRejectedValueOnce(new Error('disk'));
+    const tree = await mountLoaded();
+    act(() => buttons(tree).find((b) => /for something else$/.test(String(b.props.accessibilityLabel || ''))).props.onPress());
+    const altRow = buttons(tree).find((b) => String(b.props.accessibilityLabel || '').startsWith('Alt 3,'));
+    await act(async () => { await altRow.props.onPress(); });
+
+    expect(logError).toHaveBeenCalledWith('MealPlanScreen.swapMeal', expect.any(Error), { slotKey: 'meal_1' });
+    expect(mockToastShow).toHaveBeenCalledWith('That meal was not swapped. Try again in a moment.', { variant: 'error' });
+  });
+
+  test('a failed raw or cooked choice is told, not dropped', async () => {
+    updateMealPlan.mockRejectedValueOnce(new Error('disk'));
+    const tree = await mountWithOats();
+    const raw = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Weigh Porridge oats cooked' && typeof n.props.onPress === 'function')[0];
+    expect(raw).toBeTruthy();
+    await act(async () => { await raw.props.onPress(); });
+
+    expect(logError).toHaveBeenCalledWith('MealPlanScreen.setItemWeightState', expect.any(Error), { slotKey: 'meal_1' });
+    expect(mockToastShow).toHaveBeenCalledWith('That raw or cooked choice was not saved. Try again in a moment.', { variant: 'error' });
+  });
+
+  test('"Stop suggesting this" ends with "<food> will not be suggested again."', async () => {
+    swapFoodInMeal.mockReturnValueOnce(null);
+    const tree = await mountWithOats();
+    const row = tree.root.findAll((n) => typeof n.props?.onLongPress === 'function'
+      && /Porridge oats/.test(String(n.props.accessibilityLabel || '')))[0];
+    expect(row).toBeTruthy();
+    act(() => { row.props.onLongPress(); });
+    const [title, , alertButtons] = appAlert.mock.calls[0];
+    expect(title).toBe('Stop suggesting this?');
+    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest it").onPress(); });
+
+    expect(mockToastShow).toHaveBeenCalledWith('Porridge oats will not be suggested again.', { variant: 'success' });
+    expect(mockToastShow).not.toHaveBeenCalledWith(expect.stringContaining('We will not'), expect.anything());
+  });
+
+  test('a failed "Stop suggesting this" is told, with the cause logged', async () => {
+    const failing = jest.fn(() => Promise.reject(new Error('prefs write failed')));
+    useAppStore.mockImplementation((selector) => selector({ ...store, addMealPlanExcludedFood: failing }));
+    const tree = await mountWithOats();
+    const row = tree.root.findAll((n) => typeof n.props?.onLongPress === 'function'
+      && /Porridge oats/.test(String(n.props.accessibilityLabel || '')))[0];
+    act(() => { row.props.onLongPress(); });
+    const [, , alertButtons] = appAlert.mock.calls[0];
+    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest it").onPress(); });
+
+    expect(logError).toHaveBeenCalledWith('MealPlanScreen.flagFood', expect.any(Error), { slotKey: 'meal_1' });
+    expect(mockToastShow).toHaveBeenCalledWith('That food was not left out of your plans. Try again in a moment.', { variant: 'error' });
+  });
+
+  test('the swap sheet\'s title is a heading', async () => {
+    const tree = await mountLoaded();
+    act(() => buttons(tree).find((b) => /for something else$/.test(String(b.props.accessibilityLabel || ''))).props.onPress());
+    const headings = tree.root.findAll((n) => n.props?.accessibilityRole === 'header').map((n) => n.props.children);
+    expect(headings).toContain('Swap this meal');
   });
 });

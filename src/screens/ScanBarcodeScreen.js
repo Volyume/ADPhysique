@@ -38,6 +38,11 @@
  * see ScanBarcodeScreen.test.js's "item 16 / D26" describe block for
  * what's pinned.
  *
+ * D230 R15 and R18 (food level-up 2026-10-16): one title, "Scan barcode", on
+ * every state of the screen (the permission and no-camera states used to be
+ * titled "Scan"); the lookup failure is a full sentence; a failed permission
+ * request logs its cause.
+ *
  * Voice rules from CLAUDE.md: short sentences, no AI tells, no
  * encouragement.
  */
@@ -162,7 +167,9 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   useEffect(() => {
     if (permission !== 'granted' && !askedRef.current) {
       askedRef.current = true;
-      requestPermission().catch(() => {});
+      requestPermission().catch((e) => {
+        logError('ScanBarcode.requestPermission', e);
+      });
     }
   }, [permission, requestPermission]);
 
@@ -213,7 +220,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
       toast.show(
         offline
           ? "You're offline. Check your connection and try again."
-          : "Couldn't reach the food library. Try again.",
+          : 'The food library could not be reached. Try again in a moment.',
         { variant: 'error' }
       );
       scanLock.current = false;
@@ -279,7 +286,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   if (permission !== 'granted') {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-        <ModalHeader title="Scan" closePosition="left" onClose={() => navigation.goBack()} />
+        <ModalHeader title="Scan barcode" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.permissionWrap}>
           <Ionicons name="camera-outline" size={48} color={t.colors.textMuted} />
           <Text style={[styles.permissionTitle, live.permissionTitle]}>Camera access needed</Text>
@@ -313,7 +320,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   if (!device) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-        <ModalHeader title="Scan" closePosition="left" onClose={() => navigation.goBack()} />
+        <ModalHeader title="Scan barcode" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.permissionWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={t.colors.textMuted} />
           <Text style={[styles.permissionTitle, live.permissionTitle]}>No camera available</Text>
@@ -408,7 +415,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel="Enter barcode number"
       >
-        <Text style={[styles.manualTitle, live.manualTitle]}>Enter barcode number</Text>
+        <Text style={[styles.manualTitle, live.manualTitle]} accessibilityRole="header">Enter barcode number</Text>
         <Text style={[styles.manualBody, live.manualBody]}>
           Type the number printed under the barcode, 8 to 14 digits.
         </Text>

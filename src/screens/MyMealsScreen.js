@@ -19,6 +19,14 @@
  * Undo must delete every one of them, not just the first; see
  * applySavedMealToDiary's `entryIds`.
  *
+ * D230 R12, R15, R16 and R18 (food level-up 2026-10-16): the log toast names
+ * the meal it went to ("Your usual breakfast added to Breakfast.") and its
+ * Undo removes every row the write returned; the confirm sheet's button reads
+ * "Add this meal" (the Diary's "Add another meal" is a different act); every
+ * failure is a full sentence and logs its cause first; the info and more
+ * icons are 48 dp (24 dp glyph plus the house 12 dp hit slop); sheet titles
+ * carry the header role.
+ *
  * Voice rules from CLAUDE.md: no em dashes, plain spoken, British English.
  */
 import { todayLocalKey } from '../lib/dayKey';
@@ -30,7 +38,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, spacing, type } from '../styles/theme';
+import { colors, fontSize, spacing, type, iconSize, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import ModalHeader from '../components/ModalHeader';
@@ -48,6 +56,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { audit } from '../lib/observability';
 import { logError } from '../lib/errorLog';
+import { mealSlotLabel } from '../lib/food/mealSlots';
 import * as haptics from '../lib/haptics';
 
 export default function MyMealsScreen({ navigation, route }) {
@@ -114,14 +123,19 @@ export default function MyMealsScreen({ navigation, route }) {
     try {
       const { logged, entryIds } = await applySavedMealToDiary(userId, meal.id, { mealSlot, entryDate });
       if (logged > 0) {
-        toast.show(`${meal.name ?? 'Meal'} added.`, {
+        toast.show(`${meal.name ?? 'Meal'} added to ${mealSlotLabel(mealSlot)}.`, {
           variant: 'undo',
           action: {
             label: 'Undo',
             onPress: async () => {
               // A saved meal fans out into several food_entries rows; Undo
               // must remove every one, not just the first.
-              try { await Promise.all(entryIds.map((eid) => deleteFoodEntry(eid, userId))); } catch (_) { /* already gone */ }
+              try {
+                await Promise.all(entryIds.map((eid) => deleteFoodEntry(eid, userId)));
+              } catch (e) {
+                logError('MyMeals.undoSavedMeal', e, { count: entryIds.length });
+                toast.show('That meal was not removed. You can remove its foods from the diary.', { variant: 'error' });
+              }
             },
           },
         });
@@ -130,8 +144,9 @@ export default function MyMealsScreen({ navigation, route }) {
       } else {
         toast.show('This meal has no foods in it.', { variant: 'info' });
       }
-    } catch (_) {
-      toast.show('Couldn\'t log.', { variant: 'error' });
+    } catch (e) {
+      logError('MyMeals.applySavedMeal', e, { mealSlot, itemCount: meal.itemCount });
+      toast.show('That meal was not added. Try again in a moment.', { variant: 'error' });
     } finally {
       loggingRef.current = null;
     }
@@ -159,7 +174,7 @@ export default function MyMealsScreen({ navigation, route }) {
                     await deleteSavedMeal(userId, meal.id);
                   } catch (e) {
                     logError('MyMeals.deleteSavedMeal', e, { hasId: !!meal.id });
-                    toast.show('Couldn\'t delete that meal.', { variant: 'error' });
+                    toast.show('That meal was not deleted. Try again in a moment.', { variant: 'error' });
                     return;
                   }
                   // Haptics completion pass (2026-07-10): data-first, this
@@ -187,7 +202,7 @@ export default function MyMealsScreen({ navigation, route }) {
       await renameSavedMeal(userId, target.id, name);
     } catch (e) {
       logError('MyMeals.renameSavedMeal', e, { hasId: !!target.id });
-      toast.show('Couldn\'t rename that meal.', { variant: 'error' });
+      toast.show('That meal was not renamed. Try again in a moment.', { variant: 'error' });
       return;
     }
     reload();
@@ -210,22 +225,22 @@ export default function MyMealsScreen({ navigation, route }) {
           </Text>
         </View>
         <View style={styles.rowActions}>
-          <Ionicons name="add-circle-outline" size={22} color={t.colors.primary} />
+          <Ionicons name="add-circle-outline" size={iconSize.lg} color={t.colors.primary} />
           <TouchableOpacity
             onPress={() => { haptics.selection(); setInspecting(item); }}
-            hitSlop={10}
+            hitSlop={hitSlop}
             accessibilityRole="button"
             accessibilityLabel={`View ${item.name}`}
           >
-            <Ionicons name="information-circle-outline" size={22} color={t.colors.textMuted} />
+            <Ionicons name="information-circle-outline" size={iconSize.lg} color={t.colors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { haptics.selection(); openMenu(item); }}
-            hitSlop={10}
+            hitSlop={hitSlop}
             accessibilityRole="button"
             accessibilityLabel={`More actions for ${item.name}`}
           >
-            <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={t.colors.textMuted} />
+            <Ionicons name="ellipsis-horizontal-circle-outline" size={iconSize.lg} color={t.colors.textMuted} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -248,7 +263,7 @@ export default function MyMealsScreen({ navigation, route }) {
         <View style={styles.empty}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load saved meals"
+            title="Your saved meals did not load"
             text="Something went wrong loading these. Try again."
             actionLabel="Try again"
             onAction={reload}
@@ -281,13 +296,13 @@ export default function MyMealsScreen({ navigation, route }) {
         onClose={() => setConfirming(null)}
         accessibilityLabel="Confirm saved meal"
       >
-        <Text style={[styles.sheetTitle, live.sheetTitle]}>Add saved meal?</Text>
+        <Text style={[styles.sheetTitle, live.sheetTitle]} accessibilityRole="header">Add saved meal?</Text>
         <Text style={[styles.confirmCopy, live.meta]}>
           {confirming?.name ?? 'This meal'} will use its saved food portions. You can edit the diary entries afterwards.
         </Text>
         <View style={styles.sheetActions}>
           <Button title="Cancel" variant="secondary" onPress={() => setConfirming(null)} fullWidth={false} />
-          <Button title="Add meal" onPress={confirmLog} fullWidth={false} />
+          <Button title="Add this meal" onPress={confirmLog} fullWidth={false} />
         </View>
       </BottomSheet>
 
@@ -297,7 +312,7 @@ export default function MyMealsScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel="Rename meal"
       >
-        <Text style={[styles.sheetTitle, live.sheetTitle]}>Rename meal</Text>
+        <Text style={[styles.sheetTitle, live.sheetTitle]} accessibilityRole="header">Rename meal</Text>
         <TextField
           value={renameText}
           onChangeText={setRenameText}
@@ -336,7 +351,10 @@ const styles = StyleSheet.create({
   name: { ...type.bodyStrong, color: colors.textPrimary },
   meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   confirmCopy: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.sm },
-  rowActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginLeft: spacing.md },
+  // 24 dp glyphs with the house 12 dp hit slop are 48 dp targets; the 24 dp gap
+  // puts their centres 48 dp apart, so neighbouring targets meet without
+  // overlapping (D230 R16).
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, marginLeft: spacing.md },
   empty: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.xl,

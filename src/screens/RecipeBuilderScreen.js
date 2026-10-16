@@ -15,6 +15,11 @@
  *   - new recipe   -> createRecipe + setRecipeIngredients (atomic)
  *   - edit recipe  -> updateRecipe(patch) + setRecipeIngredients
  *
+ * D230 R15, R16 and R18 (food level-up 2026-10-16): every failure is a full
+ * sentence that says what happened and what to do, a failed save or link
+ * import logs its cause first, the "we" in the import hint is gone, and the
+ * remove icon is a 48 dp target (24 dp glyph plus the house 12 dp hit slop).
+ *
  * Voice rules from CLAUDE.md: no em dashes; plain spoken voice;
  * British English; no marketing absolutes.
  */
@@ -32,7 +37,7 @@ import Text from '../components/Text';
 import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type, iconSize, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import {
@@ -189,7 +194,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
     try {
       const parsed = await importRecipeFromUrl(url);
       if (!parsed) {
-        toast.show("Couldn't read a recipe from that link.", { variant: 'warning' });
+        toast.show('A recipe could not be read from that link. Check the link and try again.', { variant: 'warning' });
         return;
       }
       if (typeof parsed.name === 'string' && parsed.name.trim()) {
@@ -206,6 +211,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       const lines = allLines.slice(0, MAX_IMPORT_INGREDIENTS);
       const overflow = allLines.length - lines.length;
       const matched = [];
+      let failedLookups = 0;
       for (const line of lines) {
         try {
           const hits = await searchFoods(userId, line, { limit: 1 });
@@ -216,8 +222,12 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             quantity_g: Number(food.serving_g) > 0 ? Number(food.serving_g) : 100,
             food,
           });
-        } catch (_e) {
-          // One bad lookup shouldn't sink the whole import.
+        } catch (e) {
+          // One bad lookup shouldn't sink the whole import. Only the first
+          // cause is logged: a dead connection would otherwise write thirty
+          // identical errors for one import.
+          failedLookups += 1;
+          if (failedLookups === 1) logError('RecipeBuilder.importLookup', e, { lines: lines.length });
         }
       }
       if (matched.length > 0) {
@@ -229,8 +239,9 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         + (overflow > 0 ? ` (${overflow} more not imported.)` : ''),
         { variant: matched.length > 0 ? 'success' : 'warning' },
       );
-    } catch (_e) {
-      toast.show("Couldn't read a recipe from that link.", { variant: 'warning' });
+    } catch (e) {
+      logError('RecipeBuilder.importFromUrl', e);
+      toast.show('A recipe could not be read from that link. Check the link and try again.', { variant: 'warning' });
     } finally {
       setImporting(false);
     }
@@ -322,8 +333,9 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         quantity_g: ing.quantity_g,
       })));
       navigation.goBack();
-    } catch (_e) {
-      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
+    } catch (e) {
+      logError('RecipeBuilder.save', e, { isEdit: !!recipeId, ingredients: ingredients.length });
+      toast.show('That recipe was not saved. Try again in a moment.', { variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -359,7 +371,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         <View style={[styles.loadError, live.loadError]}>
           <EmptyState
             icon="restaurant-outline"
-            title="Couldn't load this recipe"
+            title="This recipe did not load"
             text="The recipe details did not load. Try again before making changes."
             actionLabel="Try again"
             onAction={onRetryLoad}
@@ -399,7 +411,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             />
           </View>
           <Text style={[styles.importHint, live.importHint]}>
-            We match each ingredient to a food and add a rough amount. Check the amounts after importing.
+            Each ingredient is matched to a food with a rough amount. Check the amounts after importing.
           </Text>
         </View>
 
@@ -489,8 +501,8 @@ export default function RecipeBuilderScreen({ navigation, route }) {
                 inputStyle={[styles.qtyInput, live.qtyInput]}
               />
               <Text style={[styles.qtyUnit, live.qtyUnit]}>g</Text>
-              <TouchableOpacity onPress={() => onRemove(i)} hitSlop={8} style={{ marginLeft: spacing.sm }} accessibilityRole="button" accessibilityLabel={`Remove ${ing.food?.name ?? ing.food_ref}`}>
-                <Ionicons name="close-circle" size={22} color={t.colors.textMuted} />
+              <TouchableOpacity onPress={() => onRemove(i)} hitSlop={hitSlop} style={{ marginLeft: spacing.sm }} accessibilityRole="button" accessibilityLabel={`Remove ${ing.food?.name ?? ing.food_ref}`}>
+                <Ionicons name="close-circle" size={iconSize.lg} color={t.colors.textMuted} />
               </TouchableOpacity>
             </View>
           ))}

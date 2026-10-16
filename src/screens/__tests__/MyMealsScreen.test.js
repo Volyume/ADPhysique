@@ -127,7 +127,9 @@ describe('MyMealsScreen saved-meal confirmation', () => {
     await flush();
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load saved meals");
+    // RE-POINTED (D230 R15, food level-up 2026-10-16): the load-error title is
+    // a full sentence; same truth, a retry state stands in for the empty prompt.
+    expect(text).toContain('Your saved meals did not load');
     // L05-MM2 (2026-07-09 design audit): this is a local SQLite read failure,
     // not a network failure — "Check your connection and try again." ->
     // "Something went wrong loading these. Try again."
@@ -136,7 +138,10 @@ describe('MyMealsScreen saved-meal confirmation', () => {
     expect(text).not.toContain('Save your go-to meals');
   });
 
-  test('tapping a meal opens confirmation and only Add meal writes it', async () => {
+  // RE-POINTED (D230 R15): the confirm sheet's button is "Add this meal", so
+  // it no longer shares a label with the Diary's "Add another meal". Same
+  // truth: a tap on the row opens the confirmation and only this button writes.
+  test('tapping a meal opens confirmation and only Add this meal writes it', async () => {
     const nav = makeNav();
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
     let tree;
@@ -150,7 +155,7 @@ describe('MyMealsScreen saved-meal confirmation', () => {
 
     expect(appAlert).not.toHaveBeenCalled();
     expect(applySavedMealToDiary).not.toHaveBeenCalled();
-    const add = tree.root.findByProps({ title: 'Add meal' });
+    const add = tree.root.findByProps({ title: 'Add this meal' });
     await act(async () => { await add.props.onPress(); });
     expect(applySavedMealToDiary).toHaveBeenCalledWith('u1', 'sm-1', { mealSlot: 'snack', entryDate: '2026-07-03' });
   });
@@ -182,9 +187,10 @@ describe('MyMealsScreen saved-meal confirmation', () => {
 
     const row = capturedListProps.renderItem({ item: MEAL });
     await act(async () => { row.props.onPress(); });
-    await act(async () => { await tree.root.findByProps({ title: 'Add meal' }).props.onPress(); });
+    await act(async () => { await tree.root.findByProps({ title: 'Add this meal' }).props.onPress(); });
 
-    expect(mockToastShow).toHaveBeenCalledWith('Chicken and rice added.', expect.objectContaining({
+    // RE-POINTED (D230 R12): the toast names the meal it went to.
+    expect(mockToastShow).toHaveBeenCalledWith('Chicken and rice added to Snacks.', expect.objectContaining({
       variant: 'undo',
       action: expect.objectContaining({ label: 'Undo', onPress: expect.any(Function) }),
     }));
@@ -200,7 +206,7 @@ describe('MyMealsScreen saved-meal confirmation', () => {
 
     const row = capturedListProps.renderItem({ item: MEAL });
     await act(async () => { row.props.onPress(); });
-    await act(async () => { await tree.root.findByProps({ title: 'Add meal' }).props.onPress(); });
+    await act(async () => { await tree.root.findByProps({ title: 'Add this meal' }).props.onPress(); });
 
     const [, opts] = mockToastShow.mock.calls[0];
     await act(async () => { await opts.action.onPress(); });
@@ -220,7 +226,7 @@ describe('MyMealsScreen saved-meal confirmation', () => {
 
     const row = capturedListProps.renderItem({ item: MEAL });
     await act(async () => { row.props.onPress(); });
-    await act(async () => { await tree.root.findByProps({ title: 'Add meal' }).props.onPress(); });
+    await act(async () => { await tree.root.findByProps({ title: 'Add this meal' }).props.onPress(); });
 
     expect(mockToastShow).toHaveBeenCalledWith('This meal has no foods in it.', expect.objectContaining({ variant: 'info' }));
     expect(nav.goBack).not.toHaveBeenCalled();
@@ -263,5 +269,96 @@ describe('MyMealsScreen saved-meal confirmation', () => {
       undefined,
       expect.any(Array),
     );
+  });
+});
+
+// D230 R12, R15, R16 and R18 (food level-up 2026-10-16).
+describe('MyMealsScreen: the house undo toast, calm failures, 48 dp icons (D230)', () => {
+  const { logError } = require('../../lib/errorLog');
+  const USUAL = { ...MEAL, id: 'sm-2', name: 'Your usual breakfast' };
+
+  async function mountAndConfirm(meal, params) {
+    const nav = makeNav();
+    let tree;
+    await act(async () => {
+      tree = create(<MyMealsScreen navigation={nav} route={{ params }} />);
+    });
+    await flush();
+    const row = capturedListProps.renderItem({ item: meal });
+    await act(async () => { row.props.onPress(); });
+    return { nav, tree, row };
+  }
+
+  test('the toast names the meal it went to, and Undo deletes every row the write returned', async () => {
+    listSavedMeals.mockResolvedValue([USUAL]);
+    applySavedMealToDiary.mockResolvedValue({ logged: 3, entryIds: ['e1', 'e2', 'e3'] });
+    const { tree } = await mountAndConfirm(USUAL, { mealSlot: 'breakfast', entryDate: '2026-10-16' });
+    await act(async () => { await tree.root.findByProps({ title: 'Add this meal' }).props.onPress(); });
+
+    expect(mockToastShow).toHaveBeenCalledWith('Your usual breakfast added to Breakfast.', expect.objectContaining({
+      variant: 'undo',
+      action: expect.objectContaining({ label: 'Undo' }),
+    }));
+    const [, opts] = mockToastShow.mock.calls[0];
+    await act(async () => { await opts.action.onPress(); });
+    expect(deleteFoodEntry).toHaveBeenCalledTimes(3);
+    expect(deleteFoodEntry.mock.calls.map((c) => c[0])).toEqual(['e1', 'e2', 'e3']);
+    expect(deleteFoodEntry.mock.calls.every((c) => c[1] === 'u1')).toBe(true);
+  });
+
+  test('a failed Undo is not silent: the cause is logged and the person is told', async () => {
+    applySavedMealToDiary.mockResolvedValue({ logged: 2, entryIds: ['e1', 'e2'] });
+    deleteFoodEntry.mockRejectedValue(new Error('locked'));
+    const { tree } = await mountAndConfirm(MEAL, { mealSlot: 'lunch', entryDate: '2026-10-16' });
+    await act(async () => { await tree.root.findByProps({ title: 'Add this meal' }).props.onPress(); });
+    const [, opts] = mockToastShow.mock.calls[0];
+    await act(async () => { await opts.action.onPress(); });
+
+    expect(logError).toHaveBeenCalledWith('MyMeals.undoSavedMeal', expect.any(Error), { count: 2 });
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'That meal was not removed. You can remove its foods from the diary.',
+      { variant: 'error' },
+    );
+  });
+
+  test('a failed log says what happened and what to do, and logs the cause first', async () => {
+    applySavedMealToDiary.mockRejectedValue(new Error('disk'));
+    const { tree, nav } = await mountAndConfirm(MEAL, { mealSlot: 'snack', entryDate: '2026-10-16' });
+    await act(async () => { await tree.root.findByProps({ title: 'Add this meal' }).props.onPress(); });
+
+    expect(logError).toHaveBeenCalledWith('MyMeals.applySavedMeal', expect.any(Error), { mealSlot: 'snack', itemCount: 2 });
+    expect(mockToastShow).toHaveBeenCalledWith('That meal was not added. Try again in a moment.', { variant: 'error' });
+    expect(nav.goBack).not.toHaveBeenCalled();
+  });
+
+  test('the confirm sheet\'s button no longer shares a label with the Diary\'s "Add another meal"', async () => {
+    const { tree } = await mountAndConfirm(MEAL, { mealSlot: 'snack', entryDate: '2026-10-16' });
+    expect(tree.root.findAll((n) => n.props?.title === 'Add this meal').length).toBeGreaterThan(0);
+    expect(tree.root.findAll((n) => n.props?.title === 'Add meal')).toHaveLength(0);
+  });
+
+  test('the sheet titles carry the header role', async () => {
+    const { tree, row } = await mountAndConfirm(MEAL, { mealSlot: 'snack', entryDate: '2026-10-16' });
+    // Open the rename sheet through the real long-press menu.
+    await act(async () => { row.props.onLongPress(); });
+    const rename = appAlert.mock.calls[0][2].find((b) => b.text === 'Rename');
+    await act(async () => { rename.onPress(); });
+    const headers = tree.root.findAll((n) => n.props?.accessibilityRole === 'header').map((n) => flattenText(n.props.children));
+    expect(headers).toContain('Add saved meal?');
+    expect(headers).toContain('Rename meal');
+  });
+
+  test('the info and more icons reach 48 dp: a 24 dp glyph plus the house 12 dp hit slop', async () => {
+    await act(async () => { create(<MyMealsScreen navigation={makeNav()} route={{ params: {} }} />); });
+    await flush();
+    const row = capturedListProps.renderItem({ item: MEAL });
+    for (const label of ['View Chicken and rice', 'More actions for Chicken and rice']) {
+      const button = findByA11y(row, label);
+      expect(button).toBeTruthy();
+      const glyph = button.props.children;
+      const slop = button.props.hitSlop;
+      expect(glyph.props.size + slop.top + slop.bottom).toBeGreaterThanOrEqual(48);
+      expect(glyph.props.size + slop.left + slop.right).toBeGreaterThanOrEqual(48);
+    }
   });
 });
