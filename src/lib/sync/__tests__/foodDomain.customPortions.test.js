@@ -5,8 +5,10 @@
  * WRITTEN, HELD. CUSTOM_FOOD_PORTIONS_PUSH ships false, so the custom_foods
  * push carries no portions_json key and the food syncs as it always did. With
  * the flag on the PARSED array is sent (the cloud column is jsonb). The pull
- * (applyCustomFoodFromCloud) reads the field defensively: an absent key leaves
- * this device's portions alone, a present value is re-validated.
+ * (applyCustomFoodFromCloud) reads the field only while the flag is on (with
+ * it off the local portions always stand, Wave 4 hostile review item 2); then
+ * an absent key leaves this device's portions alone, a present value is
+ * re-validated.
  * Source-level guards pin the flag false and the migration header HELD.
  */
 const fs = require('fs');
@@ -105,7 +107,22 @@ describe('the custom_foods pull (applyCustomFoodFromCloud)', () => {
     expect(params).toContain(null);
   });
 
-  test('a row with the key stores it validated and tells the upsert to take it', async () => {
+  // Wave 4 hostile review, item 2: once migrate_195 is applied the pull's
+  // to_jsonb(t) carries portions_json on EVERY row, NULL for every food a
+  // flag-off build pushed; reading it with the flag off erased the local
+  // portions on the device's own push-then-pull.
+  test('with the flag off (this build) a present key, NULL or not, never replaces the local portions', async () => {
+    mockFlags.portions = false;
+    await applyCustomFoodFromCloud('u1', cloud({ portions_json: null }));
+    await applyCustomFoodFromCloud('u1', cloud({ portions_json: [{ label: '1 mug', grams: 250 }] }));
+    for (const [, params] of runAsync.mock.calls) {
+      expect(params[params.length - 1]).toBe(0);
+      expect(params).not.toContain('[{"label":"1 mug","grams":250}]');
+    }
+  });
+
+  test('a row with the key stores it validated and tells the upsert to take it (flag on)', async () => {
+    mockFlags.portions = true;
     await applyCustomFoodFromCloud('u1', cloud({
       portions_json: [{ label: '1 mug', grams: 250 }, { label: 'too big', grams: 99999 }],
     }));
@@ -114,7 +131,8 @@ describe('the custom_foods pull (applyCustomFoodFromCloud)', () => {
     expect(params).toContain('[{"label":"1 mug","grams":250}]');
   });
 
-  test('a junk value is cleaned, never thrown on', async () => {
+  test('a junk value is cleaned, never thrown on (flag on)', async () => {
+    mockFlags.portions = true;
     await expect(applyCustomFoodFromCloud('u1', cloud({ portions_json: 'junk' }))).resolves.toBe(true);
     const [, params] = runAsync.mock.calls[0];
     expect(params[params.length - 1]).toBe(1);

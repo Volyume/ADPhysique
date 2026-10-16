@@ -47,7 +47,7 @@ function freshDb() {
     serving_g REAL, serving_label TEXT,
     kcal_100g REAL, protein_100g REAL, carbs_100g REAL, fat_100g REAL,
     fibre_100g REAL, sodium_100g REAL, sugar_100g REAL,
-    barcode_ean TEXT, deleted_at INTEGER, created_at INTEGER, updated_at INTEGER)`);
+    barcode_ean TEXT, portions_json TEXT, deleted_at INTEGER, created_at INTEGER, updated_at INTEGER)`);
   return raw;
 }
 

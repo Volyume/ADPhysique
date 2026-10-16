@@ -509,7 +509,9 @@ describe('body_composition_log push', () => {
     dbModule.getBodyMetricLog.mockResolvedValue([
       {
         id: 'bm-1',
-        loggedAt: Date.UTC(2026, 4, 26),
+        // Local noon: metric_date is the LOCAL day (LS-07), so a UTC-midnight
+        // fixture was the 25th west of Greenwich.
+        loggedAt: new Date(2026, 4, 26, 12, 0).getTime(),
         weightKg: 82.4,
         waistCm: 84,
         chestCm: 102,

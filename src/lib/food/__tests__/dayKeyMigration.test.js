@@ -8,8 +8,11 @@
  * trip, are pinned in dayKeyRepair.realdb.test.js).
  *
  * The expo-sqlite mock is a shape stub, so we drive getAllAsync (the row scan)
- * and assert which UPDATE writes fire. `npm test` runs with TZ=Europe/London,
- * so 00:30 BST is 23:30 UTC the day before: the window the old key got wrong.
+ * and assert which UPDATE writes fire. Every fixture is built relative to the
+ * zone the suite runs in (utcWindowMoment), so it holds under Europe/London,
+ * America/New_York and Asia/Tokyo: the window the old key got wrong is local
+ * 00:30 east of Greenwich (UTC still the day before) and local 23:30 west of
+ * it (UTC already the day after).
  */
 jest.mock('expo-sqlite');
 
@@ -33,16 +36,30 @@ function updateEntryDateCalls() {
   return conn.runAsync.mock.calls.filter((c) => /UPDATE food_entries SET entry_date/.test(c[0]));
 }
 
-// 00:30 BST on 3 June 2026 (23:30 UTC on the 2nd), before the phase 1 cutoff.
-const UTC_KEYED_MS = Date.UTC(2026, 5, 2, 23, 30, 0);
+const utcDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+function utcWindowMoment(y, m, d) {
+  for (const [h, min] of [[0, 30], [23, 30]]) {
+    const ms = new Date(y, m, d, h, min).getTime();
+    if (utcDay(ms) !== localDayKey(ms)) return ms;
+  }
+  throw new Error('run this suite in a zone that is not UTC');
+}
+
+// In London: 00:30 BST on 2 June 2026 (23:30 UTC on the 1st); in New York
+// 23:30 on 2 June (03:30 UTC on the 3rd). Either way before the phase 1
+// cutoff (4 June 00:00 UTC). UTC_KEY is the day the old build wrote,
+// LOCAL_KEY the day the meal belongs to.
+const UTC_KEYED_MS = utcWindowMoment(2026, 5, 2);
+const UTC_KEY = utcDay(UTC_KEYED_MS);
+const LOCAL_KEY = localDayKey(UTC_KEYED_MS);
 
 test('re-keys only an entry carrying the pre-phase-1 UTC key; a deliberate day is left alone', async () => {
   const correctMs = Date.UTC(2026, 5, 10, 12, 0, 0);
   conn.getAllAsync.mockResolvedValueOnce([
-    { id: 'fe1', entry_date: '2026-06-02', logged_at: UTC_KEYED_MS, created_at: UTC_KEYED_MS, is_planned: 0 }, // UTC key -> re-key
+    { id: 'fe1', entry_date: UTC_KEY, logged_at: UTC_KEYED_MS, created_at: UTC_KEYED_MS, is_planned: 0 }, // UTC key -> re-key
     { id: 'fe2', entry_date: localDayKey(correctMs), logged_at: correctMs, created_at: correctMs, is_planned: 0 }, // already right
     { id: 'fe3', entry_date: '2026-06-04', logged_at: Date.UTC(2026, 5, 3, 12, 0, 0), is_planned: 0 }, // a chosen day
-    { id: 'fe4', entry_date: '2026-06-02', logged_at: UTC_KEYED_MS, created_at: UTC_KEYED_MS, is_planned: 1 }, // planned
+    { id: 'fe4', entry_date: UTC_KEY, logged_at: UTC_KEYED_MS, created_at: UTC_KEYED_MS, is_planned: 1 }, // planned
   ]);
 
   const changed = await rekeyFoodEntriesToLocalDay('u1');
@@ -50,15 +67,16 @@ test('re-keys only an entry carrying the pre-phase-1 UTC key; a deliberate day i
   expect(changed).toBe(1);
   const updates = updateEntryDateCalls();
   expect(updates).toHaveLength(1);
-  expect(updates[0][1][0]).toBe('2026-06-03'); // the local day of 00:30 BST
+  expect(updates[0][1][0]).toBe(LOCAL_KEY); // the local day of the moment (2 June)
+  expect(LOCAL_KEY).toBe('2026-06-02');
   expect(updates[0][1][2]).toBe('fe1'); // by id
 });
 
 test('a UTC-looking key written after the phase 1 cutoff is a chosen day and is never moved', async () => {
-  // 00:30 BST on 17 October, logged for the 16th on purpose.
-  const ms = Date.UTC(2026, 9, 16, 23, 30, 0);
+  // In London: 00:30 BST on 17 October, logged for the 16th (its UTC day) on purpose.
+  const ms = utcWindowMoment(2026, 9, 17);
   conn.getAllAsync.mockResolvedValueOnce([
-    { id: 'fe1', entry_date: '2026-10-16', logged_at: ms, created_at: ms, is_planned: 0 },
+    { id: 'fe1', entry_date: utcDay(ms), logged_at: ms, created_at: ms, is_planned: 0 },
   ]);
   await expect(rekeyFoodEntriesToLocalDay('u1')).resolves.toBe(0);
   expect(updateEntryDateCalls()).toHaveLength(0);
@@ -93,7 +111,7 @@ test('a rollup-rebuild failure propagates (atomic; caller leaves the flag unset 
   // DB it rolls back), rather than leaving the entry re-keyed with a stale
   // rollup and the migration silently marked done.
   conn.getAllAsync.mockResolvedValueOnce([
-    { id: 'fe1', entry_date: '2026-06-02', logged_at: UTC_KEYED_MS, created_at: UTC_KEYED_MS, is_planned: 0 },
+    { id: 'fe1', entry_date: UTC_KEY, logged_at: UTC_KEYED_MS, created_at: UTC_KEYED_MS, is_planned: 0 },
   ]);
   conn.getFirstAsync.mockRejectedValue(new Error('rollup read failed'));
 
@@ -112,15 +130,15 @@ test('applyFoodEntryFromCloud moves a pre-phase-1 UTC-keyed cloud row to the LOC
   // the one-time re-key has run (no race).
   const iso = new Date(UTC_KEYED_MS).toISOString();
   const result = await applyFoodEntryFromCloud('u1', {
-    id: 'fe1', entry_date: '2026-06-02', // the UTC key
+    id: 'fe1', entry_date: UTC_KEY, // the UTC key
     meal_slot: 'breakfast', food_ref: 'off:1', quantity_g: 100,
     kcal: 100, protein_g: 10, carbs_g: 10, fat_g: 5,
     logged_at: iso, created_at: iso, updated_at: iso,
   });
 
-  expect(result).toBe('2026-06-03');
+  expect(result).toBe(LOCAL_KEY);
   const insertCall = conn.runAsync.mock.calls.find((c) => /INSERT OR REPLACE INTO food_entries/.test(c[0]));
-  expect(insertCall[1][2]).toBe('2026-06-03'); // entry_date param
+  expect(insertCall[1][2]).toBe(LOCAL_KEY); // entry_date param
 });
 
 test('applyFoodEntryFromCloud keeps the cloud entry_date the writing device chose', async () => {

@@ -33,8 +33,10 @@
  * migrate_090_food_delete_tombstones.sql): entry_date, eaten_at and note as
  * pushed; logged_at, created_at and updated_at all the server's now().
  *
- * Run with TZ=Europe/London (the suite asserts it, since the BST window is the
- * point).
+ * Every case is built relative to the zone the suite runs in (utcWindowMoment
+ * below), so it holds, and means the same, under Europe/London,
+ * America/New_York and Asia/Tokyo: the "UTC-key window" is local 00:30 east
+ * of Greenwich and local 23:30 west of it.
  */
 const mockState = { realTx: false, inTx: false };
 
@@ -82,6 +84,19 @@ const dbm = require('../../database');
 const food = require('../db');
 const { _foodEntryToCloud } = require('../../sync/tables/foodDomain');
 const { __raw: raw } = require('../../dbCrypto');
+const { localDayKey } = require('../../dayKey');
+
+const utcDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+// A moment on local day (y, m, d) whose UTC day is a different day: the window
+// in which the pre-phase-1 UTC key was wrong. 00:30 east of Greenwich (UTC is
+// still the day before), 23:30 west of it (UTC is already the day after).
+function utcWindowMoment(y, m, d) {
+  for (const [h, min] of [[0, 30], [23, 30]]) {
+    const ms = new Date(y, m, d, h, min).getTime();
+    if (utcDay(ms) !== localDayKey(ms)) return ms;
+  }
+  throw new Error('run this suite in a zone that is not UTC');
+}
 
 // 2026-10-16 10:00 BST, the day the lane found the collapse.
 const NOW = new Date(2026, 9, 16, 10, 0).getTime();
@@ -109,7 +124,9 @@ function serverRoundTrip(u, local, pushMs) {
     food_ref: pushed.food_ref, quantity_g: pushed.quantity_g, kcal: pushed.kcal,
     protein_g: pushed.protein_g, carbs_g: pushed.carbs_g, fat_g: pushed.fat_g,
     fibre_g: pushed.fibre_g, weight_state: pushed.weight_state, eaten_at: pushed.eaten_at,
-    note: local.note ?? null,
+    // Once migrate_194 is applied: the pushed note, or NULL when this build's
+    // record carries no note key (FOOD_ENTRY_NOTE_PUSH off).
+    note: pushed.note ?? null,
     // Not pushed: the column default now(), the same instant as v_now.
     logged_at: iso, created_at: iso, updated_at: iso, deleted_at: null,
   };
@@ -117,7 +134,7 @@ function serverRoundTrip(u, local, pushMs) {
 
 let nowSpy;
 beforeAll(async () => {
-  expect(new Date(2026, 9, 16, 0, 30).getTimezoneOffset()).toBe(-60); // BST: run with TZ=Europe/London
+  expect(new Date(2026, 9, 16, 12, 0).getTimezoneOffset()).not.toBe(0); // the UTC-key window needs a non-UTC zone
   await dbm.db();
   mockState.realTx = true;
 });
@@ -164,50 +181,54 @@ describe('rows whose day was chosen on purpose are never moved', () => {
   });
 
   test('an imported row keeps its day even when its key looks like the old UTC key', async () => {
-    // Imported at 00:30 BST on 17 October: the UTC day of that moment is the
-    // 16th, which is also the imported row's own (deliberate) day.
-    const atHalfPastMidnight = new Date(2026, 9, 17, 0, 30).getTime();
-    nowSpy.mockReturnValue(atHalfPastMidnight);
+    // Imported in the UTC-key window on 17 October (00:30 BST: the UTC day of
+    // that moment is the 16th), for the UTC day of that moment on purpose.
+    const inWindow = utcWindowMoment(2026, 9, 17);
+    const chosen = utcDay(inWindow);
+    expect(chosen).not.toBe(localDayKey(inWindow));
+    nowSpy.mockReturnValue(inWindow);
     const u = freshUser();
-    const [id] = await food.logFoodEntries(u, [entry({ entryDate: TODAY, eatenAt: null })]);
+    const [id] = await food.logFoodEntries(u, [entry({ entryDate: chosen, eatenAt: null })]);
     await expect(food.rekeyFoodEntriesToLocalDay(u)).resolves.toBe(0);
-    expect(row(u, id).entry_date).toBe(TODAY);
-    const cloud = serverRoundTrip(u, row(u, id), atHalfPastMidnight + 1000);
+    expect(row(u, id).entry_date).toBe(chosen);
+    const cloud = serverRoundTrip(u, row(u, id), inWindow + 1000);
     forget(u);
-    await expect(food.applyFoodEntryFromCloud(u, cloud)).resolves.toBe(TODAY);
+    await expect(food.applyFoodEntryFromCloud(u, cloud)).resolves.toBe(chosen);
     await food.rekeyFoodEntriesToLocalDay(u);
-    expect(row(u, id).entry_date).toBe(TODAY);
+    expect(row(u, id).entry_date).toBe(chosen);
   });
 });
 
 describe('the rows the repair was written for are still repaired', () => {
-  // A pre-phase-1 build logged a meal at 00:30 BST on 21 May 2026 and keyed it
-  // by the UTC day (the 20th).
-  const loggedAt = new Date(2026, 4, 21, 0, 30).getTime();
+  // A pre-phase-1 build logged a meal in the UTC-key window on 21 May 2026
+  // (00:30 BST) and keyed it by the UTC day (the 20th in London).
+  const loggedAt = utcWindowMoment(2026, 4, 21);
+  const UTC_KEY = utcDay(loggedAt);
+  const LOCAL_KEY = localDayKey(loggedAt);
 
   test('the re-key moves a pre-phase-1 UTC-keyed row to its local day and rebuilds both rollups', async () => {
     const u = freshUser();
     raw.prepare(`INSERT INTO food_entries (id, user_id, entry_date, meal_slot, food_ref, quantity_g,
       kcal, protein_g, carbs_g, fat_g, logged_at, created_at, updated_at)
-      VALUES ('old-utc', ?, '2026-05-20', 'meal_1', 'quick:x', 0, 400, 1, 1, 1, ?, ?, ?)`)
-      .run(u, loggedAt, loggedAt, loggedAt);
-    await food.recomputeRollup(u, '2026-05-20');
+      VALUES ('old-utc', ?, ?, 'meal_1', 'quick:x', 0, 400, 1, 1, 1, ?, ?, ?)`)
+      .run(u, UTC_KEY, loggedAt, loggedAt, loggedAt);
+    await food.recomputeRollup(u, UTC_KEY);
     await expect(food.rekeyFoodEntriesToLocalDay(u)).resolves.toBe(1);
-    expect(row(u, 'old-utc').entry_date).toBe('2026-05-21');
-    expect((await food.getRollupForDay(u, '2026-05-21')).kcal_total).toBe(400);
-    expect((await food.getRollupForDay(u, '2026-05-20')).entries_count).toBe(0);
+    expect(row(u, 'old-utc').entry_date).toBe(LOCAL_KEY);
+    expect((await food.getRollupForDay(u, LOCAL_KEY)).kcal_total).toBe(400);
+    expect((await food.getRollupForDay(u, UTC_KEY)).entries_count).toBe(0);
   });
 
   test('the pull moves a pre-phase-1 UTC-keyed cloud row to its local day', async () => {
     const u = freshUser();
     const iso = new Date(loggedAt).toISOString();
     const date = await food.applyFoodEntryFromCloud(u, {
-      id: 'old-utc-cloud', entry_date: '2026-05-20', meal_slot: 'meal_1', food_ref: 'quick:x',
+      id: 'old-utc-cloud', entry_date: UTC_KEY, meal_slot: 'meal_1', food_ref: 'quick:x',
       quantity_g: 0, kcal: 400, protein_g: 1, carbs_g: 1, fat_g: 1,
       logged_at: iso, created_at: iso, updated_at: iso,
     });
-    expect(date).toBe('2026-05-21');
-    expect(rowsOf(u)[0].entry_date).toBe('2026-05-21');
+    expect(date).toBe(LOCAL_KEY);
+    expect(rowsOf(u)[0].entry_date).toBe(LOCAL_KEY);
   });
 
   test('a pre-phase-1 row on its own day, or back-dated then, is left where it is', async () => {

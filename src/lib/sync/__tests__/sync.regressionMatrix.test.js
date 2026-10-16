@@ -1113,7 +1113,9 @@ describe('food domain coordinator (food_entries / custom_foods / saved_meals / r
 
     await pullTable('food_entries', { userId: 'u1' });
 
-    expect(foodDb.applyFoodEntryFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'fe-cloud' }));
+    // Third argument: the set of days to rebuild (the landing day and, after a
+    // cross-device move, the day the row left).
+    expect(foodDb.applyFoodEntryFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'fe-cloud' }), expect.any(Set));
   });
 
   test('T5 conflict: per-row updated_at survives the round trip to the RPC payload', async () => {

@@ -91,6 +91,7 @@ const food = require('../db');
 const flow = require('../importHistoryFlow');
 const { summariseImport } = require('../importHistory');
 const { _foodEntryToCloud } = require('../../sync/tables/foodDomain');
+const { localDayKey } = require('../../dayKey');
 const { track: mockTrack } = require('../../engineTelemetry');
 const { trackFirst: mockTrackFirst } = require('../../telemetry/firsts');
 const { __raw: raw } = require('../../dbCrypto');
@@ -281,7 +282,9 @@ describe('import', () => {
     const timed = entries(v).filter((r) => r.eaten_at != null);
     expect(timed.length).toBeGreaterThan(0);
     // Every time on a Cronometer row is the file's own, on the row's own day.
-    timed.forEach((r) => expect(new Date(r.eaten_at).toISOString().slice(0, 10) <= r.entry_date).toBe(true));
+    // On the row's LOCAL day (the day key is local; a UTC slice of the time is
+    // a different day in the evening west of Greenwich and in the morning east).
+    timed.forEach((r) => expect(localDayKey(r.eaten_at)).toBe(r.entry_date));
     expect(entries(v).filter((r) => r.eaten_at != null && r.eaten_at > Date.now() - 60000)).toEqual([]);
   });
 });
@@ -289,11 +292,14 @@ describe('import', () => {
 // food_sync_push (created branch) then food_sync_pull, for one local row: the
 // pushed day, time and note; logged_at, created_at and updated_at all the
 // server's now() (supabase/migrate_195 food_sync_push never sends logged_at).
+// `note` is what the cloud holds once migrate_194 is applied: the pushed note,
+// or NULL when this build's record carries no note key (FOOD_ENTRY_NOTE_PUSH
+// off); to_jsonb(t) returns the key either way.
 function serverRoundTrip(u, local, pushMs) {
   const pushed = _foodEntryToCloud(local, u);
   const iso = new Date(pushMs).toISOString();
   return {
-    ...pushed, note: local.note ?? null, logged_at: iso, created_at: iso, updated_at: iso, deleted_at: null,
+    ...pushed, note: pushed.note ?? null, logged_at: iso, created_at: iso, updated_at: iso, deleted_at: null,
   };
 }
 
@@ -306,6 +312,7 @@ describe('own days, for good', () => {
   afterEach(() => nowSpy.mockRestore());
 
   const shape = (rows) => rows.map((r) => [r.id, r.entry_date, r.meal_slot, r.eaten_at, r.note]).sort();
+  const shapeWithoutNote = (rows) => rows.map((r) => [r.id, r.entry_date, r.meal_slot, r.eaten_at]).sort();
 
   test('through their own push coming back in the pull, a fresh-device pull and the re-key', async () => {
     const u = freshUser();
@@ -315,8 +322,11 @@ describe('own days, for good', () => {
     expect(written.map((r) => r.entry_date)).toContain('2026-10-14');
     const before = shape(written);
 
-    // The same device: each row's own push comes back in the pull.
+    // The same device: each row's own push comes back in the pull. The notes
+    // stand although the cloud returns them NULL (this build does not push them).
+    expect(written.every((r) => typeof r.note === 'string' && r.note.length > 0)).toBe(true);
     const cloud = written.map((r) => serverRoundTrip(u, r, HALF_PAST_MIDNIGHT + 2000));
+    expect(cloud.every((c) => c.note === null)).toBe(true);
     for (const c of cloud) await food.applyFoodEntryFromCloud(u, c); // eslint-disable-line no-await-in-loop
     expect(shape(entries(u))).toEqual(before);
     await expect(food.rekeyFoodEntriesToLocalDay(u)).resolves.toBe(0);
@@ -329,7 +339,10 @@ describe('own days, for good', () => {
     for (const c of cloud) days.add(await food.applyFoodEntryFromCloud(u, c)); // eslint-disable-line no-await-in-loop
     for (const d of days) await food.recomputeRollup(u, d); // eslint-disable-line no-await-in-loop
     await expect(food.rekeyFoodEntriesToLocalDay(u)).resolves.toBe(0);
-    expect(shape(entries(u))).toEqual(before);
+    // Days, meals and times as written; the notes never reached the cloud
+    // while FOOD_ENTRY_NOTE_PUSH is off, so a fresh device has none.
+    expect(shapeWithoutNote(entries(u))).toEqual(shapeWithoutNote(written));
+    expect(entries(u).every((r) => r.note === null)).toBe(true);
     expect(rollup(u, '2026-10-14').kcal_total).toBe(written.filter((r) => r.entry_date === '2026-10-14').reduce((a, r) => a + r.kcal, 0));
     expect(rollup(u, '2026-10-15')).toBeNull();
   });

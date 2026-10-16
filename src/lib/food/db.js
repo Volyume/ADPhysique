@@ -20,6 +20,7 @@ import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from './foodSwapScope';
+import { FOOD_ENTRY_NOTE_PUSH, CUSTOM_FOOD_PORTIONS_PUSH } from '../sync/featureFlags';
 import {
   isBoundedString,
   isLocalDayKey,
@@ -737,8 +738,14 @@ export async function confirmPlannedDay(userId, entryDate, mealSlot = null) {
   if (mealSlot) { identitySql += ' AND meal_slot = ?'; identityParams.push(mealSlot); }
   const confirmedIdentities = await d.getAllAsync(identitySql, identityParams);
   const eatenAt = mealSlot ? now : null;
-  const params = [now, eatenAt, now, userId, entryDate];
-  let sql = `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, updated_at = ?
+  // created_at is the moment of confirmation too: a planned row is never
+  // pushed (the push reads is_planned = 0 only), so confirming it is when it
+  // first becomes something the cloud should hold. With its old created_at it
+  // would be sent as an edit of a row the cloud has never seen, which the
+  // server applies as a plain UPDATE, and it would never reach the cloud
+  // (Wave 4 review, lead ruling 2026-10-16).
+  const params = [now, eatenAt, now, now, userId, entryDate];
+  let sql = `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, created_at = ?, updated_at = ?
      WHERE user_id = ? AND entry_date = ? AND is_planned = 1 AND deleted_at IS NULL`;
   if (mealSlot) { sql += ' AND meal_slot = ?'; params.push(mealSlot); }
   const res = await d.runAsync(sql, params);
@@ -773,9 +780,10 @@ export async function confirmPlannedEntry(userId, entryId) {
   );
   if (!existing) return 0;
   const res = await d.runAsync(
-    `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, updated_at = ?
+    // created_at too, for the reason given in confirmPlannedDay.
+    `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, created_at = ?, updated_at = ?
      WHERE id = ? AND user_id = ? AND is_planned = 1 AND deleted_at IS NULL`,
-    [now, now, now, entryId, userId]
+    [now, now, now, now, entryId, userId]
   );
   await recomputeRollup(userId, existing.entry_date);
   if ((res?.changes ?? 0) > 0) {
@@ -1315,6 +1323,67 @@ export async function rekeyFoodEntriesToLocalDay(userId) {
     }
   });
   return updates.length;
+}
+
+// One-time repair of the rows the pre-2026-10-16 pull already moved (lead
+// ruling on the Wave 4 hostile review, item 9). Until that date
+// applyFoodEntryFromCloud put EVERY pulled row on the local day of its cloud
+// logged_at, the moment of its first push, so a meal logged for yesterday, a
+// copied day or an imported history moved to the day it was pushed on every
+// device that pulled it, this one included. The cloud still holds the day the
+// writing device chose (food_sync_push sends entry_date), so the row goes back
+// to it, but ONLY when every one of these holds, which together say "the old
+// pull put it there and nothing has touched it since":
+//  - the local row exists and is not deleted;
+//  - its updated_at equals the cloud row's (it is the applied copy, untouched);
+//  - its entry_date equals localDayKey(cloud logged_at), the day the old pull
+//    computed, and differs from the cloud entry_date;
+//  - the cloud entry_date is a valid day key and is not the pre-phase-1 UTC
+//    signature (isPreTz1UtcKeyedRow): that row was moved on purpose.
+// updated_at is NOT bumped: the cloud already holds this day, so nothing
+// re-pushes. Each move is a compare-and-set on the values just read, so an
+// edit or a newer pull landing in between wins. The moves and both days'
+// rollups commit in one transaction. `cloudRows` is food_sync_pull's
+// food_entries rows (any group). Returns the number of rows moved.
+export async function repairPulledEntryDays(userId, cloudRows) {
+  if (!isBoundedString(userId, 300) || !Array.isArray(cloudRows) || cloudRows.length === 0) return 0;
+  const candidates = [];
+  for (const row of cloudRows) {
+    if (!row || !isBoundedString(row.id, 300) || !isLocalDayKey(row.entry_date)) continue;
+    // A row with no readable logged_at was stored on the moment of the pull,
+    // which cannot be judged: never moved.
+    const loggedAt = parseCloudEpochMs(row.logged_at);
+    if (loggedAt == null) continue;
+    const times = _cloudTimes(row);
+    if (!times) continue;
+    if (isPreTz1UtcKeyedRow({ entryDate: row.entry_date, loggedAt: times.loggedAt, createdAt: times.createdAt })) continue;
+    const oldPullDay = localDayKey(times.loggedAt);
+    if (oldPullDay === row.entry_date) continue;
+    candidates.push({ id: row.id, cloudDay: row.entry_date, oldPullDay, updatedAt: times.updatedAt });
+  }
+  if (candidates.length === 0) return 0;
+  const d = await db();
+  return runInTransaction(d, async () => {
+    const affectedDays = new Set();
+    let moved = 0;
+    for (const c of candidates) {
+      const r = await d.runAsync(
+        `UPDATE food_entries SET entry_date = ?
+         WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+           AND updated_at = ? AND entry_date = ?`,
+        [c.cloudDay, c.id, userId, c.updatedAt, c.oldPullDay],
+      );
+      if (Number(r?.changes ?? 0) > 0) {
+        moved += 1;
+        affectedDays.add(c.oldPullDay);
+        affectedDays.add(c.cloudDay);
+      }
+    }
+    for (const day of affectedDays) {
+      await recomputeRollup(userId, day);
+    }
+    return moved;
+  });
 }
 
 export async function getRollupForDay(userId, entryDate) {
@@ -2654,7 +2723,11 @@ async function _localUpdatedMs(d, table, id, userId) {
   return r?.updated_at != null ? Number(r.updated_at) : null;
 }
 
-export async function applyFoodEntryFromCloud(userId, row) {
+// `affectedDays` (optional Set): receives every day whose rollup this apply
+// changes, the day the row lands on AND the day it left when this device held
+// it on another one (a cross-device move), so the caller rebuilds both. The
+// return value stays the landing day, for the callers that read only that.
+export async function applyFoodEntryFromCloud(userId, row, affectedDays = null) {
   const quick = typeof row?.food_ref === 'string' && row.food_ref.startsWith('quick:');
   const times = _cloudTimes(row ?? {});
   if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
@@ -2687,16 +2760,26 @@ export async function applyFoodEntryFromCloud(userId, row) {
   // real state (a bulk-confirmed row with no honest eaten time) and must
   // round-trip as NULL, never invented from the write timestamp.
   const eatenAt = _isoToMs(row.eaten_at);
-  // D230 R20: note is read defensively. A key the cloud does not carry (the
-  // column is not applied yet, or an older shape) leaves this device's note as
-  // it is; a present value is cleaned, and one that is not a clean note
-  // (not a string, over 120 characters) is dropped to NULL rather than stored.
+  // The row as this device holds it now (null when it is new here): its note
+  // may have to stand, and its day is the one the move leaves.
+  const local = await d.getFirstAsync(
+    'SELECT note, entry_date FROM food_entries WHERE id = ? AND user_id = ?',
+    [row.id, userId],
+  );
+  // D230 R20: the cloud note is read ONLY while this build pushes notes
+  // (FOOD_ENTRY_NOTE_PUSH). Once migrate_194 is applied, food_sync_pull's
+  // to_jsonb(t) carries `note` on every row, NULL for every row this build
+  // pushed (it never sends the key), so reading it with the flag off erased
+  // each local note on the device's own push-then-pull. With the flag off the
+  // local note always stands. With it on, a key the cloud does not carry
+  // leaves this device's note as it is; a present value is cleaned, and one
+  // that is not a clean note (not a string, over 120 characters) is dropped
+  // to NULL rather than stored.
   let note;
-  if (Object.prototype.hasOwnProperty.call(row, 'note')) {
+  if (FOOD_ENTRY_NOTE_PUSH && Object.prototype.hasOwnProperty.call(row, 'note')) {
     const cleaned = cleanFoodNote(row.note);
     note = cleaned === false || cleaned === undefined ? null : cleaned;
   } else {
-    const local = await d.getFirstAsync('SELECT note FROM food_entries WHERE id = ? AND user_id = ?', [row.id, userId]);
     note = local?.note ?? null;
   }
   await d.runAsync(
@@ -2712,6 +2795,10 @@ export async function applyFoodEntryFromCloud(userId, row) {
       deletedAt, createdAt, updatedAt,
     ]
   );
+  if (affectedDays && typeof affectedDays.add === 'function') {
+    affectedDays.add(entryDate);
+    if (local?.entry_date && local.entry_date !== entryDate) affectedDays.add(local.entry_date);
+  }
   return entryDate;
 }
 
@@ -2728,11 +2815,17 @@ export async function applyCustomFoodFromCloud(userId, row) {
     || optionalText.some((value) => value != null && !isBoundedString(value, 5000))
     || !times) return false;
   const { createdAt, updatedAt, deletedAt } = times;
-  // D230 R20: portions_json is read defensively. A row from a cloud that does
-  // not carry the key (the column is not applied yet, or an older build pushed
-  // it) leaves this device's portions as they are; a present value is
-  // re-validated (parsePortions drops a bad item) before it is stored.
-  const hasPortionsKey = Object.prototype.hasOwnProperty.call(row, 'portions_json');
+  // D230 R20: portions_json is read ONLY while this build pushes it
+  // (CUSTOM_FOOD_PORTIONS_PUSH). Once migrate_195 is applied, food_sync_pull's
+  // to_jsonb(t) carries the key on every row, NULL for every food this build
+  // pushed (it never sends the key), so reading it with the flag off erased
+  // the local portions on the device's own push-then-pull. With the flag off
+  // the local portions always stand. With it on, a row that does not carry
+  // the key (an older shape) leaves this device's portions as they are; a
+  // present value is re-validated (parsePortions drops a bad item) before it
+  // is stored.
+  const hasPortionsKey = CUSTOM_FOOD_PORTIONS_PUSH
+    && Object.prototype.hasOwnProperty.call(row, 'portions_json');
   const d = await db();
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'custom_foods', row.id, userId);

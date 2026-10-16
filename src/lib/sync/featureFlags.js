@@ -102,8 +102,12 @@ export const STRUCTURE_REFUSED_TELEMETRY = true;
  * not read is ignored today, but the table has no column to hold it; sending
  * the field before the apply would do nothing useful and would be wrong the
  * moment the function changes. It ships OFF: the food syncs without its extra
- * portions and nothing fails. The pull reads the field defensively (an absent
- * key leaves the local portions alone).
+ * portions and nothing fails. The pull (applyCustomFoodFromCloud) reads the
+ * field ONLY while this flag is on: once 195 is applied, food_sync_pull's
+ * to_jsonb(t) returns portions_json on every row, NULL for every food a
+ * flag-off build pushed, so a flag-off build that read it would erase its own
+ * portions on its own push-then-pull. With the flag off the local portions
+ * always stand.
  *
  * Flip to true ONLY after the founder has applied 195 and its presence is
  * verified read-only (the supabase/README status block says APPLIED, the
@@ -122,12 +126,18 @@ export const CUSTOM_FOOD_PORTIONS_PUSH = false;
  * The local column exists (SCHEMA_MIGRATIONS in database.js) and its cloud
  * counterpart, supabase/migrate_194_food_entries_note.sql, is WRITTEN, HELD, NOT
  * APPLIED (CLAUDE.md Section 2: nothing is applied without the founder's exact
- * phrase "run against production"). food_sync_push names its columns, and a
- * pushed key the cloud lacks fails the WHOLE food_entries upsert for the chunk
- * (the transport retries a rejected row on every flush), so this stays FALSE
- * and the push omits the key: the entry still syncs, without its note, and
- * nothing fails. The pull reads the field defensively (an absent key leaves
- * this device's note as it is).
+ * phrase "run against production"). food_sync_push names its columns: it
+ * reads each one from the pushed record by name (v_row->>'entry_date' and so
+ * on, migrate_118 and migrate_195), so a key the deployed function does not
+ * read is ignored, not rejected. Before 194 the function never reads `note`
+ * and the table has no column for it, so a note sent then would be dropped
+ * silently; this stays FALSE and the push omits the key: the entry still
+ * syncs, without its note, and nothing fails. The pull
+ * (applyFoodEntryFromCloud) reads the cloud note ONLY while this flag is on:
+ * once 194 is applied, food_sync_pull's to_jsonb(t) returns `note` on every
+ * row, NULL for every entry a flag-off build pushed, so a flag-off build that
+ * read it would erase its own notes on its own push-then-pull. With the flag
+ * off the local note always stands.
  *
  * Flip this to true ONLY after migrate_194 is applied and its presence is
  * verified read-only (supabase/README status block says APPLIED, the migration

@@ -36,11 +36,26 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logSyncError } from '../telemetry';
+import { logError } from '../../errorLog';
 import { FOOD_ENTRY_NOTE_PUSH, CUSTOM_FOOD_PORTIONS_PUSH } from '../featureFlags';
 import { parsePortions } from '../../food/portions';
 
 const FOOD_LAST_PUSHED_KEY = (userId) => `@volyume_food_last_pushed_${userId}`;
 const FOOD_LAST_PULLED_KEY = (userId) => `@volyume_food_last_pulled_${userId}`;
+// Per user, per device (AsyncStorage is this device's): set once the one-time
+// repair of rows the old pull moved has completed (repairPulledEntryDaysOnce).
+export const FOOD_DAY_REPAIR_KEY = (userId) => `@volyume_food_entry_day_repair_${userId}`;
+
+// The most rows one food_sync_push call carries for one table. A large import
+// (thousands of diary rows) used to go up as ONE call: one oversized request
+// body and one long transaction that a slow connection could time out on and
+// retry whole, every cycle. Re-sending a chunk is safe, as re-sending a whole
+// table after a partial failure always was: `created` is ON CONFLICT (DO
+// NOTHING, or DO UPDATE with the same values), `updated` writes the same
+// values again, `deleted` removes or tombstones the same row again, and
+// favourites and water upsert under their own guards (food_sync_push,
+// supabase/migrate_118 and migrate_194/195).
+export const FOOD_PUSH_CHUNK = 500;
 
 export const FOOD_DOMAIN_TABLES = Object.freeze([
   'food_entries',
@@ -82,6 +97,34 @@ function _bucketFoodRow(r) {
   if (r.deleted_at) return 'deleted';
   if (r.created_at && r.updated_at && r.created_at === r.updated_at) return 'created';
   return 'updated';
+}
+
+// The bucket(s) a food row goes up in, given the push watermark `sinceMs`
+// (FOOD_LAST_PUSHED_KEY: the newest local updated_at of the last fully
+// successful push, less 1 ms). Lead ruling on the Wave 4 hostile review: a
+// row edited before its first push (created_at !== updated_at) used to go in
+// `updated` alone, and the server's `updated` branch is an UPDATE of a row it
+// does not hold (food_entries, saved_meals, recipes) or is not read at all
+// (custom_foods, migrate_118/194), so the row never reached the cloud.
+//  - created_at at or before the watermark: the row went up in a push that
+//    advanced it (every pushed row's created_at <= its updated_at <= the
+//    watermark + 1), so the existing rule stands.
+//  - created_at after the watermark: it has never been pushed, OR it went up
+//    in a cycle whose watermark did not move (another table or chunk failed),
+//    or in the same millisecond as the watermark's row. It goes in `created`
+//    with its latest values, so it lands if the server lacks it; and, when it
+//    has been edited, ALSO in `updated`, so the edit lands if the server
+//    already holds it (`created` is ON CONFLICT DO NOTHING for food_entries,
+//    saved_meals and recipes, and the function runs every `created` before
+//    every `updated` of a table). Both halves are repeatable.
+// Returns an array of bucket names.
+export function _foodRowBuckets(r, sinceMs) {
+  if (r.deleted_at) return ['deleted'];
+  const createdMs = typeof r.created_at === 'number' ? r.created_at : Date.parse(r.created_at);
+  if (Number.isFinite(createdMs) && createdMs > (Number(sinceMs) || 0)) {
+    return r.created_at === r.updated_at ? ['created'] : ['created', 'updated'];
+  }
+  return [_bucketFoodRow(r)];
 }
 
 function _msToISOorNull(t) {
@@ -288,11 +331,15 @@ async function _doPushAll(sb, { userId, localUserId }) {
     food.getAllWaterSince(localUserId, sinceMs),
   ]);
 
-  const bucket = (rows, mapper) => {
+  const bucket = (mapper) => (rows) => {
     const out = { created: [], updated: [], deleted: [] };
-    for (const r of rows) out[_bucketFoodRow(r)].push(mapper(r, userId));
+    for (const r of rows) {
+      const record = mapper(r, userId);
+      for (const b of _foodRowBuckets(r, sinceMs)) out[b].push(record);
+    }
     return out;
   };
+  const tombstones = (mapper) => (rows) => _bucketTombstone(rows, mapper, userId);
 
   // One payload slice per table. Each is pushed in its own
   // food_sync_push call so a failure in one table can't roll back the
@@ -304,13 +351,15 @@ async function _doPushAll(sb, { userId, localUserId }) {
   // `deleted` slice (via _bucketTombstone) and propagates to the cloud + other
   // devices instead of being device-local. The change query already returns
   // tombstoned rows because deleting bumps last_used_at / updated_at.
+  // Each slice is built per chunk of FOOD_PUSH_CHUNK source rows (see the
+  // constant), so a large table goes up in several calls.
   const slices = [
-    ['food_entries',    bucket(entries, _foodEntryToCloud),  entries],
-    ['custom_foods',    bucket(customs, _customFoodToCloud),  customs],
-    ['saved_meals',     bucket(meals, _savedMealToCloud),     meals],
-    ['recipes',         bucket(recipesRows, _recipeToCloud),  recipesRows],
-    ['food_favourites', _bucketTombstone(favs, _favouriteToCloud, userId), favs],
-    ['daily_water',     _bucketTombstone(water, _waterToCloud, userId), water],
+    ['food_entries',    bucket(_foodEntryToCloud),  entries],
+    ['custom_foods',    bucket(_customFoodToCloud),  customs],
+    ['saved_meals',     bucket(_savedMealToCloud),     meals],
+    ['recipes',         bucket(_recipeToCloud),  recipesRows],
+    ['food_favourites', tombstones(_favouriteToCloud), favs],
+    ['daily_water',     tombstones(_waterToCloud), water],
   ];
 
   const counts = { ...EMPTY_COUNTS };
@@ -319,28 +368,34 @@ async function _doPushAll(sb, { userId, localUserId }) {
   let pushedAny = false;
   let latestTsMs = null;
 
-  for (const [table, slice, rows] of slices) {
-    if (rows.length === 0) continue; // nothing changed: skip the round-trip
-    const { error } = await sb.rpc('food_sync_push', { changes: { [table]: slice } });
-    if (error) {
-      logSyncError(`sync.tables.foodDomain.push.${table}`, error);
-      errorsByTable[table] = 1;
-      anyError = true;
-      continue;
-    }
-    counts[table] = rows.length;
-    pushedAny = true;
-    // SYNC-5: advance the watermark to the newest LOCAL updated_at among the
-    // rows we actually pushed, NOT the server timestamp. The change query
-    // filters on local updated_at (WHERE updated_at > sinceMs); comparing
-    // that against a server clock could skip a row whose local updated_at
-    // fell at/below the recorded server time (a row written during the RPC
-    // round-trip, or under clock skew) and never push it. Keeping both sides
-    // on one clock means anything written after this batch is strictly newer
-    // than the watermark and gets picked up next cycle.
-    for (const r of rows) {
-      const ms = _rowUpdatedMs(r);
-      if (ms !== null && (latestTsMs === null || ms > latestTsMs)) latestTsMs = ms;
+  for (const [table, toSlice, allRows] of slices) {
+    if (allRows.length === 0) continue; // nothing changed: skip the round-trip
+    for (let start = 0; start < allRows.length; start += FOOD_PUSH_CHUNK) {
+      const rows = allRows.slice(start, start + FOOD_PUSH_CHUNK);
+      const { error } = await sb.rpc('food_sync_push', { changes: { [table]: toSlice(rows) } });
+      if (error) {
+        logSyncError(`sync.tables.foodDomain.push.${table}`, error);
+        errorsByTable[table] = 1;
+        anyError = true;
+        // The rest of this table waits for the next cycle: the watermark does
+        // not move (below), so every row of it, the chunks already sent
+        // included, goes again then.
+        break;
+      }
+      counts[table] += rows.length;
+      pushedAny = true;
+      // SYNC-5: advance the watermark to the newest LOCAL updated_at among the
+      // rows we actually pushed, NOT the server timestamp. The change query
+      // filters on local updated_at (WHERE updated_at > sinceMs); comparing
+      // that against a server clock could skip a row whose local updated_at
+      // fell at/below the recorded server time (a row written during the RPC
+      // round-trip, or under clock skew) and never push it. Keeping both sides
+      // on one clock means anything written after this batch is strictly newer
+      // than the watermark and gets picked up next cycle.
+      for (const r of rows) {
+        const ms = _rowUpdatedMs(r);
+        if (ms !== null && (latestTsMs === null || ms > latestTsMs)) latestTsMs = ms;
+      }
     }
   }
 
@@ -410,9 +465,13 @@ async function _doPullAll(sb, { userId }) {
     return n;
   };
 
+  // The applier adds every day its apply changed to datesToRecompute: the day
+  // the row lands on AND the day it left when this device held it on another
+  // (a move made on another device), so both days' rollups are rebuilt. The
+  // returned landing day is added too, for an applier that reports only that.
   counts.food_entries = await applyGroup(
     'food_entries',
-    food.applyFoodEntryFromCloud,
+    (uid, row) => food.applyFoodEntryFromCloud(uid, row, datesToRecompute),
     (_row, date) => { if (date) datesToRecompute.add(date); },
   );
   counts.custom_foods = await applyGroup('custom_foods', food.applyCustomFoodFromCloud);
@@ -460,8 +519,64 @@ async function _doPullAll(sb, { userId }) {
       // re-pulling them is idempotent under the per-row LWW apply gate.
       try { await AsyncStorage.setItem(key, String(tsMs - 1)); } catch (_) { /* tolerate */ }
     }
+    // After a pull in which every row applied: the one-time repair of rows the
+    // old pull moved (repairPulledEntryDaysOnce). Not awaited, so it never
+    // holds up the sync cycle or anything waiting on it; it never throws.
+    // Skipped where the food module has no repair (a test double).
+    if (typeof food.repairPulledEntryDays === 'function') {
+      repairPulledEntryDaysOnce(sb, userId);
+    }
   }
   return { counts, errorsByTable, errors: anyFailed || recomputeFailed ? 1 : 0 };
+}
+
+let _dayRepairPromise = null;
+
+/**
+ * One-time repair, per user per device, of the food entries the pull before
+ * 2026-10-16 moved to the day they were pushed (lead ruling on the Wave 4
+ * hostile review, item 9; the rule for which rows move is
+ * food/db.js repairPulledEntryDays). Fetches the user's food_entries from the
+ * cloud from epoch through the existing food_sync_pull (one call, as the pull
+ * itself makes: the RPC is not paged), hands them to repairPulledEntryDays,
+ * and marks FOOD_DAY_REPAIR_KEY only after that completes. Best effort: any
+ * failure goes to logError with the error alone (no context: no row, no day,
+ * no figure; logError's Sentry path scrubs) and the repair runs again after
+ * the next successful pull. It logs through logError, not logSyncError, so a
+ * repair finishing during a later sync run never counts in that run's
+ * per-table error marks. Never throws; one run at a time. Resolves to the number of rows moved, or null when it did not run
+ * to completion (already done, failed, or nothing to call).
+ *
+ * Wired here, after a fully applied food pull, rather than on HomeScreen next
+ * to the TZ-1 re-key: it needs the Supabase client, which only the sync layer
+ * holds (components never reach Supabase), and "after the next successful
+ * full pull" is exactly this point.
+ */
+export function repairPulledEntryDaysOnce(sb, userId) {
+  if (_dayRepairPromise) return _dayRepairPromise;
+  _dayRepairPromise = (async () => {
+    if (!sb || typeof sb.rpc !== 'function' || !userId) return null;
+    const key = FOOD_DAY_REPAIR_KEY(userId);
+    if ((await AsyncStorage.getItem(key)) === 'true') return null;
+    const { data, error } = await sb.rpc('food_sync_pull', { last_pulled_at: new Date(0).toISOString() });
+    if (error) {
+      logError('sync.tables.foodDomain.dayRepair.fetch', error);
+      return null;
+    }
+    const g = data?.changes?.food_entries ?? {};
+    const rows = [...(g.created ?? []), ...(g.updated ?? []), ...(g.deleted ?? [])];
+    // eslint-disable-next-line global-require
+    const food = require('../../food/db');
+    const moved = await food.repairPulledEntryDays(userId, rows);
+    await AsyncStorage.setItem(key, 'true');
+    return moved;
+  })()
+    .catch((e) => {
+      logError('sync.tables.foodDomain.dayRepair', e);
+      return null;
+    })
+    .finally(() => { _dayRepairPromise = null; });
+  return _dayRepairPromise;
 }
 
 /**

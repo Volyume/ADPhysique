@@ -51,6 +51,17 @@ jest.mock('../../dbCrypto', () => {
   return { openEncryptedDb: async () => ({ db: adapt, encrypted: true }), __raw: raw };
 });
 jest.mock('expo-sqlite');
+// The shipped flag value by default; the pull tests that model a build which
+// pushes notes turn it on (applyFoodEntryFromCloud reads the cloud note only
+// then).
+const mockFlags = { note: false };
+// A real getter (defineProperty: an object spread with a getter is compiled to
+// a one-time read of its value).
+jest.mock('../../sync/featureFlags', () => Object.defineProperty(
+  { ...jest.requireActual('../../sync/featureFlags') },
+  'FOOD_ENTRY_NOTE_PUSH',
+  { get: () => mockFlags.note, enumerable: true },
+));
 jest.mock('../../sync', () => ({ scheduleSync: jest.fn() }));
 jest.mock('../../errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
 const mockTrack = jest.fn(() => Promise.resolve());
@@ -87,7 +98,7 @@ const patchFor = (over = {}) => ({
 });
 
 beforeAll(async () => { await dbm.db(); });
-beforeEach(() => { jest.clearAllMocks(); mockState.statements.length = 0; });
+beforeEach(() => { jest.clearAllMocks(); mockState.statements.length = 0; mockFlags.note = false; });
 
 describe('cleanFoodNote', () => {
   test('the one definition of a clean note', () => {
@@ -219,7 +230,37 @@ describe('pull: applyFoodEntryFromCloud', () => {
     updated_at: '2026-04-02T09:00:01.000Z', ...over,
   });
 
-  test('maps a present note, including a cloud NULL', async () => {
+  // Wave 4 hostile review, item 1: once migrate_194 is applied the pull's
+  // to_jsonb(t) carries `note` on EVERY row, NULL for every row a flag-off
+  // build pushed (it never sends the key). Reading it with the flag off erased
+  // each local note on the device's own push-then-pull.
+  test('with the flag off (this build) the local note stands against a cloud NULL on its own round trip', async () => {
+    const u = freshUser();
+    const [id] = await food.logFoodEntries(u, [row({ note: 'Pret sandwich' })]);
+    const local = stored(id);
+    const pushedAt = new Date(local.updated_at + 2000).toISOString();
+    // The row as food_sync_pull returns it once 194 is applied.
+    const back = {
+      id, user_id: u, entry_date: D, meal_slot: 'meal_1', food_ref: 'global:oats', quantity_g: 60,
+      kcal: 227, protein_g: 8, carbs_g: 36, fat_g: 5, fibre_g: 6, weight_state: 'as_weighed',
+      eaten_at: null, logged_at: pushedAt, created_at: pushedAt, updated_at: pushedAt, deleted_at: null, note: null,
+    };
+    await expect(food.applyFoodEntryFromCloud(u, back)).resolves.toBe(D);
+    expect(stored(id).note).toBe('Pret sandwich');
+    expect(stored(id).updated_at).toBe(Date.parse(pushedAt));
+  });
+
+  test('with the flag off a cloud note is never read: a new row reads NULL, an existing one keeps its own', async () => {
+    const u = freshUser();
+    await food.applyFoodEntryFromCloud(u, cloud('off1', { note: 'from the cloud' }));
+    expect(stored('off1').note).toBeNull();
+    raw.prepare('UPDATE food_entries SET note = ? WHERE id = ?').run('mine', 'off1');
+    await food.applyFoodEntryFromCloud(u, cloud('off1', { note: 'other', updated_at: '2026-04-02T12:00:00.000Z' }));
+    expect(stored('off1').note).toBe('mine');
+  });
+
+  test('maps a present note, including a cloud NULL (flag on)', async () => {
+    mockFlags.note = true;
     const u = freshUser();
     await food.applyFoodEntryFromCloud(u, cloud('c1', { note: 'from the cloud' }));
     expect(stored('c1').note).toBe('from the cloud');
@@ -227,7 +268,8 @@ describe('pull: applyFoodEntryFromCloud', () => {
     expect(stored('c1').note).toBeNull();
   });
 
-  test('tolerates a record without the key: this device\'s note is kept, and a new row reads NULL', async () => {
+  test('tolerates a record without the key: this device\'s note is kept, and a new row reads NULL (flag on)', async () => {
+    mockFlags.note = true;
     const u = freshUser();
     await food.applyFoodEntryFromCloud(u, cloud('c2'));
     expect(stored('c2').note).toBeNull();
@@ -236,7 +278,8 @@ describe('pull: applyFoodEntryFromCloud', () => {
     expect(stored('c2')).toEqual(expect.objectContaining({ quantity_g: 70, note: 'mine' }));
   });
 
-  test('never stores an over-long or non-string note from the cloud', async () => {
+  test('never stores an over-long or non-string note from the cloud (flag on)', async () => {
+    mockFlags.note = true;
     const u = freshUser();
     await food.applyFoodEntryFromCloud(u, cloud('c3', { note: 'q'.repeat(500) }));
     expect(stored('c3').note).toBeNull();
@@ -248,14 +291,10 @@ describe('pull: applyFoodEntryFromCloud', () => {
 describe('push: the flag', () => {
   const localRow = { id: 'e1', entry_date: D, meal_slot: 'meal_1', food_ref: 'global:oats', quantity_g: 60, kcal: 1, protein_g: 1, carbs_g: 1, fat_g: 1, note: 'a note' };
 
+  // The mapper reads the flag at call time, through the file's flag getter.
   function mapperWithFlag(value) {
-    let mapper;
-    jest.isolateModules(() => {
-      jest.doMock('../../sync/featureFlags', () => ({ ...jest.requireActual('../../sync/featureFlags'), FOOD_ENTRY_NOTE_PUSH: value }));
-      mapper = require('../../sync/tables/foodDomain')._foodEntryToCloud;
-    });
-    jest.dontMock('../../sync/featureFlags');
-    return mapper;
+    mockFlags.note = value;
+    return require('../../sync/tables/foodDomain')._foodEntryToCloud;
   }
 
   test('with the flag false the pushed record has NO note key (not even null)', () => {
