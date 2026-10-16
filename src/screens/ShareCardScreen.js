@@ -55,11 +55,11 @@ import { defaultLiftIndex } from '../lib/sessionShareData';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import LookStrengthSlider from '../components/share/LookStrengthSlider';
-import Stepper from '../components/Stepper';
+import VideoTrimBar from '../components/share/VideoTrimBar';
 import { lookMatrix } from '../lib/shareCard/photoLooks';
 import { photoCoverRect } from '../lib/shareCard/drawShareCard';
 import * as shareVideoEngine from '../lib/shareVideo/engine';
-import { grabVideoFrame } from '../lib/shareVideo/videoFrame';
+import { grabVideoFrame, videoThumbnailBase64 } from '../lib/shareVideo/videoFrame';
 import { getClip, listClipsForWorkout, subscribeClips } from '../lib/clips/store';
 import { clipDisplayName, clipMatchesPR, CLIP_STRINGS } from '../lib/clips/rules';
 import useClipRecorder from '../components/clips/useClipRecorder';
@@ -79,6 +79,15 @@ try { FileSystem = require('expo-file-system/legacy'); } catch (_) { /* optional
 try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
 try { ImagePicker = require('expo-image-picker'); } catch (_) { /* optional */ }
 try { MediaLibrary = require('expo-media-library'); } catch (_) { /* optional */ }
+// The preview's player (addendum 17 follow-up): expo-av's native video view,
+// already in the build for the rest timer's sounds. No Skia view.
+let AvVideo = null;
+let AvResizeMode = null;
+try { const av = require('expo-av'); AvVideo = av.Video; AvResizeMode = av.ResizeMode; } catch (_) { /* optional */ }
+// The preview video is made at half the share's width, at a low bitrate, so
+// it is quick to make; it is only ever watched here, never shared.
+const PREVIEW_VIDEO_W = 540;
+const PREVIEW_VIDEO_BITRATE = 2000000;
 try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; ImageFormat = S.ImageFormat; } catch (_) { /* optional */ }
 
 // "Share to Stories" goes straight to the OS share sheet. The Instagram
@@ -206,7 +215,21 @@ export default function ShareCardScreen({ navigation, route }) {
   // share's window begins; the preview shows that frame.
   const [clip, setClip] = useState(null);
   const [clipStartMs, setClipStartMs] = useState(0);
+  // The end of the share's window (the trim bar's right handle).
+  const [clipEndMs, setClipEndMs] = useState(0);
+  // The preview video (founder follow-up 2026-10-16): the look, the framing
+  // and the trim played back through the engine at 540 wide. `previewVideo`
+  // is { uri, signature } once made and playing; it shows only while the
+  // signature still matches what is on screen.
+  const [previewVideo, setPreviewVideo] = useState(null);
+  const [makingPreview, setMakingPreview] = useState(false);
+  const [previewProgress, setPreviewProgress] = useState(0);
+  const makingPreviewRef = useRef(false);
+  const previewCacheRef = useRef({});
+  const mountedRef = useRef(true);
   const [clipSize, setClipSize] = useState({ width: 0, height: 0 });
+  // Thumbnails of this workout's videos, by id, for the strip on the screen.
+  const [clipThumbs, setClipThumbs] = useState({});
   const [workoutClips, setWorkoutClips] = useState([]);
   const [clipsVersion, setClipsVersion] = useState(0);
   const [videoSheetOpen, setVideoSheetOpen] = useState(false);
@@ -761,6 +784,8 @@ export default function ShareCardScreen({ navigation, route }) {
     setFramerPhoto(null);
     setClip(null);
     setClipStartMs(0);
+    setClipEndMs(0);
+    setPreviewVideo(null);
   }, []);
 
   // ── Video as a background (addendum 17) ─────────────────────────────────
@@ -784,20 +809,26 @@ export default function ShareCardScreen({ navigation, route }) {
     if (!row?.uri) return;
     const shown = showVideoFrame(row, 0, { fresh: true });
     if (!shown) return;
+    const d = Number(row.durationMs) || 0;
     setClip(row);
     setClipStartMs(0);
+    setClipEndMs(d > 0 ? Math.min(d, MAX_VIDEO_MS) : MAX_VIDEO_MS);
+    setPreviewVideo(null);
     setVideoSheetOpen(false);
   }, [showVideoFrame]);
 
-  // The start of the share's window, in whole seconds; the preview follows.
+  // The share's window, both ends, from the trim bar (it clamps the window
+  // itself; this only keeps it inside the video). The still follows the start.
   const clipDurationMs = Number(clip?.durationMs) || 0;
-  const maxStartSec = Math.max(0, Math.floor((clipDurationMs - MAX_VIDEO_MS) / 1000));
-  const changeClipStart = useCallback((sec) => {
+  const changeClipWindow = useCallback(({ startMs, endMs } = {}) => {
     if (!clip) return;
-    const ms = Math.max(0, Math.min(Number(sec) || 0, maxStartSec)) * 1000;
-    setClipStartMs(ms);
-    showVideoFrame(clip, ms);
-  }, [clip, maxStartSec, showVideoFrame]);
+    const top = clipDurationMs > 0 ? clipDurationMs : MAX_VIDEO_MS;
+    const start = Math.max(0, Math.min(Math.round(Number(startMs) || 0), top));
+    const end = Math.max(start + 1, Math.min(Math.round(Number(endMs) || 0), top, start + MAX_VIDEO_MS));
+    if (start !== clipStartMs) showVideoFrame(clip, start);
+    setClipStartMs(start);
+    setClipEndMs(end);
+  }, [clip, clipDurationMs, clipStartMs, showVideoFrame]);
 
   // This workout's videos, for "From this workout": re-read on every save or
   // delete anywhere; a chosen video that no longer exists goes.
@@ -822,6 +853,22 @@ export default function ShareCardScreen({ navigation, route }) {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workoutId, userId, suppress, clipsVersion]);
+
+  // The strip's thumbnails: one still per video, decoded offscreen once
+  // (best effort; a video that will not decode shows a glyph).
+  useEffect(() => {
+    if (!Skia || !workoutClips.length) return;
+    setClipThumbs((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const row of workoutClips) {
+        if (next[row.id] !== undefined) continue;
+        next[row.id] = videoThumbnailBase64(Skia, row.uri);
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [workoutClips]);
 
   // Arriving with a video (the summary's row, or the camera opened from here
   // coming back with `clipId` merged into the route): it becomes the
@@ -1049,63 +1096,142 @@ export default function ShareCardScreen({ navigation, route }) {
   // PNG over the video, the window from the chosen start, the look's colour
   // matrix and the framing rectangle, through the native engine. Cached by
   // everything that went into it, so Share then Save makes it once.
+  // One video job's inputs at an output width: the share at 1080, the
+  // preview at 540. The signature is everything that went into it, so a
+  // cached file is reused only when nothing on screen has changed.
+  const videoJobAt = useCallback((W) => {
+    const params = buildParams();
+    let H = cardHeight(W, params.isSquare, params.aspect);
+    if (H % 2) H -= 1;
+    const durationMs = Math.min(MAX_VIDEO_MS, Math.max(1, Math.round(clipEndMs - clipStartMs)));
+    const signature = JSON.stringify({
+      uri: clip?.uri, start: clipStartMs, end: clipEndMs, durationMs, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H,
+    });
+    return { params, W, H, durationMs, signature };
+  }, [clip, buildParams, clipStartMs, clipEndMs, photoCrop, photoLook, photoLookStrength]);
+
+  // Draws the card without its photo at the job's size, writes it as the
+  // overlay PNG and hands everything to the engine. Throws the engine's error.
+  const runVideoJob = useCallback(async (job, bitrate, onProgress) => {
+    const { params, W, H, durationMs } = job;
+    const surface = Skia.Surface.MakeOffscreen(W, H);
+    if (!surface) return null;
+    drawShareCard(surface.getCanvas(), {
+      Skia, width: W, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop, omitPhoto: true,
+    });
+    surface.flush();
+    const image = surface.makeImageSnapshot();
+    const b64 = image ? image.encodeToBase64() : null;
+    if (!b64) return null;
+    const overlayPngUri = `${FileSystem.cacheDirectory || ''}volyume-overlay-${W}-${Date.now()}.png`;
+    await FileSystem.writeAsStringAsync(overlayPngUri, b64, { encoding: FileSystem.EncodingType.Base64 });
+    const rect = photoCoverRect(clipSize.width, clipSize.height, W, H, photoCrop);
+    const matrix = photoLook && photoLook !== 'none' ? lookMatrix(photoLook, photoLookStrength) : null;
+    const options = {
+      sourceUri: clip.uri,
+      startMs: Math.round(clipStartMs),
+      durationMs,
+      matrix: matrix || null,
+      rect,
+      overlayPngUri,
+      outWidth: W,
+      outHeight: H,
+    };
+    if (bitrate) options.bitrate = bitrate;
+    const result = await shareVideoEngine.exportShareVideo(options, onProgress);
+    return result.uri;
+  }, [clip, typefaces, wordmark, wordmarkDark, clipStartMs, photoCrop, photoLook, photoLookStrength, clipSize, bgPhoto]);
+
+  const engineFailed = useCallback((e, where) => {
+    const code = e?.code;
+    if (code === shareVideoEngine.EXPORT_ERROR.CANCELLED) return;
+    logError(where, e, { code });
+    const line = shareVideoEngine.lineForExportError(code, { fromGallery: clip?.source === 'gallery' });
+    if (line) toast.show(line, { variant: 'error', duration: 7000 });
+  }, [clip, toast]);
+
+  // The finished video (addendum 17): the card drawn without its photo as a
+  // PNG over the video, the trimmed window, the look's colour matrix and the
+  // framing rectangle, through the native engine at 1080. Cached by
+  // everything that went into it, so Share then Save makes it once.
   const renderVideoToFile = useCallback(async () => {
     if (!clip || !Skia || !FileSystem || !typefaces) return null;
+    if (makingPreviewRef.current) return null; // one engine job at a time
     if (!shareVideoEngine.isAvailable()) {
       toast.show(shareVideoEngine.lineForExportError(shareVideoEngine.EXPORT_ERROR.UNAVAILABLE), { variant: 'error', duration: 6000 });
       return null;
     }
-    const params = buildParams();
-    const W = 1080;
-    let H = cardHeight(W, params.isSquare, params.aspect);
-    if (H % 2) H -= 1;
-    const durationMs = Math.min(MAX_VIDEO_MS, Math.max(1, Math.round(clipDurationMs - clipStartMs)));
-    const signature = JSON.stringify({
-      uri: clip.uri, start: clipStartMs, durationMs, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H,
-    });
-    if (videoCacheRef.current[signature]) return videoCacheRef.current[signature];
+    const job = videoJobAt(1080);
+    if (videoCacheRef.current[job.signature]) return videoCacheRef.current[job.signature];
     setMakingVideo(true);
     makingVideoRef.current = true;
     setVideoProgress(0);
     try {
-      const surface = Skia.Surface.MakeOffscreen(W, H);
-      if (!surface) return null;
-      drawShareCard(surface.getCanvas(), {
-        Skia, width: W, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop, omitPhoto: true,
-      });
-      surface.flush();
-      const image = surface.makeImageSnapshot();
-      const b64 = image ? image.encodeToBase64() : null;
-      if (!b64) return null;
-      const overlayPngUri = `${FileSystem.cacheDirectory || ''}volyume-overlay-${Date.now()}.png`;
-      await FileSystem.writeAsStringAsync(overlayPngUri, b64, { encoding: FileSystem.EncodingType.Base64 });
-      const rect = photoCoverRect(clipSize.width, clipSize.height, W, H, photoCrop);
-      const matrix = photoLook && photoLook !== 'none' ? lookMatrix(photoLook, photoLookStrength) : null;
-      const result = await shareVideoEngine.exportShareVideo({
-        sourceUri: clip.uri,
-        startMs: Math.round(clipStartMs),
-        durationMs,
-        matrix: matrix || null,
-        rect,
-        overlayPngUri,
-        outWidth: W,
-        outHeight: H,
-      }, setVideoProgress);
-      videoCacheRef.current[signature] = result.uri;
-      return result.uri;
+      const uri = await runVideoJob(job, null, setVideoProgress);
+      if (uri) videoCacheRef.current[job.signature] = uri;
+      return uri;
     } catch (e) {
-      const code = e?.code;
-      if (code !== shareVideoEngine.EXPORT_ERROR.CANCELLED) {
-        logError('ShareCardScreen.renderVideo', e, { code });
-        const line = shareVideoEngine.lineForExportError(code, { fromGallery: clip?.source === 'gallery' });
-        if (line) toast.show(line, { variant: 'error', duration: 7000 });
-      }
+      engineFailed(e, 'ShareCardScreen.renderVideo');
       return null;
     } finally {
       setMakingVideo(false);
       makingVideoRef.current = false;
     }
-  }, [clip, typefaces, wordmark, wordmarkDark, buildParams, clipDurationMs, clipStartMs, photoCrop, photoLook, photoLookStrength, clipSize, bgPhoto, toast]);
+  }, [clip, typefaces, toast, videoJobAt, runVideoJob, engineFailed]);
+
+  // What the preview video would be made from right now. A playing preview
+  // whose signature no longer matches (any change to the look, framing,
+  // trim, card or toggles) is not shown: the still framer comes back.
+  const previewSignature = useMemo(
+    () => (clip && Skia ? videoJobAt(PREVIEW_VIDEO_W).signature : null),
+    [clip, videoJobAt],
+  );
+  const playingPreview = !!previewVideo && !suppress && previewVideo.signature === previewSignature;
+  useEffect(() => {
+    if (previewVideo && previewVideo.signature !== previewSignature) setPreviewVideo(null);
+  }, [previewVideo, previewSignature]);
+
+  // Play: the preview video through the engine, 540 wide, cached by the
+  // same inputs as the share, so Play after Pause with nothing changed is
+  // instant. A failure says the engine's calm line and stays on the still.
+  const playPreview = useCallback(async () => {
+    if (!clip || !Skia || !FileSystem || !typefaces || suppress) return;
+    if (makingVideoRef.current || makingPreviewRef.current) return;
+    if (!shareVideoEngine.isAvailable()) {
+      toast.show(shareVideoEngine.lineForExportError(shareVideoEngine.EXPORT_ERROR.UNAVAILABLE), { variant: 'error', duration: 6000 });
+      return;
+    }
+    const job = videoJobAt(PREVIEW_VIDEO_W);
+    const cached = previewCacheRef.current[job.signature];
+    if (cached) { setPreviewVideo({ uri: cached, signature: job.signature }); return; }
+    setMakingPreview(true);
+    makingPreviewRef.current = true;
+    setPreviewProgress(0);
+    try {
+      const uri = await runVideoJob(job, PREVIEW_VIDEO_BITRATE, setPreviewProgress);
+      if (!mountedRef.current || !uri) return;
+      previewCacheRef.current[job.signature] = uri;
+      setPreviewVideo({ uri, signature: job.signature });
+    } catch (e) {
+      if (mountedRef.current) engineFailed(e, 'ShareCardScreen.previewVideo');
+    } finally {
+      makingPreviewRef.current = false;
+      if (mountedRef.current) setMakingPreview(false);
+    }
+  }, [clip, typefaces, suppress, toast, videoJobAt, runVideoJob, engineFailed]);
+
+  const pausePreview = useCallback(() => { setPreviewVideo(null); }, []);
+
+  // Leaving the screen stops a preview still being made.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (makingPreviewRef.current) {
+        shareVideoEngine.cancelExport().catch(() => { /* nothing running is fine */ });
+      }
+    };
+  }, []);
 
   const cancelVideo = useCallback(() => {
     shareVideoEngine.cancelExport().catch(() => { /* nothing running is fine */ });
@@ -1345,29 +1471,69 @@ export default function ShareCardScreen({ navigation, route }) {
               icon={<Ionicons name="close-circle-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
+          {/* Addendum 17 (founder: "There should still be the ability to see
+              the videos created in session ... visible in the share screen"):
+              this workout's videos sit on the screen itself, one tap each,
+              in the template strip's own style. */}
+          {!suppress && workoutClips.length ? (
+            <View style={styles.videoStrip}>
+              <Text style={[styles.videoStripLabel, live.videoStripLabel]}>Your videos from this workout</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.templateStrip}
+              >
+                {workoutClips.map((row) => {
+                  const active = clip?.id === row.id;
+                  const secs = Math.round((Number(row.durationMs) || 0) / 1000);
+                  return (
+                    <TouchableOpacity
+                      key={row.id}
+                      style={[styles.templateTile, live.templateTile, active && [styles.templateTileActive, live.templateTileActive]]}
+                      onPress={() => acceptClip(row)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`Use video: ${clipDisplayName(row)}, ${secs} seconds`}
+                    >
+                      {clipThumbs[row.id] ? (
+                        <Image
+                          source={{ uri: `data:image/png;base64,${clipThumbs[row.id]}` }}
+                          style={styles.templateThumb}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.templateThumb, styles.templateThumbEmpty, live.templateThumbEmpty]}>
+                          <Ionicons name="videocam-outline" size={18} color={t.colors.textMuted} />
+                        </View>
+                      )}
+                      <Text style={[styles.templateLabel, live.templateLabel, active && [styles.templateLabelActive, live.templateLabelActive]]} numberOfLines={1}>
+                        {clipDisplayName(row)}
+                      </Text>
+                      <Text style={[styles.templateLabel, live.templateLabel]}>{`${secs} s`}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : null}
           {clip ? (
             <View style={styles.videoStartRow}>
               <Text style={[styles.photoHint, live.photoHint]}>
-                {`A share is ${MAX_VIDEO_MS / 1000} seconds at the longest. ${clipDurationMs > MAX_VIDEO_MS
-                  ? `This video is ${Math.round(clipDurationMs / 1000)} seconds, so choose where the share starts.`
-                  : 'The whole video goes on the share.'}`}
+                {`A share is ${MAX_VIDEO_MS / 1000} seconds at the longest. Slide the window to the part you want, or drag its ends to make it shorter.`}
               </Text>
-              {clipDurationMs > MAX_VIDEO_MS ? (
-                <Stepper
-                  value={Math.round(clipStartMs / 1000)}
-                  onChange={changeClipStart}
-                  min={0}
-                  max={maxStartSec}
-                  step={1}
-                  label="Start at"
-                  formatValue={(v) => `${v} s`}
-                  valueLabel={`Start at ${Math.round(clipStartMs / 1000)} seconds`}
-                  decreaseLabel="Start earlier"
-                  increaseLabel="Start later"
-                  onDecreaseLongPress={() => changeClipStart(Math.round(clipStartMs / 1000) - 5)}
-                  onIncreaseLongPress={() => changeClipStart(Math.round(clipStartMs / 1000) + 5)}
-                />
-              ) : null}
+              <VideoTrimBar
+                uri={clip.uri}
+                durationMs={clipDurationMs}
+                startMs={clipStartMs}
+                endMs={clipEndMs}
+                maxWindowMs={MAX_VIDEO_MS}
+                minWindowMs={1000}
+                width={windowWidth - 2 * spacing.lg}
+                Skia={Skia}
+                onChange={changeClipWindow}
+                blocksGesture={scrollGesture}
+                disabled={makingVideo || makingPreview}
+              />
             </View>
           ) : null}
         </View>
@@ -1469,7 +1635,26 @@ export default function ShareCardScreen({ navigation, route }) {
         <View style={styles.section}>
           <SectionLabel>Preview</SectionLabel>
           <View style={styles.previewOuter}>
-            {livePhoto ? (
+            {playingPreview && AvVideo ? (
+              <TouchableOpacity
+                onPress={pausePreview}
+                activeOpacity={1}
+                accessible={false}
+                testID="share-preview-video"
+                style={[styles.previewVideoFrame, live.previewVideoFrame, { width: previewW, height: previewH }]}
+              >
+                <AvVideo
+                  source={{ uri: previewVideo.uri }}
+                  style={{ width: previewW, height: previewH }}
+                  resizeMode={AvResizeMode?.CONTAIN ?? 'contain'}
+                  shouldPlay
+                  isLooping
+                  isMuted
+                  useNativeControls={false}
+                  onError={(e) => { logError('ShareCardScreen.previewPlay', new Error(String(e))); }}
+                />
+              </TouchableOpacity>
+            ) : livePhoto ? (
               <SharePhotoFramer
                 photoUri={framerPhoto.uri}
                 photoWidth={framerPhoto.width}
@@ -1505,10 +1690,32 @@ export default function ShareCardScreen({ navigation, route }) {
                 <ActivityIndicator color={t.colors.primary} />
               </View>
             )}
+            {clip && !suppress && AvVideo && (livePhoto || playingPreview) ? (
+              makingPreview ? (
+                <View style={[styles.previewMaking, live.previewMaking]} testID="share-making-preview">
+                  <ActivityIndicator color={t.colors.primary} />
+                  <Text style={[styles.photoHint, live.photoHint, styles.makingText]}>
+                    {`Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`}
+                  </Text>
+                  <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={cancelVideo} accessibilityLabel="Cancel making the preview" />
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={playingPreview ? pausePreview : playPreview}
+                  disabled={!playingPreview && makingVideo}
+                  accessibilityRole="button"
+                  accessibilityLabel={playingPreview ? 'Pause the video' : 'Play the video'}
+                  accessibilityState={{ disabled: !playingPreview && makingVideo }}
+                  style={[styles.playControl, live.playControl, !playingPreview && makingVideo ? styles.playControlDisabled : null]}
+                >
+                  <Ionicons name={playingPreview ? 'pause' : 'play'} size={20} color={t.colors.textPrimary} />
+                </TouchableOpacity>
+              )
+            ) : null}
           </View>
-          {livePhoto ? (
+          {livePhoto && !playingPreview ? (
             <View style={styles.photoHintRow}>
-              <Text style={[styles.photoHint, live.photoHint]}>{clip ? 'Drag to move your video. Pinch to resize it.' : 'Drag to move your photo. Pinch to resize it.'}</Text>
+              <Text style={[styles.photoHint, live.photoHint]}>{clip ? 'Drag to move your video. Pinch to resize it. Press play to watch it with your look.' : 'Drag to move your photo. Pinch to resize it.'}</Text>
               {!isCentreCrop(photoCrop) ? (
                 <TouchableOpacity
                   onPress={() => setPhotoCrop(null)}
@@ -1685,7 +1892,7 @@ export default function ShareCardScreen({ navigation, route }) {
           icon="logo-instagram"
           trailingIcon="logo-facebook"
           onPress={handleShareToStories}
-          disabled={sharingToStories || !cardReady || makingVideo}
+          disabled={sharingToStories || !cardReady || makingVideo || makingPreview}
           loading={sharingToStories}
           accessibilityLabel={clip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
           variant="outline"
@@ -1722,7 +1929,7 @@ export default function ShareCardScreen({ navigation, route }) {
           title="Save to gallery"
           icon="download-outline"
           onPress={handleSaveToGallery}
-          disabled={savingToGallery || !cardReady || makingVideo}
+          disabled={savingToGallery || !cardReady || makingVideo || makingPreview}
           loading={savingToGallery}
           accessibilityLabel="Save to gallery"
           variant="outline"
@@ -1929,6 +2136,8 @@ function ToggleRow({ label, value, onChange, last, disabled = false }) {
 const styles = StyleSheet.create({
   // Addendum 17: the video's start row, the video chooser's rows.
   videoStartRow: { marginTop: spacing.sm, gap: spacing.sm },
+  videoStrip: { marginTop: spacing.sm, gap: spacing.xs },
+  videoStripLabel: { ...type.captionTight, color: colors.textMuted },
   sheetRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48,
     paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle,
@@ -1991,6 +2200,22 @@ const styles = StyleSheet.create({
   segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   segmentTextActive: { color: colors.textPrimary },
   previewOuter: { alignSelf: 'center' },
+  // The preview's player and its round play control (founder follow-up
+  // 2026-10-16), over the framer's bottom-right corner.
+  previewVideoFrame: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface },
+  playControl: {
+    position: 'absolute', right: spacing.sm, bottom: spacing.sm,
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: withAlpha(colors.surface, 0.9),
+  },
+  playControlDisabled: { opacity: 0.5 },
+  previewMaking: {
+    position: 'absolute', left: spacing.sm, right: spacing.sm, bottom: spacing.sm,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.sm, borderRadius: radius.md,
+    backgroundColor: withAlpha(colors.surface, 0.9),
+  },
   previewPlaceholder: {
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -2063,6 +2288,10 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     sheetRow: { borderBottomColor: t.colors.borderSubtle },
+    videoStripLabel: { ...t.type.captionTight, color: t.colors.textMuted },
+    previewVideoFrame: { backgroundColor: t.colors.surface },
+    playControl: { backgroundColor: withAlpha(t.colors.surface, 0.9) },
+    previewMaking: { backgroundColor: withAlpha(t.colors.surface, 0.9) },
     sheetRowText: { ...t.type.body, color: t.colors.textPrimary },
     sheetRowMeta: { ...t.type.num('label'), color: t.colors.textMuted },
     content: { paddingHorizontal: t.screenPadding },

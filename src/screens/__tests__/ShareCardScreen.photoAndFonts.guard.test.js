@@ -38,7 +38,10 @@ describe('moving and resizing the photo, right on the preview', () => {
     // No separate editing step to open or close.
     expect(SCREEN).not.toMatch(/setFraming|Move and zoom photo|onDone=/);
     expect(SCREEN).toContain('const livePhoto = !!framerPhoto && !!bgPhoto && !isSticker;');
-    expect(SCREEN).toMatch(/\{livePhoto \? \(\s*<SharePhotoFramer/);
+    // Re-pinned 2026-10-16 (founder follow-up, addendum 17): a playing
+    // preview video may stand in front of the framer; when it is not
+    // playing, the live photo is still the framer.
+    expect(SCREEN).toMatch(/(\{|: )livePhoto \? \(\s*<SharePhotoFramer/);
   });
 
   test('the live preview lays the real card over the photo, drawn with the photo left out', () => {
