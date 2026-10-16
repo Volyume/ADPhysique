@@ -207,6 +207,6 @@ describe('keeping (addendum 15)', () => {
   test('under the list: the size and the rule in the person\'s own setting', async () => {
     const tree = await render();
     const foot = tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'clips-sheet-foot')[0];
-    expect(foot.props.children).toBe('2 videos, 150 MB. Kept for 7 days unless you keep one. Change this in Settings, under Your data.');
+    expect(foot.props.children).toBe('2 videos, 150 MB. Each video is removed after 7 days unless you tap Keep on it. You can change the 7 days in Settings, under Your data.');
   });
 });

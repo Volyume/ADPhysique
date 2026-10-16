@@ -134,7 +134,7 @@ export const CLIP_STRINGS = Object.freeze({
   // sentences about light and the clear band: said once, here, never on the
   // camera itself).
   primerTitle: 'Videos stay on this phone',
-  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. A video is kept for 7 days unless you keep it; you can change this in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.',
+  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. Each video is removed after 7 days unless you tap Keep on it in Your videos. You can change the 7 days in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.',
   primerOpen: 'Open camera',
   primerNotNow: 'Not now',
 
@@ -179,7 +179,7 @@ export const CLIP_STRINGS = Object.freeze({
   noSpace: 'There is not enough space on this phone to record a video. Free up some space and try again.',
   settingsVideosLabel: 'Videos on this phone',
   settingsKeepLabel: 'Keep videos for',
-  settingsKeepSub: 'A video you keep, and a video of a PR set, stays until you delete it.',
+  settingsKeepSub: 'After this, a video is removed from this phone. Tap Keep on a video in Your videos and it stays until you delete it; a video of a PR set is kept for you.',
   settingsDeleteAllLabel: 'Delete all videos',
   settingsDeleteAllSub: 'Removes every workout video from this phone. The workouts themselves stay.',
   deleteAllConfirmTitle: 'Delete all videos?',
@@ -194,7 +194,7 @@ export const CLIP_STRINGS = Object.freeze({
   // where it goes and where they can find it after"): the toast says both.
   // Addendum 15 (founder: say the window where a video is recorded too): the
   // first sentence carries the person's own setting; see savedLine().
-  saved: 'Saved with this workout, kept for 7 days unless you keep it. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.',
+  saved: 'Saved for 7 days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it longer.',
   undo: 'Undo',
   // Addendum 13 (F): the second action on the saved toast, which opens the
   // videos sheet with that video playing.
@@ -264,12 +264,13 @@ export function keepLabel(days) {
   return n === 0 ? 'Until I delete them' : `${n} days`;
 }
 
-/** The saved toast in the person's own keep setting: "Saved with this
- *  workout, kept for 30 days unless you keep it. Find it later ..." */
+/** The saved toast in the person's own keep setting: "Saved for 30 days
+ *  with this workout. Find it under the three dots on this exercise, in Your
+ *  videos, where tapping Keep keeps it longer." (the founder: say HOW). */
 export function savedLine(keepDays) {
   const n = parseKeepDays(keepDays);
-  const kept = n === 0 ? 'kept until you delete it' : `kept for ${n} days unless you keep it`;
-  return `Saved with this workout, ${kept}. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.`;
+  if (n === 0) return 'Saved with this workout until you delete it. Find it under the three dots on this exercise, in Your videos.';
+  return `Saved for ${n} days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it longer.`;
 }
 
 /** A stored value back to a keep setting, else the default. */
@@ -281,13 +282,13 @@ export function parseKeepDays(raw) {
   return KEEP_OPTIONS.includes(n) ? n : DEFAULT_KEEP_DAYS;
 }
 
-/** The line under a workout's videos that says the rule, in the person's
- *  own setting: "Kept for 7 days unless you keep one. Change this in Settings,
- *  under Your data." */
+/** The line under a workout's videos that says the rule and how to keep one,
+ *  in the person's own setting: "Each video is removed after 7 days unless you
+ *  tap Keep on it. You can change the 7 days in Settings, under Your data." */
 export function keepRuleLine(days) {
   const n = parseKeepDays(days);
-  if (n === 0) return 'Kept until you delete them. Change this in Settings, under Your data.';
-  return `Kept for ${n} days unless you keep one. Change this in Settings, under Your data.`;
+  if (n === 0) return 'Videos stay until you delete them. You can change this in Settings, under Your data.';
+  return `Each video is removed after ${n} days unless you tap Keep on it. You can change the ${n} days in Settings, under Your data.`;
 }
 
 /** Bytes in plain words: "68 MB", "1.2 GB". */

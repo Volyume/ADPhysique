@@ -329,7 +329,7 @@ describe('the ruled words', () => {
     // Addendum 12: the light line and the clear band are said once, here.
     // Addenda 13 and 14: the length, the light, the clear band, and where
     // the videos are kept, said once.
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. A video is kept for 7 days unless you keep it; you can change this in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. Each video is removed after 7 days unless you tap Keep on it in Your videos. You can change the 7 days in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
     expect(CLIP_STRINGS.primerOpen).toBe('Open camera');
     expect(CLIP_STRINGS.primerNotNow).toBe('Not now');
   });
@@ -337,7 +337,7 @@ describe('the ruled words', () => {
   test('the camera words', () => {
     expect(CLIP_STRINGS.permissionDenied).toBe('Volyume needs camera access to record a video.');
     // Addendum 14: where it went and where to find it, in the toast itself.
-    expect(CLIP_STRINGS.saved).toBe('Saved with this workout, kept for 7 days unless you keep it. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.');
+    expect(CLIP_STRINGS.saved).toBe('Saved for 7 days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it longer.');
     expect(CLIP_STRINGS.undo).toBe('Undo');
     expect(CLIP_STRINGS.closeA11y).toBe('Cancel recording');
     expect(CLIP_STRINGS.stopA11y).toBe('Stop recording');
@@ -393,8 +393,8 @@ describe('the keep window (addendum 15: "A, default 7 days but they can have an 
   });
 
   test('the sheet says the rule in the person\'s own setting, and where to change it', () => {
-    expect(keepRuleLine(7)).toBe('Kept for 7 days unless you keep one. Change this in Settings, under Your data.');
-    expect(keepRuleLine(0)).toBe('Kept until you delete them. Change this in Settings, under Your data.');
+    expect(keepRuleLine(7)).toBe('Each video is removed after 7 days unless you tap Keep on it. You can change the 7 days in Settings, under Your data.');
+    expect(keepRuleLine(0)).toBe('Videos stay until you delete them. You can change this in Settings, under Your data.');
     expect(keepRuleLine(null)).toBe(keepRuleLine(7));
   });
 
@@ -430,10 +430,10 @@ describe('the saved toast says the window (addendum 15, the founder: "display in
   test('in the person\'s own setting, the default being 7 days', () => {
     expect(savedLine(null)).toBe(STR.saved);
     expect(savedLine(7)).toBe(STR.saved);
-    expect(savedLine(90)).toMatch(/^Saved with this workout, kept for 90 days unless you keep it\. Find it later/);
-    expect(savedLine(0)).toMatch(/^Saved with this workout, kept until you delete it\. Find it later/);
+    expect(savedLine(90)).toMatch(/^Saved for 90 days with this workout\. Find it under the three dots/);
+    expect(savedLine(0)).toBe('Saved with this workout until you delete it. Find it under the three dots on this exercise, in Your videos.');
   });
   test('the primer says the rule and where to change it', () => {
-    expect(STR.primerBody).toContain('A video is kept for 7 days unless you keep it; you can change this in Settings, under Your data.');
+    expect(STR.primerBody).toContain('Each video is removed after 7 days unless you tap Keep on it in Your videos. You can change the 7 days in Settings, under Your data.');
   });
 });

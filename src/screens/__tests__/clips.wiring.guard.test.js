@@ -229,7 +229,7 @@ describe('addendum 15: the keep window is wired in', () => {
   });
 
   test('the privacy policy says the window and where to change it', () => {
-    expect(POLICY).toContain('a video is cleared from this device after 7 days unless you keep it');
+    expect(POLICY.replace(/\s+/g, ' ')).toContain('a video is removed from this device after 7 days unless you tap Keep on it in Your videos');
     expect(POLICY).toContain('in Settings under Your data');
   });
 });
