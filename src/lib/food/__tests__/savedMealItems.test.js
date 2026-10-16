@@ -85,3 +85,33 @@ describe('savedMealItems', () => {
     expect(draftsToEntries([], { mealSlot: 'lunch', entryDate: '2026-10-16' })).toEqual([]);
   });
 });
+
+// Fresh-eyes review 2026-10-16 (blocker 2): a saved meal can hold a quick add
+// (foodRef 'quick:*', 0 g by design, macros entered directly). It used to be
+// clamped to 1 g, which wrote a "1 g, 500 kcal" row whose grams and macros
+// disagreed (FOOD-001). Now it stays at 0 g, fixed, and a real food stored
+// with no grams (a legacy row) is left out of the list.
+const { draftsFromItems: dfi, draftMacros: dm, draftsToEntries: dte, draftToItem: dti, isQuickAddRef } = require('../savedMealItems');
+describe('a quick add inside a saved meal', () => {
+  const quick = { foodRef: 'quick:adhoc', name: 'Quick add', quantityG: 0, kcal: 500, proteinG: 20, carbsG: 50, fatG: 20, fibreG: null };
+  test('stays at 0 g, fixed, with its own figures at every read', () => {
+    const [d] = dfi([quick]);
+    expect(isQuickAddRef(d.foodRef)).toBe(true);
+    expect(d.fixed).toBe(true);
+    expect(d.quantityG).toBe(0);
+    expect(dm(d)).toMatchObject({ kcal: 500, proteinG: 20 });
+    expect(dti(d)).toMatchObject({ foodRef: 'quick:adhoc', quantityG: 0, kcal: 500 });
+    const [row] = dte([d], { mealSlot: 'lunch', entryDate: '2026-10-16' });
+    expect(row).toMatchObject({ foodRef: 'quick:adhoc', quantityG: 0, kcal: 500, mealSlot: 'lunch' });
+  });
+  test('a real food stored with no grams is left out, a real food with grams is kept', () => {
+    const list = dfi([
+      { foodRef: 'off:x', name: 'Legacy', quantityG: 0, kcal: 100, proteinG: 1, carbsG: 1, fatG: 1 },
+      { foodRef: 'off:y', name: 'Oats', quantityG: 40, kcal: 150, proteinG: 5, carbsG: 27, fatG: 3 },
+      quick,
+    ]);
+    expect(list.map((d) => d.foodRef)).toEqual(['off:y', 'quick:adhoc']);
+    expect(list[0].fixed).toBe(false);
+    expect(list[0].quantityG).toBe(40);
+  });
+});

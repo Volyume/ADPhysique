@@ -82,7 +82,9 @@ describe('FF-007: food logging surfaces failures', () => {
   test('source guard: the plate reports a failed write (all or nothing); curated meal warns on failure', () => {
     expect(FOOD).toMatch(/'That food was not added\. Try again in a moment\.'/);
     expect(FOOD).toMatch(/'Those foods were not added\. Try again in a moment\.'/);
-    expect(FOOD).toMatch(/await logFoodEntries\(userId, plate\.map\(/);
+    // Lane 3C: the plate and the typed line share the one write (writeItems).
+    expect(FOOD).toMatch(/await logFoodEntries\(userId, items\.map\(/);
+    expect(FOOD).toMatch(/await writeItems\(plate, /);
     expect(FOOD).not.toMatch(/foods were added to \$\{mealName\}\. The rest were not/);
     expect(FOOD).toMatch(/'That meal was not added\. Try again in a moment\.'/);
     expect(FOOD).toMatch(/logError\('FoodSearchScreen\.logPlate', e/);

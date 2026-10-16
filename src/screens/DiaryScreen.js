@@ -1055,12 +1055,13 @@ export default function DiaryScreen({ navigation, route }) {
       }
     })();
     return () => { active = false; };
-    // D230 R17: keyed on the set of empty meals (emptyKey), not on the rows, so
-    // a write re-ranks the suggestion only when it fills a meal. viewEntries
-    // and the rollup are read when the effect runs.
+    // D230 R17: keyed on the set of empty meals (emptyKey) rather than the
+    // rows, plus the day's energy and row count (fresh-eyes review 2026-10-16:
+    // the suggestion is scored on what is left of the day, so a write into a
+    // meal that already had food must re-rank it too). Never on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    userId, selectedDate, emptyKey, mealsPerDay,
+    userId, selectedDate, emptyKey, mealsPerDay, rollup?.kcal_total, viewEntries.length,
     dietPreference, mealPlanExcludeFoods, mealPlanExcludeTags,
   ]);
 

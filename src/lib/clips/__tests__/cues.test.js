@@ -7,8 +7,8 @@
  *     and on the countdown's own first second; never at zero (the torch is
  *     off before the first frame); never more than once a second;
  *   - the sound is the rest timer's three pips and the start tone at zero;
- *   - a pulse is 200 ms and the end cue's two beats are 300 ms apart (a
- *     third of the three-flashes-a-second ceiling, well under it);
+ *   - a pulse is 200 ms and the end cue's two pips are 300 ms apart; the
+ *     light pulses once there, so it never flashes twice in a second;
  *   - the lens pick: "ultra wide" is the wide lens, "Back Camera" (or the
  *     first plain back name) is the normal one, telephoto and depth never.
  */
@@ -59,8 +59,8 @@ describe('cueFor', () => {
   });
 });
 
-describe('the cadence stays far under three flashes a second', () => {
-  test('a pulse is 200 ms and the end cue beats are 300 ms apart', () => {
+describe('the cadence stays at one flash a second at most', () => {
+  test('a pulse is 200 ms and the end cue pips are 300 ms apart', () => {
     expect(PULSE_MS).toBe(200);
     expect(END_PULSE_GAP_MS).toBe(300);
     expect(END_PULSE_GAP_MS).toBeGreaterThan(PULSE_MS);

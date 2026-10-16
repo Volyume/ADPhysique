@@ -195,7 +195,9 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     // mealSlotLabel, so a renamed meal shows its own name. The plate bar's
     // visible button stays slot-neutral ("Log N"); its accessibility label
     // names the meal, as before.
-    expect(SCREEN_SOURCE).toMatch(/<ModalHeader title=\{`Add to \$\{mealSlotLabel\(mealSlot\)\}`\} onClose=\{/);
+    // Fresh-eyes review 2026-10-16: in pick mode nothing is logged from here,
+    // so the header reads "Choose a food" there and names the meal otherwise.
+    expect(SCREEN_SOURCE).toMatch(/<ModalHeader title=\{isRecipePick \? 'Choose a food' : `Add to \$\{mealSlotLabel\(mealSlot\)\}`\} onClose=\{/);
     expect(SCREEN_SOURCE).not.toMatch(/<ModalHeader title="Add food"/);
     expect(SCREEN_SOURCE).not.toMatch(/headerSubtitle/);
     expect(SCREEN_SOURCE).not.toMatch(/>to \{mealSlotLabel\(mealSlot\)\}/);

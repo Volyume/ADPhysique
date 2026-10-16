@@ -577,7 +577,8 @@ export default function FoodSearchScreen({ navigation, route }) {
       await deleteFoodEntries(userId, ids);
     } catch (e) {
       logError('FoodSearchScreen.undoPlate', e, { count: ids.length });
-      toast.show('Some of those foods were not removed. You can remove them from the diary.', { variant: 'error', duration: 5000 });
+      // One transaction: either every row went or none did.
+      toast.show('Those foods were not removed. You can remove them from the diary.', { variant: 'error', duration: 5000 });
     }
   }
 
@@ -596,7 +597,9 @@ export default function FoodSearchScreen({ navigation, route }) {
   // steps the search results use), for one part's name. The first food it
   // returns is the match.
   async function searchForLinePart(name) {
-    const rows = await searchFoods(userId, name, { limit: 25 });
+    // R13: the person's own foods and the local library only (lane 3D's
+    // localOnly), so a typed line never waits on the network per part.
+    const rows = await searchFoods(userId, name, { limit: 25, localOnly: true });
     return rankByPersonalHistory(
       mergePersonalMatches(rows, { personal: personalPool, query: name }),
       { favouriteRefs, recentRefs, frequentRefs },
@@ -605,6 +608,7 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   async function openLineReview() {
     if (lineMatching || lineParts.length < 2) return;
+    setLineParked(null);
     setLineMatching(true);
     try {
       const matches = await matchFoodLineParts(lineParts, searchForLinePart);
@@ -626,11 +630,21 @@ export default function FoodSearchScreen({ navigation, route }) {
     }
   }
 
+  // The rows kept aside while a "No match" part is searched for by hand
+  // (fresh-eyes review 2026-10-16: the person should not have to retype the
+  // line). A button under the box brings them back; the food found by hand
+  // goes on the plate and is written with them.
+  const [lineParked, setLineParked] = useState(null);
   function onLineRowPress(item) {
     if (item.food) { setLineEdit(item); return; }
-    // No match: close the review and put the part's name in the box.
+    setLineParked((lineReview || []).filter((r) => r.key !== item.key));
     setLineReview(null);
     setQuery(item.part.name);
+  }
+  function resumeLineReview() {
+    if (!lineParked?.length) return;
+    setLineReview(lineParked);
+    setLineParked(null);
   }
 
   function removeLineRow(key) {
@@ -656,11 +670,17 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (!rows.length || lineAdding) return;
     setLineAdding(true);
     try {
-      await writeItems(rows.map((r) => ({
-        food: r.food,
-        quantityG: r.grams,
-        ...scaleMacros(r.food, r.grams),
-      })), () => { setLineReview(null); setQuery(''); });
+      // Foods already on the plate go in the same write (fresh-eyes review
+      // 2026-10-16: the screen closes after the add, so the plate must never
+      // be dropped on the way out).
+      await writeItems([
+        ...plate,
+        ...rows.map((r) => ({
+          food: r.food,
+          quantityG: r.grams,
+          ...scaleMacros(r.food, r.grams),
+        })),
+      ], () => { setLineReview(null); setLineParked(null); setQuery(''); setPlate([]); setShowPlate(false); });
     } finally {
       setLineAdding(false);
     }
@@ -1105,7 +1125,9 @@ export default function FoodSearchScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       {/* D230 R5: the header says where this add is logging, by the meal's
           own name (mealSlotLabel, so a renamed meal shows its name). */}
-      <ModalHeader title={`Add to ${mealSlotLabel(mealSlot)}`} onClose={() => navigation.goBack()} />
+      {/* In pick mode (a recipe's or a saved meal's "Add a food") nothing is
+          logged from here: the header says so (fresh-eyes review 2026-10-16). */}
+      <ModalHeader title={isRecipePick ? 'Choose a food' : `Add to ${mealSlotLabel(mealSlot)}`} onClose={() => navigation.goBack()} />
 
       <ScrollView
         horizontal
@@ -1171,6 +1193,15 @@ export default function FoodSearchScreen({ navigation, route }) {
           loading={lineMatching}
           style={styles.lineOfferBtn}
           accessibilityLabel={`Add these ${lineParts.length} as separate foods`}
+        />
+      ) : null}
+      {!isRecipePick && lineParts.length < 2 && lineParked?.length ? (
+        <Button
+          title={`Back to the ${lineParked.length} ${lineParked.length === 1 ? 'food' : 'foods'} you were checking`}
+          onPress={resumeLineReview}
+          variant="secondary"
+          style={styles.lineOfferBtn}
+          accessibilityLabel={`Back to the ${lineParked.length} ${lineParked.length === 1 ? 'food' : 'foods'} you were checking`}
         />
       ) : null}
 
@@ -1277,6 +1308,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       <FoodDetailSheet
         visible={!!picker}
         mode="add"
+        saveTitle={isRecipePick ? 'Use this food' : null}
         food={picker?.food}
         // Campaign 17B job 2: the row's own remembered portion when it has
         // one (the Add-again rows carry it), otherwise the portion this exact

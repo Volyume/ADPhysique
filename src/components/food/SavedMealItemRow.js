@@ -5,7 +5,7 @@ import Text from '../Text';
 import Card from '../Card';
 import Button from '../Button';
 import Stepper from '../Stepper';
-import { fontSize, spacing, type } from '../../styles/theme';
+import { fontSize, spacing, type, iconSize } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
@@ -108,10 +108,13 @@ export default function SavedMealItemRow({ draft, name, energyUnit = 'kcal', onG
           accessibilityRole="button"
           accessibilityLabel={`Take ${shown} out`}
         >
-          <Ionicons name="close-circle-outline" size={24} color={t.colors.textMuted} />
+          <Ionicons name="close-circle-outline" size={iconSize.lg} color={t.colors.textMuted} />
         </TouchableOpacity>
       </View>
       <View style={styles.bottom}>
+        {draft.fixed ? (
+          <Text style={[styles.energy, live.energy]} accessibilityLabel={`${shown}, a quick add, no amount`}>Quick add</Text>
+        ) : (
         <Stepper
           value={grams}
           onChange={(g) => onGrams(draft.key, g)}
@@ -126,6 +129,7 @@ export default function SavedMealItemRow({ draft, name, energyUnit = 'kcal', onG
           onDecreaseLongPress={() => onGrams(draft.key, grams - 100)}
           onIncreaseLongPress={() => onGrams(draft.key, grams + 100)}
         />
+        )}
         <Text style={[styles.energy, live.energy]}>
           {`${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}`}
         </Text>

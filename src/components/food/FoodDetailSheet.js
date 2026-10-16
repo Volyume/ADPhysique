@@ -517,7 +517,10 @@ export default function FoodDetailSheet({
           </View>
 
           {/* (4) Where it goes: the day when it is not today, the meal, and
-              in edit mode the time it was eaten. */}
+              in edit mode the time it was eaten. Not shown when the sheet
+              only sets an amount for a caller that writes later (saveTitle):
+              the choice would be ignored, so it is not offered. */}
+          {saveTitle ? null : (
           <View style={styles.block} testID="food-sheet-meal">
             {dateLine ? <Text style={[styles.dateLine, live.dateLine]}>{dateLine}</Text> : null}
             <SectionLabel>Meal</SectionLabel>
@@ -572,6 +575,7 @@ export default function FoodDetailSheet({
               </>
             ) : null}
           </View>
+          )}
 
           {/* (5) The actions. */}
           <View style={styles.actions} testID="food-sheet-actions">

@@ -17,7 +17,8 @@
 export const PULSE_MS = 200;
 
 /** The end cue after a recording that stopped by reaching its length: two
- *  pulses this far apart, and two descending pips on the same beats. */
+ *  descending pips this far apart, and ONE light pulse on the first (never
+ *  two: the light stays at one flash a second at most). */
 export const END_PULSE_GAP_MS = 300;
 
 /** The beat at the start itself (zero): sound only, the longer tone. */

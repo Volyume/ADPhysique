@@ -36,6 +36,13 @@ const nextKey = () => { keySeq += 1; return `smi-${keySeq}`; };
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const r1 = (n) => Math.round(n * 10) / 10;
 
+/** A quick add carries no grams by design (foodRef 'quick:*', 0 g with
+ *  macros entered directly, FOOD-001): its amount is fixed, never stepped,
+ *  and it is written back at 0 g exactly as logFoodEntries accepts it. */
+export function isQuickAddRef(foodRef) {
+  return typeof foodRef === 'string' && foodRef.startsWith('quick:');
+}
+
 /** Whole grams inside the diary's bound; anything unreadable reads as the minimum. */
 export function clampItemGrams(grams) {
   const g = Math.round(Number(grams));
@@ -50,11 +57,16 @@ export function clampItemGrams(grams) {
  */
 export function draftFromItem(item, name) {
   const baseG = num(item?.quantityG);
+  const fixed = isQuickAddRef(item?.foodRef);
   return {
     key: nextKey(),
     foodRef: item?.foodRef,
     name: name ?? item?.name ?? 'Food',
-    quantityG: clampItemGrams(baseG),
+    // A quick add stays at its stored 0 g (fresh-eyes review 2026-10-16: a
+    // clamp to 1 g made a "1 g, 500 kcal" row whose grams and macros
+    // disagreed); everything else is held inside the bound.
+    fixed,
+    quantityG: fixed ? 0 : clampItemGrams(baseG),
     base: {
       quantityG: baseG,
       kcal: num(item?.kcal),
@@ -82,16 +94,20 @@ export function draftFromFood(food, grams) {
   }, food?.name);
 }
 
-/** The drafts for a stored items array; `names` is an optional Map<foodRef, { name }>. */
+/** The drafts for a stored items array; `names` is an optional Map<foodRef, { name }>.
+ *  A real food stored with no grams (a legacy row) is left out: it could not
+ *  be logged honestly at any amount (applySavedMealToDiary skipped it too). */
 export function draftsFromItems(items, names) {
   const list = Array.isArray(items) ? items : [];
-  return list.map((it) => draftFromItem(it, names?.get?.(it?.foodRef)?.name));
+  return list
+    .filter((it) => isQuickAddRef(it?.foodRef) || num(it?.quantityG) > 0)
+    .map((it) => draftFromItem(it, names?.get?.(it?.foodRef)?.name));
 }
 
 /** The macros of one draft at its shown grams. */
 export function draftMacros(draft) {
   const { base } = draft;
-  if (draft.quantityG === base.quantityG || !(base.quantityG > 0)) {
+  if (draft.fixed || draft.quantityG === base.quantityG || !(base.quantityG > 0)) {
     return { kcal: base.kcal, proteinG: base.proteinG, carbsG: base.carbsG, fatG: base.fatG, fibreG: base.fibreG };
   }
   const k = 100 / base.quantityG;

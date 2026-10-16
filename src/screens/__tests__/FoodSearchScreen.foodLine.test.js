@@ -61,8 +61,10 @@ jest.mock('../../components/food/FoodDetailSheet', () => (props) => {
   if (props.visible) mockDetailProps = props;
   return null;
 });
+const mockRowProps = {};
 jest.mock('../../components/food/FoodRow', () => (props) => {
   const { Text } = require('react-native');
+  mockRowProps[props.food.name] = props;
   return <Text>{`row:${props.food.name}`}</Text>;
 });
 jest.mock('../../lib/observability', () => ({ audit: jest.fn() }));
@@ -239,13 +241,26 @@ describe('the review', () => {
     expect(mockToastShow).not.toHaveBeenCalled();
   });
 
-  test('a row with no match closes the review and puts its name in the box', async () => {
+  test('a row with no match closes the review and puts its name in the box; the other rows wait behind "Back to the 2 foods you were checking"', async () => {
     const { tree } = await mount();
     await openReview(tree);
     await press(tree, "No match for 'tea'");
     expect(box(tree).props.value).toBe('tea');
     expect(textsInOrder(tree)).not.toContain('Check these before adding');
     expect(mockLogFoodEntries).not.toHaveBeenCalled();
+    // Fresh-eyes review 2026-10-16: the matched rows are not lost.
+    await press(tree, 'Back to the 2 foods you were checking');
+    const lines = textsInOrder(tree);
+    expect(lines).toContain('Check these before adding');
+    expect(lines).toContain('Add 2 foods to Breakfast');
+    expect(lines).not.toContain("No match for 'tea'");
+  });
+
+  test('the matching reads the person\'s own foods and the local library only (localOnly), never the network per part', async () => {
+    const { tree } = await mount();
+    await openReview(tree);
+    expect(searchFoods).toHaveBeenCalled();
+    for (const call of searchFoods.mock.calls) expect(call[2]).toMatchObject({ localOnly: true });
   });
 
   test('a row can be removed', async () => {
@@ -304,6 +319,25 @@ describe('the one button', () => {
 
     expect(nav.goBack).toHaveBeenCalled();
     expect(box(tree).props.value).toBe('');
+  });
+
+  test('foods already on the plate go in the same write as the line (the screen closes after, so the plate is never dropped)', async () => {
+    const { tree } = await mount();
+    // One food on the plate first, through a search result's own add control
+    // (the search is debounced, so wait it out on the real clock).
+    await type(tree, 'eggs');
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+    await flush();
+    expect(typeof mockRowProps.Egg?.onAdd).toBe('function');
+    await act(async () => { mockRowProps.Egg.onAdd(); });
+    await flush();
+    await openReview(tree);
+    await press(tree, 'Add 2 foods to Breakfast');
+    expect(mockLogFoodEntries).toHaveBeenCalledTimes(1);
+    const entries = mockLogFoodEntries.mock.calls[0][1];
+    expect(entries.map((e) => e.foodRef)).toEqual(['off:egg', 'off:egg', 'off:bread']);
+    expect(entries[0].quantityG).toBe(50); // the plate's egg, at its serving
+    expect(entries[1].quantityG).toBe(100); // the line's "2 eggs"
   });
 
   test('a failed write keeps the review and says nothing was added', async () => {

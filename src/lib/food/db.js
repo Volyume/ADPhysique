@@ -1991,7 +1991,9 @@ export async function updateSavedMeal(userId, mealId, { name, items } = {}) {
   items.forEach((it, i) => {
     const ok = it && typeof it === 'object'
       && typeof it.foodRef === 'string' && it.foodRef !== ''
-      && typeof it.quantityG === 'number' && isValidEntryGrams(it.quantityG)
+      && typeof it.quantityG === 'number'
+      // A quick add carries no grams by design (FOOD-001, as logFoodEntry).
+      && (it.foodRef.startsWith('quick:') ? (it.quantityG === 0 || isValidEntryGrams(it.quantityG)) : isValidEntryGrams(it.quantityG))
       && [it.kcal, it.proteinG, it.carbsG, it.fatG].every((v) => validFoodMetric(v))
       && validFoodMetric(it.fibreG, { nullable: true });
     if (!ok) throw new Error(`updateSavedMeal: item ${i + 1} is not a valid food`);

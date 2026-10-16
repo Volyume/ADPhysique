@@ -265,7 +265,7 @@ export function ToastProvider({ children }) {
               <Ionicons name={current.icon} size={18} color={current.tint} />
               <Text
                 style={[styles.text, { ...t.type.bodySm, color: t.colors.textPrimary, fontWeight: fontWeight.medium }]}
-                numberOfLines={3}
+                numberOfLines={current.secondaryAction ? 5 : 3}
               >
                 {current.message}
               </Text>
