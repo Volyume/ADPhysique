@@ -179,11 +179,17 @@ const ShareCardScreen = require('../ShareCardScreen').default;
 const useAppStore = require('../../store/useAppStore').default;
 const { drawShareCard: mockDraw } = require('../../lib/shareCard/drawShareCard');
 
+// Settles every chain the screen starts: choosing a video awaits its
+// frame, its probe and the frame file, each a promise resolved through the
+// mocks, so several rounds are run, each ending on the macrotask queue.
 async function flush() {
-  await TestRenderer.act(async () => {
-    for (let i = 0; i < 5; i++) await Promise.resolve();
-    await new Promise((r) => setImmediate(r));
-  });
+  for (let round = 0; round < 6; round++) {
+    // eslint-disable-next-line no-await-in-loop
+    await TestRenderer.act(async () => {
+      for (let i = 0; i < 6; i++) await Promise.resolve();
+      await new Promise((r) => setImmediate(r));
+    });
+  }
 }
 function makeNavigation() {
   return { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => () => {}) };
@@ -392,9 +398,17 @@ describe('choosing a video', () => {
 
   test('a PR set\'s video opens the PR card with that PR chosen', async () => {
     mockGetClip.mockResolvedValue(CLIP_SET);
-    await mount({ ...SESSION, prList: [PR], clipId: 'c2' });
-    const last = mockDraw.mock.calls[mockDraw.mock.calls.length - 1][1];
-    expect(last.params.cardType).toBe('pr');
+    const { tree } = await mount({ ...SESSION, prList: [PR], clipId: 'c2' });
+    // Read the chosen card from the type strip, not from the last draw: the
+    // strip also draws a thumbnail of every card type (Session and New PR
+    // here), so the last draw is whichever thumbnail landed last, which made
+    // this test fail about one run in three without any fault in the screen.
+    const prTile = hostsByLabel(tree, 'New PR')[0];
+    expect(prTile).toBeDefined();
+    expect(prTile.props.accessibilityState).toEqual({ selected: true });
+    expect(hostsByLabel(tree, 'Session')[0].props.accessibilityState).toEqual({ selected: false });
+    // And the preview itself was drawn as the PR card.
+    expect(mockDraw.mock.calls.some((c) => c[1].params && c[1].params.cardType === 'pr' && c[1].bgPhoto)).toBe(true);
   });
 });
 

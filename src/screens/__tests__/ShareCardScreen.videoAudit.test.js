@@ -202,11 +202,17 @@ const { drawShareCard: mockDraw, photoCoverRect } = require('../../lib/shareCard
 const { CLIP_STRINGS } = require('../../lib/clips/rules');
 const { VIDEO_SCRIM_TIER_LUMINANCE } = require('../../lib/shareVideo/clipTone');
 
+// Settles every chain the screen starts: choosing a video awaits its
+// frame, its probe and the frame file, each a promise resolved through the
+// mocks, so several rounds are run, each ending on the macrotask queue.
 async function flush() {
-  await TestRenderer.act(async () => {
-    for (let i = 0; i < 6; i++) await Promise.resolve();
-    await new Promise((r) => setImmediate(r));
-  });
+  for (let round = 0; round < 6; round++) {
+    // eslint-disable-next-line no-await-in-loop
+    await TestRenderer.act(async () => {
+      for (let i = 0; i < 6; i++) await Promise.resolve();
+      await new Promise((r) => setImmediate(r));
+    });
+  }
 }
 // The tone is read a moment after the window settles (debounced).
 async function settleTone() {

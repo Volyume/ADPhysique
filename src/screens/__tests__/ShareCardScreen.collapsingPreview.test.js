@@ -192,11 +192,17 @@ const HEADER_FULL = FULL_H + 2 * PAD;
 const HEADER_MINI = MINI_H + 2 * PAD;
 const headerAt = (y) => Math.max(HEADER_MINI, HEADER_FULL - Math.max(0, y));
 
+// Settles every chain the screen starts: choosing a video awaits its
+// frame, its probe and the frame file, each a promise resolved through the
+// mocks, so several rounds are run, each ending on the macrotask queue.
 async function flush() {
-  await TestRenderer.act(async () => {
-    for (let i = 0; i < 5; i++) await Promise.resolve();
-    await new Promise((r) => setImmediate(r));
-  });
+  for (let round = 0; round < 6; round++) {
+    // eslint-disable-next-line no-await-in-loop
+    await TestRenderer.act(async () => {
+      for (let i = 0; i < 6; i++) await Promise.resolve();
+      await new Promise((r) => setImmediate(r));
+    });
+  }
 }
 function makeNavigation() {
   return { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => () => {}) };
