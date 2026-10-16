@@ -689,7 +689,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Quick add: log calories (and optional macros) with no food lookup.
   // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
   // as "Quick add" with no gram weight. Logs, then returns to the diary.
-  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot: slot }) {
+  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot: slot, note }) {
     const entryId = await logFoodEntry(userId, {
       entryDate,
       mealSlot: slot,
@@ -700,6 +700,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       carbsG: carbs,
       fatG: fat,
       fibreG: null,
+      note, // D230 R20: the name a quick add never had
     });
     quickSavedRef.current = true;
     // A2 (first-week trust): every log gets the same success + Undo feedback,
@@ -725,7 +726,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scannedFood, preselectedFood]);
 
-  async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate, weightState }) {
+  async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate, weightState, note }) {
     if (!picker?.food) return;
     const food = picker.food;
     // Recipe builder reuse: hand the picked food back instead of logging.
@@ -754,6 +755,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       quantityG,
       food,
       weightState,
+      note, // D230 R20
     }));
     await upsertSlotRecent(userId, buildSlotRecentPayload({
       mealSlot: chosenSlot,

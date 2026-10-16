@@ -14,6 +14,8 @@ import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef, resolveFoodRefs } from './sources/localCache';
 import { microSqlColumns, microSqlPlaceholders, microSqlUpsertExcluded, microValuesFromRow, microValuesFromInput } from './micronutrients';
 import { isValidEntryGrams } from './servingEntry';
+import { serialisePortions } from './portions';
+import { cleanFoodNote } from './entryNote';
 import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
@@ -99,6 +101,7 @@ function _standDownMealReminders(userId, entryDate, slots, { plannedConfirm = fa
 // `label` names the caller in the thrown message ('logFoodEntry', or
 // 'logFoodEntries (row 3)'). Returns what the insert needs beyond the entry.
 function _prepareDiaryEntry(label, entry, now) {
+  const note = cleanFoodNote(entry.note);
   const isQuickAdd = typeof entry.foodRef === 'string' && entry.foodRef.startsWith('quick:');
   const qtyIn = entry.quantityG;
   if (isQuickAdd) {
@@ -111,7 +114,8 @@ function _prepareDiaryEntry(label, entry, now) {
   if (!validFoodIdentity(entry.entryDate, entry.mealSlot, entry.foodRef)
     || !validDiaryNumbers(entry, { allowQuickZero: isQuickAdd })
     || !isPersistedEpochMs(now)
-    || (entry.eatenAt !== undefined && entry.eatenAt !== null && !isPersistedEpochMs(entry.eatenAt))) {
+    || (entry.eatenAt !== undefined && entry.eatenAt !== null && !isPersistedEpochMs(entry.eatenAt))
+    || note === false) { // D230 R20: a note is a string of at most 120 characters, or absent
     throw new TypeError(`${label}: invalid food values`);
   }
   // is_planned=1 marks a meal-plan entry as scaffolding: excluded from the
@@ -127,6 +131,7 @@ function _prepareDiaryEntry(label, entry, now) {
     isPlanned,
     weightState: _normaliseWeightState(entry.weightState),
     eatenAt: isPlanned ? null : (Number.isFinite(entry.eatenAt) ? entry.eatenAt : now),
+    note: note ?? null, // D230 R20: blank or absent saves NULL
   };
 }
 
@@ -135,14 +140,14 @@ function _insertDiaryRow(d, userId, id, entry, prepared, loggedAt, now) {
     `INSERT INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
       kcal, protein_g, carbs_g, fat_g, fibre_g, logged_at,
-      is_planned, weight_state, eaten_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      is_planned, weight_state, eaten_at, note, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
       entry.quantityG, entry.kcal, entry.proteinG,
       entry.carbsG, entry.fatG,
       entry.fibreG ?? null, loggedAt,
-      prepared.isPlanned, prepared.weightState, prepared.eatenAt, now, now,
+      prepared.isPlanned, prepared.weightState, prepared.eatenAt, prepared.note, now, now,
     ]
   );
 }
@@ -373,7 +378,8 @@ function _validEntryPatch(id, userId, patch) {
     && isBoundedString(patch?.mealSlot, 80)
     && isBoundedString(patch?.foodRef, 500)
     && (patch?.entryDate === undefined || isLocalDayKey(patch.entryDate))
-    && (patch?.eatenAt === undefined || patch.eatenAt === null || isPersistedEpochMs(patch.eatenAt));
+    && (patch?.eatenAt === undefined || patch.eatenAt === null || isPersistedEpochMs(patch.eatenAt))
+    && cleanFoodNote(patch?.note) !== false; // D230 R20
 }
 
 // Writes `patch` over the row `existing` describes and returns the entry_date
@@ -391,16 +397,20 @@ async function _writeEntryPatch(d, userId, id, patch, existing, now) {
   const eatenAt = patch.eatenAt !== undefined
     ? (Number.isFinite(patch.eatenAt) ? patch.eatenAt : null)
     : (existing.eaten_at ?? null);
+  // D230 R20: `undefined` keeps the note the row has; null, blank or text
+  // replaces it (blank is NULL). Validated by _validEntryPatch before this.
+  const cleanedNote = cleanFoodNote(patch.note);
+  const note = cleanedNote !== undefined ? cleanedNote : (existing.note ?? null);
   await d.runAsync(
     `UPDATE food_entries SET
       entry_date = ?, meal_slot = ?, food_ref = ?, quantity_g = ?,
       kcal = ?, protein_g = ?, carbs_g = ?, fat_g = ?, fibre_g = ?,
-      weight_state = ?, eaten_at = ?, updated_at = ?
+      weight_state = ?, eaten_at = ?, note = ?, updated_at = ?
     WHERE id = ? AND user_id = ?`,
     [
       newDate, patch.mealSlot, patch.foodRef, patch.quantityG,
       patch.kcal, patch.proteinG, patch.carbsG, patch.fatG,
-      patch.fibreG ?? null, weightState, eatenAt, now, id, userId,
+      patch.fibreG ?? null, weightState, eatenAt, note, now, id, userId,
     ]
   );
   return newDate;
@@ -413,7 +423,7 @@ export async function updateFoodEntry(id, userId, patch) {
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
-    `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at
+    `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at, note
      FROM food_entries WHERE id = ? AND user_id = ?`,
     [id, userId]
   );
@@ -462,7 +472,7 @@ export async function updateFoodEntries(userId, updates) {
     for (const { id, patch } of updates) {
       // eslint-disable-next-line no-await-in-loop
       const existing = await d.getFirstAsync(
-        `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at
+        `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at, note
          FROM food_entries WHERE id = ? AND user_id = ?`,
         [id, userId]
       );
@@ -943,8 +953,8 @@ export async function insertCustomFood(userId, food) {
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
       fibre_100g, sodium_100g, sugar_100g, ${microSqlColumns}, photo_url, notes,
-      barcode_ean, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?)`,
+      barcode_ean, portions_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, food.name, food.brand ?? null,
       food.servingG, food.servingLabel ?? null,
@@ -953,6 +963,9 @@ export async function insertCustomFood(userId, food) {
       ...microValuesFromInput(food.micros),
       food.photoUrl ?? null, food.notes ?? null,
       food.barcodeEan ?? null,
+      // D230 R20: the second and third custom portions (the first is
+      // serving_g/serving_label). Validated and bounded here, null when none.
+      serialisePortions(food.portions),
       now, now,
     ]
   );
@@ -987,7 +1000,7 @@ export async function updateCustomFood(userId, id, food) {
       kcal_100g = ?, protein_100g = ?, carbs_100g = ?, fat_100g = ?,
       fibre_100g = ?, sodium_100g = ?, sugar_100g = ?,
       ${microCols.map((c) => `${c} = ?`).join(', ')},
-      photo_url = ?, notes = ?, barcode_ean = ?, updated_at = ?
+      photo_url = ?, notes = ?, barcode_ean = ?, portions_json = ?, updated_at = ?
      WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
     [
       food.name, food.brand ?? null,
@@ -997,6 +1010,7 @@ export async function updateCustomFood(userId, id, food) {
       ...microValuesFromInput(food.micros),
       food.photoUrl ?? null, food.notes ?? null,
       food.barcodeEan ?? null,
+      serialisePortions(food.portions),
       now,
       id, userId,
     ]
@@ -2590,16 +2604,28 @@ export async function applyFoodEntryFromCloud(userId, row) {
   // real state (a bulk-confirmed row with no honest eaten time) and must
   // round-trip as NULL, never invented from the write timestamp.
   const eatenAt = _isoToMs(row.eaten_at);
+  // D230 R20: note is read defensively. A key the cloud does not carry (the
+  // column is not applied yet, or an older shape) leaves this device's note as
+  // it is; a present value is cleaned, and one that is not a clean note
+  // (not a string, over 120 characters) is dropped to NULL rather than stored.
+  let note;
+  if (Object.prototype.hasOwnProperty.call(row, 'note')) {
+    const cleaned = cleanFoodNote(row.note);
+    note = cleaned === false || cleaned === undefined ? null : cleaned;
+  } else {
+    const local = await d.getFirstAsync('SELECT note FROM food_entries WHERE id = ? AND user_id = ?', [row.id, userId]);
+    note = local?.note ?? null;
+  }
   await d.runAsync(
     `INSERT OR REPLACE INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
-      kcal, protein_g, carbs_g, fat_g, fibre_g, weight_state, eaten_at, logged_at,
+      kcal, protein_g, carbs_g, fat_g, fibre_g, weight_state, eaten_at, note, logged_at,
       deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, entryDate, row.meal_slot, row.food_ref,
       row.quantity_g, row.kcal, row.protein_g, row.carbs_g, row.fat_g,
-      row.fibre_g ?? null, _normaliseWeightState(row.weight_state), eatenAt, loggedAt,
+      row.fibre_g ?? null, _normaliseWeightState(row.weight_state), eatenAt, note, loggedAt,
       deletedAt, createdAt, updatedAt,
     ]
   );
@@ -2619,6 +2645,11 @@ export async function applyCustomFoodFromCloud(userId, row) {
     || optionalText.some((value) => value != null && !isBoundedString(value, 5000))
     || !times) return false;
   const { createdAt, updatedAt, deletedAt } = times;
+  // D230 R20: portions_json is read defensively. A row from a cloud that does
+  // not carry the key (the column is not applied yet, or an older build pushed
+  // it) leaves this device's portions as they are; a present value is
+  // re-validated (parsePortions drops a bad item) before it is stored.
+  const hasPortionsKey = Object.prototype.hasOwnProperty.call(row, 'portions_json');
   const d = await db();
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'custom_foods', row.id, userId);
@@ -2635,8 +2666,8 @@ export async function applyCustomFoodFromCloud(userId, row) {
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
       fibre_100g, sodium_100g, sugar_100g, ${microSqlColumns}, photo_url, notes,
-      barcode_ean, deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?, ?)
+      barcode_ean, portions_json, deleted_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       user_id = excluded.user_id,
       name = excluded.name,
@@ -2654,6 +2685,7 @@ export async function applyCustomFoodFromCloud(userId, row) {
       photo_url = excluded.photo_url,
       notes = excluded.notes,
       barcode_ean = excluded.barcode_ean,
+      portions_json = CASE WHEN ? = 1 THEN excluded.portions_json ELSE custom_foods.portions_json END,
       deleted_at = excluded.deleted_at,
       created_at = excluded.created_at,
       updated_at = excluded.updated_at`,
@@ -2665,7 +2697,9 @@ export async function applyCustomFoodFromCloud(userId, row) {
       ...microValues,
       row.photo_url ?? null, row.notes ?? null,
       row.barcode_ean ?? null,
+      hasPortionsKey ? serialisePortions(row.portions_json) : null,
       deletedAt, createdAt, updatedAt,
+      hasPortionsKey ? 1 : 0,
     ]
   );
   return true;

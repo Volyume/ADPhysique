@@ -126,6 +126,8 @@ export async function copyEntriesToDate(userId, entries, entryDate, { mealSlot =
       fibreG: e.fibre_g ?? null,
       weightState: e.weight_state,
       ...(eatenAt == null ? {} : { eatenAt }),
+      // D230 R20: the note travels with the entry.
+      ...(typeof e.note === 'string' && e.note !== '' ? { note: e.note } : null),
     };
   });
   // Judge the payload that would be written (eaten time and all), not the

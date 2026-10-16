@@ -1,3 +1,7 @@
+// 2026-10-16 (D230 R20, custom_foods.portions_json): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
+// 2026-10-16 (D230 R20, food_entries.note): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
 // 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
 // after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
 // window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
@@ -53,6 +57,8 @@ function freshDb() {
     id TEXT PRIMARY KEY, routine_id TEXT, exercise_id TEXT,
     order_in_routine INTEGER, recommended_sets INTEGER, updated_at INTEGER
   )`);
+  raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
+  raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
   raw.exec(`CREATE TABLE workout_sets (
     id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT,
     set_type TEXT DEFAULT 'straight', updated_at INTEGER
@@ -80,7 +86,7 @@ async function runLast(raw, count) {
 
 test('a pre-migration database upgrades: existing rows read NULL on every new column', async () => {
   const raw = freshDb();
-  await runLast(raw, 6);
+  await runLast(raw, 8);
 
   const re = raw.prepare('SELECT group_kind, round_rest_seconds, updated_at FROM routine_exercises WHERE id = ?').get('re-1');
   expect(re.group_kind).toBeNull();
@@ -94,13 +100,13 @@ test('a pre-migration database upgrades: existing rows read NULL on every new co
 
 test('is idempotent: a second run changes nothing and errors on neither run', async () => {
   const raw = freshDb();
-  const total = await runLast(raw, 6);
+  const total = await runLast(raw, 8);
   const before = {
     re: raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1'),
     set: raw.prepare('SELECT * FROM workout_sets WHERE id = ?').get('set-1'),
   };
 
-  raw.exec(`PRAGMA user_version = ${total - 6}`);
+  raw.exec(`PRAGMA user_version = ${total - 8}`);
   await expect(runMigrations(adapt(raw))).resolves.not.toThrow();
 
   expect(raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1')).toEqual(before.re);
@@ -109,7 +115,7 @@ test('is idempotent: a second run changes nothing and errors on neither run', as
 
 test('the new columns round-trip a written value (group_kind/round_rest_seconds/evidence_class)', async () => {
   const raw = freshDb();
-  await runLast(raw, 6);
+  await runLast(raw, 8);
 
   raw.prepare('UPDATE routine_exercises SET group_kind = ?, round_rest_seconds = ? WHERE id = ?')
     .run('circuit', 90, 're-1');

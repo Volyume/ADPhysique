@@ -1,3 +1,7 @@
+// 2026-10-16 (D230 R20, custom_foods.portions_json): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
+// 2026-10-16 (D230 R20, food_entries.note): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
 // 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
 // after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
 // window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
@@ -116,12 +120,14 @@ describe('the local migration', () => {
     // 2026-10-05 (D219 lane LR2): workout_sets.entry_typed was appended after
     // plan_facts, so the window is the last 2 and the fixture carries the
     // workout_sets table that later ALTER needs (a mechanical +1 re-anchor).
+    raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
+    raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
     raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
     raw.prepare('INSERT INTO programmes (id, name, updated_at) VALUES (?, ?, ?)').run('p-old', 'Old plan', 111);
     // 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
     // inert against these fixtures), so every last-N window and user_version reset below moves by one
     // (a mechanical +1 re-anchor, as LR2 did before it).
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 4}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
     await runMigrations(adaptRaw(raw));
 
     const row = raw.prepare('SELECT id, name, updated_at, plan_facts FROM programmes WHERE id = ?').get('p-old');
@@ -132,14 +138,16 @@ describe('the local migration', () => {
   test('is idempotent: a second run changes nothing and throws on neither run', async () => {
     const raw = new DatabaseSync(':memory:');
     raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT, updated_at INTEGER)');
+    raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
+    raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
     raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
     raw.prepare('INSERT INTO programmes (id, name, updated_at) VALUES (?, ?, ?)').run('p-old', 'Old plan', 111);
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 4}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
     await runMigrations(adaptRaw(raw));
     raw.prepare('UPDATE programmes SET plan_facts = ? WHERE id = ?').run('{"version":2}', 'p-old');
     const before = raw.prepare('SELECT * FROM programmes WHERE id = ?').get('p-old');
 
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 4}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
     await expect(runMigrations(adaptRaw(raw))).resolves.not.toThrow();
 
     expect(raw.prepare('SELECT * FROM programmes WHERE id = ?').get('p-old')).toEqual(before);

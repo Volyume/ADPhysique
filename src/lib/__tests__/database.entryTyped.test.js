@@ -1,3 +1,7 @@
+// 2026-10-16 (D230 R20, custom_foods.portions_json): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
+// 2026-10-16 (D230 R20, food_entries.note): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
 // 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
 // after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
 // window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
@@ -127,6 +131,8 @@ describe('the local migration', () => {
 
   function preMigrationDb() {
     const raw = new DatabaseSync(':memory:');
+    raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
+    raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
     raw.exec(`CREATE TABLE workout_sets (
       id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT,
       weight REAL, actual_reps INTEGER, updated_at INTEGER
@@ -136,7 +142,7 @@ describe('the local migration', () => {
     // 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
     // inert against these fixtures), so every last-N window and user_version reset below moves by one
     // (a mechanical +1 re-anchor, as LR2 did before it).
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 5}`);
     return raw;
   }
 
@@ -157,7 +163,7 @@ describe('the local migration', () => {
 
     // A second boot that still sees the pre-migration version (a restored
     // snapshot, an interrupted run): the column is already there.
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 5}`);
     await expect(runMigrations(adaptRaw(raw))).resolves.not.toThrow();
 
     const columns = raw.prepare('PRAGMA table_info(workout_sets)').all().filter((c) => c.name === 'entry_typed');

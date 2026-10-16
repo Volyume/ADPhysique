@@ -36,6 +36,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logSyncError } from '../telemetry';
+import { FOOD_ENTRY_NOTE_PUSH, CUSTOM_FOOD_PORTIONS_PUSH } from '../featureFlags';
+import { parsePortions } from '../../food/portions';
 
 const FOOD_LAST_PUSHED_KEY = (userId) => `@volyume_food_last_pushed_${userId}`;
 const FOOD_LAST_PULLED_KEY = (userId) => `@volyume_food_last_pulled_${userId}`;
@@ -120,7 +122,7 @@ function _parseItemsJson(raw) {
 // eaten_at sync-mapper coverage, src/lib/food/__tests__/eatenAt.test.js),
 // same convention as _recipeToCloud below.
 export function _foodEntryToCloud(row, userId) {
-  return {
+  const record = {
     id: row.id,
     user_id: userId,
     entry_date: row.entry_date,
@@ -146,6 +148,13 @@ export function _foodEntryToCloud(row, userId) {
     updated_at: _msToISOorNull(row.updated_at),
     deleted_at: _msToISOorNull(row.deleted_at),
   };
+  // D230 R20: the note goes in the record ONLY once migrate_194 is applied
+  // (FOOD_ENTRY_NOTE_PUSH, featureFlags.js). A key the cloud lacks fails the
+  // whole food_entries upsert and the transport retries it for ever, so with
+  // the flag off the key is absent, not null. It is the person's own text, so
+  // it is never logged or sent to telemetry from here.
+  if (FOOD_ENTRY_NOTE_PUSH) record.note = row.note ?? null;
+  return record;
 }
 
 function _customFoodToCloud(row, userId) {
@@ -162,6 +171,11 @@ function _customFoodToCloud(row, userId) {
     fibre_100g: row.fibre_100g ?? null,
     serving_g: row.serving_g ?? null,
     serving_label: row.serving_label ?? null,
+    // D230 R20: the extra custom portions, as the PARSED array (the cloud
+    // column is jsonb). Omitted entirely while CUSTOM_FOOD_PORTIONS_PUSH is
+    // off: migrate_195 is HELD, and an absent key is what keeps the push
+    // exactly as it was before the column existed.
+    ...(CUSTOM_FOOD_PORTIONS_PUSH ? { portions_json: parsePortions(row.portions_json) } : {}),
     created_at: _msToISOorNull(row.created_at),
     updated_at: _msToISOorNull(row.updated_at),
     deleted_at: _msToISOorNull(row.deleted_at),

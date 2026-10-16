@@ -2971,6 +2971,59 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE workout_clips ADD COLUMN kept_at INTEGER',
     'ALTER TABLE workout_clips ADD COLUMN kept_reason TEXT',
   ],
+  // D230 R20 (food level-up): a note on a diary entry.
+  //   Purpose:  one nullable TEXT column on `food_entries`, `note`, at most 120
+  //             characters (the app validates it on every write): the name a
+  //             quick add never had, and the line an import writes. NULL is a
+  //             real state (no note); a blank note is saved as NULL. No
+  //             calorie, macro or rollup computation reads it.
+  //   Applied locally: yes, on every device that reaches this migration index;
+  //             ALTER TABLE ADD COLUMN only, no default and no backfill, so
+  //             every existing row reads NULL.
+  //   Applied remotely: NO. The cloud counterpart is
+  //             supabase/migrate_194_food_entries_note.sql, WRITTEN, HELD (the
+  //             founder's phrase is the only trigger). Until it is applied the
+  //             push omits the column (FOOD_ENTRY_NOTE_PUSH in
+  //             src/lib/sync/featureFlags.js is false); the pull reads the
+  //             field defensively.
+  //   Safe to re-run: yes. The benign-duplicate-column skip
+  //             (isProvenBenignMigrationError) covers a second run. The
+  //             original CREATE TABLE is left untouched (as for weight_state and
+  //             eaten_at), so a fresh install gets the column from this step only.
+  //   Rollback: leave the column in place and ignore it; every reader treats
+  //             NULL as no note.
+  [
+    'ALTER TABLE food_entries ADD COLUMN note TEXT',
+  ],
+  // D230 R20 (food level-up, lane 4B): custom portions on a custom food.
+  //   Purpose:  one nullable TEXT column on `custom_foods`, `portions_json`: a
+  //             JSON array of up to three { label, grams } objects (label 1 to
+  //             24 characters, grams 1 to 5000), for example
+  //             [{"label":"1 slice","grams":36},{"label":"1 mug","grams":250}].
+  //             The first portion is still what serving_g and serving_label
+  //             store, so every reader that knows only those is unchanged; the
+  //             column holds the second and third. A portion only changes how
+  //             an amount is entered; grams stay the stored truth. NULL is a
+  //             real state (no extra portions). parsePortions
+  //             (src/lib/food/portions.js) reads it and never throws.
+  //   Applied locally: yes, on every device that reaches this migration index;
+  //             ALTER TABLE ADD COLUMN only, no default and no backfill, so
+  //             every existing row reads NULL.
+  //   Applied remotely: NO. The cloud counterpart is
+  //             supabase/migrate_195_custom_foods_portions.sql, WRITTEN, HELD
+  //             (the founder's phrase is the only trigger). Until it is applied
+  //             the push omits the column (CUSTOM_FOOD_PORTIONS_PUSH in
+  //             src/lib/sync/featureFlags.js is false); the pull reads the
+  //             field defensively.
+  //   Safe to re-run: yes. The benign-duplicate-column skip
+  //             (isProvenBenignMigrationError) covers a second run. The
+  //             original CREATE TABLE is left untouched (as for weight_state and
+  //             eaten_at), so a fresh install gets the column from this step only.
+  //   Rollback: leave the column in place and ignore it; every reader treats
+  //             NULL as no extra portions.
+  [
+    'ALTER TABLE custom_foods ADD COLUMN portions_json TEXT',
+  ],
 ];
 
 // Tests and diagnostics may compare a database's durable marker with the

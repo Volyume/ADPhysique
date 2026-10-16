@@ -52,6 +52,7 @@ export function entryRowFromPayload({ id, userId, payload, food, now }) {
     is_planned: payload.isPlanned ? 1 : 0,
     weight_state: payload.weightState ?? 'as_weighed',
     eaten_at: payload.isPlanned ? null : now,
+    note: payload.note ?? null, // D230 R20
     created_at: now,
     updated_at: now,
     deleted_at: null,

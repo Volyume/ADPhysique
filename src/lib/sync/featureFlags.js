@@ -87,3 +87,51 @@ export const ENTRY_TYPED_PUSH = true;
 // server allow-list carries 'structure_refused'); a build before that
 // migration would have had its row rejected and retried for ever.
 export const STRUCTURE_REFUSED_TELEMETRY = true;
+
+/**
+ * CUSTOM_FOOD_PORTIONS_PUSH (D230 R20, lane 4B; the ENTRY_TYPED_PUSH pattern
+ * above): gates whether custom_foods.portions_json, the second and third named
+ * portions of a custom food ("1 slice", "1 mug"), goes in the custom_foods
+ * push.
+ *
+ * The local column exists (SCHEMA_MIGRATIONS in database.js) and its cloud
+ * counterpart, supabase/migrate_195_custom_foods_portions.sql, is WRITTEN,
+ * HELD: the founder's exact phrase "run against production" for 195 is the
+ * only trigger, and the app never applies it. food_sync_push stores a
+ * custom food from named fields, so a payload carrying a key the function does
+ * not read is ignored today, but the table has no column to hold it; sending
+ * the field before the apply would do nothing useful and would be wrong the
+ * moment the function changes. It ships OFF: the food syncs without its extra
+ * portions and nothing fails. The pull reads the field defensively (an absent
+ * key leaves the local portions alone).
+ *
+ * Flip to true ONLY after the founder has applied 195 and its presence is
+ * verified read-only (the supabase/README status block says APPLIED, the
+ * migration header is edited to match, and the guard in
+ * src/lib/sync/__tests__/foodDomain.customPortions.test.js is
+ * re-pinned in the same landing).
+ */
+export const CUSTOM_FOOD_PORTIONS_PUSH = false;
+
+/**
+ * FOOD_ENTRY_NOTE_PUSH (D230 R20; the ENTRY_TYPED_PUSH pattern above): gates
+ * whether food_entries.note, the one line a person writes on a diary entry (the
+ * name a quick add never had, the line an import writes), goes in the
+ * food_entries record of the food_sync_push upsert.
+ *
+ * The local column exists (SCHEMA_MIGRATIONS in database.js) and its cloud
+ * counterpart, supabase/migrate_194_food_entries_note.sql, is WRITTEN, HELD, NOT
+ * APPLIED (CLAUDE.md Section 2: nothing is applied without the founder's exact
+ * phrase "run against production"). food_sync_push names its columns, and a
+ * pushed key the cloud lacks fails the WHOLE food_entries upsert for the chunk
+ * (the transport retries a rejected row on every flush), so this stays FALSE
+ * and the push omits the key: the entry still syncs, without its note, and
+ * nothing fails. The pull reads the field defensively (an absent key leaves
+ * this device's note as it is).
+ *
+ * Flip this to true ONLY after migrate_194 is applied and its presence is
+ * verified read-only (supabase/README status block says APPLIED, the migration
+ * header is edited to match, and the guard in
+ * src/lib/food/__tests__/entryNote.test.js is re-pinned in the same landing).
+ */
+export const FOOD_ENTRY_NOTE_PUSH = false;
