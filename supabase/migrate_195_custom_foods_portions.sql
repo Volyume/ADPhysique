@@ -40,8 +40,9 @@
 --                   no default, no backfill: every existing row reads NULL).
 --                   The three push changes have no local counterpart (they
 --                   are the cloud's reading of what the app already sends).
--- Applied remotely: NO. HELD for the founder's exact phrase "run against
---                   production" for 195. The app never applies it. Until it is
+-- Applied remotely: YES, 2026-10-16 21:05:44 UTC, under the founder's "run against
+--                   production 194 195" (Claude-run, checksum protocol; README).
+--                   Before that it was HELD for the phrase. The app never applies it. Until it is
 --                   applied the push omits the column
 --                   (CUSTOM_FOOD_PORTIONS_PUSH in src/lib/sync/featureFlags.js
 --                   is false). Flip the flag to true only after this is

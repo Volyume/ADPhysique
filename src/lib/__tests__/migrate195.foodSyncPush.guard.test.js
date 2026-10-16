@@ -148,7 +148,7 @@ describe('headers and README (item 7d)', () => {
 
   test('195\'s header covers the wider scope and the old-build reasoning', () => {
     const h = header(SQL195);
-    for (const word of ['Purpose', 'Applied locally', 'Applied remotely: NO. HELD', 'Safe to re-run', 'Rollback', 'Depends on', 'RE-ISSUES food_sync_push']) {
+    for (const word of ['Purpose', 'Applied locally', 'Applied remotely: YES, 2026-10-16 21:05:44 UTC', 'Safe to re-run', 'Rollback', 'Depends on', 'RE-ISSUES food_sync_push']) {
       expect(h).toContain(word);
     }
     expect(h).toMatch(/custom_foods `updated` is read/);
@@ -159,10 +159,11 @@ describe('headers and README (item 7d)', () => {
     expect(h).toMatch(/WHY EACH CHANGE IS SAFE FOR THE BUILDS ALREADY IN THE STORES/);
   });
 
-  test('the README row says what 195 now does, and that it is still HELD', () => {
+  test('the README row says what 195 now does, and that it is APPLIED', () => {
     const row = read('supabase/README.md').split('\n').find((l) => l.startsWith('| 195 |'));
     expect(row).toBeTruthy();
-    expect(row).toMatch(/HELD: WRITTEN, NOT APPLIED/);
+    // Re-pinned 2026-10-16: applied to production under the founder's phrase.
+    expect(row).toMatch(/APPLIED 2026-10-16 21:05:44 UTC/);
     expect(row).toMatch(/custom_foods `updated`/);
     expect(row).toMatch(/`deleted`/);
     expect(row).toMatch(/WHERE custom_foods\.deleted_at IS NULL/);

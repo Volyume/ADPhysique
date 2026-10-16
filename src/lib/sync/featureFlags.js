@@ -115,7 +115,11 @@ export const STRUCTURE_REFUSED_TELEMETRY = true;
  * src/lib/sync/__tests__/foodDomain.customPortions.test.js is
  * re-pinned in the same landing).
  */
-export const CUSTOM_FOOD_PORTIONS_PUSH = false;
+// ON since 2026-10-16: migrate_195 APPLIED to production 21:05:44 UTC under the
+// founder's "run against production 194 195", verified read-only
+// (custom_foods.portions_json jsonb; food_sync_push reads it, syncs updated and
+// deleted custom foods, never revives a deleted one).
+export const CUSTOM_FOOD_PORTIONS_PUSH = true;
 
 /**
  * FOOD_ENTRY_NOTE_PUSH (D230 R20; the ENTRY_TYPED_PUSH pattern above): gates
@@ -144,4 +148,7 @@ export const CUSTOM_FOOD_PORTIONS_PUSH = false;
  * header is edited to match, and the guard in
  * src/lib/food/__tests__/entryNote.test.js is re-pinned in the same landing).
  */
-export const FOOD_ENTRY_NOTE_PUSH = false;
+// ON since 2026-10-16: migrate_194 APPLIED to production 21:01:33 UTC under the
+// founder's "run against production 194 195", verified read-only
+// (food_entries.note text; food_sync_push writes it only when the key is sent).
+export const FOOD_ENTRY_NOTE_PUSH = true;

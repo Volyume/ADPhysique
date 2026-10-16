@@ -308,12 +308,15 @@ describe('push: the flag', () => {
     expect(mapperWithFlag(true)({ ...localRow, note: undefined }, 'u1').note).toBeNull();
   });
 
-  test('the flag is FALSE in the tree, the migration says HELD, and the README row says HELD', () => {
+  test('the flag is ON in the tree, the migration says APPLIED, and the README row says APPLIED', () => {
     const flags = fs.readFileSync(path.join(__dirname, '../../sync/featureFlags.js'), 'utf8');
-    expect(flags).toMatch(/export const FOOD_ENTRY_NOTE_PUSH = false;/);
+    // Re-pinned 2026-10-16: 194 is applied to production and verified, so the
+    // note now syncs (the landing that applied it turned the flag on).
+    expect(flags).toMatch(/export const FOOD_ENTRY_NOTE_PUSH = true;/);
     const sql = fs.readFileSync(path.join(__dirname, '../../../../supabase/migrate_194_food_entries_note.sql'), 'utf8');
     const header = sql.slice(0, sql.indexOf('DO $$'));
-    expect(header).toMatch(/Applied remotely:\s+NO\. HELD/);
+    // Re-pinned 2026-10-16: applied to production under the founder's phrase.
+    expect(header).toMatch(/Applied remotely: YES, 2026-10-16 21:01:33 UTC/);
     expect(header).toContain('Purpose:');
     expect(header).toContain('Applied locally:');
     expect(header).toContain('Safe to re-run:');
@@ -324,7 +327,7 @@ describe('push: the flag', () => {
     const readme = fs.readFileSync(path.join(__dirname, '../../../../supabase/README.md'), 'utf8');
     const line = readme.split('\n').find((l) => l.startsWith('| 194 |'));
     expect(line).toBeTruthy();
-    expect(line).toContain('HELD');
+    expect(line).toContain('APPLIED 2026-10-16 21:01:33 UTC');
   });
 
   test('migrate_194 re-issues food_sync_push with note in the insert and the update, and touches no other branch', () => {

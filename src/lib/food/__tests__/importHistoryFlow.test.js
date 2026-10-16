@@ -322,11 +322,12 @@ describe('own days, for good', () => {
     expect(written.map((r) => r.entry_date)).toContain('2026-10-14');
     const before = shape(written);
 
-    // The same device: each row's own push comes back in the pull. The notes
-    // stand although the cloud returns them NULL (this build does not push them).
+    // The same device: each row's own push comes back in the pull. Re-pinned
+    // 2026-10-16: migrate_194 is applied and FOOD_ENTRY_NOTE_PUSH is on, so the
+    // notes go up and come back unchanged.
     expect(written.every((r) => typeof r.note === 'string' && r.note.length > 0)).toBe(true);
     const cloud = written.map((r) => serverRoundTrip(u, r, HALF_PAST_MIDNIGHT + 2000));
-    expect(cloud.every((c) => c.note === null)).toBe(true);
+    expect(cloud.map((c) => c.note)).toEqual(written.map((r) => r.note));
     for (const c of cloud) await food.applyFoodEntryFromCloud(u, c); // eslint-disable-line no-await-in-loop
     expect(shape(entries(u))).toEqual(before);
     await expect(food.rekeyFoodEntriesToLocalDay(u)).resolves.toBe(0);
@@ -339,10 +340,10 @@ describe('own days, for good', () => {
     for (const c of cloud) days.add(await food.applyFoodEntryFromCloud(u, c)); // eslint-disable-line no-await-in-loop
     for (const d of days) await food.recomputeRollup(u, d); // eslint-disable-line no-await-in-loop
     await expect(food.rekeyFoodEntriesToLocalDay(u)).resolves.toBe(0);
-    // Days, meals and times as written; the notes never reached the cloud
-    // while FOOD_ENTRY_NOTE_PUSH is off, so a fresh device has none.
+    // Days, meals, times and notes as written: with the note pushed, a fresh
+    // device gets it too.
     expect(shapeWithoutNote(entries(u))).toEqual(shapeWithoutNote(written));
-    expect(entries(u).every((r) => r.note === null)).toBe(true);
+    expect(shape(entries(u))).toEqual(before);
     expect(rollup(u, '2026-10-14').kcal_total).toBe(written.filter((r) => r.entry_date === '2026-10-14').reduce((a, r) => a + r.kcal, 0));
     expect(rollup(u, '2026-10-15')).toBeNull();
   });
