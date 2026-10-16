@@ -651,6 +651,64 @@ describe('the day reads in the order it was eaten (R9)', () => {
   });
 });
 
+describe('logFoodEntries options for a write that is not a meal logged now (the history import, R21)', () => {
+  const at = (h, m) => new Date(2026, 3, 2, h, m).getTime();
+
+  test('keepUntimed: an explicit null stays NULL; a time is kept; undefined and planned rows are unchanged', async () => {
+    const u = freshUser();
+    const before = Date.now();
+    const [untimed, timed, unset, planned] = await food.logFoodEntries(u, [
+      row({ foodRef: 'global:untimed', eatenAt: null }),
+      row({ foodRef: 'global:timed', eatenAt: at(8, 5) }),
+      row({ foodRef: 'global:unset' }),
+      row({ foodRef: 'global:planned', isPlanned: true }),
+    ], { keepUntimed: true });
+    const byId = new Map(allEntries(u).map((r) => [r.id, r]));
+    expect(byId.get(untimed).eaten_at).toBeNull();
+    expect(byId.get(timed).eaten_at).toBe(at(8, 5));
+    expect(byId.get(unset).eaten_at).toBeGreaterThanOrEqual(before); // "now", as before
+    expect(byId.get(planned).eaten_at).toBeNull();
+  });
+
+  test('without the option an explicit null still earns the moment of the write (every existing caller)', async () => {
+    const u = freshUser();
+    const before = Date.now();
+    await food.logFoodEntries(u, [row({ eatenAt: null })]);
+    expect(allEntries(u)[0].eaten_at).toBeGreaterThanOrEqual(before);
+  });
+
+  test('an untimed row reads after the timed rows of its meal, shows in no clock window, and copies like any untimed row', async () => {
+    const u = freshUser();
+    await food.logFoodEntries(u, [
+      row({ mealSlot: 'meal_1', foodRef: 'global:untimed', eatenAt: null }),
+      row({ mealSlot: 'meal_1', foodRef: 'global:timed', eatenAt: at(9, 0) }),
+    ], { keepUntimed: true });
+    const day = await food.getFoodEntriesForDay(u, D_APR);
+    expect(day.map((r) => r.food_ref)).toEqual(['global:timed', 'global:untimed']);
+    const window = await food.getEntriesForClockWindow(u, { fromDate: D_APR, toDate: D_APR });
+    expect(window.map((r) => r.food_ref)).toEqual(['global:timed']);
+    // A copy follows the existing convention for a source with no time
+    // (bulkEntryOps.eatenAtOnDate): the copy is a fresh write and is timed now.
+    const before = Date.now();
+    await bulk.copyEntriesToDate(u, day, D_APR2);
+    const copied = await food.getFoodEntriesForDay(u, D_APR2);
+    expect(copied.map((r) => r.food_ref)).toEqual(['global:timed', 'global:untimed']);
+    expect(copied[1].eaten_at).toBeGreaterThanOrEqual(before);
+  });
+
+  test('telemetry: false sends no per-row food_logged and no first_food_logged; the write and its housekeeping are unchanged', async () => {
+    const u = freshUser();
+    const ids = await food.logFoodEntries(u, [row(), row({ foodRef: 'global:b', entryDate: D_APR2 })], { telemetry: false });
+    await flush();
+    expect(ids).toHaveLength(2);
+    expect(mockTrack).not.toHaveBeenCalled();
+    expect(mockTrackFirst).not.toHaveBeenCalled();
+    expect(mockScheduleSync).toHaveBeenCalledTimes(1);
+    expect(rollupOf(u, D_APR).entries_count).toBe(1);
+    expect(rollupOf(u, D_APR2).entries_count).toBe(1);
+  });
+});
+
 describe('delete, restore and move of N rows: each touched day recomputed once (R10)', () => {
   async function seedTwoDays(u) {
     await food.logFoodEntries(u, [
@@ -823,7 +881,7 @@ describe('source wiring (the stand-down and the shared validator)', () => {
 
   test('logFoodEntry and logFoodEntries run the ONE validator, and nothing else validates grams', () => {
     expect(body('export async function logFoodEntry(')).toMatch(/_prepareDiaryEntry\('logFoodEntry', entry, now\)/);
-    expect(body('export async function logFoodEntries(')).toMatch(/_prepareDiaryEntry\(label, entry, now\)/);
+    expect(body('export async function logFoodEntries(')).toMatch(/_prepareDiaryEntry\(label, entry, now, \{ keepUntimed: keepUntimed === true \}\)/);
     // The 1 to 5000 g bound lives in the validator (both its quick-add and
     // real-food branches); neither write function carries a copy of its own.
     expect((body('function _prepareDiaryEntry(').match(/isValidEntryGrams\(qtyIn\)/g) || []).length).toBe(2);

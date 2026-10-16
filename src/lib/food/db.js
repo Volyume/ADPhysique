@@ -100,7 +100,9 @@ function _standDownMealReminders(userId, entryDate, slots, { plannedConfirm = fa
 //
 // `label` names the caller in the thrown message ('logFoodEntry', or
 // 'logFoodEntries (row 3)'). Returns what the insert needs beyond the entry.
-function _prepareDiaryEntry(label, entry, now) {
+// `keepUntimed` (logFoodEntries' option of the same name): an actual whose
+// eatenAt is explicitly null keeps eaten_at NULL instead of earning "now".
+function _prepareDiaryEntry(label, entry, now, { keepUntimed = false } = {}) {
   const note = cleanFoodNote(entry.note);
   const isQuickAdd = typeof entry.foodRef === 'string' && entry.foodRef.startsWith('quick:');
   const qtyIn = entry.quantityG;
@@ -126,11 +128,18 @@ function _prepareDiaryEntry(label, entry, now) {
   // "I ate this now" act, so it earns eaten_at = now unless the caller
   // explicitly supplies one. A planned meal-plan row has not been eaten yet
   // -- eaten_at stays NULL until it is confirmed (confirmPlannedEntry /
-  // confirmPlannedDay), which is what stamps the real moment.
+  // confirmPlannedDay), which is what stamps the real moment. A row written
+  // with keepUntimed and an explicit null eatenAt (an imported row its file
+  // did not time) is not an "I ate this now" act either, so it stays NULL,
+  // the same honest "no known time" a bulk-confirmed day carries.
+  let eatenAt;
+  if (isPlanned) eatenAt = null;
+  else if (Number.isFinite(entry.eatenAt)) eatenAt = entry.eatenAt;
+  else eatenAt = keepUntimed && entry.eatenAt === null ? null : now;
   return {
     isPlanned,
     weightState: _normaliseWeightState(entry.weightState),
-    eatenAt: isPlanned ? null : (Number.isFinite(entry.eatenAt) ? entry.eatenAt : now),
+    eatenAt,
     note: note ?? null, // D230 R20: blank or absent saves NULL
   };
 }
@@ -247,18 +256,39 @@ export async function logFoodEntry(userId, entry) {
  * they had when each was its own write (the serving memory and the in-meal
  * order read logged_at). `created_at`/`updated_at` are `now`.
  *
+ * Two options, both off by default (every existing caller is unchanged), for
+ * a write that is NOT the person logging food in the app now (the food
+ * history import, D230 R21):
+ *  - `keepUntimed`: an actual whose `eatenAt` is explicitly `null` keeps
+ *    eaten_at NULL (no time shown, ordered after the timed rows of its meal,
+ *    left out of "Around this time"), instead of the write's own moment.
+ *    An `eatenAt` left undefined still earns "now", as before.
+ *  - `telemetry: false`: no per-row `food_logged` and no `first_food_logged`.
+ *    An import is not a meal logged in the app: per-row events would flood
+ *    the food panel with history, and the durable once-per-person first-food
+ *    event would be spent on a file, so the person's own first log would
+ *    never count. (A single content-free summary event would need a new name
+ *    on the server's record_engine_telemetry allow-list, a cloud migration;
+ *    none is sent until one exists.)
+ * The rows are written exactly once, as they are meant to be: never inserted
+ * and then corrected, since a row edited before its first push is bucketed
+ * 'updated', which the server applies as a plain UPDATE of a row it does not
+ * yet hold (supabase/migrate_195 food_sync_push), so it would never reach the
+ * cloud.
+ *
  * @param {string} userId
  * @param {object[]} entries - each as logFoodEntry's `entry`
+ * @param {{ keepUntimed?: boolean, telemetry?: boolean }} [options]
  * @returns {Promise<string[]>} the new ids, in the order of `entries`
  */
-export async function logFoodEntries(userId, entries) {
+export async function logFoodEntries(userId, entries, { keepUntimed = false, telemetry = true } = {}) {
   if (!Array.isArray(entries)) throw new TypeError('logFoodEntries: entries must be an array');
   if (entries.length === 0) return [];
   const now = Date.now();
   const prepared = entries.map((entry, i) => {
     const label = `logFoodEntries (row ${i + 1})`;
     if (!entry || typeof entry !== 'object') throw new TypeError(`${label}: invalid food values`);
-    return _prepareDiaryEntry(label, entry, now);
+    return _prepareDiaryEntry(label, entry, now, { keepUntimed: keepUntimed === true });
   });
   const dates = [];
   for (const entry of entries) if (!dates.includes(entry.entryDate)) dates.push(entry.entryDate);
@@ -278,23 +308,25 @@ export async function logFoodEntries(userId, entries) {
   });
   // Committed. Everything below is best-effort and subtractive, as in
   // logFoodEntry: it can never fail the write.
-  try {
-    // eslint-disable-next-line global-require
-    const { track } = require('../engineTelemetry');
-    entries.forEach((entry) => {
-      try {
-        track(userId, 'food_logged', {
-          food_ref_source: _foodRefSource(entry.foodRef),
-          meal_slot: entry.mealSlot,
-        }).catch(() => {});
-      } catch (_) { /* one row's telemetry never blocks the next */ }
-    });
-    if (prepared.some((p) => !p.isPlanned)) {
+  if (telemetry !== false) {
+    try {
       // eslint-disable-next-line global-require
-      const { trackFirst } = require('../telemetry/firsts');
-      trackFirst(userId, 'first_food_logged').catch(() => {});
-    }
-  } catch (_) { /* tolerate test env without telemetry */ }
+      const { track } = require('../engineTelemetry');
+      entries.forEach((entry) => {
+        try {
+          track(userId, 'food_logged', {
+            food_ref_source: _foodRefSource(entry.foodRef),
+            meal_slot: entry.mealSlot,
+          }).catch(() => {});
+        } catch (_) { /* one row's telemetry never blocks the next */ }
+      });
+      if (prepared.some((p) => !p.isPlanned)) {
+        // eslint-disable-next-line global-require
+        const { trackFirst } = require('../telemetry/firsts');
+        trackFirst(userId, 'first_food_logged').catch(() => {});
+      }
+    } catch (_) { /* tolerate test env without telemetry */ }
+  }
   for (const date of dates) {
     const slots = [];
     entries.forEach((entry, i) => {
@@ -1192,32 +1224,75 @@ export async function recomputeRollup(userId, entryDate) {
   );
 }
 
+// TZ-1: the moment from which no build keys a food entry by the UTC day.
+// Phase 1 (commit 5057317da, 2026-06-03 05:52 UTC; first versioned build
+// 1.1.1, 2026-06-04) switched every food write to the LOCAL day; the build
+// in Closed Testing then was the pre-food-layer 1.1.0+4 and production
+// opened at 1.2.0 (docs/CURRENT_STATUS.md, "Distribution state"), so a row
+// created from this moment on had its day chosen by a local-day build.
+export const TZ1_LOCAL_DAY_KEYS_FROM_MS = Date.UTC(2026, 5, 4);
+
+const _utcDayKey = (ms) => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * Does this row carry the pre-TZ-1 UTC day-key bug, and nothing else?
+ *
+ * The bug wrote entry_date as the UTC day of the moment the meal was logged,
+ * so its ONLY signature is: entry_date equals the UTC day of logged_at and
+ * differs from the local day of logged_at, on a row written before the
+ * phase 1 cutoff. Every other mismatch between entry_date and logged_at is a
+ * day chosen on purpose (a meal logged today for yesterday, a copy to another
+ * day, a planned meal, an imported history: logged_at is only ever the moment
+ * of the write, and in the cloud the moment of the first push, since
+ * food_sync_push leaves logged_at to its default now()), and a planned row is
+ * never one (planning arrived after phase 1). A row with no readable
+ * logged_at cannot be judged and is never moved.
+ *
+ * @param {{ entryDate: string, loggedAt: number, createdAt?: number|null, isPlanned?: boolean }} r
+ * @returns {boolean}
+ */
+export function isPreTz1UtcKeyedRow({ entryDate, loggedAt, createdAt = null, isPlanned = false }) {
+  if (isPlanned || !Number.isFinite(loggedAt)) return false;
+  const written = Number.isFinite(createdAt) ? Math.max(createdAt, loggedAt) : loggedAt;
+  if (written >= TZ1_LOCAL_DAY_KEYS_FROM_MS) return false;
+  return entryDate === _utcDayKey(loggedAt) && entryDate !== localDayKey(loggedAt);
+}
+
 // TZ-1 phase 2: re-key historical food_entries to the LOCAL calendar day.
 // Phase 1 switched new writes to local; rows written earlier (or pulled from a
 // build that wrote UTC keys) still carry a UTC entry_date. Each row keeps its
-// logged_at timestamp, so we recompute entry_date from it and rebuild the
-// affected days' rollups. Idempotent: only rows whose key actually changes are
-// touched (updated_at bumped so the change syncs to cloud). Run once per user
-// behind the caller's guard. Best-effort: it uses the device's current
-// timezone applied to logged_at, so a user who logged in another timezone has
-// those rows classified by the current one.
+// logged_at timestamp, so the local day is recomputed from it and the affected
+// days' rollups are rebuilt. ONLY a row isPreTz1UtcKeyedRow recognises is
+// moved: until 2026-10-16 every row whose key differed from its logged_at's
+// local day was moved, which put a meal logged today for yesterday, a copied
+// day and a planned meal on the day of the write (food level-up lane 4C,
+// dayKeyRepair.realdb.test.js). Idempotent: only rows whose key actually
+// changes are touched (updated_at bumped so the change syncs to cloud). Run
+// once per user behind the caller's guard. Best-effort: it uses the device's
+// current timezone applied to logged_at, so a user who logged in another
+// timezone has those rows classified by the current one.
 export async function rekeyFoodEntriesToLocalDay(userId) {
   if (!userId) return 0;
   const d = await db();
   const rows = await d.getAllAsync(
-    'SELECT id, entry_date, logged_at FROM food_entries WHERE user_id = ? AND deleted_at IS NULL',
+    `SELECT id, entry_date, logged_at, created_at, is_planned FROM food_entries
+     WHERE user_id = ? AND deleted_at IS NULL`,
     [userId],
   );
   const affectedDays = new Set();
   const updates = [];
   for (const r of rows ?? []) {
-    if (r.logged_at == null) continue;
-    const newKey = localDayKey(r.logged_at);
-    if (newKey && newKey !== r.entry_date) {
-      affectedDays.add(r.entry_date);
-      affectedDays.add(newKey);
-      updates.push([r.id, newKey]);
-    }
+    const loggedAt = r.logged_at == null ? NaN : Number(r.logged_at);
+    if (!isPreTz1UtcKeyedRow({
+      entryDate: r.entry_date,
+      loggedAt,
+      createdAt: r.created_at == null ? null : Number(r.created_at),
+      isPlanned: Number(r.is_planned) === 1,
+    })) continue;
+    const newKey = localDayKey(loggedAt);
+    affectedDays.add(r.entry_date);
+    affectedDays.add(newKey);
+    updates.push([r.id, newKey]);
   }
   if (updates.length === 0) return 0;
   const now = Date.now();
@@ -2592,13 +2667,21 @@ export async function applyFoodEntryFromCloud(userId, row) {
   // older cloud row. Returns null so the caller does not recompute the rollup.
   const localMs = await _localUpdatedMs(d, 'food_entries', row.id, userId);
   if (localMs != null && localMs >= updatedAt) return null;
-  // TZ-1: derive entry_date from logged_at (LOCAL day) rather than trusting the
-  // cloud value, which may be a UTC-day key from old data or the frozen AAB.
-  // This makes every pulled row land on the user's calendar day on apply, so a
-  // fresh-device pull is correct regardless of whether/when the one-time
-  // food-day-key migration has run (it no longer races the pull). Returns the
-  // local key so the caller rebuilds the right day's rollup.
-  const entryDate = localDayKey(loggedAt);
+  // TZ-1: the cloud entry_date is the day the writing device chose, and it is
+  // kept. It is corrected to the local day of logged_at ONLY when it carries
+  // the pre-phase-1 UTC-key signature (isPreTz1UtcKeyedRow), so a fresh-device
+  // pull lands those old rows on the local day whether or not the one-time
+  // re-key has run (no race), and a missing or unreadable cloud day falls
+  // back to that local day. Until 2026-10-16 the local day of logged_at was
+  // used for EVERY row; since the cloud's logged_at is the moment of the first
+  // push (food_sync_push never sends it), a meal logged today for yesterday,
+  // a copied day or an imported history moved to the day it was pushed as
+  // soon as its own push came back in the pull (dayKeyRepair.realdb.test.js).
+  // Returns the key so the caller rebuilds the right day's rollup.
+  const cloudDay = isLocalDayKey(row.entry_date) ? row.entry_date : null;
+  const entryDate = cloudDay != null && !isPreTz1UtcKeyedRow({ entryDate: cloudDay, loggedAt, createdAt })
+    ? cloudDay
+    : localDayKey(loggedAt);
   // Ultimate-Audit item 15 (D22 15b): eaten_at is NOT defaulted to loggedAt
   // here (unlike loggedAt's own `?? Date.now()` fallback above) -- NULL is a
   // real state (a bulk-confirmed row with no honest eaten time) and must
