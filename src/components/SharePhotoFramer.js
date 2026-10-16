@@ -27,6 +27,12 @@
  *
  * Screen readers get the same control as actions on the frame: zoom in or
  * out, and move the photo up, down, left or right.
+ *
+ * `subject` ('photo' or 'video', audit 2026-10-16 item 9): what a screen
+ * reader hears names what is under the card, so a video is never called a
+ * photo. `disabled` (item 2): while the share's video is being made, the
+ * framing cannot change; the gestures and the actions are off and the frame
+ * says so.
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
@@ -50,6 +56,32 @@ function clampAxis(value, size, frame, zoom) {
   return Math.min(m, Math.max(-m, value));
 }
 
+// What a screen reader hears, for a photo and for a video.
+const PHOTO_WORDS = Object.freeze({
+  label: 'Your photo on the share image',
+  hint: 'Drag to move your photo. Pinch to make it bigger or smaller.',
+  actions: Object.freeze([
+    { name: 'increment', label: 'Zoom in' },
+    { name: 'decrement', label: 'Zoom out' },
+    { name: 'moveUp', label: 'Move photo up' },
+    { name: 'moveDown', label: 'Move photo down' },
+    { name: 'moveLeft', label: 'Move photo left' },
+    { name: 'moveRight', label: 'Move photo right' },
+  ]),
+});
+const VIDEO_WORDS = Object.freeze({
+  label: 'Your video on the share image',
+  hint: 'Drag to move your video. Pinch to make it bigger or smaller.',
+  actions: Object.freeze([
+    { name: 'increment', label: 'Zoom in' },
+    { name: 'decrement', label: 'Zoom out' },
+    { name: 'moveUp', label: 'Move video up' },
+    { name: 'moveDown', label: 'Move video down' },
+    { name: 'moveLeft', label: 'Move video left' },
+    { name: 'moveRight', label: 'Move video right' },
+  ]),
+});
+
 export default function SharePhotoFramer({
   photoUri,
   photoWidth,
@@ -60,7 +92,10 @@ export default function SharePhotoFramer({
   overlayUri,
   onChange,
   blocksGesture = null,
+  subject = 'photo',
+  disabled = false,
 }) {
+  const words = subject === 'video' ? VIDEO_WORDS : PHOTO_WORDS;
   const cover = useMemo(
     () => coverSize(photoWidth, photoHeight, frameWidth, frameHeight),
     [photoWidth, photoHeight, frameWidth, frameHeight],
@@ -97,6 +132,7 @@ export default function SharePhotoFramer({
 
   const gesture = useMemo(() => {
     let pinch = Gesture.Pinch()
+      .enabled(!disabled)
       .onStart(() => {
         'worklet';
         savedZoom.value = zoom.value;
@@ -115,6 +151,7 @@ export default function SharePhotoFramer({
         runOnJS(commit)(zoom.value, tx.value, ty.value);
       });
     let pan = Gesture.Pan()
+      .enabled(!disabled)
       .onStart(() => {
         'worklet';
         savedTx.value = tx.value;
@@ -134,7 +171,7 @@ export default function SharePhotoFramer({
       pan = pan.blocksExternalGesture(blocksGesture);
     }
     return Gesture.Simultaneous(pinch, pan);
-  }, [commit, blocksGesture, cw, ch, fw, fh, minZoom, maxZoom, zoom, tx, ty, savedZoom, savedTx, savedTy]);
+  }, [commit, blocksGesture, disabled, cw, ch, fw, fh, minZoom, maxZoom, zoom, tx, ty, savedZoom, savedTx, savedTy]);
 
   const photoStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: zoom.value }],
@@ -143,6 +180,7 @@ export default function SharePhotoFramer({
   // The accessible route to the same control: a tenth of the frame per move,
   // a quarter step per zoom.
   const nudge = useCallback((action) => {
+    if (disabled) return;
     let z = zoom.value;
     let x = tx.value;
     let y = ty.value;
@@ -159,24 +197,18 @@ export default function SharePhotoFramer({
     tx.value = x;
     ty.value = y;
     commit(z, x, y);
-  }, [zoom, tx, ty, cw, ch, fw, fh, minZoom, commit]);
+  }, [disabled, zoom, tx, ty, cw, ch, fw, fh, minZoom, commit]);
 
   return (
     <GestureDetector gesture={gesture}>
       <View
-        style={[styles.frame, { width: fw, height: fh }]}
+        style={[styles.frame, { width: fw, height: fh }, disabled && styles.disabled]}
         accessible
         accessibilityRole="adjustable"
-        accessibilityLabel="Your photo on the share image"
-        accessibilityHint="Drag to move your photo. Pinch to make it bigger or smaller."
-        accessibilityActions={[
-          { name: 'increment', label: 'Zoom in' },
-          { name: 'decrement', label: 'Zoom out' },
-          { name: 'moveUp', label: 'Move photo up' },
-          { name: 'moveDown', label: 'Move photo down' },
-          { name: 'moveLeft', label: 'Move photo left' },
-          { name: 'moveRight', label: 'Move photo right' },
-        ]}
+        accessibilityLabel={words.label}
+        accessibilityHint={disabled ? undefined : words.hint}
+        accessibilityState={disabled ? { disabled: true } : undefined}
+        accessibilityActions={disabled ? [] : words.actions}
         onAccessibilityAction={(e) => nudge(e.nativeEvent.actionName)}
       >
         <AnimatedImage
@@ -206,4 +238,7 @@ const styles = StyleSheet.create({
   // because it is part of the image being shared (drawShareCard CARD_GROUND).
   frame: { overflow: 'hidden', borderRadius: radius.lg, backgroundColor: CARD_GROUND },
   photo: { position: 'absolute' },
+  // The house disabled treatment (Button's one opacity), while the framing
+  // cannot change.
+  disabled: { opacity: 0.5 },
 });

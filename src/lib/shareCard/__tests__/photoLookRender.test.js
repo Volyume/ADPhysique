@@ -113,15 +113,16 @@ const SESSION = (over = {}) => ({
 const isRadialVignette = (r) => r.paint && r.paint.shader && r.paint.shader.kind === 'radial';
 
 describe('the photo look colours the athlete\'s photo alone', () => {
-  // RE-POINTED 2026-10-15 (D229 addendum 6, the backdrop bleed): the photo
-  // is now drawn twice, once softened over the whole canvas under the
-  // outline's ink and once sharp inside the outline. The truth is unchanged:
-  // every draw of the athlete's photo carries the chosen look.
+  // RE-POINTED 2026-10-15 (D229 addendum 6, the backdrop bleed) to two
+  // draws, and RE-PINNED 2026-10-16 to one (founder decision, option A: "I
+  // think we only displayed from within the outline on photos?", which
+  // withdrew the bleed): the photo is drawn once, inside the outline, and
+  // carries the chosen look.
   test('the photo draw carries the chosen look at the chosen strength', () => {
     const { images } = record(SESSION({ photoLook: 'gold', photoLookStrength: 0.5 }), { bgPhoto: PHOTO });
     const photoDraws = images.filter((im) => im.img === PHOTO);
-    expect(photoDraws).toHaveLength(2);
-    photoDraws.forEach((d) => expect(d.paint.filter).toEqual({ kind: 'matrix', m: lookMatrix('gold', 0.5) }));
+    expect(photoDraws).toHaveLength(1);
+    expect(photoDraws[0].paint.filter).toEqual({ kind: 'matrix', m: lookMatrix('gold', 0.5) });
   });
 
   test('no other draw -- text, rules, the outline, the wordmark -- ever carries a colour filter', () => {

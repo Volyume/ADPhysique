@@ -155,6 +155,17 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry17).toContain('share it the way you share an image: on your session or on a PR');
     expect(entry17).toContain('Videos stay on your phone and are never uploaded');
     expect(entry17).toContain('Settings, under Privacy and legal');
+    // 2.18.0 (D229 addenda 17 and 18): the videos line carries the share
+    // screen's video, play and trim, the keep window and the privacy line.
+    const start18 = sheet.indexOf("'2.18.0': [");
+    expect(start18).toBeGreaterThan(-1);
+    const entry18 = sheet.slice(start18, sheet.indexOf('],', start18));
+    expect(entry18).toContain('share it the way you share an image');
+    expect(entry18).toContain('A video is kept for 7 days unless you tap Keep on it, and you can change that in Settings, under Your data.');
+    expect(entry18).toContain('Videos stay on your phone and are never uploaded');
+    expect(entry18).toContain('Settings, under Privacy and legal');
+    expect(entry18).toContain('Food has been rebuilt.');
+    expect({ bad: /\bclips?\b/i.test(entry18) }).toEqual({ bad: false });
   });
   test('the running version has a What\'s new entry', () => {
     const app = JSON.parse(readRepoFile('app.json'));

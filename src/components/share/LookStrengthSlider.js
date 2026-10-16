@@ -40,6 +40,9 @@ export default function LookStrengthSlider({
   onValueChange,
   onSlidingComplete,
   accessibilityLabel = 'Look strength',
+  // While the share's video is being made the look cannot change (audit
+  // 2026-10-16, item 2): no drag, no tap, no action, and it says so.
+  disabled = false,
 }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -61,6 +64,7 @@ export default function LookStrengthSlider({
     // would throw there (the app's other gestures hop back with runOnJS).
     const pan = Gesture.Pan()
       .runOnJS(true)
+      .enabled(!disabled)
       .activeOffsetX([-10, 10])
       .failOffsetY([-12, 12])
       .onUpdate((e) => {
@@ -75,6 +79,7 @@ export default function LookStrengthSlider({
       .onFinalize(() => setDragPct(null));
     const tap = Gesture.Tap()
       .runOnJS(true)
+      .enabled(!disabled)
       .maxDuration(250)
       .onEnd((e, success) => {
         if (!success) return;
@@ -83,24 +88,26 @@ export default function LookStrengthSlider({
         if (onSlidingComplete) onSlidingComplete(p);
       });
     return Gesture.Race(pan, tap);
-  }, [pctFromX, onValueChange, onSlidingComplete]);
+  }, [disabled, pctFromX, onValueChange, onSlidingComplete]);
 
   const shown = dragPct != null ? dragPct : clampPct(value);
 
   const step = useCallback((dir) => {
+    if (disabled) return;
     const next = clampPct(clampPct(value) + dir * 10);
     if (onValueChange) onValueChange(next);
     if (onSlidingComplete) onSlidingComplete(next);
-  }, [value, onValueChange, onSlidingComplete]);
+  }, [disabled, value, onValueChange, onSlidingComplete]);
 
   return (
     <View
-      style={styles.wrap}
+      style={[styles.wrap, disabled && styles.disabled]}
       accessible
       accessibilityRole="adjustable"
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: 100, now: shown }}
-      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      accessibilityState={disabled ? { disabled: true } : undefined}
+      accessibilityActions={disabled ? [] : [{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={(e) => {
         const name = e?.nativeEvent?.actionName;
         if (name === 'increment') step(1);
@@ -123,6 +130,8 @@ export default function LookStrengthSlider({
 
 const styles = StyleSheet.create({
   wrap: { paddingVertical: spacing.xs },
+  // The house disabled treatment (Button's one opacity).
+  disabled: { opacity: 0.5 },
   hit: { height: 28, justifyContent: 'center' },
   base: { height: 4, borderRadius: radius.hair, backgroundColor: colors.surface3 },
   // The same track, fill and handle as the app's photo compare slider

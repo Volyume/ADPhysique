@@ -64,7 +64,7 @@ const EXPORT_LINES = Object.freeze({
   E_SPACE: 'There is not enough space on your phone to make the video. Once some space is free you can try again.',
   E_ICLOUD: 'That video is still downloading from iCloud. Try again once it has finished.',
   E_BACKGROUND: 'The video stops if Volyume is closed while it is being made. Keep Volyume open and try again.',
-  E_UNAVAILABLE: 'Videos cannot be made in this version of Volyume. Choose None under Background to share the card as an image.',
+  E_UNAVAILABLE: "Videos can't be made on this phone. Choose None under Background to share the card as an image.",
 });
 
 // The same two failures for a video filmed in Volyume: the advice about
@@ -281,6 +281,83 @@ export async function probeVideo(uri) {
     hasAudio: raw.hasAudio === true,
     fileSizeBytes: Number.isFinite(size) && size >= 0 ? size : null,
   };
+}
+
+/** The most times one extractFrames call takes (native refuses more). */
+export const MAX_FRAME_TIMES = 64;
+const MIN_FRAME_EDGE = 16;
+const MAX_FRAME_EDGE = 4096;
+
+function toFrame(raw) {
+  if (!raw || typeof raw !== 'object' || !isUri(raw.uri)) return null;
+  const width = Number(raw.width);
+  const height = Number(raw.height);
+  if (!(width > 0) || !(height > 0) || !Number.isFinite(width) || !Number.isFinite(height)) return null;
+  const timeMs = Number(raw.timeMs);
+  return {
+    uri: raw.uri,
+    width: Math.round(width),
+    height: Math.round(height),
+    timeMs: Number.isFinite(timeMs) && timeMs >= 0 ? timeMs : 0,
+  };
+}
+
+/**
+ * Still frames of a video as JPEG files (lead ruling 2026-10-16, after
+ * Sentry VOLYUME-3M: Skia's video object is never used for this). Native
+ * decodes off the JS thread, turns each frame upright, scales it so its
+ * longer edge is at most `maxEdge`, keeps every time inside the video and
+ * writes `share-frames/<random>.jpg` under the caches directory.
+ *
+ * Resolves one slot per time, `{ uri, width, height, timeMs }` (the upright
+ * pixel size) or null where that time failed. Rejects only for a source that
+ * cannot be opened (E_SOURCE, E_DECODE) or options that fail validation
+ * (E_INVALID), with the calm line as the message. A build without the native
+ * function resolves all nulls, so the caller shows its empty state.
+ *
+ * `exact` (audit 2026-10-16, item 4): true only for the preview's still,
+ * which must be the very frame the export starts on; native then decodes the
+ * exact frame first. Otherwise (a thumbnail, the trim strip, the tone) native
+ * takes the nearest sync frame first, which is far quicker. Always sent as a
+ * boolean: the native function takes four arguments on both platforms.
+ *
+ * @param {string} uri a file:// (or, on Android, content://) video
+ * @param {number[]} timesMs
+ * @param {{ maxEdge?: number, exact?: boolean }} [options]
+ * @returns {Promise<Array<{ uri: string, width: number, height: number, timeMs: number } | null>>}
+ */
+export async function extractFrames(uri, timesMs, { maxEdge = 1440, exact = false } = {}) {
+  const list = Array.isArray(timesMs) ? timesMs : [];
+  const native = getNative();
+  if (!native || typeof native.extractFrames !== 'function') return list.map(() => null);
+  if (!isUri(uri)) throw exportError(EXPORT_ERROR.SOURCE, 'invalid uri');
+  if (list.length === 0) return [];
+  if (list.length > MAX_FRAME_TIMES || !list.every(isFiniteNumber)) {
+    throw exportError(EXPORT_ERROR.INVALID, 'invalid timesMs');
+  }
+  if (!isFiniteNumber(maxEdge) || maxEdge < MIN_FRAME_EDGE || maxEdge > MAX_FRAME_EDGE) {
+    throw exportError(EXPORT_ERROR.INVALID, 'invalid maxEdge');
+  }
+  const times = list.map((t) => Math.max(0, t));
+  let raw;
+  try {
+    raw = await native.extractFrames(uri, times, Math.round(maxEdge), exact === true);
+  } catch (e) {
+    throw fromNativeError(e, EXPORT_ERROR.DECODE);
+  }
+  const slots = Array.isArray(raw) ? raw : [];
+  return times.map((_t, i) => toFrame(slots[i]));
+}
+
+/** Removes every frame file extractFrames wrote. Best effort: never rejects. */
+export async function deleteFrames() {
+  const native = getNative();
+  if (!native || typeof native.deleteFrames !== 'function') return;
+  try {
+    await native.deleteFrames();
+  } catch (_e) {
+    // The caches directory is the system's to clear as well.
+  }
 }
 
 /**

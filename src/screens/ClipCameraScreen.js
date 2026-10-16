@@ -58,6 +58,19 @@
  *   delete the clip after the share screen has opened with it, so the share
  *   screen must treat a clipId that no longer resolves as "no clip".
  *
+ * SHARE-ONLY MODE: { mode: 'share', returnTo? } with no workoutId. The share
+ * screen opens it when the share has no workout (a PR from a lift's history,
+ * a milestone, the weekly recap; founder: "recording one in the share screen
+ * after the same as you do with photos"). It records exactly as above (the
+ * countdown, the cues, the lengths, the hold, muted), but there is no workout
+ * to keep the video with, so NOTHING touches the clip store: no save, no
+ * three-per-workout check, no keep window, no saved toast, no Undo. The
+ * recorded file goes straight back to the share screen, merged into ITS
+ * route params as `sharedVideo: { uri, durationMs, width: null, height: null }`
+ * (by `returnTo`, that share screen's route key, when given), and is used
+ * for that share alone. The free-space check still runs (the file is
+ * written either way). The workout mode is unchanged.
+ *
  * Camera access: asked for on open. A refusal is one calm warning toast of two
  * sentences (what is needed, then where to turn it on) and the screen closes;
  * a build without the camera module says to update the app instead. There is
@@ -173,7 +186,11 @@ export default function ClipCameraScreen({ navigation, route }) {
     // opener knows them, so the setup line can be the exercise's own camera
     // tip (the name alone picks most of them; these settle the rest).
     exercisePattern = null, exerciseEquipment = null,
+    // Share-only mode (see the header): the video goes back to the share
+    // screen and is never saved.
+    mode = null, returnTo = null,
   } = route?.params || {};
+  const shareOnly = mode === 'share';
   // The camera's setup line for THIS exercise: pure, from the name, pattern
   // and equipment (cameraTips.js). Without an exercise it is the general line.
   const setupLine = useMemo(
@@ -369,8 +386,9 @@ export default function ClipCameraScreen({ navigation, route }) {
   }, [toast, navigation]);
 
   useEffect(() => {
-    // Nothing to record against: close without a word.
-    if (!workoutId || !userId) { closeOnce(null); return; }
+    // Nothing to record against: close without a word. Share-only mode has
+    // no workout by design; the video goes back to the share screen.
+    if (!shareOnly && (!workoutId || !userId)) { closeOnce(null); return; }
     if (!CameraView) { closeOnce(CLIP_STRINGS.cameraMissing); return; }
     if (!permission) return; // still reading the current answer
     if (permission.granted) { setReady(true); return; }
@@ -386,7 +404,7 @@ export default function ClipCameraScreen({ navigation, route }) {
       if (!aliveRef.current) return;
       if (result?.granted) setReady(true); else closeOnce(CLIP_STRINGS.permissionDenied);
     })();
-  }, [permission, requestPermission, workoutId, userId, closeOnce]);
+  }, [permission, requestPermission, workoutId, userId, closeOnce, shareOnly]);
 
   // ── Recording ──────────────────────────────────────────────────────────────
   const showFull = useCallback(() => {
@@ -440,6 +458,27 @@ export default function ClipCameraScreen({ navigation, route }) {
     leave(() => navigation.goBack());
   }, [navigation, source, toast]);
 
+  // Share-only mode: the recorded file goes straight back to the share
+  // screen that opened the camera, for that share alone. Nothing is saved,
+  // so there is no toast and no Undo; the share screen shows the video.
+  const handBackToShare = useCallback((uri, durationMs) => {
+    // The end cue's second beat is still to come: leave after it.
+    const leaveAfter = Math.max(0, endCueUntilRef.current - Date.now());
+    const params = { sharedVideo: { uri, durationMs, width: null, height: null } };
+    const go = () => {
+      if (!aliveRef.current) { dropCacheFile(uri); return; }
+      closedRef.current = true;
+      navigation.navigate(returnTo
+        ? { key: returnTo, params, merge: true }
+        : { name: 'ShareCard', params, merge: true });
+    };
+    if (leaveAfter <= 0) { go(); return; }
+    leaveTimer.current = setTimeout(() => {
+      leaveTimer.current = null;
+      go();
+    }, leaveAfter);
+  }, [navigation, returnTo, dropCacheFile]);
+
   const finishRecording = useCallback(async (uri, measuredMs) => {
     clearTimers();
     if (discardRef.current || !aliveRef.current) {
@@ -455,6 +494,10 @@ export default function ClipCameraScreen({ navigation, route }) {
       return;
     }
     setPhase('saving');
+    if (shareOnly) {
+      handBackToShare(uri, durationMs);
+      return;
+    }
     let result;
     try {
       result = await saveClip({
@@ -496,7 +539,7 @@ export default function ClipCameraScreen({ navigation, route }) {
     toast.show(CLIP_STRINGS.saveFailed, { variant: 'error' });
   }, [
     clearTimers, dropCacheFile, setPhase, userId, workoutId, exerciseId, exerciseName,
-    setNumber, source, afterSave, showFull, toast,
+    setNumber, source, afterSave, showFull, toast, shareOnly, handBackToShare,
   ]);
 
   // ── Cues (addendum 13) ─────────────────────────────────────────────────────
@@ -631,6 +674,8 @@ export default function ClipCameraScreen({ navigation, route }) {
 
   // Is there room for another video? Read fresh: the number on screen may be old.
   const hasRoom = useCallback(async () => {
+    // Share-only mode keeps nothing, so no workout's three-video limit applies.
+    if (shareOnly) return true;
     let held = 0;
     try {
       held = await countClipsForWorkout(userId, workoutId);
@@ -638,7 +683,7 @@ export default function ClipCameraScreen({ navigation, route }) {
       logError('ClipCamera.count', e, { workoutId });
     }
     return !isFull(held);
-  }, [userId, workoutId]);
+  }, [userId, workoutId, shareOnly]);
 
   // Addendum 15: a phone that is nearly full is told so before anything is
   // recorded, instead of a failed save after the set. A phone that cannot

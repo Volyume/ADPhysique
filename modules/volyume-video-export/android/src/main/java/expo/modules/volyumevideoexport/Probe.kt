@@ -166,7 +166,8 @@ internal object Probe {
     return value?.takeIf { it.isFinite() }
   }
 
-  private fun normaliseRotation(degrees: Int): Int {
+  /** Any degrees to 0, 90, 180 or 270 (shared with FrameExtractor). */
+  internal fun normaliseRotation(degrees: Int): Int {
     val r = ((degrees % 360) + 360) % 360
     return ((r + 45) / 90 * 90) % 360
   }

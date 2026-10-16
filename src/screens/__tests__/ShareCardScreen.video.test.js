@@ -118,14 +118,20 @@ jest.mock('../../hooks/usePhotoSuppression', () => ({
   __esModule: true,
   default: () => mockSuppress.value,
 }));
+// The engine as the frame-source lane leaves it (2026-10-16): probeVideo
+// reads the upright size and real length, extractFrames writes small upright
+// JPEGs (here: files the mocked file system reads back as empty, so the tone
+// falls back to the bright tier), deleteFrames clears them.
 const mockEngine = {
   isAvailable: jest.fn(() => true),
   probeVideo: jest.fn(() => Promise.resolve({ durationMs: 9000, width: 1920, height: 1080 })),
+  extractFrames: jest.fn((_uri, times) => Promise.resolve(times.map((t) => ({ uri: `file:///cache/share-frames/${t}.jpg`, width: 90, height: 160, timeMs: t })))),
+  deleteFrames: jest.fn(() => Promise.resolve()),
   exportShareVideo: jest.fn(() => Promise.resolve({ uri: 'file:///cache/volyume-share.mp4' })),
   cancelExport: jest.fn(() => Promise.resolve()),
   setLockScreenWallpaper: jest.fn(() => Promise.resolve()),
   lineForExportError: jest.fn((code) => (code === 'cancelled' ? null : "Couldn't make the video. Try again.")),
-  EXPORT_ERROR: { UNAVAILABLE: 'unavailable', CANCELLED: 'cancelled', DECODE: 'decode_failed' },
+  EXPORT_ERROR: { UNAVAILABLE: 'unavailable', CANCELLED: 'cancelled', DECODE: 'decode_failed', BUSY: 'E_BUSY' },
 };
 jest.mock('../../lib/shareVideo/engine', () => mockEngine);
 
@@ -137,10 +143,13 @@ jest.mock('../../components/share/VideoTrimBar', () => {
 // expo-av's player as a host component.
 jest.mock('expo-av', () => ({ Video: 'Video', ResizeMode: { CONTAIN: 'contain' } }));
 
+// The frame source is ASYNC (the native lane's contract, 2026-10-16): a
+// frame arrives later, upright; thumbnails are file URIs.
 const mockGrab = jest.fn();
 jest.mock('../../lib/shareVideo/videoFrame', () => ({
-  grabVideoFrame: (...args) => mockGrab(...args),
-  videoThumbnailBase64: () => 'CCCC',
+  grabVideoFrame: (...args) => Promise.resolve(mockGrab(...args)),
+  videoThumbnailUri: (uri) => Promise.resolve(`file:///cache/share-frames/thumb-${uri.split('/').pop()}.jpg`),
+  videoStripUris: (_uri, _d, count) => Promise.resolve(Array.from({ length: count }, () => null)),
 }));
 const mockGetClip = jest.fn();
 const mockListClips = jest.fn();
@@ -170,14 +179,29 @@ const ShareCardScreen = require('../ShareCardScreen').default;
 const useAppStore = require('../../store/useAppStore').default;
 const { drawShareCard: mockDraw } = require('../../lib/shareCard/drawShareCard');
 
+// Settles every chain the screen starts: choosing a video awaits its
+// frame, its probe and the frame file, each a promise resolved through the
+// mocks, so several rounds are run, each ending on the macrotask queue.
 async function flush() {
-  await TestRenderer.act(async () => {
-    for (let i = 0; i < 5; i++) await Promise.resolve();
-    await new Promise((r) => setImmediate(r));
-  });
+  for (let round = 0; round < 6; round++) {
+    // eslint-disable-next-line no-await-in-loop
+    await TestRenderer.act(async () => {
+      for (let i = 0; i < 6; i++) await Promise.resolve();
+      await new Promise((r) => setImmediate(r));
+    });
+  }
 }
 function makeNavigation() {
   return { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => () => {}) };
+}
+// Re-pinned 2026-10-16 (audit item 1): Play, Share and Save with a video
+// wait for the scrim's tone for the window (read a moment after the window
+// settles) and then run by themselves. These suites pin what happens once
+// they run, so a video opened from the route is given that moment, and
+// Share and Save are pressed once the tone is read, as a person meets them.
+async function settleTone() {
+  await TestRenderer.act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+  await flush();
 }
 async function mount(params, navigation = makeNavigation()) {
   let tree = null;
@@ -185,9 +209,11 @@ async function mount(params, navigation = makeNavigation()) {
     tree = TestRenderer.create(React.createElement(ShareCardScreen, { route: { params, name: 'ShareCard' }, navigation }));
   });
   await flush();
+  if (params && params.clipId) await settleTone();
   return { tree, navigation };
 }
 async function press(node) {
+  if (node && (node.props.title === 'Share video' || node.props.title === 'Save to gallery')) await settleTone();
   await TestRenderer.act(async () => { node.props.onPress(); });
   await flush();
 }
@@ -231,6 +257,10 @@ beforeEach(() => {
   mockEngine.isAvailable.mockImplementation(() => true);
   mockEngine.exportShareVideo.mockImplementation(() => Promise.resolve({ uri: 'file:///cache/volyume-share.mp4' }));
   mockGrab.mockImplementation((_Skia, uri, ms) => frameOf([CLIP_SET, CLIP_LONG].find((c) => c.uri === uri) || CLIP_SET, ms));
+  mockEngine.probeVideo.mockImplementation((uri) => {
+    const row = [CLIP_SET, CLIP_LONG].find((c) => c.uri === uri);
+    return Promise.resolve(row ? { durationMs: row.durationMs, width: 1080, height: 1920 } : null);
+  });
   mockListClips.mockResolvedValue([CLIP_SET, CLIP_LONG]);
   mockGetClip.mockResolvedValue(null);
   mockSharing.isAvailableAsync.mockResolvedValue(true);
@@ -286,7 +316,9 @@ describe('choosing a video', () => {
       'Use video: Bench press, set 3, 12 seconds',
       'Use video: After the workout, 22 seconds',
     ]);
-    expect(tree.root.findAll((n) => n.type === 'Image' && /^data:image\/png;base64,/.test(n.props?.source?.uri || ''))).not.toHaveLength(0);
+    // Re-pinned (the async frame source): each thumbnail is a file URI in a
+    // plain Image.
+    expect(tree.root.findAll((n) => n.type === 'Image' && n.props?.source?.uri === 'file:///cache/share-frames/thumb-c2.mp4.jpg')).not.toHaveLength(0);
     await press(tiles[1]);
     expect(mockGrab).toHaveBeenCalledWith(expect.anything(), CLIP_LONG.uri, 0);
     expect(texts(tree)).toContain('Share video');
@@ -298,7 +330,7 @@ describe('choosing a video', () => {
 
   test('"Video" opens the chooser with this workout\'s videos, the gallery and Film now; a tap makes that video the background', async () => {
     const { tree } = await mount(SESSION);
-    const videoBtn = hostsByLabel(tree, 'Video')[0];
+    const videoBtn = hostsByLabel(tree, 'Video, choose a video')[0];
     expect(videoBtn).toBeDefined();
     await press(videoBtn);
     const all = texts(tree);
@@ -314,7 +346,7 @@ describe('choosing a video', () => {
 
   test('Film now goes through the one recording flow, from this screen', async () => {
     const { tree } = await mount(SESSION);
-    await press(hostsByLabel(tree, 'Video')[0]);
+    await press(hostsByLabel(tree, 'Video, choose a video')[0]);
     await press(buttonTitled(tree, 'Film now')[0]);
     expect(mockOpenRecorder).toHaveBeenCalledWith({ source: 'share' });
   });
@@ -324,7 +356,7 @@ describe('choosing a video', () => {
     mockEngine.probeVideo.mockResolvedValue({ durationMs: 30000, width: 1920, height: 1080 });
     mockGrab.mockImplementation((_S, uri, ms) => ({ image: FAKE_FRAME, width: 1920, height: 1080, durationMs: 30000, ms }));
     const { tree } = await mount(SESSION);
-    await press(hostsByLabel(tree, 'Video')[0]);
+    await press(hostsByLabel(tree, 'Video, choose a video')[0]);
     await press(buttonTitled(tree, 'From your gallery')[0]);
     expect(mockPicker.launchImageLibraryAsync).toHaveBeenCalledWith({ mediaTypes: ['videos'] });
     expect(mockEngine.probeVideo).toHaveBeenCalledWith('file:///gallery/v.mp4');
@@ -372,14 +404,22 @@ describe('choosing a video', () => {
   test('under calm mode or an open flag the Video source is not offered (fail closed)', async () => {
     mockSuppress.value = true;
     const { tree } = await mount(SESSION);
-    expect(hostsByLabel(tree, 'Video')).toHaveLength(0);
+    expect(hostsByLabel(tree, 'Video, choose a video')).toHaveLength(0);
   });
 
   test('a PR set\'s video opens the PR card with that PR chosen', async () => {
     mockGetClip.mockResolvedValue(CLIP_SET);
-    await mount({ ...SESSION, prList: [PR], clipId: 'c2' });
-    const last = mockDraw.mock.calls[mockDraw.mock.calls.length - 1][1];
-    expect(last.params.cardType).toBe('pr');
+    const { tree } = await mount({ ...SESSION, prList: [PR], clipId: 'c2' });
+    // Read the chosen card from the type strip, not from the last draw: the
+    // strip also draws a thumbnail of every card type (Session and New PR
+    // here), so the last draw is whichever thumbnail landed last, which made
+    // this test fail about one run in three without any fault in the screen.
+    const prTile = hostsByLabel(tree, 'New PR')[0];
+    expect(prTile).toBeDefined();
+    expect(prTile.props.accessibilityState).toEqual({ selected: true });
+    expect(hostsByLabel(tree, 'Session')[0].props.accessibilityState).toEqual({ selected: false });
+    // And the preview itself was drawn as the PR card.
+    expect(mockDraw.mock.calls.some((c) => c[1].params && c[1].params.cardType === 'pr' && c[1].bgPhoto)).toBe(true);
   });
 });
 
@@ -453,6 +493,11 @@ describe('sharing and saving the finished video', () => {
   });
 });
 
+// Re-pinned 2026-10-16 (render audit, lead ruling 1): Play is now a
+// secondary button under the preview, off the card, whose visible label is
+// "Play with your look"; its accessible name is that label (the name holds
+// the visible words), so it is found by that name. Pause keeps "Pause the
+// video" (the visible "Pause" is in it).
 describe('playing the video in the preview (founder follow-up 2026-10-16)', () => {
   const PREVIEW_URI = 'file:///cache/volyume-preview.mp4';
   const framers = (tree) => tree.root.findAll((n) => n.type && n.type.name === 'SharePhotoFramer');
@@ -461,7 +506,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     mockGetClip.mockResolvedValue(CLIP_SET);
     mockEngine.exportShareVideo.mockImplementation(() => Promise.resolve({ uri: PREVIEW_URI }));
     const m = await mount({ ...SESSION, clipId: 'c2' });
-    await press(hostsByLabel(m.tree, 'Play the video')[0]);
+    await press(hostsByLabel(m.tree, 'Play with your look')[0]);
     return m;
   }
 
@@ -471,7 +516,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     expect(framers(tree)).toHaveLength(1);
     mockDraw.mockClear();
-    await press(hostsByLabel(tree, 'Play the video')[0]);
+    await press(hostsByLabel(tree, 'Play with your look')[0]);
     const opts = mockEngine.exportShareVideo.mock.calls[0][0];
     expect(opts).toMatchObject({ outWidth: 540, bitrate: 2000000, startMs: 0, durationMs: 12000 });
     expect(opts.outHeight % 2).toBe(0);
@@ -487,7 +532,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     await press(hostsByLabel(tree, 'Pause the video')[0]);
     expect(players(tree)).toHaveLength(0);
     expect(framers(tree)).toHaveLength(1);
-    await press(hostsByLabel(tree, 'Play the video')[0]);
+    await press(hostsByLabel(tree, 'Play with your look')[0]);
     expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
     expect(players(tree)).toHaveLength(1);
     await press(tree.root.find((n) => typeof n.type === 'string' && n.props.testID === 'share-preview-video'));
@@ -511,7 +556,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     mockEngine.exportShareVideo.mockImplementation(() => new Promise((r) => { finish = r; }));
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     await press(buttonTitled(tree, 'Share video')[0]);
-    const play = hostsByLabel(tree, 'Play the video')[0];
+    const play = hostsByLabel(tree, 'Play with your look')[0];
     expect(play.props.accessibilityState).toEqual({ disabled: true });
     await press(play);
     expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
@@ -523,7 +568,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     mockGetClip.mockResolvedValue(CLIP_SET);
     mockEngine.exportShareVideo.mockImplementation(() => Promise.reject(Object.assign(new Error('x'), { code: 'E_ENCODE' })));
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
-    await press(hostsByLabel(tree, 'Play the video')[0]);
+    await press(hostsByLabel(tree, 'Play with your look')[0]);
     expect(mockToastShow).toHaveBeenCalledWith("Couldn't make the video. Try again.", { variant: 'error', duration: 7000 });
     expect(players(tree)).toHaveLength(0);
     expect(framers(tree)).toHaveLength(1);
@@ -545,7 +590,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     mockGetClip.mockResolvedValue(CLIP_SET);
     mockEngine.exportShareVideo.mockImplementation(() => new Promise(() => {}));
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
-    await press(hostsByLabel(tree, 'Play the video')[0]);
+    await press(hostsByLabel(tree, 'Play with your look')[0]);
     expect(tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'share-making-preview')).not.toHaveLength(0);
     expect(mockEngine.cancelExport).not.toHaveBeenCalled();
     await TestRenderer.act(async () => { tree.unmount(); });
