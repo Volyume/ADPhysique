@@ -20,6 +20,16 @@ describe('SEARCH_TABS (GAP row 28 + curated suggestions)', () => {
     expect(customTab.label).not.toBe('Custom');
   });
 
+  // D230 R15 (food level-up 2026-10-16): plain words, one name per thing.
+  // "Frequents" is not a word people use; the tab reads "Often". Keys are
+  // unchanged so state, telemetry and empty-copy keys stay stable.
+  test('the five labels read Recent, Suggested, Favourites, Often, More', () => {
+    expect(SEARCH_TABS.map((t) => t.label)).toEqual([
+      'Recent', 'Suggested', 'Favourites', 'Often', 'More',
+    ]);
+    expect(SEARCH_TABS.map((t) => t.label)).not.toContain('Frequents');
+  });
+
   test('Suggested has no selectTabRows list (the screen renders meals, not rows)', () => {
     expect(selectTabRows({ activeTab: 'suggested', query: '', lists: {} })).toEqual([]);
   });

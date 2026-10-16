@@ -183,12 +183,16 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
   test('keeps the plate log button slot-neutral on screen', () => {
     // Batch 1 lane-03 moved the top header onto the shared ModalHeader
     // component (was a bespoke <View style={styles.header}> with its own
-    // styles.headerTitle Text); the title itself is unchanged ("Add food",
-    // never the meal slot), which is what this test guards.
-    expect(SCREEN_SOURCE).toMatch(/<ModalHeader title="Add food" onClose=\{/);
+    // styles.headerTitle Text).
+    // REVERSED BY RULING (D230 R5, food level-up 2026-10-16): the header now
+    // says where the add is logging, "Add to <meal name>" through
+    // mealSlotLabel, so a renamed meal shows its own name. The plate bar's
+    // visible button stays slot-neutral ("Log N"); its accessibility label
+    // names the meal, as before.
+    expect(SCREEN_SOURCE).toMatch(/<ModalHeader title=\{`Add to \$\{mealSlotLabel\(mealSlot\)\}`\} onClose=\{/);
+    expect(SCREEN_SOURCE).not.toMatch(/<ModalHeader title="Add food"/);
     expect(SCREEN_SOURCE).not.toMatch(/headerSubtitle/);
     expect(SCREEN_SOURCE).not.toMatch(/>to \{mealSlotLabel\(mealSlot\)\}/);
-    expect(SCREEN_SOURCE).not.toMatch(/<ModalHeader title=\{`Add to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
     // Batch 2 wave B (B-2 Button adoption): the hand-rolled TouchableOpacity +
     // raw <Text> pair is now <Button title="Log selected" textStyle={styles.plateLogText}>.
     // CP-10 batch E (2026-07-10): live-themed, so textStyle now carries the

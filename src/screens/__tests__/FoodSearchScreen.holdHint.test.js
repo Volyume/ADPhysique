@@ -76,6 +76,18 @@ jest.mock('../../lib/food/db', () => ({
     food_ref: 'off:chicken', name: 'Chicken breast', kcal_100g: 165,
     protein_100g: 31, carbs_100g: 0, fat_100g: 3.6,
   })),
+  // RE-POINTED (D230 R18, food level-up 2026-10-16): the screen has resolved
+  // recents in ONE batched resolveSlotRecentRefs call and read the slot's
+  // remembered portions since D138, and this mock never carried either, so
+  // loadBrowse threw part-way and the old `catch (_) {}` hid it. That catch
+  // now logs its cause (logError, which reads the error-log buffer from
+  // AsyncStorage), so the harness carries the two calls the screen really
+  // makes. The pins below are unchanged: no hint flag is read or written.
+  resolveSlotRecentRefs: jest.fn((userId, refs) => Promise.resolve(new Map(refs.map((r) => [r, {
+    food_ref: r, name: 'Chicken breast', kcal_100g: 165,
+    protein_100g: 31, carbs_100g: 0, fat_100g: 3.6,
+  }])))),
+  getSlotRecentQuantities: jest.fn(() => Promise.resolve(new Map())),
 }));
 jest.mock('../../lib/database', () => ({ getNutritionTargets: jest.fn(() => Promise.resolve(null)) }));
 jest.mock('../../lib/food/curatedMeals', () => ({ getCuratedCandidates: jest.fn(() => []) }));

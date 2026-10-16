@@ -534,6 +534,33 @@ export async function getFoodEntriesForRange(userId, startDate, endDate) {
   );
 }
 
+/**
+ * The eaten-at evidence for "Around this time" (D230 R7): every ACTUAL entry
+ * with a known eaten time between two local day keys (inclusive), reduced to
+ * the four columns the pure ranker reads (food/aroundThisTime.js).
+ *
+ * PLANNED IS NOT EATEN: `is_planned = 0`, so unconfirmed meal-plan scaffolding
+ * never teaches what the person eats at this hour. A deleted row is not
+ * evidence either, and a row with no eaten_at (a bulk-confirmed plan row) has
+ * no clock time to compare, so it is left out rather than given a false one.
+ * Deterministic order (day, then time, then id) so the ranker's input never
+ * depends on the storage engine's row order.
+ */
+export async function getEntriesForClockWindow(userId, { fromDate, toDate } = {}) {
+  if (!userId || !fromDate || !toDate) return [];
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT food_ref, eaten_at, quantity_g, entry_date
+     FROM food_entries
+     WHERE user_id = ? AND entry_date BETWEEN ? AND ?
+       AND deleted_at IS NULL
+       AND is_planned = 0
+       AND eaten_at IS NOT NULL
+     ORDER BY entry_date, eaten_at, id`,
+    [userId, fromDate, toDate]
+  );
+}
+
 // ─── food_frequents (GAP row 28, server-computed cache) ──────────────────
 //
 // Derived data: the server recomputes the top-20-over-30-days nightly

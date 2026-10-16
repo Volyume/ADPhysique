@@ -45,7 +45,7 @@ import FeatureRow from '../FeatureRow';
 import SourceChip from '../SourceChip';
 import MealSection from '../MealSection';
 import { EntryRow, SwipeableEntryRow, friendlyFoodName } from '../EntryRow';
-import FoodRow, { SOURCE_LABEL, kcalForServing } from '../FoodRow';
+import FoodRow, { SOURCE_LABEL, kcalForServing, rowPortion } from '../FoodRow';
 import { colors } from '../../../styles/theme';
 
 describe('FeatureRow (the diary doors, D230 R1 and R2)', () => {
@@ -448,11 +448,16 @@ describe('FoodRow', () => {
     expect(JSON.stringify(tree)).not.toContain('Starred');
   });
 
-  test('falls back to "<serving_g>g" when no serving_label', () => {
+  // RE-POINTED (D230 R6, food level-up 2026-10-16): the row's portion now
+  // reads in the diary row's grammar, a space before the unit ("36 g", as
+  // EntryRow's "60 g"). Same truth: with no serving name the row shows the
+  // serving's grams, never "nullg".
+  test('falls back to "<serving_g> g" when no serving_label', () => {
     const tree = create(
       <FoodRow food={{ ...baseFood, serving_label: null }} isFav={false} onPress={() => {}} />
     ).toJSON();
-    expect(JSON.stringify(tree)).toContain('36g');
+    expect(JSON.stringify(tree)).toContain('36 g');
+    expect(JSON.stringify(tree)).not.toContain('nullg');
   });
 
   test('shows computed kcal-per-serving', () => {
@@ -465,23 +470,27 @@ describe('FoodRow', () => {
   // D138: the fastest path (a bare row + button, no sheet) must be named
   // plainly -- "Add", not the internal "Plate" concept the multi-add tray
   // used to leak into the label.
-  test('the plus-button default label reads "Add", with a plain a11y name', () => {
+  // RE-POINTED (D230 R6): the control is now the bare "+" glyph (ink, on a
+  // 48 dp target) with no visible word, so the plain name lives where a
+  // glyph's name lives, its accessibility label, and the visible "Add" pill
+  // text is gone. Same truth: named "Add <food>", never "Plate".
+  test('the plus-button reads as "Add <food>", never the internal "Plate"', () => {
     const tree = create(<FoodRow food={baseFood} isFav={false} onPress={() => {}} onAdd={() => {}} />);
     const btn = tree.root.findByProps({ accessibilityLabel: 'Add Wholemeal bread' });
     expect(btn).toBeTruthy();
-    const labelTexts = btn.findAll((n) => n.children?.some((c) => typeof c === 'string'))
-      .map((n) => n.children.join(''));
-    expect(labelTexts).toContain('Add');
+    expect(btn.props.accessibilityRole).toBe('button');
+    expect(JSON.stringify(tree.toJSON())).not.toMatch(/Plate/);
   });
 
-  test('an explicit addLabel/addAccessibilityLabel still overrides the default', () => {
+  // RE-POINTED (D230 R6): `addLabel` (the visible pill word) went with the
+  // pill; the override that remains is the accessibility label's.
+  test('an explicit addAccessibilityLabel still overrides the default', () => {
     const tree = create(
-      <FoodRow food={baseFood} isFav={false} onPress={() => {}} onAdd={() => {}} addLabel="Log" addAccessibilityLabel="Custom label" />
+      <FoodRow food={baseFood} isFav={false} onPress={() => {}} onAdd={() => {}} addAccessibilityLabel="Custom label" />
     );
     const btn = tree.root.findByProps({ accessibilityLabel: 'Custom label' });
-    const labelTexts = btn.findAll((n) => n.children?.some((c) => typeof c === 'string'))
-      .map((n) => n.children.join(''));
-    expect(labelTexts).toContain('Log');
+    expect(btn).toBeTruthy();
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Add Wholemeal bread')).toHaveLength(0);
   });
 
   // D138 item 6: the More tab's edit affordance -- a trailing pencil, never
@@ -516,6 +525,132 @@ describe('FoodRow', () => {
   });
 });
 
+// D230 R6 (food level-up 2026-10-16): every search row speaks the diary row's
+// grammar. Line one the name; line two the brand, the portion and its energy;
+// line three the macros for that same portion as a quiet caption, spoken in
+// words. The "+" adds exactly the portion shown, an ink glyph on a 48 dp
+// target, and a "don't suggest" row carries none.
+describe('FoodRow three-line grammar (D230 R6)', () => {
+  const { touchTarget } = require('../../../styles/layout');
+  // 247 kcal, 8.9 g protein, 47 g carbs, 2.4 g fat per 100 g; one slice is 36 g:
+  // 89 kcal, 3.2 P, 16.9 C, 0.9 F for the slice.
+  const bread = {
+    food_ref: 'off:abc',
+    name: 'Wholemeal bread',
+    brand: 'Hovis',
+    serving_g: 36,
+    serving_label: 'slice',
+    kcal_100g: 247,
+    protein_100g: 8.9,
+    carbs_100g: 47,
+    fat_100g: 2.4,
+    source: 'off',
+  };
+  const texts = (tree) => tree.root.findAll((n) => typeof n.type === 'string'
+    && Array.isArray(n.children) && n.children.every((c) => typeof c === 'string'))
+    .map((n) => n.children.join(''));
+
+  test('name, then brand · portion · energy (source last), then the macro caption', () => {
+    const tree = create(<FoodRow food={bread} onPress={() => {}} onAdd={() => {}} />);
+    const lines = texts(tree);
+    expect(lines).toContain('Wholemeal bread');
+    expect(lines).toContain('Hovis · 1 slice (36 g) · 89 kcal · Food Facts');
+    expect(lines).toContain('3 P · 17 C · 1 F');
+  });
+
+  test('the macro line is a caption and the row speaks the macros in words', () => {
+    const tree = create(<FoodRow food={bread} onPress={() => {}} onAdd={() => {}} />);
+    const macroNode = tree.root.findAll((n) => typeof n.type === 'string'
+      && Array.isArray(n.children) && n.children.join('') === '3 P · 17 C · 1 F')[0];
+    const flat = Object.assign({}, ...[].concat(macroNode.props.style).flat(Infinity).filter(Boolean));
+    expect(flat.fontSize).toBe(require('../../../styles/theme').type.caption.fontSize);
+    const row = tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string'
+      && n.props.accessibilityLabel.startsWith('Wholemeal bread'))[0];
+    expect(row.props.accessibilityLabel).toBe(
+      'Wholemeal bread, Hovis, 1 slice, 36 grams, 89 calories, 3 grams protein, 17 carbs, 1 fat.',
+    );
+    expect(row.props.accessibilityLabel).not.toMatch(/\b\d+ ?[PCF]\b/);
+  });
+
+  test('a remembered portion is the portion shown, and the macros follow it', () => {
+    const tree = create(<FoodRow food={{ ...bread, last_quantity_g: 72 }} onPress={() => {}} onAdd={() => {}} />);
+    const lines = texts(tree);
+    expect(lines).toContain('Hovis · 72 g · 178 kcal · Food Facts');
+    expect(lines).toContain('6 P · 34 C · 2 F');
+  });
+
+  test('the "+" is an ink glyph on a 48 dp target and calls onAdd', () => {
+    const onAdd = jest.fn();
+    const onPress = jest.fn();
+    const tree = create(<FoodRow food={bread} onPress={onPress} onAdd={onAdd} />);
+    const btn = tree.root.findByProps({ accessibilityLabel: 'Add Wholemeal bread' });
+    const flat = Object.assign({}, ...[].concat(btn.props.style).flat(Infinity).filter(Boolean));
+    expect(flat.width).toBeGreaterThanOrEqual(touchTarget.minimum);
+    expect(flat.height).toBeGreaterThanOrEqual(touchTarget.minimum);
+    const glyph = btn.findAll((n) => n.props?.name === 'add')[0];
+    expect(glyph.props.color).toBe(colors.textSecondary);
+    expect(glyph.props.color).not.toBe(colors.primary);
+    expect(btn.props.accessibilityHint).toBe('Adds 1 slice, 36 grams to the foods to log.');
+    btn.props.onPress();
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  test('a "don\'t suggest" row carries no "+" (its body still opens the sheet)', () => {
+    const onPress = jest.fn();
+    const tree = create(<FoodRow food={bread} preference="dislike" onPress={onPress} onAdd={() => {}} />);
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Add Wholemeal bread')).toHaveLength(0);
+    const row = tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string'
+      && n.props.accessibilityLabel.startsWith('Wholemeal bread'))[0];
+    expect(row.props.accessibilityLabel).toMatch(/Not suggested\.$/);
+    row.props.onPress();
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  test('a favourite shows a small ink star beside the name; the word is spoken, not shown', () => {
+    const tree = create(<FoodRow food={bread} preference="fav" onPress={() => {}} onAdd={() => {}} />);
+    expect(texts(tree).some((t) => t.includes('Starred'))).toBe(false);
+    const star = tree.root.findAll((n) => n.props?.name === 'star')[0];
+    expect(star).toBeTruthy();
+    expect(star.props.color).toBe(colors.textSecondary);
+    const row = tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string'
+      && n.props.accessibilityLabel.startsWith('Wholemeal bread'))[0];
+    expect(row.props.accessibilityLabel).toMatch(/ Starred\.$/);
+  });
+});
+
+describe('rowPortion (D230 R6: the portion shown is the portion the "+" adds)', () => {
+  test('one named serving reads "1 slice (36 g)"; a counted label keeps its count', () => {
+    expect(rowPortion({ serving_g: 36, serving_label: 'slice' }).text).toBe('1 slice (36 g)');
+    expect(rowPortion({ serving_g: 36, serving_label: '1 slice' }).text).toBe('1 slice (36 g)');
+    expect(rowPortion({ serving_g: 30, serving_label: '2 tbsp' }).text).toBe('2 tbsp (30 g)');
+  });
+  test('a label that already states its amount is shown as it is', () => {
+    expect(rowPortion({ serving_g: 30, serving_label: '30 g' }).text).toBe('30 g');
+    expect(rowPortion({ serving_g: 36, serving_label: '1 slice (36g)' }).text).toBe('1 slice (36g)');
+  });
+  test('a unit-only label names the serving figure ("330 ml")', () => {
+    expect(rowPortion({ serving_g: 330, serving_label: 'ml' })).toEqual(
+      expect.objectContaining({ grams: 330, text: '330 ml', spoken: '330 millilitres' }),
+    );
+  });
+  test('no named serving reads in grams; no serving at all is 100 g', () => {
+    expect(rowPortion({ serving_g: 36, serving_label: null }).text).toBe('36 g');
+    expect(rowPortion({}).text).toBe('100 g');
+    expect(rowPortion({}).grams).toBe(100);
+  });
+  test('a remembered portion wins and reads in grams unless it is exactly one serving', () => {
+    expect(rowPortion({ serving_g: 36, serving_label: 'slice', last_quantity_g: 72 })).toEqual(
+      expect.objectContaining({ grams: 72, text: '72 g', spoken: '72 grams' }),
+    );
+    expect(rowPortion({ serving_g: 36, serving_label: 'slice', last_quantity_g: 36 }).text).toBe('1 slice (36 g)');
+  });
+  test('a saved meal shows its own label, never a gram figure', () => {
+    expect(rowPortion({ food_ref: 'meal:sm-1', savedMealId: 'sm-1', serving_g: null, serving_label: '3 foods' }).text)
+      .toBe('3 foods');
+  });
+});
+
 describe('kcalForServing', () => {
   test('rounds (kcal_100g * serving_g) / 100', () => {
     expect(kcalForServing({ kcal_100g: 247, serving_g: 36 })).toBe(89);
@@ -536,13 +671,19 @@ describe('SOURCE_LABEL', () => {
   // O18 (comprehension/trust audit 2026-08-06): 'off' renamed 'OFF' ->
   // 'Food Facts' (readable short form; 'OFF' read as "food gone off" to a
   // first-time user). The other four sources were already plain language.
-  test('matches the locked five sources', () => {
+  // RE-POINTED (D230 R15, food level-up 2026-10-16): the one source
+  // vocabulary. "Snapped" becomes "From a label", "You" becomes "Yours", and
+  // the two sources that had no name at all (a curated staple, a recipe) gain
+  // one. Same truth: every source the row shows is named in plain words.
+  test('matches the locked source vocabulary', () => {
     expect(SOURCE_LABEL).toEqual({
       off: 'Food Facts',
-      usda: 'USDA',
       cofid: 'CoFID',
-      user_ocr: 'Snapped',
-      custom: 'You',
+      usda: 'USDA',
+      user_ocr: 'From a label',
+      custom: 'Yours',
+      curated: 'Volyume',
+      recipe: 'Recipe',
     });
   });
 });

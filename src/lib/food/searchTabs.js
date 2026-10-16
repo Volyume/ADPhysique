@@ -15,11 +15,13 @@
 // "Custom" read as "create a custom food" and buried the rest. "More"
 // matches how those other actions are actually being found. The `key`
 // stays 'custom' (state, telemetry and empty-copy keys are unchanged).
+// D230 R15 (food level-up 2026-10-16): "Frequents" is not a word people use;
+// the tab reads "Often". The key stays 'frequents' for the same reason.
 export const SEARCH_TABS = [
   { key: 'recents', label: 'Recent' },
   { key: 'suggested', label: 'Suggested' },
   { key: 'favourites', label: 'Favourites' },
-  { key: 'frequents', label: 'Frequents' },
+  { key: 'frequents', label: 'Often' },
   { key: 'custom', label: 'More' },
 ];
 

@@ -14,6 +14,13 @@
  * Source-level guard (fs.readFileSync + regex), not a full screen mount:
  * cheap, and it pins the actual invariant (imports the constant, doesn't
  * paste the string) rather than incidental render details.
+ *
+ * RE-POINTED (D230 R3, food level-up 2026-10-16): explanation is on demand,
+ * so the Suggested tab no longer carries the additions note at all; the one
+ * sentence lives only in the meal's own sheet (CuratedMealSheet), where the
+ * additions are shown. The invariant this suite exists for is unchanged and
+ * now holds the strongest way: the screen carries NO copy of the intro, so
+ * the app cannot show two different sentences for the same concept.
  */
 import fs from 'fs';
 import path from 'path';
@@ -28,11 +35,20 @@ const OLD_HARDCODED_INTRO =
   'A starting point, not a rule. Season and tweak to taste with herbs, spices, citrus or sauces you enjoy.';
 
 describe('FoodSearchScreen additions-intro copy (single source, no duplicate string)', () => {
-  test('imports ADDITIONS_INTRO from the canonical mealAdditions module', () => {
-    expect(FOOD_SEARCH_SCREEN).toMatch(
+  test('carries no second copy of the additions intro: not pasted, not rendered', () => {
+    expect(FOOD_SEARCH_SCREEN).not.toMatch(
       /import\s*\{\s*ADDITIONS_INTRO\s*\}\s*from\s*['"]\.\.\/lib\/food\/mealAdditions['"]/
     );
-    expect(FOOD_SEARCH_SCREEN).toContain('{ADDITIONS_INTRO}');
+    expect(FOOD_SEARCH_SCREEN).not.toContain('{ADDITIONS_INTRO}');
+    expect(FOOD_SEARCH_SCREEN).not.toContain(ADDITIONS_INTRO);
+  });
+
+  test('the one source still reaches the person where the additions are shown', () => {
+    const sheet = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'components', 'food', 'CuratedMealSheet.js'),
+      'utf8',
+    );
+    expect(sheet).toMatch(/ADDITIONS_INTRO/);
   });
 
   test('no longer pastes its own copy of the old intro text', () => {

@@ -4,8 +4,8 @@
  * Locked in UI_FLOWS_LOCKED.md and FOOD_DATA_STRATEGY_LOCKED.md.
  *
  * Sits between the Diary "Add food" tap and the actual log write. The
- * top is a browse subnav (GAP row 28): Recents, Suggested, Favourites,
- * Frequents, Custom. The search box under it searches the food database
+ * top is a browse subnav (GAP row 28): Recent, Suggested, Favourites,
+ * Often, More. The search box under it searches the food database
  * from any tab (250ms-debounced waterfall: local cache first, then live
  * OFF + USDA), nothing shown until a 2+ char query. With no query each
  * tab shows its own list. Suggested lists curated meals, not food rows.
@@ -29,7 +29,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import useTheme from '../hooks/useTheme';
+import SectionLabel from '../components/SectionLabel';
+import { logError } from '../lib/errorLog';
 import { SkeletonRow } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import {
@@ -37,7 +40,10 @@ import {
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
   upsertSlotRecent, getSlotRecents, getSlotRecentQuantities, resolveSlotRecentRefs,
+  getEntriesForClockWindow,
 } from '../lib/food/db';
+import { rankAroundThisTime } from '../lib/food/aroundThisTime';
+import { entryDateLine, shiftDate } from '../lib/food/diaryDates';
 import { getNutritionTargets } from '../lib/database';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
 import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
@@ -64,7 +70,6 @@ import Button from '../components/Button';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import CuratedMealSheet from '../components/food/CuratedMealSheet';
-import { ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import BottomSheet from '../components/BottomSheet';
 import FoodRow from '../components/food/FoodRow';
 import SearchBar from '../components/SearchBar';
@@ -84,6 +89,10 @@ const EMPTY_ICON = {
   favourites: 'star-outline',
   frequents: 'repeat-outline',
 };
+
+// D230 R7: "Around this time" looks back over the last 60 days (other days
+// only), so a habit counts while it is still a habit.
+const AROUND_LOOKBACK_DAYS = 60;
 
 export default function FoodSearchScreen({ navigation, route }) {
   const { user, userProfile, energyUnit } = useAppStore(useShallow((s) => ({
@@ -129,6 +138,10 @@ export default function FoodSearchScreen({ navigation, route }) {
   const [recentsLoaded, setRecentsLoaded] = useState(false);
   // food_ref -> last portion used in THIS slot (Campaign 17B job 2).
   const [slotPortions, setSlotPortions] = useState(() => new Map());
+  // D230 R7: the foods eaten around this clock time on other days, resolved,
+  // each carrying the portion last eaten (last_quantity_g) so its "+" and its
+  // sheet both start from that portion. Empty unless adding to today.
+  const [aroundRows, setAroundRows] = useState([]);
   const [favouriteRows, setFavouriteRows] = useState([]);
   const [favouriteRefs, setFavouriteRefs] = useState(new Set());
   const [dislikeRefs, setDislikeRefs] = useState(new Set());
@@ -151,6 +164,35 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   const debounceRef = useRef(null);
   const searchRequestRef = useRef(0);
+
+  // D230 R7: "Around this time". What the person has eaten within 90 minutes
+  // of this clock time on other days in the last 60 days, ranked by how
+  // often (aroundThisTime.js, pure), the slot recents left out so no food is
+  // offered twice, then resolved in ONE batched call. Shown only when adding
+  // to today: the clock time says nothing about another day. Local data and
+  // a pure ranking only: no network, no randomness.
+  const loadAroundThisTime = useCallback(async (slotRecentRefs) => {
+    const today = todayLocalKey();
+    if (!userId || entryDate !== today) { setAroundRows([]); return; }
+    try {
+      const entries = await getEntriesForClockWindow(userId, {
+        fromDate: shiftDate(today, -AROUND_LOOKBACK_DAYS),
+        toDate: shiftDate(today, -1),
+      });
+      const ranked = rankAroundThisTime(entries, { nowMs: Date.now(), excludeRefs: slotRecentRefs });
+      if (!ranked.length) { setAroundRows([]); return; }
+      const refMap = await resolveFoodRefs(userId, ranked.map((r) => r.foodRef));
+      const rows = [];
+      for (const r of ranked) {
+        const food = refMap.get(r.foodRef);
+        if (food) rows.push({ ...food, last_quantity_g: r.quantityG });
+      }
+      setAroundRows(rows);
+    } catch (e) {
+      logError('FoodSearchScreen.loadAroundThisTime', e, { mealSlot });
+      setAroundRows([]);
+    }
+  }, [userId, entryDate, mealSlot]);
 
   // Browse lists (Recents / Favourites / Custom) + the preference ref
   // sets that drive each row's star/exclude icon. Reloaded on focus so
@@ -186,6 +228,12 @@ export default function FoodSearchScreen({ navigation, route }) {
         if (food) recentResolved.push({ ...food, last_quantity_g: r.last_quantity_g });
       }
       setRecents(recentResolved);
+      // D230 R7: excludes this slot's own recents (the raw list, so a food
+      // that failed to resolve above is still never offered twice). Runs
+      // beside the loads below and is awaited before this reports back, so
+      // the search box's autofocus (below) knows whether there is anything
+      // to tap.
+      const aroundLoad = loadAroundThisTime(recentRows.map((r) => r.food_ref));
       // Campaign 17B job 2: the remembered portion for EVERY food in this
       // slot, not just the ten in the list above. A food reached through
       // search, favourites, frequents or custom now opens the sheet at the
@@ -193,7 +241,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       // Preselected only - never auto-submitted; the sheet still confirms.
       getSlotRecentQuantities(userId, mealSlot)
         .then((m) => setSlotPortions(m))
-        .catch(() => {});
+        .catch((e) => logError('FoodSearchScreen.loadSlotPortions', e, { mealSlot }));
 
       setFavouriteRefs(new Set(favRows.map((f) => f.food_ref)));
       // D138 latency ruling: one batched resolve instead of one round-trip
@@ -216,14 +264,17 @@ export default function FoodSearchScreen({ navigation, route }) {
         food_ref: `custom:${c.id}`,
         source: 'custom',
       })));
-    } catch (_) { /* tolerate */ }
-    finally {
+      await aroundLoad;
+    } catch (e) {
+      // Tolerated: the tabs show their empty states and search still works.
+      logError('FoodSearchScreen.loadBrowse', e, { mealSlot });
+    } finally {
       // D138: gate the search box's autoFocus on this having actually
       // reported back (success or failure), never on the pre-load empty
       // state, so a genuine "no recents" case autofocuses exactly once.
       setRecentsLoaded(true);
     }
-  }, [userId, mealSlot]);
+  }, [userId, mealSlot, loadAroundThisTime]);
 
   // Frequents is server-computed; pull a fresh snapshot if the local
   // cache is stale, then resolve the refs for display. Lazy: only runs
@@ -244,7 +295,10 @@ export default function FoodSearchScreen({ navigation, route }) {
         if (food) resolved.push(food);
       }
       setFrequentRows(resolved);
-    } catch (_) { /* tolerate */ }
+    } catch (e) {
+      // Tolerated: the tab shows the last cache or its empty state.
+      logError('FoodSearchScreen.loadFrequents', e);
+    }
   }, [userId]);
 
   // The user's own foods (favourites, frequents, this slot's "add again"
@@ -351,7 +405,8 @@ export default function FoodSearchScreen({ navigation, route }) {
       });
       setSuggestions(ranked);
       setSuggestMeta({ hasTargets: true, remaining, perMeal });
-    } catch (_) {
+    } catch (e) {
+      logError('FoodSearchScreen.loadSuggested', e, { mealSlot });
       setSuggestions([]);
       setSuggestMeta(null);
     } finally {
@@ -393,14 +448,16 @@ export default function FoodSearchScreen({ navigation, route }) {
           try {
             const state = await NetInfo.fetch();
             offline = state?.isConnected === false || state?.isInternetReachable === false;
-          } catch (_) {
+          } catch (e) {
             // Connectivity probe itself failed: leave the generic miss copy.
+            logError('FoodSearchScreen.connectivityProbe', e);
           }
           if (searchRequestRef.current === requestId) setSearchOffline(offline);
         } else if (searchRequestRef.current === requestId) {
           setSearchOffline(false);
         }
-      } catch (_) {
+      } catch (e) {
+        logError('FoodSearchScreen.search', e, { queryLength: q.length });
         if (searchRequestRef.current !== requestId) return;
         setResults([]);
         setSearchOffline(false);
@@ -440,6 +497,10 @@ export default function FoodSearchScreen({ navigation, route }) {
   const plateKcal = useMemo(() => plate.reduce((s, it) => s + (it.kcal || 0), 0), [plate]);
 
   // Log every plate item to the meal, then return to the diary.
+  // D230 R6: the plate closes with the house undo toast ("3 foods added to
+  // Breakfast.", one food: "Oats added to Breakfast."), and its Undo removes
+  // every row this log wrote: the ids logFoodEntry returns are collected as
+  // they land. The per-food write itself is unchanged (lane 3A batches it).
   async function logPlate() {
     if (!plate.length) return;
     // CALC-3: in-flight guard so a double-tap can't log the whole plate twice
@@ -447,11 +508,13 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (loggingPlateRef.current) return;
     loggingPlateRef.current = true;
     const total = plate.length;
+    const mealName = mealSlotLabel(mealSlot);
+    const writtenIds = [];
     let logged = 0;
     try {
       for (const it of plate) {
         // eslint-disable-next-line no-await-in-loop
-        await logFoodEntry(userId, {
+        const entryId = await logFoodEntry(userId, {
           entryDate,
           mealSlot,
           foodRef: it.food.food_ref,
@@ -462,14 +525,23 @@ export default function FoodSearchScreen({ navigation, route }) {
           fatG: it.fatG,
           fibreG: it.fibreG,
         });
+        writtenIds.push(entryId);
         logged++;
         // eslint-disable-next-line no-await-in-loop
         await upsertSlotRecent(userId, {
           mealSlot,
           foodRef: it.food.food_ref,
           quantityG: it.quantityG,
-        }).catch(() => {}); // derived memory only; never fail the log
+        }).catch((e) => logError('FoodSearchScreen.logPlate.slotRecent', e, { mealSlot })); // derived memory only; never fail the log
       }
+      const message = total === 1
+        ? `${plate[0].food?.name ?? 'Food'} added to ${mealName}.`
+        : `${total} foods added to ${mealName}.`;
+      // The toast provider is app-level, so it survives the goBack below.
+      toast.show(message, {
+        variant: 'undo',
+        action: { label: 'Undo', onPress: () => undoPlate(writtenIds) },
+      });
       setPlate([]);
       setShowPlate(false);
       navigation.goBack();
@@ -477,17 +549,32 @@ export default function FoodSearchScreen({ navigation, route }) {
       // FF-007: a mid-plate write failure used to leave the plate up with no
       // feedback. Tell the user what actually logged, drop the logged items so a
       // retry can't double-log them (entries are sequential), and stay on screen.
-      // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('FoodSearch.logPlate', e); } catch (_) {}
+      logError('FoodSearchScreen.logPlate', e, { mealSlot, logged, total });
       toast.show(
         logged > 0
-          ? `Logged ${logged} of ${total}. The rest didn't save, try again.`
-          : "Couldn't log those foods, try again.",
+          ? `${logged} of ${total} foods were added to ${mealName}. The rest were not. Try again in a moment.`
+          : total === 1
+            ? 'That food was not added. Try again in a moment.'
+            : 'Those foods were not added. Try again in a moment.',
         { variant: 'error', duration: 5000 },
       );
       if (logged > 0) setPlate((p) => p.slice(logged));
     } finally {
       loggingPlateRef.current = false;
+    }
+  }
+
+  // The plate toast's Undo: the existing delete path for every row the log
+  // wrote, in one loop, under the one toast.
+  async function undoPlate(ids) {
+    try {
+      for (const id of ids) {
+        // eslint-disable-next-line no-await-in-loop
+        await deleteFoodEntry(id, userId);
+      }
+    } catch (e) {
+      logError('FoodSearchScreen.undoPlate', e, { count: ids.length });
+      toast.show('Some of those foods were not removed. You can remove them from the diary.', { variant: 'error', duration: 5000 });
     }
   }
 
@@ -564,7 +651,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       mealSlot: chosenSlot,
       foodRef: food.food_ref,
       quantityG,
-    })).catch(() => {}); // derived memory only; never fail the log
+    })).catch((e) => logError('FoodSearchScreen.confirmLog.slotRecent', e, { mealSlot: chosenSlot })); // derived memory only; never fail the log
     // A2 (first-week trust): the FIRST food log (and every log after) gets the
     // same success + Undo toast as a re-log or a diary "usual", previously
     // this path (the sheet's "Add to diary") showed nothing at all. Exact
@@ -590,9 +677,8 @@ export default function FoodSearchScreen({ navigation, route }) {
       navigation.goBack();
     } catch (e) {
       // FF-007: surface the failure instead of only resetting the spinner.
-      // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('FoodSearch.logCuratedMeal', e, { mealId: s.id }); } catch (_) {}
-      toast.show("Couldn't add that meal, try again.", { variant: 'error', duration: 4000 });
+      logError('FoodSearchScreen.logCuratedMeal', e, { mealId: s.id });
+      toast.show('That meal was not added. Try again in a moment.', { variant: 'error', duration: 4000 });
       setLoggingMealId(null);
     }
   }
@@ -626,12 +712,11 @@ export default function FoodSearchScreen({ navigation, route }) {
         mealSlot,
         foodRef: s.foodRef,
         quantityG: s.quantityG,
-      })).catch(() => {}); // derived memory only; never fail the log
+      })).catch((err) => logError('FoodSearchScreen.logSuggestedFood.slotRecent', err, { mealSlot })); // derived memory only; never fail the log
       navigation.goBack();
     } catch (e) {
-      // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('FoodSearch.logSuggestedFood', e, { foodRef: s.foodRef }); } catch (_) {}
-      toast.show("Couldn't add that food, try again.", { variant: 'error', duration: 4000 });
+      logError('FoodSearchScreen.logSuggestedFood', e, { foodRef: s.foodRef });
+      toast.show('That food was not added. Try again in a moment.', { variant: 'error', duration: 4000 });
       setLoggingMealId(null);
     }
   }
@@ -660,7 +745,10 @@ export default function FoodSearchScreen({ navigation, route }) {
         : 'Preference cleared';
       toast.show(msg);
       loadBrowse();
-    } catch (_) {}
+    } catch (e) {
+      logError('FoodSearchScreen.cyclePreference', e, { foodRef: food.food_ref });
+      toast.show('That choice was not saved. Try again in a moment.', { variant: 'error', duration: 4000 });
+    }
   }
 
   // Database "no match" fallback replaces the screen so Back lands on
@@ -757,12 +845,19 @@ export default function FoodSearchScreen({ navigation, route }) {
         </TouchableOpacity>
       );
     }
-    const food = item.food;
+    return renderFoodRow(item.food);
+  }
+
+  // One food row, the same grammar wherever it appears (a tab's list, the
+  // search results, "Around this time"): a tap opens the sheet, the "+" adds
+  // the shown portion to the foods to log, a hold cycles the preference.
+  function renderFoodRow(food, key) {
     // A saved meal has no single-food gram editor. Open its confirmation
     // surface with the exact meal preselected; never fan it out from a row tap.
     if (typeof food.food_ref === 'string' && food.food_ref.startsWith('meal:')) {
       return (
         <FoodRow
+          key={key}
           food={food}
           preference={null}
           onPress={() => navigation.navigate('MyMeals', {
@@ -781,6 +876,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     const isEditableCustomFood = activeTab === 'custom' && food.source === 'custom' && !!food.id;
     return (
       <FoodRow
+        key={key}
         food={food}
         preference={preference}
         onPress={() => openPicker(food)}
@@ -855,30 +951,19 @@ export default function FoodSearchScreen({ navigation, route }) {
         keyExtractor={(s) => (s.kind === 'food' ? `food:${s.foodRef}` : `meal:${s.id}`)}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
-        ListHeaderComponent={
+        // D230 R3 (food level-up 2026-10-16): explanation is on demand. The
+        // standing additions note that sat here (Founder 2026-06-30: a
+        // suggested meal is a base to build on) now lives only where the
+        // additions themselves are shown, the meal's own sheet
+        // (CuratedMealSheet, ADDITIONS_INTRO from mealAdditions.js, the one
+        // source), so this list carries no second copy of it.
+        ListHeaderComponent={suggestMeta?.perMeal ? (
           <View>
-            {suggestMeta?.perMeal ? (
-              <Text style={[styles.suggestHint, live.suggestHint]}>
-                Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {toEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
-              </Text>
-            ) : null}
-            {/* Founder 2026-06-30: novices don't realise a suggested meal is a
-                base they can build on (season it, add veg, add flavour), not
-                a fixed prescription. A quiet, pro-food note,
-                framed around flavour/enjoyment, never diet-culture restriction.
-                L05 copy audit (2026-07-09): this used to paste its own copy of
-                the additions intro, which drifted from the canonical wording
-                when D12.4/D13 reframed it. Now imports ADDITIONS_INTRO from
-                mealAdditions.js (single source, also used by CuratedMealSheet)
-                so the two can never say different things again. */}
-            <View style={styles.suggestNoteRow}>
-              <Ionicons name="leaf-outline" size={13} color={t.colors.textMuted} style={{ marginTop: spacing.hair }} />
-              <Text style={[styles.suggestNote, live.suggestNote]}>
-                {ADDITIONS_INTRO}
-              </Text>
-            </View>
+            <Text style={[styles.suggestHint, live.suggestHint]}>
+              Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {toEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
+            </Text>
           </View>
-        }
+        ) : undefined}
         renderItem={({ item }) => {
           const isFood = item.kind === 'food';
           const busyKey = isFood ? item.foodRef : item.id;
@@ -908,9 +993,31 @@ export default function FoodSearchScreen({ navigation, route }) {
     );
   }
 
+  // D230 R5: the day this add lands on, said once under the tabs when it is
+  // not today ("For Tuesday 14 October."), in the add sheet's own words
+  // (diaryDates.entryDateLine, null on today so the line is absent then).
+  const dateLine = entryDateLine(entryDate);
+  // D230 R7: "Around this time" sits above the slot recents on the Recent tab,
+  // only while adding to today and only when it has something to offer.
+  const showAround = activeTab === 'recents'
+    && query.trim().length < 2
+    && entryDate === todayLocalKey()
+    && aroundRows.length > 0;
+  const aroundHeader = showAround ? (
+    <View>
+      <SectionLabel heading style={styles.sectionLabel}>Around this time</SectionLabel>
+      {aroundRows.map((food) => renderFoodRow(food, `around-${food.food_ref}`))}
+      {recents.length > 0 ? (
+        <SectionLabel heading style={styles.sectionLabel}>{`Recent at ${mealSlotLabel(mealSlot)}`}</SectionLabel>
+      ) : null}
+    </View>
+  ) : undefined;
+
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-      <ModalHeader title="Add food" onClose={() => navigation.goBack()} />
+      {/* D230 R5: the header says where this add is logging, by the meal's
+          own name (mealSlotLabel, so a renamed meal shows its name). */}
+      <ModalHeader title={`Add to ${mealSlotLabel(mealSlot)}`} onClose={() => navigation.goBack()} />
 
       <ScrollView
         horizontal
@@ -919,6 +1026,11 @@ export default function FoodSearchScreen({ navigation, route }) {
         contentContainerStyle={styles.tabBarContent}
         keyboardShouldPersistTaps="handled"
       >
+        {/* D230 R4/R16: still a tab strip (role tab, selected state), each
+            tab a full 48 dp target with no hit slop needed, and the selected
+            tab drawn in ink (WindowChips' inkSelected treatment: the label
+            and the rule beneath it in textPrimary, the rest in textMuted).
+            Amber stays on the thing to do, never on a control's state. */}
         {SEARCH_TABS.map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -932,6 +1044,8 @@ export default function FoodSearchScreen({ navigation, route }) {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {dateLine ? <Text style={[styles.dateLine, live.dateLine]}>{dateLine}</Text> : null}
 
       {/* NU-9: the search box renders on EVERY tab, including Suggested. The
           locked design intent (searchTabs.js header) is a persistent search
@@ -950,27 +1064,25 @@ export default function FoodSearchScreen({ navigation, route }) {
         placeholder="Search foods or brands"
         accessibilityLabel="Search foods or brands"
         loading={searching}
-        autoFocus={recentsLoaded && recents.length === 0}
+        // D230 R7: "Around this time" is something to tap too, so it keeps
+        // the keyboard down as the slot recents do (a meal with no history of
+        // its own, the very case it exists for).
+        autoFocus={recentsLoaded && recents.length === 0 && aroundRows.length === 0}
         style={styles.searchBar}
       />
 
+      {/* D230 R3: the standing provenance line that sat here ("Saved foods
+          work offline...") is gone; the offline fact is said where it
+          matters, in the offline empty state of a search. */}
       {activeTab === 'suggested' && query.trim().length < 2 ? renderSuggested() : (
       <>
-      {/* Wave-1 A6: name the UK data moat on the pre-typing state. Hidden the
-          moment a live query (2+ chars) takes over, so it never competes with
-          results. */}
-      {query.trim().length < 2 ? (
-        <Text style={[styles.provenanceNote, live.provenanceNote]}>
-          Saved foods work offline. Live search can also check trusted UK generics and branded products.
-        </Text>
-      ) : null}
-
       <FlashList
         data={listData}
         keyExtractor={(i) => i.key}
         renderItem={renderItem}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
+        ListHeaderComponent={aroundHeader}
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={
           activeTab !== 'custom' && query.trim().length >= 2 && results.length > 0 ? (
@@ -1115,29 +1227,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     alignItems: 'center',
   },
+  // D230 R4/R16: every tab is at least the 48 dp touch target by its own
+  // height (no hit slop), the label centred and the rule on the bottom edge.
   tab: {
+    minHeight: touchTarget.minimum,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
     ...type.label,
     color: colors.textMuted,
-    paddingBottom: spacing.sm,
   },
-  tabLabelActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  tabLabelActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
   tabUnderline: {
-    height: 2, width: '100%', backgroundColor: 'transparent',
+    position: 'absolute', left: spacing.md, right: spacing.md, bottom: 0,
+    height: 2, backgroundColor: 'transparent',
     borderRadius: radius.hair,
   },
-  tabUnderlineActive: { backgroundColor: colors.primary },
+  // Ink, not amber: the selected tab is a control's state, not the action.
+  tabUnderlineActive: { backgroundColor: colors.textPrimary },
+
+  // D230 R5: the add screen's day line, the add sheet's own style for it.
+  dateLine: {
+    ...type.bodySm, color: colors.textSecondary,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.sm,
+  },
 
   searchBar: {
     margin: spacing.md,
   },
-  provenanceNote: {
-    ...type.captionTight, color: colors.textMuted,
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
+
+  sectionLabel: {
+    paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xs,
   },
 
   ctaRow: {
@@ -1150,13 +1272,6 @@ const styles = StyleSheet.create({
   suggestHint: {
     ...type.caption, color: colors.textMuted,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
-  },
-  suggestNoteRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
-    paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm,
-  },
-  suggestNote: {
-    ...type.caption, color: colors.textMuted, flex: 1, lineHeight: fontSize.sm + 5,
   },
   suggestCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -1241,13 +1356,12 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     tabBar: { borderBottomColor: t.colors.border },
     tabLabel: { ...t.type.label, color: t.colors.textMuted },
-    tabLabelActive: { color: t.colors.textPrimary },
-    tabUnderlineActive: { backgroundColor: t.colors.primary },
-    provenanceNote: { ...t.type.captionTight, color: t.colors.textMuted },
+    tabLabelActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
+    tabUnderlineActive: { backgroundColor: t.colors.textPrimary },
+    dateLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     ctaRow: { borderBottomColor: t.colors.borderSubtle },
     ctaText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     suggestHint: { ...t.type.caption, color: t.colors.textMuted },
-    suggestNote: { ...t.type.caption, color: t.colors.textMuted, lineHeight: t.fontSize.sm + 5 },
     suggestCard: {
       backgroundColor: t.colors.surface,
       borderColor: t.colors.border,

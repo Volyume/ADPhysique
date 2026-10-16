@@ -71,8 +71,13 @@ describe('FF-006: workout summary attributes recovery to the workout week', () =
 });
 
 describe('FF-007: food logging surfaces failures', () => {
+  // RE-POINTED (D230 R15/R18, food level-up 2026-10-16): the same two
+  // failures are reported, now as full sentences that say what happened and
+  // what to do, and each is logged with its cause first.
   test('source guard: plate reports partial progress; curated meal warns on failure', () => {
-    expect(FOOD).toMatch(/Logged \$\{logged\} of \$\{total\}/);
-    expect(FOOD).toMatch(/Couldn't add that meal, try again/);
+    expect(FOOD).toMatch(/\$\{logged\} of \$\{total\} foods were added to \$\{mealName\}\. The rest were not\. Try again in a moment\./);
+    expect(FOOD).toMatch(/'That meal was not added\. Try again in a moment\.'/);
+    expect(FOOD).toMatch(/logError\('FoodSearchScreen\.logPlate', e/);
+    expect(FOOD).toMatch(/logError\('FoodSearchScreen\.logCuratedMeal', e/);
   });
 });

@@ -52,11 +52,15 @@ describe('additions allergen filter is applied at every render site (R1)', () =>
     expect(src).toMatch(/if\s*\(!adds\s*\|\|\s*!adds\.length\)\s*return\s*null/);
   });
 
-  test('FoodSearchScreen renders only the generic intro copy, never addition items', () => {
+  test('FoodSearchScreen renders no additions copy, never addition items', () => {
     const src = read('screens/FoodSearchScreen.js');
-    // It imports the intro line but neither additions getter; if that ever
-    // changes, this fails and the new list must be wired through the filter.
-    expect(src).toMatch(/ADDITIONS_INTRO/);
+    // RE-POINTED (D230 R3, food level-up 2026-10-16): the Suggested tab's
+    // standing additions note is gone (it lives in CuratedMealSheet, pinned
+    // above), so the screen no longer imports even the intro line. The pin
+    // that matters is unchanged: neither additions getter is called here; if
+    // that ever changes, this fails and the new list must be wired through
+    // the filter.
+    expect(src).not.toMatch(/import\s*\{[^}]*ADDITIONS_INTRO[^}]*\}\s*from/);
     expect(src).not.toMatch(/getMealAdditions\b|getMealAdditionsForEntries\b/);
   });
 
