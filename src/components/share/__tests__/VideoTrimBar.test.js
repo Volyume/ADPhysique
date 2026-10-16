@@ -251,3 +251,72 @@ describe('the bar never captures a vertical scroll (audit item 5)', () => {
     for (const d of detectors) expect(d.props.gesture.calls).toContainEqual(['enabled', false]);
   });
 });
+
+// Render audit 2026-10-16, lead ruling 2: the handles were 20 dp wide with
+// 8 dp outside them, about a 28 dp target. Each is now drawn 24 dp wide and
+// takes touches 10 dp beyond it on BOTH sides (44 dp wide, the strip's 56 dp
+// tall), on the view (iOS's hit test) and on its Pan (Android's gesture
+// handler); where a handle's slop lies over the window's edge the handle
+// wins, because the window's Pan waits for both handles' Pans to fail. The
+// layout follows HANDLE_WIDTH. Written to FAIL against the bar before.
+describe('the handles\' touch targets (render audit, ruling 2)', () => {
+  const { HANDLE_WIDTH, HANDLE_SLOP, STRIP_HEIGHT } = require('../VideoTrimBar');
+  const flat = (style) => Object.assign({}, ...[].concat(style).flat(Infinity).filter(Boolean));
+  const handle = (tree, label) => tree.root.findAll((n) => typeof n.type !== 'string' && n.props.accessibilityLabel === label)[0];
+
+  test('24 dp drawn, 10 dp slop on both sides: at least 44 dp wide and the strip\'s 56 dp tall', () => {
+    expect(HANDLE_WIDTH).toBe(24);
+    expect(HANDLE_SLOP).toBe(10);
+    const tree = mount({});
+    for (const label of ['Start handle', 'End handle']) {
+      const h = handle(tree, label);
+      expect(flat(h.props.style)).toMatchObject({ width: 24, height: STRIP_HEIGHT });
+      expect(h.props.hitSlop).toMatchObject({ left: 10, right: 10 });
+      expect(h.props.hitSlop.left + flat(h.props.style).width + h.props.hitSlop.right).toBeGreaterThanOrEqual(44);
+      expect(STRIP_HEIGHT).toBe(56);
+    }
+  });
+
+  test('each handle\'s Pan carries the same slop; the window\'s Pan waits for both handles to fail; the drag offsets stay', async () => {
+    mockGestures.length = 0;
+    const tree = mount({});
+    await settle();
+    const detectors = tree.root.findAll((n) => n.type === 'GestureDetector');
+    const [win, start, end] = detectors.map((d) => d.props.gesture);
+    for (const g of [start, end]) {
+      expect(g.calls).toContainEqual(['hitSlop', expect.objectContaining({ left: 10, right: 10 })]);
+    }
+    expect(win.calls.some((c) => c[0] === 'hitSlop')).toBe(false);
+    const wait = win.calls.find((c) => c[0] === 'requireExternalGestureToFail');
+    expect(wait).toBeDefined();
+    expect(wait.slice(1)).toEqual([start, end]);
+    for (const g of [win, start, end]) {
+      expect(g.calls).toContainEqual(['activeOffsetX', [-8, 8]]);
+      expect(g.calls).toContainEqual(['failOffsetY', [-12, 12]]);
+    }
+    // The handles are drawn above the window (later siblings).
+    expect(detectors.map((d) => d.props.children.props.accessibilityLabel)).toEqual([undefined, 'Start handle', 'End handle']);
+  });
+
+  test('the strip, the window and the scrims are laid out from HANDLE_WIDTH', () => {
+    const tree = mount({ width: 340 });
+    const strip = tree.root.findAll((n) => typeof n.type === 'string' && n.props.style
+      && flat(n.props.style).flexDirection === 'row' && flat(n.props.style).position === 'absolute')[0];
+    expect(flat(strip.props.style)).toMatchObject({ left: 24, width: 340 - 48 });
+    // The scrims start and end at the handles' inner edges. (The handles'
+    // and the window's positions are animated styles, which the repo's
+    // reanimated mock does not compute; they read HANDLE_WIDTH the same way.)
+    const scrims = tree.root.findAll((n) => typeof n.type !== 'string' && n.props.pointerEvents === 'none' && n.props.style);
+    const edges = scrims.map((n) => flat(n.props.style)).map((st) => st.left ?? st.right);
+    expect(edges).toEqual([24, 24]);
+  });
+
+  // Lead ruling 7: the caption sits centred under the screen's centred
+  // instruction.
+  test('the caption is centred', () => {
+    const tree = mount({});
+    const caption = tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Text'
+      && [].concat(n.props.children).join('') === 'Start 0:02 to 0:14, 12 seconds')[0];
+    expect(flat(caption.props.style).textAlign).toBe('center');
+  });
+});

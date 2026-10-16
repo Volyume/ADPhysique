@@ -188,7 +188,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 const ShareCardScreen = require('../ShareCardScreen').default;
 const useAppStore = require('../../store/useAppStore').default;
 const { drawShareCard: mockDraw } = require('../../lib/shareCard/drawShareCard');
-const { CLIP_STRINGS } = require('../../lib/clips/rules');
+const { CLIP_STRINGS, clipDisplayName, formatClipDuration } = require('../../lib/clips/rules');
+const secondsWordsOf = (ms) => { const n = Math.max(0, Math.round((Number(ms) || 0) / 1000)); return `${n} ${n === 1 ? 'second' : 'seconds'}`; };
 const { VIDEO_SCRIM_TIER_LUMINANCE } = require('../../lib/shareVideo/clipTone');
 
 // Settles every chain the screen starts: choosing a video awaits its
@@ -307,6 +308,11 @@ const SHARE_CHANGED_LINE = 'Your share changed while the video was being made. T
 const PREVIEW_CHANGED_LINE = 'Your video changed while the preview was being made. Tap play to see it now.';
 const MOMENT_FAILED_LINE = "The preview couldn't show that moment. Your share will still start there.";
 const flatStyle = (style) => Object.assign({}, ...[].concat(style).flat(Infinity).filter(Boolean));
+// Re-pinned 2026-10-16 (render audit, lead ruling 1): Play is now a
+// secondary button under the preview, off the card, whose visible label is
+// "Play with your look"; its accessible name is that label (the name holds
+// the visible words), so it is found by that name. Pause keeps "Pause the
+// video" (the visible "Pause" is in it).
 const playControl = (tree) => byTestID(tree, 'share-play-control')[0];
 const toastLines = () => mockToastShow.mock.calls.map((c) => c[0]);
 const players = (tree) => tree.root.findAll((n) => n.type === 'Video');
@@ -350,10 +356,10 @@ describe('1: Play, Share and Save wait for the tone, and nothing finished is thr
     expect(mockToastShow).not.toHaveBeenCalled();
   });
 
-  test('once the tone is read, Play reads "Play the video" with no spinner', async () => {
+  test('once the tone is read, Play reads "Play with your look" with no spinner', async () => {
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     await settleTone();
-    expect(playControl(tree).props.accessibilityLabel).toBe('Play the video');
+    expect(playControl(tree).props.accessibilityLabel).toBe('Play with your look');
     expect(byTestID(tree, 'share-play-waiting')).toHaveLength(0);
   });
 
@@ -609,6 +615,30 @@ describe('8: the safety gate and the video chooser', () => {
     expect(mockPicker.launchImageLibraryAsync).not.toHaveBeenCalled();
     expect(navigation.navigate).not.toHaveBeenCalled();
     expect(texts(tree)).not.toContain(CLIP_STRINGS.primerTitle);
+  });
+});
+
+// Render audit 2026-10-16, lead ruling 5: at the largest text size the
+// chooser cut names to one line. Written to FAIL against numberOfLines={1}.
+describe('the chooser\'s rows at a large text size', () => {
+  test('a name wraps to two lines, the row grows to fit (a floor, never a fixed height), and the duration stays on the right', async () => {
+    const { tree } = await mount(SESSION);
+    await press(byLabel(tree, 'Video, choose a video')[0]);
+    const s = sheet(tree);
+    for (const row of [CLIP_SET, CLIP_LONG]) {
+      const label = `${clipDisplayName(row)}, ${secondsWordsOf(row.durationMs)}`;
+      const r = s.findAll((n) => host(n) && n.props.accessibilityLabel === label)[0];
+      expect(r).toBeTruthy();
+      const parts = r.findAll((n) => host(n) && n.type === 'Text');
+      const name = parts.find((n) => [].concat(n.props.children).join('') === clipDisplayName(row));
+      expect(name.props.numberOfLines).toBe(2);
+      const style = flatStyle(r.props.style);
+      expect(style.height).toBeUndefined();
+      expect(style.flexDirection).toBe('row');
+      // The duration is the row's last words, after the name.
+      expect([].concat(parts[parts.length - 1].props.children).join('')).toBe(formatClipDuration(row.durationMs));
+      expect(parts.indexOf(name)).toBeLessThan(parts.length - 1);
+    }
   });
 });
 

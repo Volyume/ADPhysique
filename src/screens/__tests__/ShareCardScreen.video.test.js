@@ -493,6 +493,11 @@ describe('sharing and saving the finished video', () => {
   });
 });
 
+// Re-pinned 2026-10-16 (render audit, lead ruling 1): Play is now a
+// secondary button under the preview, off the card, whose visible label is
+// "Play with your look"; its accessible name is that label (the name holds
+// the visible words), so it is found by that name. Pause keeps "Pause the
+// video" (the visible "Pause" is in it).
 describe('playing the video in the preview (founder follow-up 2026-10-16)', () => {
   const PREVIEW_URI = 'file:///cache/volyume-preview.mp4';
   const framers = (tree) => tree.root.findAll((n) => n.type && n.type.name === 'SharePhotoFramer');
@@ -501,7 +506,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     mockGetClip.mockResolvedValue(CLIP_SET);
     mockEngine.exportShareVideo.mockImplementation(() => Promise.resolve({ uri: PREVIEW_URI }));
     const m = await mount({ ...SESSION, clipId: 'c2' });
-    await press(hostsByLabel(m.tree, 'Play the video')[0]);
+    await press(hostsByLabel(m.tree, 'Play with your look')[0]);
     return m;
   }
 
@@ -511,7 +516,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     expect(framers(tree)).toHaveLength(1);
     mockDraw.mockClear();
-    await press(hostsByLabel(tree, 'Play the video')[0]);
+    await press(hostsByLabel(tree, 'Play with your look')[0]);
     const opts = mockEngine.exportShareVideo.mock.calls[0][0];
     expect(opts).toMatchObject({ outWidth: 540, bitrate: 2000000, startMs: 0, durationMs: 12000 });
     expect(opts.outHeight % 2).toBe(0);
@@ -527,7 +532,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     await press(hostsByLabel(tree, 'Pause the video')[0]);
     expect(players(tree)).toHaveLength(0);
     expect(framers(tree)).toHaveLength(1);
-    await press(hostsByLabel(tree, 'Play the video')[0]);
+    await press(hostsByLabel(tree, 'Play with your look')[0]);
     expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
     expect(players(tree)).toHaveLength(1);
     await press(tree.root.find((n) => typeof n.type === 'string' && n.props.testID === 'share-preview-video'));
@@ -551,7 +556,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     mockEngine.exportShareVideo.mockImplementation(() => new Promise((r) => { finish = r; }));
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     await press(buttonTitled(tree, 'Share video')[0]);
-    const play = hostsByLabel(tree, 'Play the video')[0];
+    const play = hostsByLabel(tree, 'Play with your look')[0];
     expect(play.props.accessibilityState).toEqual({ disabled: true });
     await press(play);
     expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
@@ -563,7 +568,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     mockGetClip.mockResolvedValue(CLIP_SET);
     mockEngine.exportShareVideo.mockImplementation(() => Promise.reject(Object.assign(new Error('x'), { code: 'E_ENCODE' })));
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
-    await press(hostsByLabel(tree, 'Play the video')[0]);
+    await press(hostsByLabel(tree, 'Play with your look')[0]);
     expect(mockToastShow).toHaveBeenCalledWith("Couldn't make the video. Try again.", { variant: 'error', duration: 7000 });
     expect(players(tree)).toHaveLength(0);
     expect(framers(tree)).toHaveLength(1);
@@ -585,7 +590,7 @@ describe('playing the video in the preview (founder follow-up 2026-10-16)', () =
     mockGetClip.mockResolvedValue(CLIP_SET);
     mockEngine.exportShareVideo.mockImplementation(() => new Promise(() => {}));
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
-    await press(hostsByLabel(tree, 'Play the video')[0]);
+    await press(hostsByLabel(tree, 'Play with your look')[0]);
     expect(tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'share-making-preview')).not.toHaveLength(0);
     expect(mockEngine.cancelExport).not.toHaveBeenCalled();
     await TestRenderer.act(async () => { tree.unmount(); });

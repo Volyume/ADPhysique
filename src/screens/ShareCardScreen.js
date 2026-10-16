@@ -46,6 +46,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily, fontScaleCaps } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -2119,14 +2120,65 @@ export default function ShareCardScreen({ navigation, route }) {
     const scale = previewH > 0 ? h / previewH : 1;
     return { transform: [{ translateY: -(previewH - h) / 2 }, { scale }] };
   }, [collapseRange, previewH, miniH]);
-  // What is being made, for the small preview's progress chip, so a greyed
-  // Share and Save always has a visible reason wherever the page is.
-  const makingLine = makingVideo
-    ? `Making your video, ${Math.round(Math.max(0, Math.min(1, videoProgress)) * 100)}%`
-    : makingPreview
-      ? `Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`
-      : null;
-  const makingPct = makingVideo ? videoProgress : previewProgress;
+  // Play and the preview's hint, the first things in the page (lead ruling
+  // 1, render audit 2026-10-16): Play (or the making row in its place) with
+  // a video under the card, safe to show; the hint while the framer is live.
+  const showPlay = !!liveClip && !suppress && !!AvVideo && (livePhoto || playingPreview);
+  const showPhotoHint = livePhoto && !playingPreview;
+  // Where the foot of those controls is in the page (their onLayout), so the
+  // small header knows when the "Making your preview" row has scrolled out
+  // of sight under it: the row's foot is above the small header's foot once
+  // scrollY >= foot - headerMiniH. Until it is measured it reads as out of
+  // sight, so a small header never hides the reason Share and Save are grey.
+  const controlsFoot = useSharedValue(0);
+  const [controlsOutOfView, setControlsOutOfView] = useState(false);
+  useAnimatedReaction(() => scrollY.value >= controlsFoot.value - headerMiniH, (out, prev) => {
+    if (out !== prev) runOnJS(setControlsOutOfView)(out);
+  }, [headerMiniH]);
+  // One progress indicator per place (render audit 2026-10-16, lead ruling
+  // 6). The small header's chip is for a PREVIEW being made, and only once
+  // its making row (the first thing in the page) is out of sight; the share
+  // video's making row sits by Share itself, in view where it was tapped,
+  // so it has no chip.
+  const makingLine = makingPreview && previewSmall && controlsOutOfView
+    ? `Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`
+    : null;
+  const makingPct = previewProgress;
+  // Under Sticker only what changes the sticker stays on screen (render
+  // audit 2026-10-16, lead ruling 4), so nothing there is dead; every value
+  // is kept and the rest comes back with any other format. The sticker
+  // draws what stickerContentFor (drawShareCard.js) reads, and no more:
+  // session, its hero (new bests, else the total lifted when "Total weight
+  // lifted" is on and there is a total, else working sets) and the session
+  // name; PR, the weight (or the reps, with "PR weight" off) and the lift;
+  // weekly, its hero (the weight progress, else the best lift, else the
+  // PRs); milestone, its own hero. So Top lift(s), Highlight(s), the quote,
+  // Date, Plan name and Previous best go; "Total weight lifted" stays only
+  // while it can change the session's hero; "Weight progress" and "Best
+  // lift of the week" only while switching them changes the weekly hero.
+  const stickerToggles = useMemo(() => {
+    if (!isSticker) return null;
+    const s = sessionData || {};
+    const out = { volume: isSession && !((s.prCount || 0) > 0) && (s.tonnage || 0) > 0, progress: false, best: false };
+    if (isWeekly && !suppress) {
+      const heroWith = (includeProgress, lift) => JSON.stringify(buildWeeklyRecapParams(weeklyRecapData || {}, {
+        suppress, includeProgress, units, bodyWeightUnits, bestLift: lift,
+      }).hero || null);
+      const lift = showBestLift ? bestLift : null;
+      out.progress = heroWith(true, lift) !== heroWith(false, lift);
+      out.best = !!bestLift && heroWith(showProgress, bestLift) !== heroWith(showProgress, null);
+    }
+    return out;
+  }, [isSticker, isSession, isWeekly, suppress, sessionData, weeklyRecapData, units, bodyWeightUnits, bestLift, showBestLift, showProgress]);
+  const includeRows = [
+    !isSticker && { label: 'Date', value: showDate, onChange: setShowDate },
+    isSession && !isSticker && { label: 'Plan name', value: showPlanName, onChange: setShowPlanName },
+    isSession && (!isSticker || stickerToggles.volume) && { label: 'Total weight lifted', value: showVolume, onChange: setShowVolume },
+    cardType === 'pr' && { label: 'PR weight', value: showPRWeight, onChange: setShowPRWeight },
+    cardType === 'pr' && !isSticker && { label: 'Previous best', value: showPrevBest, onChange: setShowPrevBest },
+    isWeekly && !suppress && (!isSticker || stickerToggles.progress) && { label: 'Weight progress', value: showProgress, onChange: setShowProgress },
+    isWeekly && !suppress && !!bestLift && (!isSticker || stickerToggles.best) && { label: 'Best lift of the week', value: showBestLift, onChange: setShowBestLift },
+  ].filter(Boolean);
   // While the share's video is being made, nothing that changes what is
   // shared can be changed (audit item 2): every such control is disabled,
   // looks it (the house 0.5) and says so; the making row's Cancel is the
@@ -2152,24 +2204,73 @@ export default function ShareCardScreen({ navigation, route }) {
         scrollEventThrottle={16}
       >
 
-        {/* The preview's hint, the first line of the page, right under the
-            header (it scrolls away with the page). */}
-        {livePhoto && !playingPreview ? (
-          <View style={styles.photoHintRow}>
-            <Text style={[styles.photoHint, live.photoHint]}>{clip ? 'Drag to move your video. Pinch to resize it. Press play to watch it with your look.' : 'Drag to move your photo. Pinch to resize it.'}</Text>
-            {!isCentreCrop(photoCrop) ? (
+        {/* Under the preview, the first thing in the page (render audit
+            2026-10-16, lead ruling 1): Play with your look, or Pause while
+            it plays, as a clear secondary button OFF the card, so it never
+            covers the card's footer in any format; while a preview is made,
+            the making row and its Cancel take its place. Then the preview's
+            hint. Both scroll away with the page under the small header. */}
+        {(showPlay || showPhotoHint) ? (
+          <View
+            style={styles.previewControls}
+            onLayout={(e) => { const l = e.nativeEvent.layout; controlsFoot.value = l.y + l.height; }}
+            testID="share-preview-controls"
+          >
+          {showPlay ? (
+            makingPreview ? (
+              <View style={styles.makingRow} testID="share-making-preview">
+                <ActivityIndicator color={t.colors.primary} />
+                <Text style={[styles.photoHint, live.photoHint, styles.makingText]}>
+                  {`Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`}
+                </Text>
+                <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={cancelVideo} accessibilityLabel="Cancel making the preview" />
+              </View>
+            ) : (
+              // Before the tone for this window is read, Play shows a small
+              // spinner and says so; a press waits and plays by itself once
+              // the tone is here (audit item 1), so no tap is lost. Built on a
+              // TouchableOpacity in Button's secondary dress, because the
+              // waiting state must stay pressable while it reads busy, which
+              // Button's loading state does not allow.
               <TouchableOpacity
-                onPress={() => setPhotoCrop(null)}
-                disabled={locked}
+                onPress={playingPreview ? pausePreview : () => { playPreview().catch((e) => { logError('ShareCardScreen.play', e); }); }}
+                disabled={!playingPreview && makingVideo}
                 accessibilityRole="button"
-                accessibilityLabel={clip ? 'Reset the video to the centre' : 'Reset the photo to the centre'}
-                accessibilityState={lockedA11y(undefined)}
-                style={locked ? styles.lockedControl : null}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel={playingPreview ? 'Pause the video' : playWaiting ? 'Getting your video ready' : 'Play with your look'}
+                accessibilityState={playWaiting && !makingVideo ? { disabled: false, busy: true } : { disabled: !playingPreview && makingVideo }}
+                style={[styles.playButton, live.playButton, !playingPreview && makingVideo ? styles.lockedControl : null]}
+                activeOpacity={0.85}
+                testID="share-play-control"
               >
-                <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
+                {playWaiting ? (
+                  <ActivityIndicator size="small" color={t.colors.primary} testID="share-play-waiting" />
+                ) : (
+                  <Ionicons name={playingPreview ? 'pause' : 'play'} size={18} color={t.colors.textSecondary} />
+                )}
+                <Text style={[styles.playButtonLabel, live.playButtonLabel]} maxFontSizeMultiplier={fontScaleCaps.chrome}>
+                  {playingPreview ? 'Pause' : playWaiting ? 'Getting your video ready' : 'Play with your look'}
+                </Text>
               </TouchableOpacity>
-            ) : null}
+            )
+          ) : null}
+          {showPhotoHint ? (
+            <View style={styles.photoHintRow}>
+              <Text style={[styles.photoHint, live.photoHint]}>{clip ? 'Drag to move your video. Pinch to resize it. Press play to watch it with your look.' : 'Drag to move your photo. Pinch to resize it.'}</Text>
+              {!isCentreCrop(photoCrop) ? (
+                <TouchableOpacity
+                  onPress={() => setPhotoCrop(null)}
+                  disabled={locked}
+                  accessibilityRole="button"
+                  accessibilityLabel={clip ? 'Reset the video to the centre' : 'Reset the photo to the centre'}
+                  accessibilityState={lockedA11y(undefined)}
+                  style={locked ? styles.lockedControl : null}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
           </View>
         ) : null}
 
@@ -2442,7 +2543,7 @@ export default function ShareCardScreen({ navigation, route }) {
                     accessibilityLabel={`${clipDisplayName(row)}, ${secondsWords(row.durationMs)}`}
                   >
                     <Ionicons name="videocam-outline" size={18} color={chosen ? t.colors.primary : t.colors.textMuted} />
-                    <Text style={[styles.sheetRowText, live.sheetRowText]} numberOfLines={1}>{clipDisplayName(row)}</Text>
+                    <Text style={[styles.sheetRowText, live.sheetRowText]} numberOfLines={2}>{clipDisplayName(row)}</Text>
                     <Text style={[styles.sheetRowMeta, live.sheetRowMeta]}>{formatClipDuration(row.durationMs)}</Text>
                   </TouchableOpacity>
                 );
@@ -2527,7 +2628,7 @@ export default function ShareCardScreen({ navigation, route }) {
             lifts the session card shows, as many as fit, or none. One row
             that opens the list, the way the app's own pickers work, rather
             than a strip of pills. */}
-        {isSession && liftOptions.length > 0 ? (
+        {isSession && liftOptions.length > 0 && !isSticker ? (
           <View style={styles.section}>
             <SectionLabel>{chosenLifts.length > 1 ? 'Top lifts' : 'Top lift'}</SectionLabel>
             <View style={[styles.togglesCard, live.togglesCard]}>
@@ -2558,7 +2659,7 @@ export default function ShareCardScreen({ navigation, route }) {
         {/* Highlight (founder, 2026-09-26): how this workout compares with
             its last 4 weeks, when the summary found it stronger; off until
             switched on. Nothing about the week, the block or a count. */}
-        {isSession && highlightOptions.length > 0 ? (
+        {isSession && highlightOptions.length > 0 && !isSticker ? (
           <View style={styles.section}>
             <SectionLabel>{highlightOptions.length === 1 ? 'Highlight' : 'Highlights'}</SectionLabel>
             <View style={[styles.togglesCard, live.togglesCard]}>
@@ -2635,30 +2736,16 @@ export default function ShareCardScreen({ navigation, route }) {
               </View>
             </>
           ) : null}
-          <SectionLabel>What to include</SectionLabel>
-          <View style={[styles.togglesCard, live.togglesCard]}>
-            <ToggleRow label="Date" value={showDate} onChange={setShowDate} disabled={locked} />
-            {isSession && (
-              <>
-                <ToggleRow label="Plan name" value={showPlanName} onChange={setShowPlanName} disabled={locked} />
-                <ToggleRow label="Total weight lifted" value={showVolume} onChange={setShowVolume} last disabled={locked} />
-              </>
-            )}
-            {cardType === 'pr' && (
-              <>
-                <ToggleRow label="PR weight" value={showPRWeight} onChange={setShowPRWeight} disabled={locked} />
-                <ToggleRow label="Previous best" value={showPrevBest} onChange={setShowPrevBest} last disabled={locked} />
-              </>
-            )}
-            {isWeekly && !suppress && (
-              <>
-                <ToggleRow label="Weight progress" value={showProgress} onChange={setShowProgress} disabled={locked} />
-                {bestLift ? (
-                  <ToggleRow label="Best lift of the week" value={showBestLift} onChange={setShowBestLift} last disabled={locked} />
-                ) : null}
-              </>
-            )}
-          </View>
+          {includeRows.length ? (
+            <>
+              <SectionLabel>What to include</SectionLabel>
+              <View style={[styles.togglesCard, live.togglesCard]}>
+                {includeRows.map((r, i) => (
+                  <ToggleRow key={r.label} label={r.label} value={r.value} onChange={r.onChange} last={i === includeRows.length - 1} disabled={locked} />
+                ))}
+              </View>
+            </>
+          ) : null}
           <Text style={[styles.privacyNote, live.privacyNote]}>
             {isWeekly
               ? "Only this week's progress, lifts and sessions are shown. Your measurements and private notes are never included."
@@ -2688,13 +2775,15 @@ export default function ShareCardScreen({ navigation, route }) {
             <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={cancelVideo} accessibilityLabel="Cancel making the video" />
           </View>
         ) : null}
+        {/* While that row says it, Share and Save show disabled, not a
+            spinner of their own (lead ruling 6: one indicator per place). */}
         <Button
           title={liveClip ? 'Share video' : 'Share image'}
           icon="logo-instagram"
           trailingIcon="logo-facebook"
           onPress={handleShareToStories}
           disabled={sharingToStories || !cardReady || makingVideo || makingPreview}
-          loading={sharingToStories || waitingFor === 'share'}
+          loading={(sharingToStories || waitingFor === 'share') && !makingVideo}
           accessibilityLabel={liveClip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
           variant="emphatic"
           size="lg"
@@ -2709,7 +2798,7 @@ export default function ShareCardScreen({ navigation, route }) {
           icon="download-outline"
           onPress={handleSaveToGallery}
           disabled={savingToGallery || !cardReady || makingVideo || makingPreview}
-          loading={savingToGallery || waitingFor === 'save'}
+          loading={(savingToGallery || waitingFor === 'save') && !makingVideo}
           accessibilityLabel="Save to gallery"
           variant="secondary"
           size="lg"
@@ -2826,6 +2915,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 variant="secondary"
                 size="sm"
                 fullWidth={false}
+                style={styles.retryButton}
                 accessibilityLabel="Retry building the preview"
               />
             </View>
@@ -2834,42 +2924,6 @@ export default function ShareCardScreen({ navigation, route }) {
               <ActivityIndicator color={t.colors.primary} />
             </View>
           )}
-          {/* Play/Pause and the "Making your preview" row sit over the
-              preview's foot and shrink with it; at the small size they are
-              hidden, because the small preview is then ONE target, "Back
-              to the preview" (a 44 pt control over a thumbnail barely
-              wider than itself would take that tap, or be too small to
-              read). Both are back the moment the preview is full size. */}
-          {!previewSmall && liveClip && !suppress && AvVideo && (livePhoto || playingPreview) ? (
-            makingPreview ? (
-              <View style={[styles.previewMaking, live.previewMaking]} testID="share-making-preview">
-                <ActivityIndicator color={t.colors.primary} />
-                <Text style={[styles.photoHint, live.photoHint, styles.makingText]}>
-                  {`Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`}
-                </Text>
-                <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={cancelVideo} accessibilityLabel="Cancel making the preview" />
-              </View>
-            ) : (
-              // Before the tone for this window is read, Play shows a small
-              // spinner and says so; a press waits and plays by itself once
-              // the tone is here (audit item 1), so no tap is lost.
-              <TouchableOpacity
-                onPress={playingPreview ? pausePreview : () => { playPreview().catch((e) => { logError('ShareCardScreen.play', e); }); }}
-                disabled={!playingPreview && makingVideo}
-                accessibilityRole="button"
-                accessibilityLabel={playingPreview ? 'Pause the video' : playWaiting ? 'Getting your video ready' : 'Play the video'}
-                accessibilityState={playWaiting && !makingVideo ? { disabled: false, busy: true } : { disabled: !playingPreview && makingVideo }}
-                style={[styles.playControl, live.playControl, !playingPreview && makingVideo ? styles.playControlDisabled : null]}
-                testID="share-play-control"
-              >
-                {playWaiting ? (
-                  <ActivityIndicator size="small" color={t.colors.primary} testID="share-play-waiting" />
-                ) : (
-                  <Ionicons name={playingPreview ? 'pause' : 'play'} size={20} color={t.colors.textPrimary} />
-                )}
-              </TouchableOpacity>
-            )
-          ) : null}
           {/* A video's frame on its way (the first frame of a newly chosen
               video, or the still at a new start): the preview says so and
               the rest of the screen keeps working. */}
@@ -2897,11 +2951,12 @@ export default function ShareCardScreen({ navigation, route }) {
             testID="share-mini-preview"
           />
         ) : null}
-        {/* The small preview's progress: while a preview or the video is
-            made, a compact chip over the small card, not scaled with it and
-            taking no touches (the tap is still "Back to the preview"). At
-            full size the making row with its Cancel says it instead. */}
-        {previewSmall && makingLine ? (
+        {/* The small preview's progress: while a preview is made and its
+            making row has scrolled out of sight, a compact chip over the
+            small card, not scaled with it and taking no touches (the tap is
+            still "Back to the preview"). In sight, the making row with its
+            Cancel says it instead; the share video's row is by Share. */}
+        {makingLine ? (
           <View style={styles.previewMiniProgressWrap} pointerEvents="none">
             <View
               style={[styles.previewMiniProgress, live.previewMiniProgress]}
@@ -3137,6 +3192,8 @@ const styles = StyleSheet.create({
   videoStartRow: { marginTop: spacing.sm, gap: spacing.sm },
   videoStrip: { marginTop: spacing.sm, gap: spacing.xs },
   videoStripLabel: { ...type.captionTight, color: colors.textMuted },
+  // A long video name wraps to two lines and the row grows to fit, the
+  // duration staying on the right (render audit 2026-10-16, lead ruling 5).
   sheetRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48,
     paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle,
@@ -3220,25 +3277,24 @@ const styles = StyleSheet.create({
   segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   segmentTextActive: { color: colors.textPrimary },
   segmentTextStacked: { textAlign: 'center' },
-  // The preview's player and its round play control (founder follow-up
-  // 2026-10-16), over the framer's bottom-right corner.
+  // The preview's player (founder follow-up 2026-10-16). Its Play/Pause is
+  // a secondary button under the preview, the first thing in the page
+  // (lead ruling 1, render audit 2026-10-16), in Button's secondary dress:
+  // the base surface, the same border, a softer semibold label.
   previewVideoFrame: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface },
-  playControl: {
-    position: 'absolute', right: spacing.sm, bottom: spacing.sm,
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: withAlpha(colors.surface, 0.9),
+  previewControls: { gap: spacing.md },
+  playButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    minHeight: touchTarget.minimum, paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
   },
-  playControlDisabled: { opacity: 0.5 },
+  playButtonLabel: { fontFamily: fontFamily.semibold, fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', flexShrink: 1 },
+  // Retry, centred in the error box (Button's fullWidth={false} sets its
+  // own alignSelf to the start).
+  retryButton: { alignSelf: 'center' },
   // A control that cannot be used while the share's video is being made
   // (audit item 2): the house disabled treatment, Button's one opacity.
   lockedControl: { opacity: 0.5 },
-  previewMaking: {
-    position: 'absolute', left: spacing.sm, right: spacing.sm, bottom: spacing.sm,
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.sm, borderRadius: radius.md,
-    backgroundColor: withAlpha(colors.surface, 0.9),
-  },
   // A video's frame on its way: a quiet veil with a spinner over the
   // preview, and over a tile in the strip.
   previewBusy: {
@@ -3325,8 +3381,8 @@ function buildLiveStyles(t) {
     sheetRow: { borderBottomColor: t.colors.borderSubtle },
     videoStripLabel: { ...t.type.captionTight, color: t.colors.textMuted },
     previewVideoFrame: { backgroundColor: t.colors.surface },
-    playControl: { backgroundColor: withAlpha(t.colors.surface, 0.9) },
-    previewMaking: { backgroundColor: withAlpha(t.colors.surface, 0.9) },
+    playButton: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    playButtonLabel: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
     previewBusy: { backgroundColor: withAlpha(t.colors.surface, alpha.half) },
     thumbBusy: { backgroundColor: withAlpha(t.colors.surface, alpha.half) },
     previewHeader: { backgroundColor: t.colors.surface },

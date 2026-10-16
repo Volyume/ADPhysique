@@ -37,7 +37,12 @@ import { videoStripUris } from '../../lib/shareVideo/videoFrame';
 
 export const STRIP_HEIGHT = 56;
 export const FRAME_BOX = 48;
-export const HANDLE_WIDTH = 20;
+// Each handle is drawn 24 dp wide and takes touches 10 dp beyond it on both
+// sides, a 44 dp wide target the strip's 56 dp tall (render audit
+// 2026-10-16, lead ruling 2; it was 20 dp with 8 dp outside, about 28 dp).
+export const HANDLE_WIDTH = 24;
+export const HANDLE_SLOP = 10;
+const HANDLE_HIT_SLOP = { top: spacing.sm, bottom: spacing.sm, left: HANDLE_SLOP, right: HANDLE_SLOP };
 const STEP_MS = 1000;
 
 /** How many frames the strip shows for a bar `width` dp wide. */
@@ -191,10 +196,21 @@ export default function VideoTrimBar({
           e.value = w.endMs;
           runOnJS(commit)(w.startMs, w.endMs);
         });
+      // A handle takes touches beyond its drawn edge (the gesture's own
+      // hitSlop, which Android's gesture handler reads; the view's hitSlop
+      // below is iOS's hit test).
+      if (moved !== 'window') g = g.hitSlop(HANDLE_HIT_SLOP);
       if (blocksGesture) g = g.blocksExternalGesture(blocksGesture);
       return g;
     };
-    return { window: build('window'), start: build('start'), end: build('end') };
+    const start = build('start');
+    const end = build('end');
+    // Where a handle's slop lies over the window's edge, the handle wins:
+    // the window's Pan waits for both handles' Pans to fail before it can
+    // move (a touch outside both handles' slop never starts them, so the
+    // window is not held up there). The handles are also drawn above it.
+    const win = build('window').requireExternalGestureToFail(start, end);
+    return { window: win, start, end };
   }, [disabled, short, pxPerMs, dur, minWindowMs, maxWindowMs, blocksGesture, commit, showLive, s, e, savedS, savedE, lastSec]);
 
   const windowStyle = useAnimatedStyle(() => ({
@@ -281,7 +297,7 @@ export default function VideoTrimBar({
               <Animated.View
                 style={[styles.handle, styles.handleStart, live.handle, startHandleStyle]}
                 accessibilityLabel="Start handle"
-                hitSlop={{ top: spacing.sm, bottom: spacing.sm, left: spacing.sm }}
+                hitSlop={HANDLE_HIT_SLOP}
               >
                 <View style={[styles.grip, live.grip]} />
               </Animated.View>
@@ -290,7 +306,7 @@ export default function VideoTrimBar({
               <Animated.View
                 style={[styles.handle, styles.handleEnd, live.handle, endHandleStyle]}
                 accessibilityLabel="End handle"
-                hitSlop={{ top: spacing.sm, bottom: spacing.sm, right: spacing.sm }}
+                hitSlop={HANDLE_HIT_SLOP}
               >
                 <View style={[styles.grip, live.grip]} />
               </Animated.View>
@@ -311,7 +327,7 @@ function buildLiveStyles(t) {
     window: { borderColor: t.colors.primary },
     handle: { backgroundColor: t.colors.primary },
     grip: { backgroundColor: t.colors.background },
-    caption: { ...t.type.captionTight, color: t.colors.textMuted },
+    caption: { ...t.type.captionTight, color: t.colors.textMuted, textAlign: 'center' },
   };
 }
 
@@ -334,5 +350,7 @@ const styles = StyleSheet.create({
   handleStart: { borderTopLeftRadius: radius.md, borderBottomLeftRadius: radius.md },
   handleEnd: { borderTopRightRadius: radius.md, borderBottomRightRadius: radius.md },
   grip: { width: spacing.xxs, height: spacing.lg, borderRadius: radius.sm },
-  caption: { marginTop: spacing.sm, color: colors.textMuted, ...type.captionTight },
+  // Centred under the screen's centred instruction above the bar (lead
+  // ruling 7, render audit 2026-10-16).
+  caption: { marginTop: spacing.sm, color: colors.textMuted, ...type.captionTight, textAlign: 'center' },
 });

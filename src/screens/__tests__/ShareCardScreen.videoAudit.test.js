@@ -469,13 +469,18 @@ describe('E: a photo chosen after a video replaces it (finding 5)', () => {
   });
 });
 
+// Re-pinned 2026-10-16 (render audit, lead ruling 1): Play is now a
+// secondary button under the preview, off the card, whose visible label is
+// "Play with your look"; its accessible name is that label (the name holds
+// the visible words), so it is found by that name. Pause keeps "Pause the
+// video" (the visible "Pause" is in it).
 describe('F: Full screen\'s own shape reaches every video job (finding 7)', () => {
   test('the share and the preview are made at the phone\'s shape, evened', async () => {
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     await press(byLabel(tree, 'Full screen')[0]);
     // Re-pinned 2026-10-16 (audit item 1): Play waits for the new shape's tone.
     await settleTone();
-    await press(byLabel(tree, 'Play the video')[0]);
+    await press(byLabel(tree, 'Play with your look')[0]);
     await press(byLabel(tree, 'Pause the video')[0]);
     await press(buttonTitled(tree, 'Share video')[0]);
     const heights = mockEngine.exportShareVideo.mock.calls.map((c) => c[0].outHeight);
@@ -517,7 +522,7 @@ describe('H: the scrim over a video is read across its window (addendum 4, findi
     const read = { ...BRIGHT_READING };
     expect(overlayDraws(640).pop().toneOverride).toEqual(read);
     mockDraw.mockClear();
-    await press(byLabel(tree, 'Play the video')[0]);
+    await press(byLabel(tree, 'Play with your look')[0]);
     expect(overlayDraws(540).pop().toneOverride).toEqual(read);
     await press(byLabel(tree, 'Pause the video')[0]);
     await press(buttonTitled(tree, 'Share video')[0]);
@@ -653,7 +658,7 @@ describe('L: the safety gate closing drops the video (finding 14)', () => {
     expect(trimBar(tree)).toBeUndefined();
     expect(texts(tree)).toContain('Share image');
     expect(byLabel(tree, 'Video, choose a video')).toHaveLength(0);
-    expect(byLabel(tree, 'Play the video')).toHaveLength(0);
+    expect(byLabel(tree, 'Play with your look')).toHaveLength(0);
     expect(texts(tree)).not.toContain('Your videos from this workout');
     await press(buttonTitled(tree, 'Share image')[0]);
     expect(mockEngine.exportShareVideo).not.toHaveBeenCalled();

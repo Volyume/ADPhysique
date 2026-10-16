@@ -8,8 +8,11 @@
  * and shrinks on the UI thread as the page scrolls, so nothing floats over
  * the controls. Every preview state lives in that header and shrinks with
  * it: the still image, the photo framer, the playing preview video, the
- * Play/Pause control, the "Making your preview" row, the error box and the
- * spinner.
+ * error box and the spinner. Play/Pause and the "Making your preview" row
+ * are NOT on the card (render audit 2026-10-16, lead ruling 1: the round
+ * Play drawn over the card covered its footer in Full screen, Feed and
+ * Square); they are a secondary button under the preview, the first thing
+ * in the page, which scrolls away with the page as the hint does.
  *
  * Pinned, written to FAIL against the restored screen (where the preview was
  * a section half way down the page):
@@ -23,17 +26,23 @@
  *      by a shared value, an animated scroll handler and animated styles
  *      (the UI thread), never JS-thread Animated;
  *   3. every preview state renders inside the header, none in the page;
+ *      Play/Pause and the making row are in the page, never in the header;
  *   4. the framer takes touches at full size and none at the small size,
  *      and a drag on it still blocks the page's scroll gesture;
- *   5. the Play/Pause control and the "Making your preview" row are HIDDEN
- *      at the small size (the small preview is one target, "Back to the
- *      preview") and back at full size; a playing video keeps playing small;
+ *   5. Play/Pause ("Play with your look", "Pause") and the "Making your
+ *      preview" row are the first thing in the page, above the hint, in
+ *      every format, and never drawn over the card; small, they scroll with
+ *      the page and the small preview stays one target, "Back to the
+ *      preview"; a playing video keeps playing small, and a tap on it at
+ *      full size still pauses it;
  *   6. a tap on the small preview scrolls the page back to the top, animated
  *      unless Reduce Motion is on, read as Volyume's own setting OR the
  *      phone's;
- *   6b. at the small size, while a preview or the video is made, a compact
- *      progress chip over the small card says so (no touches, a polite live
- *      region), so a greyed Share and Save always has a visible reason;
+ *   6b. at the small size, while a PREVIEW is made and its making row (in
+ *      the page) has scrolled out of sight, a compact progress chip over the
+ *      small card says so (no touches, a polite live region); never for the
+ *      share video, whose making row is by Share (lead ruling 6, one
+ *      progress indicator per place);
  *   7. no live Skia view in the header (Sentry VOLYUME-3M), and under calm
  *      mode or an open flag the header carries no video surface.
  *
@@ -47,6 +56,7 @@ const TestRenderer = require('react-test-renderer');
 const fs = require('fs');
 const path = require('path');
 const SectionLabel = require('../../components/SectionLabel').default;
+const Button = require('../../components/Button').default;
 
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn().mockResolvedValue(true), shareAsync: jest.fn() }));
 jest.mock('expo-media-library', () => ({ requestPermissionsAsync: jest.fn(), saveToLibraryAsync: jest.fn() }));
@@ -253,6 +263,12 @@ const card = (tree) => byTestID(tree.root, 'share-preview-card')[0];
 const page = (tree) => tree.root.findAll((n) => n.type === 'Animated.ScrollView')[0];
 const headings = (tree) => tree.root.findAll((n) => n.type === SectionLabel).map((n) => n.props.children);
 const byLabel = (root, label) => root.findAll((n) => host(n) && n.props.accessibilityLabel === label);
+// Play's accessible name is its visible label (render audit 2026-10-16,
+// lead ruling 1); Pause keeps "Pause the video", which holds its "Pause".
+const PLAY = 'Play with your look';
+const PAUSE = 'Pause the video';
+const controls = (tree) => byTestID(tree.root, 'share-preview-controls')[0];
+const textOf = (n) => n.findAll((m) => host(m) && m.type === 'Text').map((m) => [].concat(m.props.children).join(''));
 const backButtons = (tree) => byLabel(tree.root, 'Back to the preview');
 const stills = (root) => root.findAll((n) => host(n) && n.type === 'Image' && n.props.resizeMode === 'contain');
 const framers = (root) => root.findAll((n) => n.type && n.type.name === 'SharePhotoFramer');
@@ -271,7 +287,7 @@ async function mountWithVideo() {
   // settles, so the video is met here as a person meets it a moment later:
   // with its tone read and Play ready.
   await TestRenderer.act(async () => { await new Promise((r) => setTimeout(r, 450)); });
-  await waitFor(() => byLabel(card(tree), 'Play the video').length === 1);
+  await waitFor(() => byLabel(page(tree), PLAY).length === 1);
   return tree;
 }
 
@@ -419,17 +435,23 @@ describe('the preview is the header above the page, and it collapses as the page
 });
 
 describe('every preview state is in the header and shrinks with it', () => {
-  test('source: the player, the framer, the still, the error box, the spinner, Play/Pause and the making row are in the header; none is in the page', () => {
+  // Re-pinned 2026-10-16 (render audit, lead ruling 1): Play/Pause and the
+  // "Making your preview" row moved OFF the card into the page; the other
+  // preview states stay in the header.
+  test('source: the player, the framer, the still, the error box and the spinner are in the header, none in the page; Play/Pause and the making row are in the page, none in the header', () => {
     const headerBlock = HEADER_SRC;
     const pageBlock = PAGE_SRC;
     for (const piece of [
       '<AvVideo', '<SharePhotoFramer', 'data:image/png;base64,${previewB64}', 'Retry building the preview',
-      '<ActivityIndicator color={t.colors.primary} />', "'Play the video'", 'testID="share-making-preview"',
+      '<ActivityIndicator color={t.colors.primary} />',
     ]) {
       expect({ piece, inHeader: headerBlock.includes(piece) }).toEqual({ piece, inHeader: true });
     }
-    for (const piece of ['<AvVideo', '<SharePhotoFramer', 'data:image/png;base64,${previewB64}', 'Retry building the preview', "'Play the video'", 'share-making-preview']) {
+    for (const piece of ['<AvVideo', '<SharePhotoFramer', 'data:image/png;base64,${previewB64}', 'Retry building the preview']) {
       expect({ piece, inPage: pageBlock.includes(piece) }).toEqual({ piece, inPage: false });
+    }
+    for (const piece of ["'Play with your look'", "'Pause the video'", 'testID="share-play-control"', 'testID="share-making-preview"']) {
+      expect({ piece, inPage: pageBlock.includes(piece), inHeader: headerBlock.includes(piece) }).toEqual({ piece, inPage: true, inHeader: false });
     }
     // The trim bar and the hints stay in the page and scroll.
     expect(pageBlock).toContain('<VideoTrimBar');
@@ -495,50 +517,109 @@ describe('the framer at full size and at the small size', () => {
   });
 });
 
-describe('Play/Pause and the making row at the small size: hidden, and back at full size', () => {
-  test('Play is over the preview at full size, hidden at the small size, and back at the top', async () => {
+// Render audit 2026-10-16, lead ruling 1. Written to FAIL against the screen
+// before, where a round Play sat over the card's bottom-right corner and
+// covered "volyume.app" and the outline in Full screen, Feed and Square.
+describe('Play/Pause is a button under the preview, off the card, in every format', () => {
+  test('in every format Play is in the page, the first thing, above the hint; never in the header', async () => {
     const tree = await mountWithVideo();
-    expect(byLabel(card(tree), 'Play the video')).toHaveLength(1);
-    await scroll(tree, 5000);
-    expect(byLabel(tree.root, 'Play the video')).toHaveLength(0);
-    expect(byLabel(tree.root, 'Pause the video')).toHaveLength(0);
-    await scroll(tree, 0);
-    expect(byLabel(card(tree), 'Play the video')).toHaveLength(1);
+    for (const fmt of ['Story', 'Full screen', 'Feed', 'Square']) {
+      // eslint-disable-next-line no-await-in-loop
+      await press(byLabel(tree.root, fmt)[0]);
+      // eslint-disable-next-line no-await-in-loop
+      await waitFor(() => byLabel(page(tree), PLAY).length === 1);
+      expect({ fmt, inHeader: byTestID(header(tree), 'share-play-control').length }).toEqual({ fmt, inHeader: 0 });
+      const c = controls(tree);
+      // The page's first child is the controls block: the button, then the hint.
+      const firstHost = (n) => (host(n) ? n : firstHost(n.children[0]));
+      expect(firstHost(page(tree).children[0])).toBe(c);
+      const words = textOf(c);
+      expect(words[0]).toBe('Play with your look');
+      expect(words.indexOf('Play with your look')).toBeLessThan(words.findIndex((w) => w.startsWith('Drag to move your video.')));
+    }
   });
 
-  test('a playing video is in the header and keeps playing small; Pause is hidden there and back at the top', async () => {
+  test('it reads "Play with your look" with a play icon, and "Pause" with a pause icon while playing; a tap on the playing video still pauses it', async () => {
     const tree = await mountWithVideo();
-    await press(byLabel(card(tree), 'Play the video')[0]);
+    const play = byTestID(page(tree), 'share-play-control')[0];
+    expect(textOf(play)).toEqual(['Play with your look']);
+    expect(play.findAll((n) => n.props && n.props.name === 'play').length).toBeGreaterThan(0);
+    expect(flatStyle(play.props.style).position).toBeUndefined();
+    await press(byLabel(page(tree), PLAY)[0]);
     expect(players(card(tree))).toHaveLength(1);
-    expect(byLabel(card(tree), 'Pause the video')).toHaveLength(1);
+    const pause = byTestID(page(tree), 'share-play-control')[0];
+    expect(pause.props.accessibilityLabel).toBe(PAUSE);
+    expect(textOf(pause)).toEqual(['Pause']);
+    expect(pause.findAll((n) => n.props && n.props.name === 'pause').length).toBeGreaterThan(0);
+    // The hint goes while it plays; the button stays.
+    expect(textOf(controls(tree)).some((w) => w.startsWith('Drag to move'))).toBe(false);
+    // A tap on the playing video pauses it.
+    await press(byTestID(card(tree), 'share-preview-video')[0]);
+    expect(players(card(tree))).toHaveLength(0);
+    expect(byLabel(page(tree), PLAY)).toHaveLength(1);
+  });
+
+  test('small, the button scrolls with the page (still the page\'s, never the header\'s) and the small preview is one target; a playing video keeps playing small', async () => {
+    const tree = await mountWithVideo();
+    await press(byLabel(page(tree), PLAY)[0]);
     await scroll(tree, 5000);
     expect(players(card(tree))).toHaveLength(1);
-    expect(byTestID(card(tree), 'share-preview-video')).toHaveLength(1);
-    expect(byLabel(tree.root, 'Pause the video')).toHaveLength(0);
+    expect(byLabel(page(tree), PAUSE)).toHaveLength(1);
+    expect(byLabel(header(tree), PAUSE)).toHaveLength(0);
     expect(card(tree).props.pointerEvents).toBe('none');
+    expect(backButtons(tree)).toHaveLength(1);
     await scroll(tree, 0);
-    expect(byLabel(card(tree), 'Pause the video')).toHaveLength(1);
+    expect(byLabel(page(tree), PAUSE)).toHaveLength(1);
   });
 
-  test('the "Making your preview" row is over the preview at full size, hidden at the small size, and back at the top', async () => {
+  test('while a preview is made, the making row and its Cancel take the button\'s place, in the page', async () => {
     mockEngine.exportShareVideo.mockImplementation(() => new Promise(() => {}));
     const tree = await mountWithVideo();
-    await press(byLabel(card(tree), 'Play the video')[0]);
-    expect(byTestID(card(tree), 'share-making-preview').length).toBeGreaterThan(0);
-    await scroll(tree, 5000);
-    expect(byTestID(tree.root, 'share-making-preview')).toHaveLength(0);
-    await scroll(tree, 0);
-    expect(byTestID(card(tree), 'share-making-preview').length).toBeGreaterThan(0);
+    await press(byLabel(page(tree), PLAY)[0]);
+    expect(byTestID(page(tree), 'share-making-preview').length).toBeGreaterThan(0);
+    expect(byTestID(header(tree), 'share-making-preview')).toHaveLength(0);
+    expect(byTestID(tree.root, 'share-play-control')).toHaveLength(0);
+    expect(byLabel(page(tree), 'Cancel making the preview').length).toBeGreaterThan(0);
+  });
+
+  test('waiting for the tone, it keeps its waiting state, now with its label in words', async () => {
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const tree = await mount({ ...SESSION, clipId: 'c2' });
+    await waitFor(() => framers(card(tree)).length === 1);
+    const waiting = byTestID(page(tree), 'share-play-control')[0];
+    expect(waiting.props.accessibilityLabel).toBe('Getting your video ready');
+    expect(waiting.props.accessibilityState).toEqual({ disabled: false, busy: true });
+    expect(byTestID(waiting, 'share-play-waiting')).toHaveLength(1);
+    expect(textOf(waiting)).toEqual(['Getting your video ready']);
   });
 });
 
-describe('the small preview says when something is being made', () => {
+// Re-pinned 2026-10-16 (render audit, lead ruling 6: one progress
+// indicator per place). The chip is for a PREVIEW being made once its making
+// row, now the first thing in the page, is out of sight under the small
+// header; the share video's making row sits by Share, so it has no chip.
+describe('the small preview says when a preview is being made and its row is out of sight', () => {
   const chip = (tree) => byTestID(header(tree), 'share-mini-progress');
-  test('a preview being made: at full size the making row; small, a compact chip with the percentage, no touches, a polite live region', async () => {
+  // The controls' place in the page, as the phone lays it out: their top
+  // at the page's top padding (the full header), 60 tall.
+  const layOut = async (tree) => {
+    await TestRenderer.act(async () => { controls(tree).props.onLayout({ nativeEvent: { layout: { x: 0, y: HEADER_FULL, width: 300, height: 60 } } }); });
+    await rerenders.get(tree)();
+  };
+  test('a preview being made: at full size the making row; small with the row still in sight, no chip; scrolled past it, a compact chip with the percentage, no touches, a polite live region', async () => {
     mockEngine.exportShareVideo.mockImplementation((_o, onProgress) => { onProgress(0.42); return new Promise(() => {}); });
     const tree = await mountWithVideo();
-    await press(byLabel(card(tree), 'Play the video')[0]);
+    await layOut(tree);
+    await press(byLabel(page(tree), PLAY)[0]);
     expect(chip(tree)).toHaveLength(0);
+    // Small, but the row's foot (HEADER_FULL + 60) is still below the small
+    // header's foot: the row says it, so no chip.
+    await scroll(tree, HEADER_FULL + 60 - HEADER_MINI - 1);
+    expect(backButtons(tree)).toHaveLength(1);
+    expect(chip(tree)).toHaveLength(0);
+    // Scrolled past it: the chip.
+    await scroll(tree, HEADER_FULL + 60 - HEADER_MINI);
+    expect(chip(tree)).toHaveLength(1);
     await scroll(tree, 5000);
     expect(chip(tree)).toHaveLength(1);
     const c = chip(tree)[0];
@@ -554,18 +635,24 @@ describe('the small preview says when something is being made', () => {
     expect(card(tree).findAll((n) => host(n) && n.props.testID === 'share-mini-progress')).toHaveLength(0);
     await scroll(tree, 0);
     expect(chip(tree)).toHaveLength(0);
-    expect(byTestID(card(tree), 'share-making-preview').length).toBeGreaterThan(0);
+    expect(byTestID(page(tree), 'share-making-preview').length).toBeGreaterThan(0);
   });
 
-  test('the share video being made: small, the chip reads "Making your video, N%"; the full-size row and Cancel stay in the page', async () => {
+  test('the share video being made: no chip at any size; its row and Cancel are in the page, and Share and Save show disabled, not their own spinner', async () => {
     mockEngine.exportShareVideo.mockImplementation((_o, onProgress) => { onProgress(0.3); return new Promise(() => {}); });
     const tree = await mountWithVideo();
-    const share = tree.root.findAll((n) => host(n) && n.props.accessibilityLabel === 'Share your video to Instagram or Facebook Story')[0];
-    await press(share);
+    await layOut(tree);
+    const share = () => tree.root.findAll((n) => host(n) && n.props.accessibilityLabel === 'Share your video to Instagram or Facebook Story')[0];
+    await press(share());
     expect(byTestID(page(tree), 'share-making-video').length).toBeGreaterThan(0);
     expect(chip(tree)).toHaveLength(0);
+    const buttons = tree.root.findAll((n) => n.type === Button && (n.props.title === 'Share video' || n.props.title === 'Save to gallery'));
+    expect(buttons).toHaveLength(2);
+    for (const b of buttons) {
+      expect({ title: b.props.title, loading: b.props.loading, disabled: b.props.disabled }).toEqual({ title: b.props.title, loading: false, disabled: true });
+    }
     await scroll(tree, 5000);
-    expect(chip(tree)[0].props.accessibilityLabel).toBe('Making your video, 30%');
+    expect(chip(tree)).toHaveLength(0);
     expect(byTestID(page(tree), 'share-making-video').length).toBeGreaterThan(0);
   });
 
@@ -624,7 +711,8 @@ describe('safety', () => {
     mockGetClip.mockResolvedValue(CLIP_SET);
     const tree = await mount({ ...SESSION, clipId: 'c2' });
     expect(players(header(tree))).toHaveLength(0);
-    expect(byLabel(header(tree), 'Play the video')).toHaveLength(0);
-    expect(byTestID(header(tree), 'share-making-preview')).toHaveLength(0);
+    expect(byLabel(tree.root, PLAY)).toHaveLength(0);
+    expect(byTestID(tree.root, 'share-play-control')).toHaveLength(0);
+    expect(byTestID(tree.root, 'share-making-preview')).toHaveLength(0);
   });
 });
