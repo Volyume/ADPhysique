@@ -32,8 +32,9 @@
  *     discards; flip is disabled while recording;
  *   - a save through the store carries the exercise and the set; from the
  *     workout: the house undo toast saying where the video is (addendum
- *     14: "Saved with this workout. Find it under Your videos, and on your
- *     share at the end."), with Watch beside Undo, then back;
+ *     14, the founder's precision order: "Saved with this workout. Find it
+ *     later under the three dots on this exercise, in Your videos, or on
+ *     your share when you finish."), with Watch beside Undo, then back;
  *     from the summary or the share screen: no toast (the video is about to
  *     be on screen), back there with clipId; a full workout shows the sheet
  *     instead;
@@ -1124,7 +1125,7 @@ describe('after a save', () => {
     expect(mockShow).toHaveBeenCalledTimes(1);
     const [message, options] = mockShow.mock.calls[0];
     expect(message).toBe(CLIP_STRINGS.saved);
-    expect(message).toBe('Saved with this workout. Find it under Your videos, and on your share at the end.');
+    expect(message).toBe('Saved with this workout. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.');
     expect(options.variant).toBe('undo');
     expect(options.action.label).toBe('Undo');
     expect(navigation.goBack).toHaveBeenCalledTimes(1);

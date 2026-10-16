@@ -329,7 +329,7 @@ describe('the ruled words', () => {
     // Addendum 12: the light line and the clear band are said once, here.
     // Addenda 13 and 14: the length, the light, the clear band, and where
     // the videos are kept, said once.
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under Your videos, and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
     expect(CLIP_STRINGS.primerOpen).toBe('Open camera');
     expect(CLIP_STRINGS.primerNotNow).toBe('Not now');
   });
@@ -337,7 +337,7 @@ describe('the ruled words', () => {
   test('the camera words', () => {
     expect(CLIP_STRINGS.permissionDenied).toBe('Volyume needs camera access to record a video.');
     // Addendum 14: where it went and where to find it, in the toast itself.
-    expect(CLIP_STRINGS.saved).toBe('Saved with this workout. Find it under Your videos, and on your share at the end.');
+    expect(CLIP_STRINGS.saved).toBe('Saved with this workout. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.');
     expect(CLIP_STRINGS.undo).toBe('Undo');
     expect(CLIP_STRINGS.closeA11y).toBe('Cancel recording');
     expect(CLIP_STRINGS.stopA11y).toBe('Stop recording');

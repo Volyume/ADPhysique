@@ -119,7 +119,7 @@ export const CLIP_STRINGS = Object.freeze({
   // sentences about light and the clear band: said once, here, never on the
   // camera itself).
   primerTitle: 'Videos stay on this phone',
-  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under Your videos, and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.',
+  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.',
   primerOpen: 'Open camera',
   primerNotNow: 'Not now',
 
@@ -160,7 +160,7 @@ export const CLIP_STRINGS = Object.freeze({
   flipA11y: 'Flip camera',
   // Addendum 14 (founder: "make it clear when they record a video on set
   // where it goes and where they can find it after"): the toast says both.
-  saved: 'Saved with this workout. Find it under Your videos, and on your share at the end.',
+  saved: 'Saved with this workout. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.',
   undo: 'Undo',
   // Addendum 13 (F): the second action on the saved toast, which opens the
   // videos sheet with that video playing.
