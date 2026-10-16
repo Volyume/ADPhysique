@@ -130,9 +130,11 @@ jest.mock('../../components/share/VideoTrimBar', () => {
   return { __esModule: true, default: (props) => mockReact.createElement('VideoTrimBar', props) };
 });
 jest.mock('expo-av', () => ({ Video: 'Video', ResizeMode: { CONTAIN: 'contain' } }));
+// The frame source is ASYNC (the native lane's contract, 2026-10-16).
 jest.mock('../../lib/shareVideo/videoFrame', () => ({
-  grabVideoFrame: (_Skia, _uri, ms) => ({ image: FAKE_FRAME, width: 1080, height: 1920, durationMs: 12000, ms }),
-  videoThumbnailBase64: () => 'CCCC',
+  grabVideoFrame: (_Skia, _uri, ms) => Promise.resolve({ image: FAKE_FRAME, width: 1080, height: 1920, durationMs: 12000, ms }),
+  videoThumbnailUri: () => Promise.resolve('file:///cache/share-frames/thumb.jpg'),
+  videoStripUris: (_uri, _d, count) => Promise.resolve(Array.from({ length: count }, () => null)),
 }));
 const mockGetClip = jest.fn();
 jest.mock('../../lib/clips/store', () => ({

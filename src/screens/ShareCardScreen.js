@@ -76,9 +76,13 @@ import VideoTrimBar from '../components/share/VideoTrimBar';
 import { lookMatrix } from '../lib/shareCard/photoLooks';
 import { photoCoverRect } from '../lib/shareCard/drawShareCard';
 import * as shareVideoEngine from '../lib/shareVideo/engine';
-import { grabVideoFrame, videoThumbnailBase64 } from '../lib/shareVideo/videoFrame';
+// The frame source is native and ASYNC (Skia.Video cannot work on a device):
+// a frame arrives later, upright, as an SkImage decoded offscreen, and the
+// strip's thumbnails are plain file URIs for an RN Image.
+import { grabVideoFrame, videoThumbnailUri } from '../lib/shareVideo/videoFrame';
+import { sampleClipTone, videoTier } from '../lib/shareVideo/clipTone';
 import { getClip, listClipsForWorkout, subscribeClips } from '../lib/clips/store';
-import { clipDisplayName, clipMatchesPR, CLIP_STRINGS } from '../lib/clips/rules';
+import { clipDisplayName, clipMatchesPR, formatClipDuration, CLIP_STRINGS } from '../lib/clips/rules';
 import useClipRecorder from '../components/clips/useClipRecorder';
 import useAppStore from '../store/useAppStore';
 
@@ -87,6 +91,104 @@ import useAppStore from '../store/useAppStore';
 // A share is 15 seconds at the longest (the engine's own ceiling; the
 // number is held here too so the screen never shows a blank length).
 const MAX_VIDEO_MS = Number(shareVideoEngine.MAX_CLIP_MS) > 0 ? Number(shareVideoEngine.MAX_CLIP_MS) : 15000;
+
+// Legibility over a moving video (D229 addendum 4, rules 2 and 3): the scrim
+// is set from frames spaced through the share's window (the first and the
+// last included), decoded small and offscreen, and read the photo way
+// (shareVideo/clipTone.js). Re-read a moment after the window or the
+// framing settles; until then the bright tier stands (rule 3's safe side).
+const TONE_FRAME_COUNT = 8;
+const TONE_FRAME_EDGE = 160;
+const TONE_DEBOUNCE_MS = 350;
+const TONE_W = 1080;
+const BRIGHT_TIER_TONE = videoTier(null);
+// The engine's finished videos live in the cache's own folder; this screen
+// clears the ones older than an hour when it opens (the share sheet has long
+// finished with them), never while anything waits on it.
+const SHARE_VIDEO_DIR = 'share-video/';
+const SHARE_VIDEO_KEEP_MS = 60 * 60 * 1000;
+// A second engine job while one is still finishing (for example, coming
+// back to the screen while the last video is still being stopped).
+const VIDEO_BUSY_LINE = 'A video is still being made. Try again in a moment.';
+
+// The moments the tone is read at: `count` spaced through the window, the
+// first at its start and the last just inside its end.
+function toneSampleTimes(startMs, endMs, count = TONE_FRAME_COUNT) {
+  const start = Math.max(0, Math.round(Number(startMs) || 0));
+  const last = Math.max(start, Math.round(Number(endMs) || 0) - 1);
+  const out = [];
+  for (let i = 0; i < count; i += 1) {
+    out.push(count === 1 ? start : Math.round(start + ((last - start) * i) / (count - 1)));
+  }
+  return out;
+}
+
+// The engine's codes this screen answers itself (the wrapper's own names,
+// with their values as the fallback when a build lacks the table).
+const ENGINE_CANCELLED = shareVideoEngine.EXPORT_ERROR?.CANCELLED || 'E_CANCELLED';
+const ENGINE_BUSY = shareVideoEngine.EXPORT_ERROR?.BUSY || 'E_BUSY';
+
+// Stops the engine's running job; nothing running is fine.
+function cancelEngineJob() {
+  try {
+    const done = typeof shareVideoEngine.cancelExport === 'function' ? shareVideoEngine.cancelExport() : null;
+    if (done && typeof done.catch === 'function') done.catch(() => { /* nothing running is fine */ });
+  } catch (_e) { /* nothing running is fine */ }
+}
+
+// Deletes one cache file; best effort, never waited on.
+function deleteCacheFile(uri) {
+  try {
+    const done = FileSystem && typeof FileSystem.deleteAsync === 'function'
+      ? FileSystem.deleteAsync(uri, { idempotent: true }) : null;
+    if (done && typeof done.catch === 'function') done.catch(() => { /* best effort */ });
+  } catch (_e) { /* best effort */ }
+}
+
+// Releases an SkImage the screen no longer holds; best effort.
+function disposeImage(img) {
+  try { img?.dispose?.(); } catch (_e) { /* released either way */ }
+}
+
+// "12 seconds" (spoken), as the trim bar's caption says it.
+function secondsWords(ms) {
+  const s = Math.max(0, Math.round((Number(ms) || 0) / 1000));
+  return `${s} ${s === 1 ? 'second' : 'seconds'}`;
+}
+
+// One video, whether it came from the clip store (an id) or the gallery
+// (its file alone).
+function videoKeyOf(row) {
+  return row?.id != null ? `id:${row.id}` : `uri:${row?.uri || ''}`;
+}
+function isSameVideo(a, b) {
+  if (!a || !b) return false;
+  return videoKeyOf(a) === videoKeyOf(b);
+}
+
+// Clears this screen's finished videos older than SHARE_VIDEO_KEEP_MS from
+// the cache. Best effort throughout: a phone that cannot list or read the
+// folder simply keeps the files.
+async function sweepOldShareVideos(FS) {
+  if (!FS || !FS.cacheDirectory || typeof FS.readDirectoryAsync !== 'function'
+    || typeof FS.getInfoAsync !== 'function' || typeof FS.deleteAsync !== 'function') return;
+  const dir = `${FS.cacheDirectory}${SHARE_VIDEO_DIR}`;
+  let names = [];
+  try { names = await FS.readDirectoryAsync(dir); } catch (_e) { return; }
+  const now = Date.now();
+  for (const name of Array.isArray(names) ? names : []) {
+    if (typeof name !== 'string' || !/\.mp4$/i.test(name)) continue;
+    const uri = `${dir}${name}`;
+    try {
+      const info = await FS.getInfoAsync(uri);
+      // expo-file-system gives the modification time in seconds.
+      const modifiedMs = Number(info?.modificationTime) * 1000;
+      if (info?.exists && Number.isFinite(modifiedMs) && modifiedMs > 0 && now - modifiedMs > SHARE_VIDEO_KEEP_MS) {
+        await FS.deleteAsync(uri, { idempotent: true });
+      }
+    } catch (_e) { /* this one stays */ }
+  }
+}
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
@@ -228,6 +330,10 @@ export default function ShareCardScreen({ navigation, route }) {
   // caller can still force suppression, never clear it.
   const suppressedLive = usePhotoSuppression();
   const suppress = suppressParam || suppressedLive;
+  // Read after an await (a video share that finishes after the gate closed
+  // is never handed on).
+  const suppressRef = useRef(suppress);
+  suppressRef.current = suppress;
 
   // Session leads whenever session data is present (a workout share opens as the
   // session card even when it also carries a PR). A standalone "Share this PR"
@@ -303,7 +409,30 @@ export default function ShareCardScreen({ navigation, route }) {
   const makingVideoRef = useRef(false);
   const videoCacheRef = useRef({});
   const handledClipIdRef = useRef(null);
+  // The async frame source (A): every frame request takes the next number,
+  // and only the LATEST is ever applied, so a slow frame for a video the
+  // person has since moved on from never lands. A pending choice is shown
+  // on its tile and over the preview while its first frame comes.
+  const frameReqRef = useRef(0);
+  const [frameLoading, setFrameLoading] = useState(false);
+  const [pendingClipKey, setPendingClipKey] = useState(null);
+  const pendingClipKeyRef = useRef(null);
+  // Thumbnails asked for already, by video id (each is asked for once).
+  const thumbRequestedRef = useRef(new Set());
+  // The scrim's tone over the video (H): { key, tone } for the window and
+  // framing it was read from; the frames decoded for the current window are
+  // kept so a change of framing re-reads them without decoding again.
+  const [clipTone, setClipTone] = useState(null);
+  const toneReqRef = useRef(0);
+  const toneFramesRef = useRef({ key: null, images: [] });
+  // The overlay pictures written this session (J), cleared after each job
+  // and again on leaving.
+  const overlayFilesRef = useRef(new Set());
   const userId = useAppStore((st) => st.user?.id ?? null);
+  // The latest chosen video and safety state, for the async paths that must
+  // read them after an await.
+  const clipRef = useRef(null);
+  clipRef.current = clip;
   // Reduce Motion: the phone's own setting, read once, OR Volyume's own
   // (Settings), the one AnimatedEntrance and the camera read (fresh-eyes
   // review 2026-10-15, should-fix 6). It makes the preview's scroll back to
@@ -434,6 +563,10 @@ export default function ShareCardScreen({ navigation, route }) {
         ? { kind: 'session', workoutId }
         : null;
   const isSticker = format === 'sticker';
+  // The video in play: none under the Sticker (a transparent panel has no
+  // background), which shares and saves the image; the chosen video is kept
+  // for when another format is chosen again (finding 8).
+  const liveClip = isSticker ? null : clip;
   // Campaign 30: the weekly recap's old square-only restriction is lifted -
   // the rebuilt renderer composes every type against the tall canvas (story
   // safe zones, content balance) instead of leaving it mostly empty. The
@@ -871,45 +1004,130 @@ export default function ShareCardScreen({ navigation, route }) {
     chooseLook('none');
   }, [boundPhotoForCanvas, makeFramerPhoto, chooseLook]);
 
+  // Drops the video and everything that belonged to it (its window, the
+  // preview made from it, a frame still on its way and both caches of made
+  // videos), leaving the background itself to the caller. Used by None, by a
+  // photo chosen after a video (finding 5) and by the safety gate closing.
+  const dropVideo = useCallback(() => {
+    frameReqRef.current += 1;
+    toneReqRef.current += 1;
+    pendingClipKeyRef.current = null;
+    setPendingClipKey(null);
+    setFrameLoading(false);
+    setClip(null);
+    setClipStartMs(0);
+    setClipEndMs(0);
+    setClipSize({ width: 0, height: 0 });
+    setPreviewVideo(null);
+    setClipTone(null);
+    toneFramesRef.current.images.forEach(disposeImage);
+    toneFramesRef.current = { key: null, images: [] };
+    videoCacheRef.current = {};
+    previewCacheRef.current = {};
+  }, []);
+
   const clearPhoto = useCallback(() => {
     setBgPhoto(null);
     setPhotoCrop(null);
     setFramerPhoto(null);
-    setClip(null);
-    setClipStartMs(0);
-    setClipEndMs(0);
-    setPreviewVideo(null);
+    dropVideo();
     setBackgroundSource(BACKGROUND_SOURCES.NONE);
-  }, []);
+  }, [dropVideo]);
 
   // ── Video as a background (addendum 17) ─────────────────────────────────
-  // The frame at `ms` becomes the background through the photo path, so the
-  // looks and the framing apply to it; a failed decode says so and leaves the
-  // background as it was.
-  const showVideoFrame = useCallback((row, ms, { fresh = false } = {}) => {
-    if (!Skia || !row?.uri) return false;
-    const frame = grabVideoFrame(Skia, row.uri, ms);
+  // The frame source is native and asynchronous. Each request takes the next
+  // number and only the latest is applied: a frame for a video the person
+  // has moved on from (another video, the trim moved again, a photo, None)
+  // is released and nothing is said about it. A frame that cannot be read
+  // says so once and leaves the background as it was. `withProbe` also asks
+  // the engine for the video's upright size and real length.
+  const requestFrame = useCallback(async (row, ms, { withProbe = false } = {}) => {
+    const req = frameReqRef.current + 1;
+    frameReqRef.current = req;
+    setFrameLoading(true);
+    const grab = (async () => {
+      try {
+        const f = await grabVideoFrame(Skia, row.uri, ms);
+        return f && f.image ? f : null;
+      } catch (e) {
+        logError('ShareCardScreen.videoFrame', e);
+        return null;
+      }
+    })();
+    const probe = (async () => {
+      if (!withProbe || typeof shareVideoEngine.probeVideo !== 'function') return null;
+      try {
+        const p = await shareVideoEngine.probeVideo(row.uri);
+        return p && Number(p.width) > 0 && Number(p.height) > 0 ? p : null;
+      } catch (_e) {
+        return null; // the frame's own upright size is used instead
+      }
+    })();
+    const [frame, facts] = await Promise.all([grab, probe]);
+    if (!mountedRef.current || req !== frameReqRef.current) {
+      disposeImage(frame?.image);
+      return { status: 'stale' };
+    }
+    setFrameLoading(false);
     if (!frame) {
       toast.show(CLIP_STRINGS.shareVideoCannotOpen, { variant: 'error' });
-      return false;
+      return { status: 'failed' };
     }
-    setClipSize({ width: frame.width, height: frame.height });
-    if (fresh) acceptPhoto(frame.image);
-    else setBgPhoto(boundPhotoForCanvas(frame.image));
-    return true;
-  }, [acceptPhoto, boundPhotoForCanvas, toast]);
+    return { status: 'ok', frame, probe: facts };
+  }, [toast]);
 
-  const acceptClip = useCallback((row) => {
-    if (!row?.uri) return;
-    const shown = showVideoFrame(row, 0, { fresh: true });
-    if (!shown) return;
-    const d = Number(row.durationMs) || 0;
-    setClip(row);
+  // A video chosen from the strip, the sheet, the gallery or the route. It
+  // is committed only once its first frame has arrived; until then its tile
+  // and the preview show that it is on its way. The one already chosen is
+  // left exactly as it is (its look, framing and window), and a PR set's
+  // video leads with that PR's card, wherever it was chosen from.
+  const acceptClip = useCallback(async (row) => {
+    if (!Skia || !row?.uri || suppressRef.current) return false;
+    setVideoSheetOpen(false);
+    if (isSameVideo(clipRef.current, row)) return true;
+    const key = videoKeyOf(row);
+    if (pendingClipKeyRef.current === key) return false;
+    pendingClipKeyRef.current = key;
+    setPendingClipKey(key);
+    const result = await requestFrame(row, 0, { withProbe: true });
+    if (result.status === 'stale') return false; // a newer choice owns the pending state
+    pendingClipKeyRef.current = null;
+    setPendingClipKey(null);
+    if (result.status !== 'ok') return false;
+    const { frame, probe } = result;
+    // One upright size for the framer, the cover rect and the share
+    // (finding 6): the engine's own reading when it has one.
+    setClipSize(probe
+      ? { width: Math.round(Number(probe.width)), height: Math.round(Number(probe.height)) }
+      : { width: frame.width, height: frame.height });
+    const probedMs = Number(probe?.durationMs) || 0;
+    const d = probedMs > 0 ? probedMs : (Number(row.durationMs) || 0);
+    acceptPhoto(frame.image);
+    setBackgroundSource(BACKGROUND_SOURCES.VIDEO);
+    setClip(probedMs > 0 && probedMs !== Number(row.durationMs) ? { ...row, durationMs: probedMs } : row);
     setClipStartMs(0);
     setClipEndMs(d > 0 ? Math.min(d, MAX_VIDEO_MS) : MAX_VIDEO_MS);
     setPreviewVideo(null);
-    setVideoSheetOpen(false);
-  }, [showVideoFrame]);
+    setClipTone(null);
+    const prIndex = prs.findIndex((pr) => clipMatchesPR(row, pr));
+    if (prIndex >= 0) { setSelectedPrIndex(prIndex); setCardType('pr'); }
+    return true;
+  }, [requestFrame, acceptPhoto, prs]);
+
+  // The still at a new start (the trim moved): the same video, so the look,
+  // its strength and the framing all stay; the framer is redrawn from the
+  // new frame so the preview SHOWS the new start (finding 9).
+  const showFrameAt = useCallback(async (row, ms) => {
+    // A choice still on its way is given up: the trim belongs to the video
+    // already chosen.
+    pendingClipKeyRef.current = null;
+    setPendingClipKey(null);
+    const result = await requestFrame(row, ms);
+    if (result.status !== 'ok') return;
+    const bounded = boundPhotoForCanvas(result.frame.image);
+    setBgPhoto(bounded);
+    setFramerPhoto(makeFramerPhoto(bounded));
+  }, [requestFrame, boundPhotoForCanvas, makeFramerPhoto]);
 
   // The share's window, both ends, from the trim bar (it clamps the window
   // itself; this only keeps it inside the video). The still follows the start.
@@ -919,10 +1137,12 @@ export default function ShareCardScreen({ navigation, route }) {
     const top = clipDurationMs > 0 ? clipDurationMs : MAX_VIDEO_MS;
     const start = Math.max(0, Math.min(Math.round(Number(startMs) || 0), top));
     const end = Math.max(start + 1, Math.min(Math.round(Number(endMs) || 0), top, start + MAX_VIDEO_MS));
-    if (start !== clipStartMs) showVideoFrame(clip, start);
+    if (start !== clipStartMs) {
+      showFrameAt(clip, start).catch((e) => { logError('ShareCardScreen.videoStart', e); });
+    }
     setClipStartMs(start);
     setClipEndMs(end);
-  }, [clip, clipDurationMs, clipStartMs, showVideoFrame]);
+  }, [clip, clipDurationMs, clipStartMs, showFrameAt]);
 
   // This workout's videos, for "From this workout": re-read on every save or
   // delete anywhere; a chosen video that no longer exists goes.
@@ -948,25 +1168,31 @@ export default function ShareCardScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workoutId, userId, suppress, clipsVersion]);
 
-  // The strip's thumbnails: one still per video, decoded offscreen once
-  // (best effort; a video that will not decode shows a glyph).
+  // The strip's thumbnails: one file per video from the native frame source,
+  // asked for once per video id and shown in a plain Image (best effort; a
+  // video with no thumbnail shows a glyph). Nothing lands after leaving.
   useEffect(() => {
-    if (!Skia || !workoutClips.length) return;
-    setClipThumbs((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const row of workoutClips) {
-        if (next[row.id] !== undefined) continue;
-        next[row.id] = videoThumbnailBase64(Skia, row.uri);
-        changed = true;
-      }
-      return changed ? next : prev;
-    });
+    if (!workoutClips.length || typeof videoThumbnailUri !== 'function') return;
+    for (const row of workoutClips) {
+      const id = row?.id;
+      if (id == null || !row.uri || thumbRequestedRef.current.has(id)) continue;
+      thumbRequestedRef.current.add(id);
+      Promise.resolve()
+        .then(() => videoThumbnailUri(row.uri))
+        .then((uri) => {
+          if (!mountedRef.current) return;
+          const ok = typeof uri === 'string' && uri.length > 0;
+          // A video with no thumbnail this time may get one on the next list.
+          if (!ok) thumbRequestedRef.current.delete(id);
+          setClipThumbs((prev) => (prev[id] === (ok ? uri : null) ? prev : { ...prev, [id]: ok ? uri : null }));
+        })
+        .catch(() => { thumbRequestedRef.current.delete(id); });
+    }
   }, [workoutClips]);
 
   // Arriving with a video (the summary's row, or the camera opened from here
   // coming back with `clipId` merged into the route): it becomes the
-  // background once, and a PR it was filmed for leads the card.
+  // background once, and a PR it was filmed for leads the card (acceptClip).
   const routeClipId = route?.params?.clipId ?? null;
   useEffect(() => {
     if (!routeClipId || !userId || suppress) return undefined;
@@ -975,15 +1201,22 @@ export default function ShareCardScreen({ navigation, route }) {
     let cancelled = false;
     getClip(userId, routeClipId)
       .then((row) => {
-        if (cancelled || !row) return;
-        acceptClip(row);
-        const prIndex = prs.findIndex((pr) => clipMatchesPR(row, pr));
-        if (prIndex >= 0) { setSelectedPrIndex(prIndex); setCardType('pr'); }
+        if (cancelled || !row) return undefined;
+        return acceptClip(row);
       })
       .catch((e) => { logError('ShareCardScreen.routeClip', e, { clipId: routeClipId }); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeClipId, userId, suppress]);
+
+  // The safety gate closing with a video chosen (finding 14): the video goes
+  // and every video surface with it; a video still being made is stopped.
+  useEffect(() => {
+    if (!suppress) return;
+    if (!clipRef.current && pendingClipKeyRef.current == null) return;
+    if (makingPreviewRef.current || makingVideoRef.current) cancelEngineJob();
+    clearPhoto();
+  }, [suppress, clearPhoto]);
 
   // Film now: the one recording flow (the primer first, the camera, the
   // videos sheet at three), coming back here with the video chosen.
@@ -1002,19 +1235,17 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!mountedRef.current) return;
       if (!perm.granted) { toast.show('Photo access is needed to choose a video.', { variant: 'warning' }); return; }
       const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'] });
-      if (res.canceled || !res.assets?.[0]?.uri) return;
+      if (!mountedRef.current || res.canceled || !res.assets?.[0]?.uri) return;
       const asset = res.assets[0];
-      let durationMs = Number(asset.duration) || 0;
-      try {
-        const probe = await shareVideoEngine.probeVideo(asset.uri);
-        if (probe?.durationMs) durationMs = probe.durationMs;
-      } catch (_e) { /* the decoder's own length is used below */ }
-      acceptClip({ id: null, uri: asset.uri, durationMs, source: 'gallery' });
+      // The picker's own length stands until acceptClip's probe reads the
+      // real one (with the upright size) alongside the first frame.
+      await acceptClip({ id: null, uri: asset.uri, durationMs: Number(asset.duration) || 0, source: 'gallery' });
     } catch (e) {
       logError('ShareCardScreen.pickVideo', e);
-      toast.show('That video could not be opened. Try another.', { variant: 'error' });
+      if (mountedRef.current) toast.show('That video could not be opened. Try another.', { variant: 'error' });
     }
   }, [toast, acceptClip]);
 
@@ -1075,18 +1306,22 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!mountedRef.current) return;
       if (!perm.granted) { toast.show('Camera access is needed to add a background', { variant: 'warning' }); return; }
       const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 });
-      if (res.canceled || !res.assets?.[0]?.uri) return;
+      if (!mountedRef.current || res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
+      if (!mountedRef.current) return;
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-      if (img) setBackgroundSource(BACKGROUND_SOURCES.PHOTO);
+      // A photo replaces a video outright: the video, its window and
+      // anything made from it go (finding 5).
+      if (img) { dropVideo(); setBackgroundSource(BACKGROUND_SOURCES.PHOTO); }
       if (img) acceptPhoto(img);
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
-      toast.show("Couldn't take that photo, try again", { variant: 'error' });
+      if (mountedRef.current) toast.show("Couldn't take that photo, try again", { variant: 'error' });
     }
-  }, [toast, acceptPhoto]);
+  }, [toast, acceptPhoto, dropVideo]);
 
   // Choose an existing photo from the gallery (ELITE-SHARE-SPEC pillar 1:
   // the photo becomes the canvas, and most gym photos already exist). Uses
@@ -1100,18 +1335,22 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!mountedRef.current) return;
       if (!perm.granted) { toast.show('Photo access is needed to choose a background', { variant: 'warning' }); return; }
       const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
-      if (res.canceled || !res.assets?.[0]?.uri) return;
+      if (!mountedRef.current || res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
+      if (!mountedRef.current) return;
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-      if (img) setBackgroundSource(BACKGROUND_SOURCES.GALLERY);
+      // A photo replaces a video outright: the video, its window and
+      // anything made from it go (finding 5).
+      if (img) { dropVideo(); setBackgroundSource(BACKGROUND_SOURCES.GALLERY); }
       if (img) acceptPhoto(img);
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
-      toast.show("Couldn't open your photos, try again", { variant: 'error' });
+      if (mountedRef.current) toast.show("Couldn't open your photos, try again", { variant: 'error' });
     }
-  }, [toast, acceptPhoto]);
+  }, [toast, acceptPhoto, dropVideo]);
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
@@ -1140,6 +1379,81 @@ export default function ShareCardScreen({ navigation, route }) {
   // the preview is live: the photo moves and resizes under the athlete's
   // fingers, right on the card.
   const livePhoto = !!framerPhoto && !!bgPhoto && !isSticker;
+  // The framer places the picture at the size the share will use: for a
+  // video, its own upright size (finding 6), so what is framed here is what
+  // the engine draws.
+  const framerSize = liveClip && clipSize.width > 0 && clipSize.height > 0
+    ? clipSize
+    : { width: framerPhoto?.width || 0, height: framerPhoto?.height || 0 };
+
+  // ── Legibility over the video (D229 addendum 4, rules 2 and 3) ─────────
+  // The video share's height at a width, evened for the encoder, with Full
+  // screen's own shape (finding 7): one place, so the tone, the preview and
+  // the share are all read at the same shape.
+  const videoHeightAt = useCallback((W, params) => {
+    let H = cardHeight(W, params.isSquare, params.aspect, params.fullAspect);
+    if (H % 2) H -= 1;
+    return H;
+  }, []);
+  const toneShapeH = liveClip ? videoHeightAt(TONE_W, { isSquare, aspect: cardAspect, fullAspect: isFullScreen ? fullAspect : undefined }) : 0;
+  const toneFramesKey = liveClip ? `${liveClip.uri}|${clipStartMs}|${clipEndMs}` : null;
+  const toneKey = toneFramesKey ? `${toneFramesKey}|${toneShapeH}|${JSON.stringify(photoCrop || null)}` : null;
+  // The tone every overlay with a video is drawn from: the reading for
+  // exactly this window, shape and framing, else the bright tier until it
+  // arrives. Null with no video (the photo path samples its own).
+  const videoTone = useMemo(() => {
+    if (!toneKey) return null;
+    return clipTone && clipTone.key === toneKey ? clipTone.tone : BRIGHT_TIER_TONE;
+  }, [toneKey, clipTone]);
+  useEffect(() => {
+    if (!toneKey || !liveClip || !Skia || suppress) return undefined;
+    if (clipTone && clipTone.key === toneKey) return undefined;
+    const req = toneReqRef.current + 1;
+    toneReqRef.current = req;
+    const uri = liveClip.uri;
+    const framesKey = toneFramesKey;
+    const start = clipStartMs;
+    const end = clipEndMs;
+    const crop = photoCrop;
+    const H = toneShapeH;
+    const current = () => mountedRef.current && req === toneReqRef.current;
+    const timer = setTimeout(() => {
+      (async () => {
+        let images = toneFramesRef.current.key === framesKey ? toneFramesRef.current.images : null;
+        if (!images) {
+          images = [];
+          let frames = [];
+          try {
+            frames = typeof shareVideoEngine.extractFrames === 'function'
+              ? await shareVideoEngine.extractFrames(uri, toneSampleTimes(start, end), { maxEdge: TONE_FRAME_EDGE })
+              : [];
+          } catch (e) {
+            logError('ShareCardScreen.clipToneFrames', e, { code: e?.code });
+            frames = [];
+          }
+          for (const f of Array.isArray(frames) ? frames : []) {
+            if (!current()) break;
+            if (!f?.uri || !FileSystem) continue;
+            try {
+              const b64 = await FileSystem.readAsStringAsync(f.uri, { encoding: FileSystem.EncodingType.Base64 });
+              const img = b64 ? Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64)) : null;
+              if (img) images.push(img);
+            } catch (_e) { /* this frame is skipped */ }
+          }
+          if (!current()) { images.forEach(disposeImage); return; }
+          toneFramesRef.current.images.forEach(disposeImage);
+          toneFramesRef.current = { key: framesKey, images };
+        }
+        const tone = sampleClipTone(Skia, images, TONE_W, H, crop);
+        if (current()) setClipTone({ key: toneKey, tone });
+      })().catch((e) => { logError('ShareCardScreen.clipTone', e); });
+    }, TONE_DEBOUNCE_MS);
+    return () => { clearTimeout(timer); };
+    // clipTone is read, not followed: a reading that lands must not start
+    // another.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toneKey, suppress]);
+
 
   // The card laid over the photo in the live preview: the one renderer,
   // with the photo itself left out (`omitPhoto`), so the athlete places the
@@ -1154,6 +1468,9 @@ export default function ShareCardScreen({ navigation, route }) {
       if (!surface) return null;
       drawShareCard(surface.getCanvas(), {
         Skia, width: PREVIEW_RENDER_W, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop, omitPhoto: true,
+        // Over a video the scrim is the one read across its window (or the
+        // bright tier until then), exactly as the share draws it.
+        toneOverride: videoTone,
       });
       surface.flush();
       const image = surface.makeImageSnapshot();
@@ -1163,7 +1480,7 @@ export default function ShareCardScreen({ navigation, route }) {
       logError('ShareCardScreen.framerOverlay', e);
       return null;
     }
-  }, [livePhoto, typefaces, wordmark, wordmarkDark, buildParams, bgPhoto, photoCrop]);
+  }, [livePhoto, typefaces, wordmark, wordmarkDark, buildParams, bgPhoto, photoCrop, videoTone]);
 
   // The page's own scroll, made known to the gesture system so a drag that
   // starts on the photo moves the photo and never the page (the photo's
@@ -1190,57 +1507,95 @@ export default function ShareCardScreen({ navigation, route }) {
 
   // The finished video (addendum 17): the card drawn without its photo as a
   // PNG over the video, the window from the chosen start, the look's colour
-  // matrix and the framing rectangle, through the native engine. Cached by
-  // everything that went into it, so Share then Save makes it once.
+  // matrix and the framing rectangle, through the native engine.
   // One video job's inputs at an output width: the share at 1080, the
-  // preview at 540. The signature is everything that went into it, so a
-  // cached file is reused only when nothing on screen has changed.
+  // preview at 540. The signature is everything that went into it (the
+  // card, the window, the framing, the look, the scrim's tone, and which
+  // typefaces and marks were ready), so a cached file is reused only when
+  // nothing on screen has changed (finding 13).
   const videoJobAt = useCallback((W) => {
     const params = buildParams();
-    let H = cardHeight(W, params.isSquare, params.aspect);
-    if (H % 2) H -= 1;
+    const H = videoHeightAt(W, params);
     const durationMs = Math.min(MAX_VIDEO_MS, Math.max(1, Math.round(clipEndMs - clipStartMs)));
+    const tone = videoTone || BRIGHT_TIER_TONE;
     const signature = JSON.stringify({
-      uri: clip?.uri, start: clipStartMs, end: clipEndMs, durationMs, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H,
+      uri: liveClip?.uri,
+      start: clipStartMs,
+      end: clipEndMs,
+      durationMs,
+      crop: photoCrop,
+      look: photoLook,
+      strength: photoLookStrength,
+      params,
+      W,
+      H,
+      tone,
+      faces: appTypefaces ? 'app' : 'system',
+      mark: !!wordmark,
+      markDark: !!wordmarkDark,
     });
-    return { params, W, H, durationMs, signature };
-  }, [clip, buildParams, clipStartMs, clipEndMs, photoCrop, photoLook, photoLookStrength]);
+    return { params, W, H, durationMs, tone, signature };
+  }, [liveClip, buildParams, videoHeightAt, clipStartMs, clipEndMs, photoCrop, photoLook, photoLookStrength, videoTone, appTypefaces, wordmark, wordmarkDark]);
 
-  // Draws the card without its photo at the job's size, writes it as the
-  // overlay PNG and hands everything to the engine. Throws the engine's error.
+  // Draws the card without its photo at the job's size, over the scrim read
+  // from the video, writes it as the overlay PNG and hands everything to the
+  // engine; the PNG is deleted once the engine is done with it. Throws the
+  // engine's error.
   const runVideoJob = useCallback(async (job, bitrate, onProgress) => {
-    const { params, W, H, durationMs } = job;
+    const { params, W, H, durationMs, tone } = job;
+    const source = liveClip;
+    if (!source?.uri) return null;
     const surface = Skia.Surface.MakeOffscreen(W, H);
     if (!surface) return null;
     drawShareCard(surface.getCanvas(), {
-      Skia, width: W, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop, omitPhoto: true,
+      Skia, width: W, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop, omitPhoto: true, toneOverride: tone,
     });
     surface.flush();
     const image = surface.makeImageSnapshot();
     const b64 = image ? image.encodeToBase64() : null;
     if (!b64) return null;
     const overlayPngUri = `${FileSystem.cacheDirectory || ''}volyume-overlay-${W}-${Date.now()}.png`;
-    await FileSystem.writeAsStringAsync(overlayPngUri, b64, { encoding: FileSystem.EncodingType.Base64 });
-    const rect = photoCoverRect(clipSize.width, clipSize.height, W, H, photoCrop);
-    const matrix = photoLook && photoLook !== 'none' ? lookMatrix(photoLook, photoLookStrength) : null;
-    const options = {
-      sourceUri: clip.uri,
-      startMs: Math.round(clipStartMs),
-      durationMs,
-      matrix: matrix || null,
-      rect,
-      overlayPngUri,
-      outWidth: W,
-      outHeight: H,
-    };
-    if (bitrate) options.bitrate = bitrate;
-    const result = await shareVideoEngine.exportShareVideo(options, onProgress);
-    return result.uri;
-  }, [clip, typefaces, wordmark, wordmarkDark, clipStartMs, photoCrop, photoLook, photoLookStrength, clipSize, bgPhoto]);
+    overlayFilesRef.current.add(overlayPngUri);
+    try {
+      await FileSystem.writeAsStringAsync(overlayPngUri, b64, { encoding: FileSystem.EncodingType.Base64 });
+      if (!mountedRef.current) return null;
+      // The video's own upright size (finding 6), the frame's if the engine
+      // could not say.
+      const size = clipSize.width > 0 && clipSize.height > 0
+        ? clipSize
+        : { width: bgPhoto ? bgPhoto.width() : 0, height: bgPhoto ? bgPhoto.height() : 0 };
+      const rect = photoCoverRect(size.width, size.height, W, H, photoCrop);
+      const matrix = photoLook && photoLook !== 'none' ? lookMatrix(photoLook, photoLookStrength) : null;
+      const options = {
+        sourceUri: source.uri,
+        startMs: Math.round(clipStartMs),
+        durationMs,
+        matrix: matrix || null,
+        rect,
+        overlayPngUri,
+        outWidth: W,
+        outHeight: H,
+      };
+      if (bitrate) options.bitrate = bitrate;
+      const result = await shareVideoEngine.exportShareVideo(options, onProgress);
+      return result && result.uri ? result.uri : null;
+    } finally {
+      overlayFilesRef.current.delete(overlayPngUri);
+      deleteCacheFile(overlayPngUri);
+    }
+  }, [liveClip, typefaces, wordmark, wordmarkDark, clipStartMs, photoCrop, photoLook, photoLookStrength, clipSize, bgPhoto]);
 
+  // The engine's calm line for a failure. Nothing for a cancel the person
+  // chose, nothing once the screen has gone, and a plain line for a job
+  // still finishing (finding 11: a second job is never a dead tap).
   const engineFailed = useCallback((e, where) => {
     const code = e?.code;
-    if (code === shareVideoEngine.EXPORT_ERROR.CANCELLED) return;
+    if (code && code === ENGINE_CANCELLED) return;
+    if (!mountedRef.current) return;
+    if (code && code === ENGINE_BUSY) {
+      toast.show(VIDEO_BUSY_LINE, { variant: 'info', duration: 5000 });
+      return;
+    }
     logError(where, e, { code });
     const line = shareVideoEngine.lineForExportError(code, { fromGallery: clip?.source === 'gallery' });
     if (line) toast.show(line, { variant: 'error', duration: 7000 });
@@ -1251,8 +1606,11 @@ export default function ShareCardScreen({ navigation, route }) {
   // framing rectangle, through the native engine at 1080. Cached by
   // everything that went into it, so Share then Save makes it once.
   const renderVideoToFile = useCallback(async () => {
-    if (!clip || !Skia || !FileSystem || !typefaces) return null;
-    if (makingPreviewRef.current) return null; // one engine job at a time
+    if (!liveClip || !Skia || !FileSystem || !typefaces) return null;
+    if (makingPreviewRef.current || makingVideoRef.current) { // one engine job at a time
+      toast.show(VIDEO_BUSY_LINE, { variant: 'info', duration: 5000 });
+      return null;
+    }
     if (!shareVideoEngine.isAvailable()) {
       toast.show(shareVideoEngine.lineForExportError(shareVideoEngine.EXPORT_ERROR.UNAVAILABLE), { variant: 'error', duration: 6000 });
       return null;
@@ -1263,26 +1621,26 @@ export default function ShareCardScreen({ navigation, route }) {
     makingVideoRef.current = true;
     setVideoProgress(0);
     try {
-      const uri = await runVideoJob(job, null, setVideoProgress);
+      const uri = await runVideoJob(job, null, (p) => { if (mountedRef.current) setVideoProgress(p); });
       if (uri) videoCacheRef.current[job.signature] = uri;
-      return uri;
+      return mountedRef.current ? uri : null;
     } catch (e) {
       engineFailed(e, 'ShareCardScreen.renderVideo');
       return null;
     } finally {
-      setMakingVideo(false);
       makingVideoRef.current = false;
+      if (mountedRef.current) setMakingVideo(false);
     }
-  }, [clip, typefaces, toast, videoJobAt, runVideoJob, engineFailed]);
+  }, [liveClip, typefaces, toast, videoJobAt, runVideoJob, engineFailed]);
 
   // What the preview video would be made from right now. A playing preview
   // whose signature no longer matches (any change to the look, framing,
   // trim, card or toggles) is not shown: the still framer comes back.
   const previewSignature = useMemo(
-    () => (clip && Skia ? videoJobAt(PREVIEW_VIDEO_W).signature : null),
-    [clip, videoJobAt],
+    () => (liveClip && Skia ? videoJobAt(PREVIEW_VIDEO_W).signature : null),
+    [liveClip, videoJobAt],
   );
-  const playingPreview = !!previewVideo && !suppress && previewVideo.signature === previewSignature;
+  const playingPreview = !!previewVideo && !!liveClip && !suppress && previewVideo.signature === previewSignature;
   useEffect(() => {
     if (previewVideo && previewVideo.signature !== previewSignature) setPreviewVideo(null);
   }, [previewVideo, previewSignature]);
@@ -1291,8 +1649,11 @@ export default function ShareCardScreen({ navigation, route }) {
   // same inputs as the share, so Play after Pause with nothing changed is
   // instant. A failure says the engine's calm line and stays on the still.
   const playPreview = useCallback(async () => {
-    if (!clip || !Skia || !FileSystem || !typefaces || suppress) return;
-    if (makingVideoRef.current || makingPreviewRef.current) return;
+    if (!liveClip || !Skia || !FileSystem || !typefaces || suppress) return;
+    if (makingVideoRef.current || makingPreviewRef.current) {
+      toast.show(VIDEO_BUSY_LINE, { variant: 'info', duration: 5000 });
+      return;
+    }
     if (!shareVideoEngine.isAvailable()) {
       toast.show(shareVideoEngine.lineForExportError(shareVideoEngine.EXPORT_ERROR.UNAVAILABLE), { variant: 'error', duration: 6000 });
       return;
@@ -1304,33 +1665,50 @@ export default function ShareCardScreen({ navigation, route }) {
     makingPreviewRef.current = true;
     setPreviewProgress(0);
     try {
-      const uri = await runVideoJob(job, PREVIEW_VIDEO_BITRATE, setPreviewProgress);
+      const uri = await runVideoJob(job, PREVIEW_VIDEO_BITRATE, (p) => { if (mountedRef.current) setPreviewProgress(p); });
       if (!mountedRef.current || !uri) return;
       previewCacheRef.current[job.signature] = uri;
+      if (suppressRef.current) return;
       setPreviewVideo({ uri, signature: job.signature });
     } catch (e) {
-      if (mountedRef.current) engineFailed(e, 'ShareCardScreen.previewVideo');
+      engineFailed(e, 'ShareCardScreen.previewVideo');
     } finally {
       makingPreviewRef.current = false;
       if (mountedRef.current) setMakingPreview(false);
     }
-  }, [clip, typefaces, suppress, toast, videoJobAt, runVideoJob, engineFailed]);
+  }, [liveClip, typefaces, suppress, toast, videoJobAt, runVideoJob, engineFailed]);
 
   const pausePreview = useCallback(() => { setPreviewVideo(null); }, []);
 
-  // Leaving the screen stops a preview still being made.
+  // Opening the screen clears the engine's finished videos older than an
+  // hour, off the critical path (finding 12). Leaving it stops any engine
+  // job still running (the share or the preview, finding 11), lets go of
+  // the frames read for the scrim and their files, and deletes this
+  // session's overlay pictures; the share's own videos are left for the
+  // share sheet.
   useEffect(() => {
     mountedRef.current = true;
+    sweepOldShareVideos(FileSystem).catch(() => { /* best effort */ });
+    const overlays = overlayFilesRef.current;
+    const toneFrames = toneFramesRef;
     return () => {
       mountedRef.current = false;
-      if (makingPreviewRef.current) {
-        shareVideoEngine.cancelExport().catch(() => { /* nothing running is fine */ });
-      }
+      frameReqRef.current += 1;
+      toneReqRef.current += 1;
+      if (makingPreviewRef.current || makingVideoRef.current) cancelEngineJob();
+      toneFrames.current.images.forEach(disposeImage);
+      toneFrames.current = { key: null, images: [] };
+      try {
+        const done = typeof shareVideoEngine.deleteFrames === 'function' ? shareVideoEngine.deleteFrames() : null;
+        if (done && typeof done.catch === 'function') done.catch(() => { /* best effort */ });
+      } catch (_e) { /* best effort */ }
+      overlays.forEach(deleteCacheFile);
+      overlays.clear();
     };
   }, []);
 
   const cancelVideo = useCallback(() => {
-    shareVideoEngine.cancelExport().catch(() => { /* nothing running is fine */ });
+    cancelEngineJob();
   }, []);
 
   // Save the rendered card straight to the device gallery (expo-media-library).
@@ -1346,28 +1724,34 @@ export default function ShareCardScreen({ navigation, route }) {
       toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }
+    // The Sticker saves the image (the panel), even with a video chosen.
+    const video = !!liveClip;
     setSavingToGallery(true);
     try {
       const perm = await MediaLibrary.requestPermissionsAsync();
+      if (!mountedRef.current) return;
       if (!perm.granted) {
-        toast.show(clip ? 'Gallery access is needed to save the video. You can still use Share.' : 'Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
+        toast.show(video ? 'Gallery access is needed to save the video. You can still use Share.' : 'Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
         return;
       }
-      if (clip) {
+      if (video) {
         const videoUri = await renderVideoToFile();
-        if (!videoUri) return; // the engine's own line, or a cancel, has already spoken
+        // The engine's own line, or a cancel, has already spoken; nothing
+        // is saved once the screen has gone or the safety gate has closed.
+        if (!videoUri || !mountedRef.current || suppressRef.current) return;
         await MediaLibrary.saveToLibraryAsync(videoUri);
-        toast.show('Saved to your gallery.', { variant: 'success' });
+        if (mountedRef.current) toast.show('Saved to your gallery.', { variant: 'success' });
         return;
       }
       const uri = await renderCardToFile();
+      if (!mountedRef.current) return;
       if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
       await MediaLibrary.saveToLibraryAsync(uri);
-      toast.show('Saved to your gallery.', { variant: 'success' });
+      if (mountedRef.current) toast.show('Saved to your gallery.', { variant: 'success' });
     } catch (_e) {
-      toast.show(clip ? 'The video could not be saved. Try again.' : 'The image could not be saved. Try again.', { variant: 'error' });
+      if (mountedRef.current) toast.show(video ? 'The video could not be saved. Try again.' : 'The image could not be saved. Try again.', { variant: 'error' });
     } finally {
-      setSavingToGallery(false);
+      if (mountedRef.current) setSavingToGallery(false);
     }
   }
 
@@ -1388,7 +1772,9 @@ export default function ShareCardScreen({ navigation, route }) {
   // the two), and the file alone reaches every target reliably.
   async function handleShareToStories() {
     const isIos = Platform.OS === 'ios';
-    if (!Skia || !FileSystem || (isIos && !clip ? !Share : !Sharing)) {
+    // The Sticker shares the image (the panel), even with a video chosen.
+    const video = !!liveClip;
+    if (!Skia || !FileSystem || (isIos && !video ? !Share : !Sharing)) {
       // P-16: device-specific, not "incomplete build".
       toast.show("Story sharing isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
@@ -1399,32 +1785,36 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     setSharingToStories(true);
     try {
-      if (clip) {
-        if (!Sharing) { toast.show("Video sharing isn't available on your device.", { variant: 'error', duration: 5000 }); return; }
+      if (video) {
         const canShareVideo = await Sharing.isAvailableAsync();
+        if (!mountedRef.current) return;
         if (!canShareVideo) { toast.show('Sharing is not available on this device.', { variant: 'warning', duration: 5000 }); return; }
         const videoUri = await renderVideoToFile();
-        if (!videoUri) return;
+        // No share sheet once the screen has gone or the safety gate has
+        // closed (finding 11).
+        if (!videoUri || !mountedRef.current || suppressRef.current) return;
         await Sharing.shareAsync(videoUri, {
           mimeType: 'video/mp4', UTI: 'public.mpeg-4', dialogTitle: 'Share video',
         });
         return;
       }
       const uri = await renderCardToFile();
+      if (!mountedRef.current) return;
       if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
       if (isIos) {
         await Share.share({ url: uri, message: 'volyume.app' });
         return;
       }
       const canShare = await Sharing.isAvailableAsync();
+      if (!mountedRef.current) return;
       if (!canShare) { toast.show('Sharing is not available on this device.', { variant: 'warning', duration: 5000 }); return; }
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share to Stories',
       });
     } catch (_e) {
-      toast.show('The share sheet could not be opened. Try again.', { variant: 'error' });
+      if (mountedRef.current) toast.show('The share sheet could not be opened. Try again.', { variant: 'error' });
     } finally {
-      setSharingToStories(false);
+      if (mountedRef.current) setSharingToStories(false);
     }
   }
 
@@ -1458,14 +1848,15 @@ export default function ShareCardScreen({ navigation, route }) {
     setSettingWallpaper(true);
     try {
       const uri = await renderCardToFile();
+      if (!mountedRef.current) return;
       if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
       await engine.setLockScreenWallpaper(uri);
-      toast.show('Set as your lock screen wallpaper', { variant: 'success' });
+      if (mountedRef.current) toast.show('Set as your lock screen wallpaper', { variant: 'success' });
     } catch (e) {
       logError('ShareCardScreen.setWallpaper', e);
-      toast.show("Couldn't set the wallpaper, try again", { variant: 'error' });
+      if (mountedRef.current) toast.show("Couldn't set the wallpaper, try again", { variant: 'error' });
     } finally {
-      setSettingWallpaper(false);
+      if (mountedRef.current) setSettingWallpaper(false);
     }
   }
 
@@ -1538,7 +1929,7 @@ export default function ShareCardScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <BackHeader title={clip ? 'Share video' : 'Share image'} />
+      <BackHeader title={liveClip ? 'Share video' : 'Share image'} />
       <View style={styles.body}>
       <GestureDetector gesture={scrollGesture}>
       <Animated.ScrollView
@@ -1557,7 +1948,7 @@ export default function ShareCardScreen({ navigation, route }) {
               <TouchableOpacity
                 onPress={() => setPhotoCrop(null)}
                 accessibilityRole="button"
-                accessibilityLabel="Reset the photo to the centre"
+                accessibilityLabel={clip ? 'Reset the video to the centre' : 'Reset the photo to the centre'}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
                 <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
@@ -1712,6 +2103,7 @@ export default function ShareCardScreen({ navigation, route }) {
             {!suppress ? (
               <SegmentBtn
                 label="Video"
+                accessibilityLabel="Video, choose a video"
                 active={!!clip}
                 onPress={() => setVideoSheetOpen(true)}
                 icon={<Ionicons name="videocam-outline" size={15} color={clip ? t.colors.primary : t.colors.textMuted} />}
@@ -1738,39 +2130,46 @@ export default function ShareCardScreen({ navigation, route }) {
                 contentContainerStyle={styles.templateStrip}
               >
                 {workoutClips.map((row) => {
-                  const active = clip?.id === row.id;
-                  const secs = Math.round((Number(row.durationMs) || 0) / 1000);
+                  const active = isSameVideo(clip, row);
+                  const opening = pendingClipKey === videoKeyOf(row);
                   return (
                     <TouchableOpacity
                       key={row.id}
                       style={[styles.templateTile, live.templateTile, active && [styles.templateTileActive, live.templateTileActive]]}
-                      onPress={() => acceptClip(row)}
+                      onPress={() => { acceptClip(row).catch((e) => { logError('ShareCardScreen.chooseVideo', e); }); }}
                       accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      accessibilityLabel={`Use video: ${clipDisplayName(row)}, ${secs} seconds`}
+                      accessibilityState={opening ? { selected: active, busy: true } : { selected: active }}
+                      accessibilityLabel={`Use video: ${clipDisplayName(row)}, ${secondsWords(row.durationMs)}`}
                     >
-                      {clipThumbs[row.id] ? (
-                        <Image
-                          source={{ uri: `data:image/png;base64,${clipThumbs[row.id]}` }}
-                          style={styles.templateThumb}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={[styles.templateThumb, styles.templateThumbEmpty, live.templateThumbEmpty]}>
-                          <Ionicons name="videocam-outline" size={18} color={t.colors.textMuted} />
-                        </View>
-                      )}
+                      <View>
+                        {clipThumbs[row.id] ? (
+                          <Image
+                            source={{ uri: clipThumbs[row.id] }}
+                            style={styles.templateThumb}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={[styles.templateThumb, styles.templateThumbEmpty, live.templateThumbEmpty]}>
+                            <Ionicons name="videocam-outline" size={18} color={t.colors.textMuted} />
+                          </View>
+                        )}
+                        {opening ? (
+                          <View style={[styles.thumbBusy, live.thumbBusy]} pointerEvents="none" testID="share-video-tile-busy">
+                            <ActivityIndicator color={t.colors.primary} />
+                          </View>
+                        ) : null}
+                      </View>
                       <Text style={[styles.templateLabel, live.templateLabel, active && [styles.templateLabelActive, live.templateLabelActive]]} numberOfLines={1}>
                         {clipDisplayName(row)}
                       </Text>
-                      <Text style={[styles.templateLabel, live.templateLabel]}>{`${secs} s`}</Text>
+                      <Text style={[styles.templateLabel, live.templateLabel]}>{formatClipDuration(row.durationMs)}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </ScrollView>
             </View>
           ) : null}
-          {clip ? (
+          {clip && !suppress ? (
             <View style={styles.videoStartRow}>
               <Text style={[styles.photoHint, live.photoHint]}>
                 {`A share is ${MAX_VIDEO_MS / 1000} seconds at the longest. Slide the window to the part you want, or drag its ends to make it shorter.`}
@@ -1786,7 +2185,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 Skia={Skia}
                 onChange={changeClipWindow}
                 blocksGesture={scrollGesture}
-                disabled={makingVideo || makingPreview}
+                disabled={makingVideo || makingPreview || pendingClipKey != null}
               />
             </View>
           ) : null}
@@ -1800,20 +2199,23 @@ export default function ShareCardScreen({ navigation, route }) {
           {workoutClips.length ? (
             <>
               <SectionLabel style={styles.sheetGroupLabel}>From this workout</SectionLabel>
-              {workoutClips.map((row) => (
-                <TouchableOpacity
-                  key={row.id}
-                  style={[styles.sheetRow, live.sheetRow]}
-                  onPress={() => acceptClip(row)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: clip?.id === row.id }}
-                  accessibilityLabel={`${clipDisplayName(row)}, ${Math.round((Number(row.durationMs) || 0) / 1000)} seconds`}
-                >
-                  <Ionicons name="videocam-outline" size={18} color={clip?.id === row.id ? t.colors.primary : t.colors.textMuted} />
-                  <Text style={[styles.sheetRowText, live.sheetRowText]} numberOfLines={1}>{clipDisplayName(row)}</Text>
-                  <Text style={[styles.sheetRowMeta, live.sheetRowMeta]}>{`${Math.round((Number(row.durationMs) || 0) / 1000)} s`}</Text>
-                </TouchableOpacity>
-              ))}
+              {workoutClips.map((row) => {
+                const chosen = isSameVideo(clip, row);
+                return (
+                  <TouchableOpacity
+                    key={row.id}
+                    style={[styles.sheetRow, live.sheetRow]}
+                    onPress={() => { acceptClip(row).catch((e) => { logError('ShareCardScreen.chooseVideo', e); }); }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: chosen }}
+                    accessibilityLabel={`${clipDisplayName(row)}, ${secondsWords(row.durationMs)}`}
+                  >
+                    <Ionicons name="videocam-outline" size={18} color={chosen ? t.colors.primary : t.colors.textMuted} />
+                    <Text style={[styles.sheetRowText, live.sheetRowText]} numberOfLines={1}>{clipDisplayName(row)}</Text>
+                    <Text style={[styles.sheetRowMeta, live.sheetRowMeta]}>{formatClipDuration(row.durationMs)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </>
           ) : null}
           <View style={styles.sheetActions}>
@@ -2045,13 +2447,13 @@ export default function ShareCardScreen({ navigation, route }) {
           </View>
         ) : null}
         <Button
-          title={clip ? 'Share video' : 'Share image'}
+          title={liveClip ? 'Share video' : 'Share image'}
           icon="logo-instagram"
           trailingIcon="logo-facebook"
           onPress={handleShareToStories}
           disabled={sharingToStories || !cardReady || makingVideo || makingPreview}
           loading={sharingToStories}
-          accessibilityLabel={clip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
+          accessibilityLabel={liveClip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
           variant="emphatic"
           size="lg"
           style={styles.secondaryAction}
@@ -2155,8 +2557,8 @@ export default function ShareCardScreen({ navigation, route }) {
           ) : livePhoto ? (
             <SharePhotoFramer
               photoUri={framerPhoto.uri}
-              photoWidth={framerPhoto.width}
-              photoHeight={framerPhoto.height}
+              photoWidth={framerSize.width}
+              photoHeight={framerSize.height}
               frameWidth={previewW}
               frameHeight={previewH}
               crop={photoCrop}
@@ -2194,7 +2596,7 @@ export default function ShareCardScreen({ navigation, route }) {
               to the preview" (a 44 pt control over a thumbnail barely
               wider than itself would take that tap, or be too small to
               read). Both are back the moment the preview is full size. */}
-          {!previewSmall && clip && !suppress && AvVideo && (livePhoto || playingPreview) ? (
+          {!previewSmall && liveClip && !suppress && AvVideo && (livePhoto || playingPreview) ? (
             makingPreview ? (
               <View style={[styles.previewMaking, live.previewMaking]} testID="share-making-preview">
                 <ActivityIndicator color={t.colors.primary} />
@@ -2215,6 +2617,21 @@ export default function ShareCardScreen({ navigation, route }) {
                 <Ionicons name={playingPreview ? 'pause' : 'play'} size={20} color={t.colors.textPrimary} />
               </TouchableOpacity>
             )
+          ) : null}
+          {/* A video's frame on its way (the first frame of a newly chosen
+              video, or the still at a new start): the preview says so and
+              the rest of the screen keeps working. */}
+          {frameLoading ? (
+            <View
+              style={[styles.previewBusy, live.previewBusy]}
+              pointerEvents="none"
+              accessible
+              accessibilityLabel="Opening your video"
+              accessibilityLiveRegion="polite"
+              testID="share-preview-busy"
+            >
+              <ActivityIndicator color={t.colors.primary} />
+            </View>
           ) : null}
         </Animated.View>
         {previewSmall ? (
@@ -2368,6 +2785,10 @@ export default function ShareCardScreen({ navigation, route }) {
           last
         />
       </BottomSheet>
+
+      {/* Film now (finding 4): the recording flow's privacy primer and its
+          videos sheet, as every screen that films renders them. */}
+      {clipFlow.sheets}
     </SafeAreaView>
   );
 }
@@ -2560,6 +2981,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, borderRadius: radius.md,
     backgroundColor: withAlpha(colors.surface, 0.9),
   },
+  // A video's frame on its way: a quiet veil with a spinner over the
+  // preview, and over a tile in the strip.
+  previewBusy: {
+    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center',
+    borderRadius: radius.lg, backgroundColor: withAlpha(colors.surface, alpha.half),
+  },
+  thumbBusy: {
+    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center',
+    borderRadius: radius.sm, backgroundColor: withAlpha(colors.surface, alpha.half),
+  },
   previewPlaceholder: {
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -2638,6 +3069,8 @@ function buildLiveStyles(t) {
     previewVideoFrame: { backgroundColor: t.colors.surface },
     playControl: { backgroundColor: withAlpha(t.colors.surface, 0.9) },
     previewMaking: { backgroundColor: withAlpha(t.colors.surface, 0.9) },
+    previewBusy: { backgroundColor: withAlpha(t.colors.surface, alpha.half) },
+    thumbBusy: { backgroundColor: withAlpha(t.colors.surface, alpha.half) },
     previewHeader: { backgroundColor: t.colors.surface },
     previewMiniProgress: { backgroundColor: withAlpha(t.colors.surface, 0.9) },
     previewMiniProgressText: { ...t.type.captionTight, color: t.colors.textPrimary },
