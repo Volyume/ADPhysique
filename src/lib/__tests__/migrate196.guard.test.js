@@ -182,7 +182,8 @@ describe('migrate_196: header (schema rule) and safety', () => {
   test('names purpose, NOT APPLIED and HELD, safe to re-run, rollback and the 195 dependency', () => {
     expect(header).toMatch(/^-- migrate_196_food_soft_deletes_and_kind\.sql/);
     expect(header).toMatch(/-- Purpose:/);
-    expect(header).toMatch(/-- Applied remotely: NO\. NOT APPLIED\. HELD for the founder's exact phrase/);
+    // Re-pinned 2026-10-16: applied to production under the founder's phrase.
+    expect(header).toMatch(/-- Applied remotely: YES, 2026-10-16 23:04:58 UTC, under the founder's\n--\s+"run against production 196"/);
     expect(header).toMatch(/-- Safe to re-run:\s+YES/);
     expect(header).toMatch(/-- Rollback:\s+ALTER TABLE public\.recipes DROP COLUMN IF EXISTS[\s\S]*re-apply migrate_195_custom_foods_portions\.sql's/);
     expect(header).toMatch(/-- Depends on:\s+migrate_195_custom_foods_portions\.sql/);

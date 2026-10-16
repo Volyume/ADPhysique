@@ -155,9 +155,8 @@ export const FOOD_ENTRY_NOTE_PUSH = true;
 
 // Founder ruling "Add cooked weight" (2026-10-16): recipes.cooked_weight_g in
 // the food push and pull. The cloud column arrives with
-// supabase/migrate_196_food_soft_deletes_and_kind.sql, WRITTEN and HELD. While
-// false the push omits the key (a key the cloud lacks would be ignored by
-// today's food_sync_push, but the flag keeps the record exactly as before) and
-// the pull keeps this device's value. Flip to true only after 196 is applied
-// and verified read-only.
-export const RECIPE_COOKED_WEIGHT_PUSH = false;
+// supabase/migrate_196_food_soft_deletes_and_kind.sql, APPLIED 2026-10-16
+// 23:04:58 UTC under the founder's "run against production 196" and verified
+// read-only (the column is numeric, food_sync_push writes it only when the
+// record carries the key), so the push sends it and the pull reads it.
+export const RECIPE_COOKED_WEIGHT_PUSH = true;

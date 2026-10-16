@@ -111,15 +111,18 @@ test('a failed batch leaves the watermark, so the rows go again next cycle', asy
 });
 
 // Founder ruling "Add cooked weight": the recipe record carries
-// cooked_weight_g only behind RECIPE_COOKED_WEIGHT_PUSH (ships false until
-// migrate_196 is applied); absent, not null, while it is off.
+// cooked_weight_g only behind RECIPE_COOKED_WEIGHT_PUSH; absent, not null,
+// while it is off. Re-pinned 2026-10-16: 196 is applied, so it ships on.
 describe('recipes push: cooked_weight_g behind RECIPE_COOKED_WEIGHT_PUSH', () => {
   const row = { id: 'r1', name: 'Chilli', total_servings: 4, notes: null, cooked_weight_g: 1200, created_at: 1, updated_at: 2, deleted_at: null };
 
-  test('flag off (as shipped): the key is absent', () => {
-    expect(require('../featureFlags').RECIPE_COOKED_WEIGHT_PUSH).toBe(false);
-    const { _recipeToCloud } = require('../tables/foodDomain');
-    expect(Object.prototype.hasOwnProperty.call(_recipeToCloud(row, 'u'), 'cooked_weight_g')).toBe(false);
+  test('shipped on (migrate_196 applied); with the flag off the key is absent', () => {
+    expect(require('../featureFlags').RECIPE_COOKED_WEIGHT_PUSH).toBe(true);
+    jest.isolateModules(() => {
+      jest.doMock('../featureFlags', () => ({ ...jest.requireActual('../featureFlags'), RECIPE_COOKED_WEIGHT_PUSH: false }));
+      const { _recipeToCloud } = require('../tables/foodDomain');
+      expect(Object.prototype.hasOwnProperty.call(_recipeToCloud(row, 'u'), 'cooked_weight_g')).toBe(false);
+    });
   });
 
   test('flag on: the key is sent (null when not weighed)', () => {
