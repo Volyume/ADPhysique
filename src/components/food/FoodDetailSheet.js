@@ -20,6 +20,7 @@ import TextField from '../TextField';
 import SourceChip from './SourceChip';
 import { useToast } from '../Toast';
 import { pickerMealSlots, mealSlotLabel } from '../../lib/food/mealSlots';
+import { FOOD_NOTE_MAX_LENGTH, displayFoodNote } from '../../lib/food/entryNote';
 import { scaleMacros, scaleSugarG, scaleSodiumMg, saltGFromSodiumMg } from '../../lib/food/macros';
 import {
   buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams, MAX_ENTRY_GRAMS,
@@ -64,6 +65,15 @@ const NBSP = '\u00A0';
 const keepTogether = (part) => part.replace(/ /g, NBSP);
 const gramsWord = (n) => (n === 1 ? 'gram' : 'grams');
 
+// Wave 4 review, item 12: a portion is often named with its own count of one
+// ("1 slice", "1 mug"). The chip's spoken label reads "Per slice", never
+// "Per 1 slice". Only a leading "1 " goes; any other label is kept whole.
+export function portionNoun(label) {
+  const text = String(label ?? '').trim();
+  const noun = text.replace(/^1\s+(?=\S)/, '');
+  return noun || text;
+}
+
 /**
  * Bottom sheet for adding or editing a food entry. Replaces the
  * centred Modal pattern in FoodSearchScreen and the long-press-delete
@@ -97,7 +107,12 @@ const gramsWord = (n) => (n === 1 ? 'gram' : 'grams');
  *                    mode never shows this field -- a fresh log stamps
  *                    eaten_at = now automatically (see src/lib/food/db.js
  *                    logFoodEntry), keeping the fast add path unchanged.
- *   onSave           ({ quantityG, mealSlot, entryDate, weightState, eatenAt }) => Promise<void>
+ *   initialNote      optional: the entry's note (D230 R20, edit mode), at most 120
+ *                    characters. The "Note" field sits under the meal chips and
+ *                    is hidden with the meal block when saveTitle is set.
+ *   onSave           ({ quantityG, mealSlot, entryDate, weightState, eatenAt, note }) => Promise<void>
+ *                    (note is the trimmed text, '' when blank, and undefined
+ *                    when saveTitle hides the field)
  *                    (eatenAt is only ever sent in edit mode; add-mode
  *                    callers can ignore it, it is undefined)
  *   onDelete         () => Promise<void>  (edit mode only)
@@ -115,11 +130,20 @@ const gramsWord = (n) => (n === 1 ? 'gram' : 'grams');
  *                    changing an amount for a caller that writes later (the
  *                    typed line's review, D230 R13: "Use this amount"), so
  *                    it never says "Add to Breakfast" when nothing is added.
+ *   fixedMacros      optional, edit mode: { kcal, protein, carbs, fat, fibre }
+ *                    for an entry with no food behind it (a quick add or an
+ *                    imported day, food_ref 'quick:*'). Such an entry has no
+ *                    grams to scale (its quantity_g is 0), so the Amount block
+ *                    and "More about this food" are not shown, the summary
+ *                    reads these figures, and onSave sends quantityG
+ *                    undefined: only the meal, the time and the note change.
+ *                    (Wave 4 review, item 3: scaling a quick add from 100 g of
+ *                    a 0 kcal stand-in food saved it as 0 kcal.)
  */
 export default function FoodDetailSheet({
   visible, food, mode = 'add',
-  initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState, initialEatenAt = null,
-  onSave, onDelete, onSelectEntries, onClose, saveTitle = null,
+  initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState, initialEatenAt = null, initialNote = null,
+  onSave, onDelete, onSelectEntries, onClose, saveTitle = null, fixedMacros = null,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -149,13 +173,15 @@ export default function FoodDetailSheet({
   // Primitive deps (not the `food` object identity) so these don't re-memo on
   // every parent render; the helpers only read serving_g/serving_label.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const units = useMemo(() => buildServingUnits(food), [food?.serving_g, food?.serving_label]);
+  const units = useMemo(() => buildServingUnits(food), [food?.serving_g, food?.serving_label, food?.portions_json]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const initial = useMemo(() => initialServingState(food, mode, initialQuantityG), [mode, initialQuantityG, food?.serving_g]);
+  const initial = useMemo(() => initialServingState(food, mode, initialQuantityG), [mode, initialQuantityG, food?.serving_g, food?.portions_json]);
 
   const [unitKey, setUnitKey] = useState(initial.unitKey);
   const [amount, setAmount] = useState(initial.amount);
   const [mealSlot, setMealSlot] = useState(initialMealSlot);
+  // D230 R20: an optional one-line note, at most 120 characters.
+  const [note, setNote] = useState(displayFoodNote(initialNote) ?? '');
   const [submitting, setSubmitting] = useState(false);
   // M4 (audit 03b §3.3b): the save has landed; the sheet closes on the save
   // Button's onSettled so the checkmark beat is seen before the sheet goes.
@@ -190,7 +216,9 @@ export default function FoodDetailSheet({
   const [showTimePicker, setShowTimePicker] = useState(false);
 
   const unit = units.find(u => u.key === unitKey) || units[units.length - 1];
-  const isServing = unitKey === 'serving';
+  // Any unit but grams is a counted unit: the named serving or, D230 R20, one
+  // of the food's own custom portions ('portion:<index>').
+  const isServing = unitKey !== 'g';
   // D230 R8 (inventory section 6, decimal comma): the typed amount is read
   // through the app's one number parser, so "1,5" from a comma-decimal
   // keyboard means 1.5, never 15. resolveGrams takes the parsed number as it
@@ -210,6 +238,7 @@ export default function FoodDetailSheet({
     setUnitKey(initial.unitKey);
     setAmount(initial.amount);
     setMealSlot(initialMealSlot);
+    setNote(displayFoodNote(initialNote) ?? '');
     setWeightState(initialWeight);
     setEatenAt(mode === 'edit' ? (Number.isFinite(initialEatenAt) ? initialEatenAt : null) : null);
     setShowTimePicker(false);
@@ -253,7 +282,7 @@ export default function FoodDetailSheet({
     if (!u) return;
     const g = quantityG;
     setUnitKey(key);
-    setAmount(key === 'serving'
+    setAmount(key !== 'g'
       ? String(Math.round((g / u.grams) * 10) / 10)
       : String(Math.round(g)));
   }
@@ -269,6 +298,11 @@ export default function FoodDetailSheet({
   // typed 1.25 reads as 1.25, and floating-point noise never shows).
   function formatAmount(v) {
     const n = Math.round(v * 100) / 100;
+    // Wave 4 review, item 12: "2 × 1 slice", the times sign of the logger's
+    // own amount grammar ("72.5 kg × 8"), which a screen reader says as
+    // "times". A typed label is not pluralised: "1 tbsp" or "1 glass of milk"
+    // has no reliable plural.
+    if (unitKey.startsWith('portion:')) return `${n} × ${unit.label}`;
     if (isServing) return `${n} ${n === 1 ? 'serving' : 'servings'}`;
     return `${n} g`;
   }
@@ -278,8 +312,10 @@ export default function FoodDetailSheet({
   }
 
   async function handleSave() {
-    const qty = Math.round(quantityG);
-    if (!isValidEntryGrams(qty)) {
+    // A fixed entry (fixedMacros) has no amount here: nothing to check, and
+    // quantityG goes as undefined so the caller keeps the entry's own.
+    const qty = fixedMacros ? undefined : Math.round(quantityG);
+    if (!fixedMacros && !isValidEntryGrams(qty)) {
       toast.show('Enter an amount that works out between 1 and 5000 g.', { variant: 'warning' });
       return;
     }
@@ -293,6 +329,9 @@ export default function FoodDetailSheet({
       await onSave({
         quantityG: qty, mealSlot, entryDate: initialEntryDate, weightState,
         eatenAt: mode === 'edit' ? eatenAt : undefined,
+        // D230 R20: the note is part of the meal block, so a sheet that hides
+        // that block (saveTitle) sends nothing and the caller never sees one.
+        note: saveTitle ? undefined : note.trim(),
       });
       setSaved(true);
     } catch (_e) {
@@ -323,7 +362,16 @@ export default function FoodDetailSheet({
     );
   }
 
-  const macros = macrosFor(food, quantityG);
+  const macros = fixedMacros
+    ? {
+      kcal: Math.round(Number(fixedMacros.kcal) || 0),
+      protein: Math.round((Number(fixedMacros.protein) || 0) * 10) / 10,
+      carbs: Math.round((Number(fixedMacros.carbs) || 0) * 10) / 10,
+      fat: Math.round((Number(fixedMacros.fat) || 0) * 10) / 10,
+      fibre: Number.isFinite(Number(fixedMacros.fibre)) && fixedMacros.fibre != null
+        ? Math.round(Number(fixedMacros.fibre) * 10) / 10 : null,
+    }
+    : macrosFor(food, quantityG);
   // D230 R8: the one line of what this amount is, replacing the four macro
   // pills. Fibre joins it when the food carries the datum (null = "no data",
   // never a fake 0) and the Display toggle is on. The spoken label says the
@@ -385,23 +433,29 @@ export default function FoodDetailSheet({
           </View>
 
           {/* (2) Amount. The common case, one named serving, needs zero
-              keystrokes: step it, type it, or just add it. */}
+              keystrokes: step it, type it, or just add it. An entry with no
+              food behind it (fixedMacros) has no amount to change. */}
+          {fixedMacros ? (
+            <Text style={[styles.gramHint, live.gramHint]} testID="food-sheet-fixed">
+              This entry keeps the figures it was added with.
+            </Text>
+          ) : (
           <View style={styles.block} testID="food-sheet-amount">
             <SectionLabel>Amount</SectionLabel>
             {units.length > 1 ? (
-              <View style={styles.unitRow}>
+              <View style={[styles.unitRow, styles.unitRowWrap]}>
                 {units.map(u => (
                   <Chip
                     key={u.key}
-                    label={u.key === 'serving' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
+                    label={u.key !== 'g' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
                     selected={unitKey === u.key}
                     onPress={() => { haptics.selection(); selectUnit(u.key); }}
-                    style={styles.unitBtn}
+                    style={[styles.unitBtn, styles.unitBtnWrap]}
                     labelStyle={[styles.unitBtnText, live.unitBtnText]}
                     selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
                     accessibilityRole="radio"
-                    accessibilityLabel={u.key === 'serving' ? `Per ${u.label}` : 'Grams'}
-                    numberOfLines={1}
+                    accessibilityLabel={u.key !== 'g' ? `Per ${portionNoun(u.label)}` : 'Grams'}
+                    numberOfLines={2}
                   />
                 ))}
               </View>
@@ -431,7 +485,7 @@ export default function FoodDetailSheet({
                     onChangeText={v => setAmount(v.replace(/[^0-9.,]/g, ''))}
                     keyboardType="decimal-pad"
                     selectTextOnFocus
-                    accessibilityLabel={isServing ? 'Amount in servings' : 'Amount in grams'}
+                    accessibilityLabel={unitKey.startsWith('portion:') ? `Amount in ${unit.label}` : (isServing ? 'Amount in servings' : 'Amount in grams')}
                   />
                 )}
               />
@@ -440,6 +494,7 @@ export default function FoodDetailSheet({
               <Text style={[styles.gramHint, live.gramHint]}>= {Math.round(quantityG)} g</Text>
             ) : null}
           </View>
+          )}
 
           {/* (3) What this amount is, on one wrapping line. */}
           <View
@@ -454,6 +509,7 @@ export default function FoodDetailSheet({
           {/* D230 R8: the rest, on demand, closed on every open. It sits before
               the meal and the actions (the lead's ruling on lane 2B's note 4):
               content first, the action last, as every house sheet reads. */}
+          {fixedMacros ? null : (
           <View testID="food-sheet-more">
             <CollapsibleSection
               title="More about this food"
@@ -515,6 +571,7 @@ export default function FoodDetailSheet({
               <MicronutrientDetail food={food} quantityG={quantityG} />
             </CollapsibleSection>
           </View>
+          )}
 
           {/* (4) Where it goes: the day when it is not today, the meal, and
               in edit mode the time it was eaten. Not shown when the sheet
@@ -539,7 +596,18 @@ export default function FoodDetailSheet({
                 />
               ))}
             </View>
-            {/* Ultimate-Audit item 15 (D22 15b): the calm, optional "eaten at"
+            {/* D230 R20: the note. One line, optional, saved as NULL when blank. */}
+            <TextField
+              label="Note"
+              size="sm"
+              value={note}
+              onChangeText={setNote}
+              maxLength={FOOD_NOTE_MAX_LENGTH}
+              placeholder="Anything worth remembering"
+              accessibilityLabel="Note, optional"
+              returnKeyType="done"
+            />
+            {/* Ultimate-Audit item 15 (D22 15b): the calm, optional "eaten at
                 time. Edit mode only. A bulk-confirmed entry opens here with no
                 time set (D22 15b's honest untimed state); setting one here is
                 the one place a user can give it a real, editable time. */}
@@ -645,6 +713,10 @@ const styles = StyleSheet.create({
   // Unit selector (household serving vs grams), and the weigh-basis and
   // eaten-at rows that share its shape.
   unitRow: { flexDirection: 'row', gap: spacing.xs },
+  // D230 R20: with custom portions the chips can outnumber the row at a large
+  // text size, so the amount row wraps rather than clipping a chip.
+  unitRowWrap: { flexWrap: 'wrap' },
+  unitBtnWrap: { flexBasis: '30%', flexGrow: 1 },
   unitBtn: {
     flex: 1,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,

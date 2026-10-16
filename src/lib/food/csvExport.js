@@ -19,6 +19,9 @@ const CSV_HEADERS = [
   // The columns above keep their positions; the food cells of a water row are
   // blank, so a sum over kcal or grams is unchanged.
   'water_ml',
+  // D230 R20: the entry's note, last, so every column above keeps its place.
+  // A cell like any other: formula-injection neutralised by csvEscape.
+  'note',
 ];
 
 function csvEscape(value) {
@@ -57,6 +60,7 @@ export function buildDiaryCsv(entries, foodLookup, water = []) {
       e.fat_g,
       e.fibre_g ?? '',
       '',
+      e.note ?? '',
     ];
     lines.push(row.map(csvEscape).join(','));
   }
@@ -66,7 +70,7 @@ export function buildDiaryCsv(entries, foodLookup, water = []) {
     .sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date)));
   for (const w of waterRows) {
     lines.push(
-      [w.entry_date, 'water', 'Water', '', '', '', '', '', '', '', Math.round(Number(w.ml))]
+      [w.entry_date, 'water', 'Water', '', '', '', '', '', '', '', Math.round(Number(w.ml)), '']
         .map(csvEscape).join(','),
     );
   }
@@ -93,6 +97,9 @@ export async function buildFoodLookup(userId, entries) {
 }
 
 // ─── PDF report (gap #6) ────────────────────────────────────────────────────
+// D230 R20: the PDF leaves entry notes OUT. A note is a person's own free text
+// and the PDF is the page they hand to someone else (a coach, a clinician); the
+// CSV above carries it in its last column for the person's own records.
 // A printable "share with your coach / GP" report. Like the CSV, energy stays in
 // kcal (the canonical stored unit) so the export is unambiguous. Pure HTML
 // builder, tested directly; the thin wrapper renders it via expo-print.

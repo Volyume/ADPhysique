@@ -18,6 +18,13 @@
  * marked by a dot beside its label as well as by its border, so the mark is
  * never only a colour.
  *
+ * D230 R20 (lane 4B): the serving block is "Portions". The single serving
+ * (name and grams) stays portion one and is still what serving_g and
+ * serving_label store; "Add another portion" adds up to two more rows (a name
+ * and a weight), saved to custom_foods.portions_json. A portion only changes
+ * how an amount is entered; grams stay the stored truth, and every portion
+ * keeps the 1 to 5000 g bound.
+ *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
 import { todayLocalKey } from '../lib/dayKey';
@@ -50,7 +57,12 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { findLocalByBarcode } from '../lib/food/sources/localCache';
 import { scaleMacros } from '../lib/food/macros';
+import Stepper from '../components/Stepper';
+import {
+  parsePortions, MAX_EXTRA_PORTIONS, PORTION_LABEL_MAX, PORTION_GRAMS_MIN, PORTION_GRAMS_MAX,
+} from '../lib/food/portions';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { MICRONUTRIENTS } from '../lib/food/micronutrients';
 import CollapsibleSection from '../components/CollapsibleSection';
 
@@ -135,6 +147,10 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   const [servingLabel, setServingLabel] = useState(
     (!prefillMacros?.servingG && prefillMacros?.servingMl) ? 'ml' : ''
   );
+  // D230 R20: the second and third portions, as typed. A row left wholly blank
+  // is ignored on save; a row with only one half filled in blocks the save
+  // with a sentence under it. Grams are kept as text so a field can be empty.
+  const [extraPortions, setExtraPortions] = useState([]);
   const [kcal, setKcal] = useState(_num(prefillMacros?.kcal100g));
   const [protein, setProtein] = useState(_num(prefillMacros?.protein100g));
   const [carbs, setCarbs] = useState(_num(prefillMacros?.carbs100g));
@@ -184,6 +200,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         setBrand(row.brand ?? '');
         setServingG(_num(row.serving_g) || '100');
         setServingLabel(row.serving_label ?? '');
+        setExtraPortions(parsePortions(row.portions_json).slice(0, MAX_EXTRA_PORTIONS)
+          .map((p) => ({ label: p.label, grams: String(p.grams) })));
         setKcal(_num(row.kcal_100g));
         setProtein(_num(row.protein_100g));
         setCarbs(_num(row.carbs_100g));
@@ -208,8 +226,10 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   const food = useMemo(() => ({
     name: name.trim(),
     brand: brand.trim() || null,
-    servingG: Number(servingG) || 0,
+    servingG: parseDecimalInput(servingG) || 0,
     servingLabel: servingLabel.trim() || null,
+    portions: extraPortions.filter((p) => portionRowState(p) === 'ok')
+      .map((p) => ({ label: p.label.trim(), grams: parseDecimalInput(p.grams) })),
     kcal100g: Number(kcal) || 0,
     protein100g: Number(protein) || 0,
     carbs100g: Number(carbs) || 0,
@@ -219,16 +239,22 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     photoUrl: isEditMode ? (existingFood?.photo_url ?? null) : null,
     notes: isEditMode ? (existingFood?.notes ?? null) : null,
     micros,
-  }), [name, brand, servingG, servingLabel, kcal, protein, carbs, fat, fibre, prefillBarcode, micros, isEditMode, existingFood]);
+  }), [name, brand, servingG, servingLabel, extraPortions, kcal, protein, carbs, fat, fibre, prefillBarcode, micros, isEditMode, existingFood]);
 
   // Hard-block non-finite / negative numbers here (audit F-006): an entry like
   // 1e400 parses to Infinity, which is >= 0, and would scale to Infinity then be
   // coerced to a silent 0-calorie diary entry downstream. "Save anyway" is only
   // for finite-but-unusual values (handled by checkFoodSanity in onSave).
   const fin = (s) => Number.isFinite(Number(s));
+  // Wave 4 review, item 10: the serving weight is read as the amount sheet
+  // reads it ("12,5" from a comma-decimal keyboard is 12.5), and a weight the
+  // save refuses says why under the field rather than only greying the button.
+  const servingGrams = parseDecimalInput(servingG);
+  const servingError = servingState(servingG);
   const canSave = name.trim().length > 0
     && fin(kcal) && Number(kcal) >= 0
-    && fin(servingG) && Number(servingG) > 0
+    && servingError === undefined
+    && extraPortions.every((p) => portionRowState(p) !== 'bad')
     && fin(protein) && Number(protein) >= 0
     && fin(carbs) && Number(carbs) >= 0
     && fin(fat) && Number(fat) >= 0
@@ -248,8 +274,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     // into the existing preview as a multiple ("2 x slice") alongside the
     // grams, rather than adding a second preview line.
     const label = servingLabel.trim();
-    const sG = Number(servingG);
-    const unitPrefix = (label && fin(servingG) && sG > 0)
+    const sG = servingGrams;
+    const unitPrefix = (label && Number.isFinite(sG) && sG > 0)
       ? ` (${round1(qty / sG)} x ${label})`
       : '';
     return {
@@ -259,7 +285,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       fat: round1((Number(fat) || 0) * factor),
       unitPrefix,
     };
-  }, [quantityG, kcal, protein, carbs, fat, servingG, servingLabel]);
+  }, [quantityG, kcal, protein, carbs, fat, servingGrams, servingLabel]);
 
   // D138: editing an existing custom food only ever updates the food row --
   // it never logs a new diary entry, so this skips the eaten-amount gate and
@@ -524,32 +550,48 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </View>
         <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" unsure={_unsure('fibre100g', fibre)} />
 
-        <SectionLabel style={styles.sectionLabelSpacing}>{isEditMode ? 'Serving' : 'Quantity eaten'}</SectionLabel>
+        <SectionLabel style={styles.sectionLabelSpacing}>Portions</SectionLabel>
         {/* L05-ACF1 (2026-07-09 design audit): name the Serving (g) amount as
             a household unit ("slice", "cup", "tin"), stored as
             custom_foods.serving_label alongside the gram figure. Optional;
-            leaving it blank saves exactly as before this field existed. */}
+            leaving it blank saves exactly as before this field existed. This
+            is portion one (D230 R20). */}
         <Field
           label="Serving name (optional)"
           value={servingLabel}
           onChange={setServingLabel}
           placeholder="e.g. slice, cup, tin"
         />
+        <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" error={servingError} />
+        {extraPortions.map((p, index) => (
+          <PortionRow
+            key={index}
+            number={index + 2}
+            portion={p}
+            onChange={(next) => setExtraPortions((list) => list.map((x, i) => (i === index ? next : x)))}
+            onRemove={() => setExtraPortions((list) => list.filter((_, i) => i !== index))}
+          />
+        ))}
+        {extraPortions.length < MAX_EXTRA_PORTIONS ? (
+          <Button
+            title="Add another portion"
+            accessibilityLabel="Add another portion, such as 1 slice or 1 mug"
+            variant="tertiary"
+            onPress={() => setExtraPortions((list) => [...list, { label: '', grams: '' }])}
+            style={styles.addPortionBtn}
+          />
+        ) : null}
         {/* D138: editing a food's own details logs nothing, so the "Eaten"
             amount (today's log quantity, not part of the food itself) has no
-            place here -- Serving (g) is the only gram field this mode needs. */}
-        {isEditMode ? (
-          <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" />
-        ) : (
+            place here. */}
+        {isEditMode ? null : (
           <>
-            <View style={styles.row}>
-              <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" />
-              <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
-            </View>
-            {/* L05-ACF3 (2026-07-09 design audit): the two gram fields sat side
-                by side with no explanation of which drives what. */}
+            <SectionLabel style={styles.sectionLabelSpacing}>Quantity eaten</SectionLabel>
+            <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
+            {/* L05-ACF3 (2026-07-09 design audit): the two gram fields need
+                an explanation of which drives what. */}
             <Text style={[styles.unsureNote, live.unsureNote]}>
-              Serving is this food's usual portion, saved for next time. Eaten is how much you had today, logged now.
+              The first portion is this food's usual portion, saved for next time. Eaten is how much you had today, logged now.
             </Text>
             {portionPreview ? (
               <Text style={[styles.portionPreview, live.portionPreview]}>
@@ -610,6 +652,92 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   );
 }
 
+// Wave 4 review, item 10: the reason the first portion's weight blocks the
+// save, or undefined when it is fine (more than 0 and at most 5000 g).
+function servingState(text) {
+  const grams = parseDecimalInput(text);
+  if (Number.isFinite(grams) && grams > PORTION_GRAMS_MAX) {
+    return `Enter a serving of ${PORTION_GRAMS_MAX} g or less.`;
+  }
+  if (!Number.isFinite(grams) || grams <= 0) return 'Enter the serving\'s weight in grams.';
+  return undefined;
+}
+
+// D230 R20: one extra portion row's state. 'blank' (both halves empty, ignored
+// on save), 'ok' (a name of 1 to 24 characters and whole or decimal grams from
+// 1 to 5000) or 'bad' (anything in between, which blocks the save).
+function portionRowState(p) {
+  const label = (p?.label ?? '').trim();
+  const gramsText = String(p?.grams ?? '').trim();
+  if (!label && !gramsText) return 'blank';
+  // Wave 4 review, item 10: "12,5" is 12.5 g, as the amount sheet reads it.
+  const grams = parseDecimalInput(gramsText);
+  if (label.length >= 1 && label.length <= PORTION_LABEL_MAX
+    && gramsText !== '' && Number.isFinite(grams)
+    && grams >= PORTION_GRAMS_MIN && grams <= PORTION_GRAMS_MAX) return 'ok';
+  return 'bad';
+}
+
+function PortionRow({ number, portion, onChange, onRemove }) {
+  const t = useTheme();
+  const state = portionRowState(portion);
+  const labelError = state === 'bad' && !portion.label.trim()
+    ? 'Give this portion a name, such as 1 slice.' : undefined;
+  const gramsNumber = parseDecimalInput(portion.grams);
+  const gramsError = state === 'bad' && portion.label.trim()
+    && !(Number.isFinite(gramsNumber) && gramsNumber >= PORTION_GRAMS_MIN && gramsNumber <= PORTION_GRAMS_MAX && String(portion.grams).trim() !== '')
+    ? `Enter a weight between ${PORTION_GRAMS_MIN} and ${PORTION_GRAMS_MAX} g.` : undefined;
+  return (
+    <View style={styles.portionCard} testID={`portion-row-${number}`}>
+      <TextField
+        label={`Portion ${number} name`}
+        value={portion.label}
+        onChangeText={(v) => onChange({ ...portion, label: v })}
+        placeholder="e.g. 1 slice, 1 mug, 1 tbsp"
+        maxLength={PORTION_LABEL_MAX}
+        accessibilityLabel={`Portion ${number} name`}
+        surface={t.colors.inputBg}
+        containerStyle={styles.field}
+        error={labelError}
+      />
+      <Stepper
+        value={Number.isFinite(gramsNumber) ? gramsNumber : 0}
+        onChange={(next) => onChange({ ...portion, grams: String(next) })}
+        min={PORTION_GRAMS_MIN}
+        max={PORTION_GRAMS_MAX}
+        step={10}
+        label={`Portion ${number} weight`}
+        decreaseLabel="Less"
+        increaseLabel="More"
+        style={styles.portionStepper}
+        centre={(
+          <TextField
+            size="sm"
+            containerStyle={styles.portionGramsField}
+            inputStyle={styles.portionGramsInput}
+            value={portion.grams}
+            onChangeText={(v) => onChange({ ...portion, grams: v.replace(/[^0-9.,]/g, '') })}
+            keyboardType="decimal-pad"
+            selectTextOnFocus
+            placeholder="0"
+            accessibilityLabel={`Portion ${number} weight, grams`}
+            surface={t.colors.inputBg}
+            error={gramsError}
+            trailing={<Text style={{ color: t.colors.textMuted, fontSize: t.fontSize.sm }}>g</Text>}
+          />
+        )}
+      />
+      <Button
+        title="Remove this portion"
+        accessibilityLabel={`Remove portion ${number}`}
+        variant="outline"
+        onPress={onRemove}
+        style={styles.removePortionBtn}
+      />
+    </View>
+  );
+}
+
 function Field({ label, value, onChange, placeholder, autoFocus }) {
   // CP-10 batch D (2026-07-10): Field is a sibling function-component scope
   // (not prop-drilled `live`/`t` from AddCustomFoodScreen, it is called from
@@ -631,7 +759,7 @@ function Field({ label, value, onChange, placeholder, autoFocus }) {
   );
 }
 
-function NumField({ label, value, onChange, suffix, unsure }) {
+function NumField({ label, value, onChange, suffix, unsure, error }) {
   // CP-10 batch D (2026-07-10): same rationale as Field above, own useTheme()
   // call rather than prop-drilling.
   const t = useTheme();
@@ -658,6 +786,7 @@ function NumField({ label, value, onChange, suffix, unsure }) {
       accessibilityLabel={suffix === 'g' ? `${label}, grams` : label}
       accessibilityHint={unsure ? 'Hard to read. Check this value.' : undefined}
       surface={t.colors.inputBg}
+      error={error}
       containerStyle={[styles.field, styles.numField]}
       fieldStyle={unsure && [styles.numWrapUnsure, live.numWrapUnsure]}
       trailing={<Text style={[styles.numSuffix, live.numSuffix]}>{suffix}</Text>}
@@ -695,6 +824,15 @@ const styles = StyleSheet.create({
   unsureNote: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, marginBottom: spacing.sm },
   // L05-ACF2 (2026-07-09 design audit): the live portion-calorie preview.
   portionPreview: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, marginTop: -spacing.xs, marginBottom: spacing.sm },
+
+  // D230 R20: an extra portion's card, its weight Stepper (the typed field is
+  // the Stepper's centre) and its 48 dp remove control.
+  portionCard: { marginBottom: spacing.md },
+  portionStepper: { alignSelf: 'stretch' },
+  portionGramsField: { flexGrow: 1 },
+  portionGramsInput: { textAlign: 'center' },
+  addPortionBtn: { marginBottom: spacing.md },
+  removePortionBtn: { marginTop: spacing.sm, minHeight: 48 },
 
   saveBtn: { marginTop: spacing.xl },
   saveOnlyBtn: { marginTop: spacing.md },

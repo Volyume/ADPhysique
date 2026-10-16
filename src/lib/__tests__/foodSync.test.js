@@ -68,12 +68,19 @@ describe('applyFoodEntryFromCloud', () => {
     // eaten_at (Ultimate-Audit item 15, D22 15b): NULL here, never defaulted
     // to logged_at -- the cloud row carries no eaten_at at all.
     expect(params[12]).toBeNull();
+    // note (D230 R20, dc6343d): the INSERT's column list puts note between
+    // eaten_at and logged_at. This row carries no note key and there is no
+    // local row, so it is NULL.
+    expect(params[13]).toBeNull();
     // logged_at, created_at, updated_at as ms numbers
-    expect(typeof params[13]).toBe('number');
-    expect(params[13]).toBe(Date.parse('2026-05-23T08:15:00Z'));
-    expect(params[14]).toBeNull(); // deleted_at
-    expect(params[15]).toBe(params[13]); // created_at
-    expect(params[16]).toBe(params[13]); // updated_at
+    expect(typeof params[14]).toBe('number');
+    expect(params[14]).toBe(Date.parse('2026-05-23T08:15:00Z'));
+    expect(params[15]).toBeNull(); // deleted_at
+    expect(params[16]).toBe(params[14]); // created_at
+    expect(params[17]).toBe(params[14]); // updated_at
+    // The column list and the parameter list agree in length (18).
+    expect(params).toHaveLength(18);
+    expect(writes[0].sql).toMatch(/weight_state, eaten_at, note, logged_at,\s+deleted_at, created_at, updated_at/);
   });
 
   test('soft-delete tombstone surfaces as a non-null deleted_at', async () => {
@@ -92,7 +99,7 @@ describe('applyFoodEntryFromCloud', () => {
       deleted_at: '2026-05-22T15:00:00Z',
     });
     const { params } = writes[0];
-    expect(params[14]).toBe(Date.parse('2026-05-22T15:00:00Z'));
+    expect(params[15]).toBe(Date.parse('2026-05-22T15:00:00Z')); // deleted_at, after note (index 13) and logged_at (14)
   });
 
   test('returns null and skips the write when the row has no id', async () => {

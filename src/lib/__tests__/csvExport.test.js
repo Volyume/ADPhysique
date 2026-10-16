@@ -4,6 +4,11 @@
  * Pure formatter only, no I/O. Locks the header row, the escape
  * rules, and the food-lookup miss fallback (food_ref appears in
  * the food column).
+ *
+ * D230 R20 (re-point, same truth): the header and every row gained a trailing
+ * `note` column after water_ml, so each expectation below ends one comma
+ * longer (an empty note); no column moved. The note tests at the end pin the
+ * new column and its formula-injection neutralisation.
  */
 jest.mock('expo-file-system/legacy', () => ({ cacheDirectory: '/tmp/', writeAsStringAsync: jest.fn(), EncodingType: { UTF8: 'utf8' } }));
 jest.mock('expo-sharing', () => ({ isAvailableAsync: async () => false, shareAsync: jest.fn() }));
@@ -14,7 +19,7 @@ import { buildDiaryCsv, buildDiaryHtml } from '../food/csvExport';
 describe('buildDiaryCsv', () => {
   test('emits the header row first', () => {
     const csv = buildDiaryCsv([], new Map());
-    expect(csv).toBe('date,meal,food,brand,quantity_g,kcal,protein_g,carbs_g,fat_g,fibre_g,water_ml');
+    expect(csv).toBe('date,meal,food,brand,quantity_g,kcal,protein_g,carbs_g,fat_g,fibre_g,water_ml,note');
   });
 
   test('joins entries with newlines and resolves the food name from the lookup', () => {
@@ -35,7 +40,7 @@ describe('buildDiaryCsv', () => {
     const csv = buildDiaryCsv(entries, lookup);
     const lines = csv.split('\n');
     expect(lines).toHaveLength(2);
-    expect(lines[1]).toBe('2026-05-23,lunch,Chicken breast,Tesco,150,248,46,0,5.4,0,');
+    expect(lines[1]).toBe('2026-05-23,lunch,Chicken breast,Tesco,150,248,46,0,5.4,0,,');
   });
 
   test('falls back to food_ref when the lookup misses', () => {
@@ -45,7 +50,7 @@ describe('buildDiaryCsv', () => {
     }];
     const csv = buildDiaryCsv(entries, new Map());
     const lines = csv.split('\n');
-    expect(lines[1]).toBe('2026-05-22,snack,custom:xyz,,30,100,1,20,0,,');
+    expect(lines[1]).toBe('2026-05-22,snack,custom:xyz,,30,100,1,20,0,,,');
   });
 
   test('quotes values that contain commas, quotes, or newlines', () => {
@@ -70,9 +75,35 @@ describe('buildDiaryCsv', () => {
     ];
     const lines = buildDiaryCsv(entries, new Map(), water).split('\n');
     expect(lines).toHaveLength(4);
-    expect(lines[1]).toBe('2026-05-23,lunch,x,,100,100,1,2,3,4,');
-    expect(lines[2]).toBe('2026-05-23,water,Water,,,,,,,,1500');
-    expect(lines[3]).toBe('2026-05-24,water,Water,,,,,,,,750');
+    expect(lines[1]).toBe('2026-05-23,lunch,x,,100,100,1,2,3,4,,');
+    expect(lines[2]).toBe('2026-05-23,water,Water,,,,,,,,1500,');
+    expect(lines[3]).toBe('2026-05-24,water,Water,,,,,,,,750,');
+  });
+
+  test('the note is the last column, quoted when it needs it and neutralised when it could run as a formula (D230 R20)', () => {
+    const base = { entry_date: '2026-05-23', meal_slot: 'lunch', food_ref: 'x', quantity_g: 100, kcal: 100, protein_g: 1, carbs_g: 2, fat_g: 3, fibre_g: 4 };
+    const csv = buildDiaryCsv([
+      { ...base, note: 'Pasta at Sam\'s' },
+      { ...base, note: 'Chips, mushy peas' },
+      { ...base, note: '=HYPERLINK("http://x")' },
+      { ...base, note: '+44 123' },
+      { ...base, note: null },
+    ], new Map());
+    const lines = csv.split('\n');
+    expect(lines[0].split(',').pop()).toBe('note');
+    expect(lines[1]).toBe("2026-05-23,lunch,x,,100,100,1,2,3,4,,Pasta at Sam's");
+    expect(lines[2]).toBe('2026-05-23,lunch,x,,100,100,1,2,3,4,,"Chips, mushy peas"');
+    expect(lines[3]).toBe('2026-05-23,lunch,x,,100,100,1,2,3,4,,"\'=HYPERLINK(""http://x"")"');
+    expect(lines[4]).toBe("2026-05-23,lunch,x,,100,100,1,2,3,4,,'+44 123");
+    expect(lines[5]).toBe('2026-05-23,lunch,x,,100,100,1,2,3,4,,');
+  });
+
+  test('the PDF report leaves the note out (D230 R20)', () => {
+    const html = buildDiaryHtml(
+      [{ entry_date: '2026-05-23', meal_slot: 'lunch', food_ref: 'x', quantity_g: 100, kcal: 100, protein_g: 1, carbs_g: 2, fat_g: 3, fibre_g: 4, note: 'PRIVATE-NOTE-TEXT' }],
+      new Map(), { startDate: '2026-05-23', endDate: '2026-05-23' },
+    );
+    expect(html).not.toContain('PRIVATE-NOTE-TEXT');
   });
 
   test('renders an empty fibre cell when the entry has no fibre value', () => {
@@ -160,7 +191,7 @@ describe('buildDiaryCsv', () => {
         quantity_g: 120, kcal: 105, protein_g: 1, carbs_g: 27, fat_g: 0, fibre_g: 3,
       }];
       const cell = buildDiaryCsv(entries, lookup).split('\n')[1];
-      expect(cell).toBe('2026-05-17,breakfast,Banana,,120,105,1,27,0,3,');
+      expect(cell).toBe('2026-05-17,breakfast,Banana,,120,105,1,27,0,3,,');
     });
 
     test('a negative number value is not mangled (numbers are not formulas here)', () => {

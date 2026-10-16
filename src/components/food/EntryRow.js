@@ -8,11 +8,13 @@ import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
+import { displayFoodNote } from '../../lib/food/entryNote';
 
 export function friendlyFoodName(entry) {
   if (entry?._name && typeof entry._name === 'string') return entry._name;
   const ref = entry?.food_ref ?? '';
-  if (ref.startsWith('quick:')) return 'Quick add';
+  // D230 R20: a quick add has no food to name it, so its note IS its name.
+  if (ref.startsWith('quick:')) return displayFoodNote(entry?.note) ?? 'Quick add';
   if (ref.startsWith('custom:')) return 'Custom food';
   return 'Food';
 }
@@ -43,6 +45,9 @@ export function EntryRow({
   const f = Math.round(entry.fat_g ?? 0);
   const name = friendlyFoodName(entry);
   const brand = entry?._brand ?? null;
+  // D230 R20: the note as one quiet line under the meta line. A quick add
+  // already shows its note as its name, so it is not repeated here.
+  const noteLine = (entry?.food_ref ?? '').startsWith('quick:') ? null : displayFoodNote(entry?.note);
   // Quick-add entries carry macros directly with no meaningful gram weight.
   const isQuick = (entry?.food_ref ?? '').startsWith('quick:');
   // Ultimate-Audit item 15 (D22 15b): the quiet time shown is now eaten_at,
@@ -62,6 +67,7 @@ export function EntryRow({
   // spoken label says the same thing in words, never the letters.
   const spokenMacros = `${p} grams protein, ${c} carbs, ${f} fat`;
   const energy = `${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}`;
+  const spokenNote = noteLine ? ` Note: ${noteLine}${/[.!?]$/.test(noteLine) ? '' : '.'}` : '';
   // Item 9 (campaign 2026-07-10): weight_state (raw/cooked/as_weighed) only
   // showed in FoodDetailSheet's edit sheet before. A quiet inline chip on
   // the row itself surfaces the weighing basis without opening the sheet --
@@ -95,12 +101,15 @@ export function EntryRow({
       onAccessibilityAction={!readOnly && onAccessibilityDelete
         ? (e) => { if (e.nativeEvent.actionName === 'delete') onAccessibilityDelete(); }
         : undefined}
+      // D230 R20 (Wave 4 review, item 11): the note line is said too, so a
+      // screen reader hears what a sighted person reads under the meta line.
+      // A quick add's note is already its name, so it is not said twice.
       accessibilityLabel={
         readOnly
-          ? `${name}, ${energy}, ${spokenMacros}.`
+          ? `${name}, ${energy}, ${spokenMacros}.${spokenNote}`
           : selectionMode
-            ? `${name}, ${energy}, ${spokenMacros}. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
-            : `${name}, ${energy}, ${spokenMacros}. Tap to edit.`
+            ? `${name}, ${energy}, ${spokenMacros}.${spokenNote} ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
+            : `${name}, ${energy}, ${spokenMacros}.${spokenNote} Tap to edit.`
       }
       // D94 (Campaign 3, Phase 10): the long press is now an accelerator
       // (the edit sheet carries the visible route), but screen-reader users
@@ -135,6 +144,7 @@ export function EntryRow({
         </View>
         {brand ? <Text style={[styles.entryBrand, live.entryBrand]} numberOfLines={1}>{brand}</Text> : null}
         {metaLine ? <Text style={[styles.entryQuantity, live.entryQuantity]}>{metaLine}</Text> : null}
+        {noteLine ? <Text style={[styles.entryNote, live.entryNote]} numberOfLines={1} ellipsizeMode="tail">{noteLine}</Text> : null}
       </View>
       <View style={styles.entryMacros}>
         <Text style={[styles.entryKcal, live.entryKcal]}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
@@ -242,6 +252,7 @@ const styles = StyleSheet.create({
   weightStateTagText: { ...type.caption, color: colors.textMuted, fontSize: fontSize.xs },
   entryBrand: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
   entryQuantity: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  entryNote: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   entryMacros: { alignItems: 'flex-end' },
   // D230 4.3: tabular bodyStrong, so a column of kcal figures lines up.
   entryKcal: { ...type.num('bodyStrong'), color: colors.textPrimary },
@@ -278,6 +289,7 @@ function buildLiveStyles(t) {
     weightStateTagText: { color: t.colors.textMuted },
     entryBrand: { color: t.colors.textMuted },
     entryQuantity: { color: t.colors.textMuted },
+    entryNote: { color: t.colors.textMuted },
     entryKcal: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     entryMacroLine: { color: t.colors.textMuted },
     swipeDelete: { backgroundColor: t.colors.error },

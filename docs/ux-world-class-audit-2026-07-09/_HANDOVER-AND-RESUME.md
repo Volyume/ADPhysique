@@ -1,6 +1,9 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-16 (night) — FOOD WAVE 4 LANDED, LIVE SYNC DAY-MOVE FIXED (D230 Wave 4 landing) ★
+Founder: "Ok proceed and finish off food now". Source: `DECISIONS-2026-07-09.md`, D230 Wave 4 landing; plan `docs/audit/food-levelup-2026-10-16/03-ASSESSMENT-AND-PLAN.md` R20, R21. Branch `food/wave4-2026-10-16`. Cloud 194 and 195 written and NOT applied (flags off). The day-key fix: `src/lib/food/db.js` `isPreTz1UtcKeyedRow`, `applyFoodEntryFromCloud`, `repairPulledEntryDays`; `src/lib/sync/tables/foodDomain.js` `repairPulledEntryDaysOnce`, chunking, `_foodRowBuckets`.
+
 ## ★ 2026-10-16 (evening) — SHARE 2.18.0: COLLAPSING PREVIEW, NATIVE FRAMES, TWO AUDITS, RENDERS (D229 addendum 19) ★
 Founder: the collapsing preview back, a hostile audit with agents and renders of every page, "fool proof and error free", version bump. Source: `DECISIONS-2026-07-09.md`, D229 addendum 19. Branch `share/collapsing-preview-2026-10-16`. Native frames: `modules/volyume-video-export/{android/.../FrameExtractor.kt, ios/FrameExtractor.swift}`, JS `src/lib/shareVideo/videoFrame.js`; guard `src/lib/shareVideo/__tests__/noSkiaVideo.guard.test.js`. Renders and harness (scratchpad, not in the repo): the session scratchpad's `renders/`. Native code is uncompiled until the founder's build. Food parked on `hold/food-wave4-unreviewed`.
 

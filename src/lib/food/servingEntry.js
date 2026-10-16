@@ -7,10 +7,13 @@
 // floors operate on grams); the unit only changes how the user enters the
 // amount. A food with no named serving falls back to grams-only.
 
+import { parsePortions } from './portions';
+
 export const MAX_ENTRY_GRAMS = 5000;
 
 // The selectable units for a food: its household serving (when known) first,
-// then raw grams. Each unit's `grams` is the gram-weight of ONE unit, so
+// then each extra custom portion (D230 R20: portions_json, keys 'portion:0',
+// 'portion:1'), then raw grams. Each unit's `grams` is the gram-weight of ONE unit, so
 // grams = amount * unit.grams.
 export function buildServingUnits(food) {
   const servingG = Number(food?.serving_g) || 0;
@@ -18,6 +21,9 @@ export function buildServingUnits(food) {
   if (servingG > 0) {
     list.push({ key: 'serving', label: food?.serving_label || 'serving', grams: servingG });
   }
+  parsePortions(food?.portions_json).forEach((p, index) => {
+    list.push({ key: `portion:${index}`, label: p.label, grams: p.grams });
+  });
   list.push({ key: 'g', label: 'g', grams: 1 });
   return list;
 }
@@ -40,18 +46,23 @@ export function buildServingUnits(food) {
 export function initialServingState(food, mode, initialQuantityG) {
   const servingG = Number(food?.serving_g) || 0;
   if (initialQuantityG != null && initialQuantityG > 0) {
-    if (servingG > 0) {
-      const halfServingG = servingG / 2;
-      const nearestHalves = Math.round(initialQuantityG / halfServingG);
-      if (nearestHalves > 0) {
-        const roundedServings = nearestHalves * 0.5;
-        const roundedGrams = roundedServings * servingG;
-        const withinTolerance = Math.abs(initialQuantityG - roundedGrams) <= initialQuantityG * 0.02;
-        if (withinTolerance) {
-          return { unitKey: 'serving', amount: String(roundedServings) };
-        }
+    // D230 R20: a half-multiple of ANY of the food's portions reopens in that
+    // portion. The nearest match (smallest gram distance) wins; a tie goes to
+    // the named serving, which is listed first.
+    let best = null;
+    for (const unit of buildServingUnits(food)) {
+      if (unit.key === 'g' || !(unit.grams > 0)) continue;
+      const nearestHalves = Math.round(initialQuantityG / (unit.grams / 2));
+      if (nearestHalves <= 0) continue;
+      const roundedServings = nearestHalves * 0.5;
+      const roundedGrams = roundedServings * unit.grams;
+      const distance = Math.abs(initialQuantityG - roundedGrams);
+      if (distance > initialQuantityG * 0.02) continue;
+      if (!best || distance < best.distance) {
+        best = { distance, unitKey: unit.key, amount: String(roundedServings) };
       }
     }
+    if (best) return { unitKey: best.unitKey, amount: best.amount };
     return { unitKey: 'g', amount: String(Math.round(initialQuantityG)) };
   }
   if (servingG > 0) return { unitKey: 'serving', amount: '1' };

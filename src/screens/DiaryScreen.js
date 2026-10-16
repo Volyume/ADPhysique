@@ -1173,7 +1173,7 @@ export default function DiaryScreen({ navigation, route }) {
     navigation.navigate(routeName, { mealSlot, entryDate: selectedDate });
   }
 
-  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot }) {
+  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot, note }) {
         // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
     // as "Quick add" with no gram weight.
     // eslint-disable-next-line global-require
@@ -1188,6 +1188,7 @@ export default function DiaryScreen({ navigation, route }) {
       carbsG: carbs,
       fatG: fat,
       fibreG: null,
+      note, // D230 R20: the name a quick add never had
     });
     await load();
   }
@@ -1358,10 +1359,22 @@ export default function DiaryScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveMealName, saveMealItems, userId, exitSelection]);
 
+  // Wave 4 review, item 3 (data loss): a 'quick:*' entry (a quick add, or a
+  // day imported from MyFitnessPal) has no food behind it and stores 0 g, so
+  // the stand-in food below would carry 0 kcal per 100 g and any scaled save
+  // would write 0 kcal over the entry. Such an entry is edited as FIXED: the
+  // sheet hides its Amount block, and saveEditSheet keeps the entry's own
+  // quantity, energy and macros; only the meal, the time and the note change.
+  // (QuickAddSheet, which creates quick adds from typed figures, has no meal
+  // time, day or delete, so the edit sheet stays the one place to change them.)
+  const isFixedEntry = (entry) => typeof entry?.food_ref === 'string' && entry.food_ref.startsWith('quick:');
+
   async function openEditSheet(entry) {
-    const food = await resolveFoodRef(userId, entry.food_ref).catch(() => null);
+    const fixed = isFixedEntry(entry);
+    const food = fixed ? null : await resolveFoodRef(userId, entry.food_ref).catch(() => null);
     setEditSheet({
       entry,
+      fixed,
       food: food ?? {
         name: friendlyFoodName(entry), brand: null, source: null,
         kcal_100g: entry.kcal && entry.quantity_g ? (entry.kcal / entry.quantity_g) * 100 : 0,
@@ -1373,9 +1386,17 @@ export default function DiaryScreen({ navigation, route }) {
     });
   }
 
-  async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState, eatenAt }) {
-        const { entry, food } = editSheet;
-    const scaled = scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
+  async function saveEditSheet({ quantityG: sheetQuantityG, mealSlot, entryDate, weightState, eatenAt, note }) {
+    const { entry, food } = editSheet;
+    // A fixed entry keeps its own grams and figures whatever the sheet sends.
+    const fixed = isFixedEntry(entry);
+    const quantityG = fixed ? entry.quantity_g : sheetQuantityG;
+    const scaled = fixed
+      ? {
+        kcal: entry.kcal, proteinG: entry.protein_g, carbsG: entry.carbs_g,
+        fatG: entry.fat_g, fibreG: entry.fibre_g ?? null,
+      }
+      : scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
     const written = await updateFoodEntry(entry.id, userId, {
       entryDate,
       mealSlot,
@@ -1391,6 +1412,8 @@ export default function DiaryScreen({ navigation, route }) {
       // undefined leaves the stored value untouched (updateFoodEntry
       // preserves omitted fields); an explicit value or null writes through.
       ...(eatenAt !== undefined ? { eatenAt } : null),
+      // D230 R20: the note ('' clears it; undefined leaves it).
+      ...(note !== undefined ? { note } : null),
     });
     // D230 R17: update the row and the ring in place (a row moved to another
     // day leaves this one), then reconcile once in the background.
@@ -1407,6 +1430,7 @@ export default function DiaryScreen({ navigation, route }) {
         fibre_g: scaled.fibreG ?? null,
         weight_state: weightState ?? entry.weight_state,
         ...(eatenAt !== undefined ? { eaten_at: eatenAt } : null),
+        ...(note !== undefined ? { note: note === '' ? null : note } : null),
       }, selectedDate));
     }
     reconcileInBackground();
@@ -2101,6 +2125,11 @@ export default function DiaryScreen({ navigation, route }) {
         initialEntryDate={editSheet?.entry?.entry_date ?? selectedDate}
         initialWeightState={editSheet?.entry?.weight_state}
         initialEatenAt={editSheet?.entry?.eaten_at ?? null}
+        initialNote={editSheet?.entry?.note ?? null}
+        fixedMacros={editSheet?.fixed ? {
+          kcal: editSheet.entry.kcal, protein: editSheet.entry.protein_g, carbs: editSheet.entry.carbs_g,
+          fat: editSheet.entry.fat_g, fibre: editSheet.entry.fibre_g ?? null,
+        } : null}
         onSave={saveEditSheet}
         onDelete={deleteFromEditSheet}
         // Phase 10 finding #2 (discoverability audit 2026-08-10): the only

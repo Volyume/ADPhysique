@@ -14,10 +14,13 @@ import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef, resolveFoodRefs } from './sources/localCache';
 import { microSqlColumns, microSqlPlaceholders, microSqlUpsertExcluded, microValuesFromRow, microValuesFromInput } from './micronutrients';
 import { isValidEntryGrams } from './servingEntry';
+import { serialisePortions } from './portions';
+import { cleanFoodNote } from './entryNote';
 import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from './foodSwapScope';
+import { FOOD_ENTRY_NOTE_PUSH, CUSTOM_FOOD_PORTIONS_PUSH } from '../sync/featureFlags';
 import {
   isBoundedString,
   isLocalDayKey,
@@ -98,7 +101,10 @@ function _standDownMealReminders(userId, entryDate, slots, { plannedConfirm = fa
 //
 // `label` names the caller in the thrown message ('logFoodEntry', or
 // 'logFoodEntries (row 3)'). Returns what the insert needs beyond the entry.
-function _prepareDiaryEntry(label, entry, now) {
+// `keepUntimed` (logFoodEntries' option of the same name): an actual whose
+// eatenAt is explicitly null keeps eaten_at NULL instead of earning "now".
+function _prepareDiaryEntry(label, entry, now, { keepUntimed = false } = {}) {
+  const note = cleanFoodNote(entry.note);
   const isQuickAdd = typeof entry.foodRef === 'string' && entry.foodRef.startsWith('quick:');
   const qtyIn = entry.quantityG;
   if (isQuickAdd) {
@@ -111,7 +117,8 @@ function _prepareDiaryEntry(label, entry, now) {
   if (!validFoodIdentity(entry.entryDate, entry.mealSlot, entry.foodRef)
     || !validDiaryNumbers(entry, { allowQuickZero: isQuickAdd })
     || !isPersistedEpochMs(now)
-    || (entry.eatenAt !== undefined && entry.eatenAt !== null && !isPersistedEpochMs(entry.eatenAt))) {
+    || (entry.eatenAt !== undefined && entry.eatenAt !== null && !isPersistedEpochMs(entry.eatenAt))
+    || note === false) { // D230 R20: a note is a string of at most 120 characters, or absent
     throw new TypeError(`${label}: invalid food values`);
   }
   // is_planned=1 marks a meal-plan entry as scaffolding: excluded from the
@@ -122,11 +129,19 @@ function _prepareDiaryEntry(label, entry, now) {
   // "I ate this now" act, so it earns eaten_at = now unless the caller
   // explicitly supplies one. A planned meal-plan row has not been eaten yet
   // -- eaten_at stays NULL until it is confirmed (confirmPlannedEntry /
-  // confirmPlannedDay), which is what stamps the real moment.
+  // confirmPlannedDay), which is what stamps the real moment. A row written
+  // with keepUntimed and an explicit null eatenAt (an imported row its file
+  // did not time) is not an "I ate this now" act either, so it stays NULL,
+  // the same honest "no known time" a bulk-confirmed day carries.
+  let eatenAt;
+  if (isPlanned) eatenAt = null;
+  else if (Number.isFinite(entry.eatenAt)) eatenAt = entry.eatenAt;
+  else eatenAt = keepUntimed && entry.eatenAt === null ? null : now;
   return {
     isPlanned,
     weightState: _normaliseWeightState(entry.weightState),
-    eatenAt: isPlanned ? null : (Number.isFinite(entry.eatenAt) ? entry.eatenAt : now),
+    eatenAt,
+    note: note ?? null, // D230 R20: blank or absent saves NULL
   };
 }
 
@@ -135,14 +150,14 @@ function _insertDiaryRow(d, userId, id, entry, prepared, loggedAt, now) {
     `INSERT INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
       kcal, protein_g, carbs_g, fat_g, fibre_g, logged_at,
-      is_planned, weight_state, eaten_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      is_planned, weight_state, eaten_at, note, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
       entry.quantityG, entry.kcal, entry.proteinG,
       entry.carbsG, entry.fatG,
       entry.fibreG ?? null, loggedAt,
-      prepared.isPlanned, prepared.weightState, prepared.eatenAt, now, now,
+      prepared.isPlanned, prepared.weightState, prepared.eatenAt, prepared.note, now, now,
     ]
   );
 }
@@ -242,18 +257,39 @@ export async function logFoodEntry(userId, entry) {
  * they had when each was its own write (the serving memory and the in-meal
  * order read logged_at). `created_at`/`updated_at` are `now`.
  *
+ * Two options, both off by default (every existing caller is unchanged), for
+ * a write that is NOT the person logging food in the app now (the food
+ * history import, D230 R21):
+ *  - `keepUntimed`: an actual whose `eatenAt` is explicitly `null` keeps
+ *    eaten_at NULL (no time shown, ordered after the timed rows of its meal,
+ *    left out of "Around this time"), instead of the write's own moment.
+ *    An `eatenAt` left undefined still earns "now", as before.
+ *  - `telemetry: false`: no per-row `food_logged` and no `first_food_logged`.
+ *    An import is not a meal logged in the app: per-row events would flood
+ *    the food panel with history, and the durable once-per-person first-food
+ *    event would be spent on a file, so the person's own first log would
+ *    never count. (A single content-free summary event would need a new name
+ *    on the server's record_engine_telemetry allow-list, a cloud migration;
+ *    none is sent until one exists.)
+ * The rows are written exactly once, as they are meant to be: never inserted
+ * and then corrected, since a row edited before its first push is bucketed
+ * 'updated', which the server applies as a plain UPDATE of a row it does not
+ * yet hold (supabase/migrate_195 food_sync_push), so it would never reach the
+ * cloud.
+ *
  * @param {string} userId
  * @param {object[]} entries - each as logFoodEntry's `entry`
+ * @param {{ keepUntimed?: boolean, telemetry?: boolean }} [options]
  * @returns {Promise<string[]>} the new ids, in the order of `entries`
  */
-export async function logFoodEntries(userId, entries) {
+export async function logFoodEntries(userId, entries, { keepUntimed = false, telemetry = true } = {}) {
   if (!Array.isArray(entries)) throw new TypeError('logFoodEntries: entries must be an array');
   if (entries.length === 0) return [];
   const now = Date.now();
   const prepared = entries.map((entry, i) => {
     const label = `logFoodEntries (row ${i + 1})`;
     if (!entry || typeof entry !== 'object') throw new TypeError(`${label}: invalid food values`);
-    return _prepareDiaryEntry(label, entry, now);
+    return _prepareDiaryEntry(label, entry, now, { keepUntimed: keepUntimed === true });
   });
   const dates = [];
   for (const entry of entries) if (!dates.includes(entry.entryDate)) dates.push(entry.entryDate);
@@ -273,23 +309,25 @@ export async function logFoodEntries(userId, entries) {
   });
   // Committed. Everything below is best-effort and subtractive, as in
   // logFoodEntry: it can never fail the write.
-  try {
-    // eslint-disable-next-line global-require
-    const { track } = require('../engineTelemetry');
-    entries.forEach((entry) => {
-      try {
-        track(userId, 'food_logged', {
-          food_ref_source: _foodRefSource(entry.foodRef),
-          meal_slot: entry.mealSlot,
-        }).catch(() => {});
-      } catch (_) { /* one row's telemetry never blocks the next */ }
-    });
-    if (prepared.some((p) => !p.isPlanned)) {
+  if (telemetry !== false) {
+    try {
       // eslint-disable-next-line global-require
-      const { trackFirst } = require('../telemetry/firsts');
-      trackFirst(userId, 'first_food_logged').catch(() => {});
-    }
-  } catch (_) { /* tolerate test env without telemetry */ }
+      const { track } = require('../engineTelemetry');
+      entries.forEach((entry) => {
+        try {
+          track(userId, 'food_logged', {
+            food_ref_source: _foodRefSource(entry.foodRef),
+            meal_slot: entry.mealSlot,
+          }).catch(() => {});
+        } catch (_) { /* one row's telemetry never blocks the next */ }
+      });
+      if (prepared.some((p) => !p.isPlanned)) {
+        // eslint-disable-next-line global-require
+        const { trackFirst } = require('../telemetry/firsts');
+        trackFirst(userId, 'first_food_logged').catch(() => {});
+      }
+    } catch (_) { /* tolerate test env without telemetry */ }
+  }
   for (const date of dates) {
     const slots = [];
     entries.forEach((entry, i) => {
@@ -373,7 +411,8 @@ function _validEntryPatch(id, userId, patch) {
     && isBoundedString(patch?.mealSlot, 80)
     && isBoundedString(patch?.foodRef, 500)
     && (patch?.entryDate === undefined || isLocalDayKey(patch.entryDate))
-    && (patch?.eatenAt === undefined || patch.eatenAt === null || isPersistedEpochMs(patch.eatenAt));
+    && (patch?.eatenAt === undefined || patch.eatenAt === null || isPersistedEpochMs(patch.eatenAt))
+    && cleanFoodNote(patch?.note) !== false; // D230 R20
 }
 
 // Writes `patch` over the row `existing` describes and returns the entry_date
@@ -391,16 +430,20 @@ async function _writeEntryPatch(d, userId, id, patch, existing, now) {
   const eatenAt = patch.eatenAt !== undefined
     ? (Number.isFinite(patch.eatenAt) ? patch.eatenAt : null)
     : (existing.eaten_at ?? null);
+  // D230 R20: `undefined` keeps the note the row has; null, blank or text
+  // replaces it (blank is NULL). Validated by _validEntryPatch before this.
+  const cleanedNote = cleanFoodNote(patch.note);
+  const note = cleanedNote !== undefined ? cleanedNote : (existing.note ?? null);
   await d.runAsync(
     `UPDATE food_entries SET
       entry_date = ?, meal_slot = ?, food_ref = ?, quantity_g = ?,
       kcal = ?, protein_g = ?, carbs_g = ?, fat_g = ?, fibre_g = ?,
-      weight_state = ?, eaten_at = ?, updated_at = ?
+      weight_state = ?, eaten_at = ?, note = ?, updated_at = ?
     WHERE id = ? AND user_id = ?`,
     [
       newDate, patch.mealSlot, patch.foodRef, patch.quantityG,
       patch.kcal, patch.proteinG, patch.carbsG, patch.fatG,
-      patch.fibreG ?? null, weightState, eatenAt, now, id, userId,
+      patch.fibreG ?? null, weightState, eatenAt, note, now, id, userId,
     ]
   );
   return newDate;
@@ -413,7 +456,7 @@ export async function updateFoodEntry(id, userId, patch) {
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
-    `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at
+    `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at, note
      FROM food_entries WHERE id = ? AND user_id = ?`,
     [id, userId]
   );
@@ -462,7 +505,7 @@ export async function updateFoodEntries(userId, updates) {
     for (const { id, patch } of updates) {
       // eslint-disable-next-line no-await-in-loop
       const existing = await d.getFirstAsync(
-        `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at
+        `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at, note
          FROM food_entries WHERE id = ? AND user_id = ?`,
         [id, userId]
       );
@@ -695,8 +738,14 @@ export async function confirmPlannedDay(userId, entryDate, mealSlot = null) {
   if (mealSlot) { identitySql += ' AND meal_slot = ?'; identityParams.push(mealSlot); }
   const confirmedIdentities = await d.getAllAsync(identitySql, identityParams);
   const eatenAt = mealSlot ? now : null;
-  const params = [now, eatenAt, now, userId, entryDate];
-  let sql = `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, updated_at = ?
+  // created_at is the moment of confirmation too: a planned row is never
+  // pushed (the push reads is_planned = 0 only), so confirming it is when it
+  // first becomes something the cloud should hold. With its old created_at it
+  // would be sent as an edit of a row the cloud has never seen, which the
+  // server applies as a plain UPDATE, and it would never reach the cloud
+  // (Wave 4 review, lead ruling 2026-10-16).
+  const params = [now, eatenAt, now, now, userId, entryDate];
+  let sql = `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, created_at = ?, updated_at = ?
      WHERE user_id = ? AND entry_date = ? AND is_planned = 1 AND deleted_at IS NULL`;
   if (mealSlot) { sql += ' AND meal_slot = ?'; params.push(mealSlot); }
   const res = await d.runAsync(sql, params);
@@ -731,9 +780,10 @@ export async function confirmPlannedEntry(userId, entryId) {
   );
   if (!existing) return 0;
   const res = await d.runAsync(
-    `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, updated_at = ?
+    // created_at too, for the reason given in confirmPlannedDay.
+    `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, created_at = ?, updated_at = ?
      WHERE id = ? AND user_id = ? AND is_planned = 1 AND deleted_at IS NULL`,
-    [now, now, now, entryId, userId]
+    [now, now, now, now, entryId, userId]
   );
   await recomputeRollup(userId, existing.entry_date);
   if ((res?.changes ?? 0) > 0) {
@@ -943,8 +993,8 @@ export async function insertCustomFood(userId, food) {
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
       fibre_100g, sodium_100g, sugar_100g, ${microSqlColumns}, photo_url, notes,
-      barcode_ean, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?)`,
+      barcode_ean, portions_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, food.name, food.brand ?? null,
       food.servingG, food.servingLabel ?? null,
@@ -953,6 +1003,9 @@ export async function insertCustomFood(userId, food) {
       ...microValuesFromInput(food.micros),
       food.photoUrl ?? null, food.notes ?? null,
       food.barcodeEan ?? null,
+      // D230 R20: the second and third custom portions (the first is
+      // serving_g/serving_label). Validated and bounded here, null when none.
+      serialisePortions(food.portions),
       now, now,
     ]
   );
@@ -987,7 +1040,7 @@ export async function updateCustomFood(userId, id, food) {
       kcal_100g = ?, protein_100g = ?, carbs_100g = ?, fat_100g = ?,
       fibre_100g = ?, sodium_100g = ?, sugar_100g = ?,
       ${microCols.map((c) => `${c} = ?`).join(', ')},
-      photo_url = ?, notes = ?, barcode_ean = ?, updated_at = ?
+      photo_url = ?, notes = ?, barcode_ean = ?, portions_json = ?, updated_at = ?
      WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
     [
       food.name, food.brand ?? null,
@@ -997,6 +1050,7 @@ export async function updateCustomFood(userId, id, food) {
       ...microValuesFromInput(food.micros),
       food.photoUrl ?? null, food.notes ?? null,
       food.barcodeEan ?? null,
+      serialisePortions(food.portions),
       now,
       id, userId,
     ]
@@ -1178,32 +1232,75 @@ export async function recomputeRollup(userId, entryDate) {
   );
 }
 
+// TZ-1: the moment from which no build keys a food entry by the UTC day.
+// Phase 1 (commit 5057317da, 2026-06-03 05:52 UTC; first versioned build
+// 1.1.1, 2026-06-04) switched every food write to the LOCAL day; the build
+// in Closed Testing then was the pre-food-layer 1.1.0+4 and production
+// opened at 1.2.0 (docs/CURRENT_STATUS.md, "Distribution state"), so a row
+// created from this moment on had its day chosen by a local-day build.
+export const TZ1_LOCAL_DAY_KEYS_FROM_MS = Date.UTC(2026, 5, 4);
+
+const _utcDayKey = (ms) => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * Does this row carry the pre-TZ-1 UTC day-key bug, and nothing else?
+ *
+ * The bug wrote entry_date as the UTC day of the moment the meal was logged,
+ * so its ONLY signature is: entry_date equals the UTC day of logged_at and
+ * differs from the local day of logged_at, on a row written before the
+ * phase 1 cutoff. Every other mismatch between entry_date and logged_at is a
+ * day chosen on purpose (a meal logged today for yesterday, a copy to another
+ * day, a planned meal, an imported history: logged_at is only ever the moment
+ * of the write, and in the cloud the moment of the first push, since
+ * food_sync_push leaves logged_at to its default now()), and a planned row is
+ * never one (planning arrived after phase 1). A row with no readable
+ * logged_at cannot be judged and is never moved.
+ *
+ * @param {{ entryDate: string, loggedAt: number, createdAt?: number|null, isPlanned?: boolean }} r
+ * @returns {boolean}
+ */
+export function isPreTz1UtcKeyedRow({ entryDate, loggedAt, createdAt = null, isPlanned = false }) {
+  if (isPlanned || !Number.isFinite(loggedAt)) return false;
+  const written = Number.isFinite(createdAt) ? Math.max(createdAt, loggedAt) : loggedAt;
+  if (written >= TZ1_LOCAL_DAY_KEYS_FROM_MS) return false;
+  return entryDate === _utcDayKey(loggedAt) && entryDate !== localDayKey(loggedAt);
+}
+
 // TZ-1 phase 2: re-key historical food_entries to the LOCAL calendar day.
 // Phase 1 switched new writes to local; rows written earlier (or pulled from a
 // build that wrote UTC keys) still carry a UTC entry_date. Each row keeps its
-// logged_at timestamp, so we recompute entry_date from it and rebuild the
-// affected days' rollups. Idempotent: only rows whose key actually changes are
-// touched (updated_at bumped so the change syncs to cloud). Run once per user
-// behind the caller's guard. Best-effort: it uses the device's current
-// timezone applied to logged_at, so a user who logged in another timezone has
-// those rows classified by the current one.
+// logged_at timestamp, so the local day is recomputed from it and the affected
+// days' rollups are rebuilt. ONLY a row isPreTz1UtcKeyedRow recognises is
+// moved: until 2026-10-16 every row whose key differed from its logged_at's
+// local day was moved, which put a meal logged today for yesterday, a copied
+// day and a planned meal on the day of the write (food level-up lane 4C,
+// dayKeyRepair.realdb.test.js). Idempotent: only rows whose key actually
+// changes are touched (updated_at bumped so the change syncs to cloud). Run
+// once per user behind the caller's guard. Best-effort: it uses the device's
+// current timezone applied to logged_at, so a user who logged in another
+// timezone has those rows classified by the current one.
 export async function rekeyFoodEntriesToLocalDay(userId) {
   if (!userId) return 0;
   const d = await db();
   const rows = await d.getAllAsync(
-    'SELECT id, entry_date, logged_at FROM food_entries WHERE user_id = ? AND deleted_at IS NULL',
+    `SELECT id, entry_date, logged_at, created_at, is_planned FROM food_entries
+     WHERE user_id = ? AND deleted_at IS NULL`,
     [userId],
   );
   const affectedDays = new Set();
   const updates = [];
   for (const r of rows ?? []) {
-    if (r.logged_at == null) continue;
-    const newKey = localDayKey(r.logged_at);
-    if (newKey && newKey !== r.entry_date) {
-      affectedDays.add(r.entry_date);
-      affectedDays.add(newKey);
-      updates.push([r.id, newKey]);
-    }
+    const loggedAt = r.logged_at == null ? NaN : Number(r.logged_at);
+    if (!isPreTz1UtcKeyedRow({
+      entryDate: r.entry_date,
+      loggedAt,
+      createdAt: r.created_at == null ? null : Number(r.created_at),
+      isPlanned: Number(r.is_planned) === 1,
+    })) continue;
+    const newKey = localDayKey(loggedAt);
+    affectedDays.add(r.entry_date);
+    affectedDays.add(newKey);
+    updates.push([r.id, newKey]);
   }
   if (updates.length === 0) return 0;
   const now = Date.now();
@@ -1226,6 +1323,67 @@ export async function rekeyFoodEntriesToLocalDay(userId) {
     }
   });
   return updates.length;
+}
+
+// One-time repair of the rows the pre-2026-10-16 pull already moved (lead
+// ruling on the Wave 4 hostile review, item 9). Until that date
+// applyFoodEntryFromCloud put EVERY pulled row on the local day of its cloud
+// logged_at, the moment of its first push, so a meal logged for yesterday, a
+// copied day or an imported history moved to the day it was pushed on every
+// device that pulled it, this one included. The cloud still holds the day the
+// writing device chose (food_sync_push sends entry_date), so the row goes back
+// to it, but ONLY when every one of these holds, which together say "the old
+// pull put it there and nothing has touched it since":
+//  - the local row exists and is not deleted;
+//  - its updated_at equals the cloud row's (it is the applied copy, untouched);
+//  - its entry_date equals localDayKey(cloud logged_at), the day the old pull
+//    computed, and differs from the cloud entry_date;
+//  - the cloud entry_date is a valid day key and is not the pre-phase-1 UTC
+//    signature (isPreTz1UtcKeyedRow): that row was moved on purpose.
+// updated_at is NOT bumped: the cloud already holds this day, so nothing
+// re-pushes. Each move is a compare-and-set on the values just read, so an
+// edit or a newer pull landing in between wins. The moves and both days'
+// rollups commit in one transaction. `cloudRows` is food_sync_pull's
+// food_entries rows (any group). Returns the number of rows moved.
+export async function repairPulledEntryDays(userId, cloudRows) {
+  if (!isBoundedString(userId, 300) || !Array.isArray(cloudRows) || cloudRows.length === 0) return 0;
+  const candidates = [];
+  for (const row of cloudRows) {
+    if (!row || !isBoundedString(row.id, 300) || !isLocalDayKey(row.entry_date)) continue;
+    // A row with no readable logged_at was stored on the moment of the pull,
+    // which cannot be judged: never moved.
+    const loggedAt = parseCloudEpochMs(row.logged_at);
+    if (loggedAt == null) continue;
+    const times = _cloudTimes(row);
+    if (!times) continue;
+    if (isPreTz1UtcKeyedRow({ entryDate: row.entry_date, loggedAt: times.loggedAt, createdAt: times.createdAt })) continue;
+    const oldPullDay = localDayKey(times.loggedAt);
+    if (oldPullDay === row.entry_date) continue;
+    candidates.push({ id: row.id, cloudDay: row.entry_date, oldPullDay, updatedAt: times.updatedAt });
+  }
+  if (candidates.length === 0) return 0;
+  const d = await db();
+  return runInTransaction(d, async () => {
+    const affectedDays = new Set();
+    let moved = 0;
+    for (const c of candidates) {
+      const r = await d.runAsync(
+        `UPDATE food_entries SET entry_date = ?
+         WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+           AND updated_at = ? AND entry_date = ?`,
+        [c.cloudDay, c.id, userId, c.updatedAt, c.oldPullDay],
+      );
+      if (Number(r?.changes ?? 0) > 0) {
+        moved += 1;
+        affectedDays.add(c.oldPullDay);
+        affectedDays.add(c.cloudDay);
+      }
+    }
+    for (const day of affectedDays) {
+      await recomputeRollup(userId, day);
+    }
+    return moved;
+  });
 }
 
 export async function getRollupForDay(userId, entryDate) {
@@ -2565,7 +2723,11 @@ async function _localUpdatedMs(d, table, id, userId) {
   return r?.updated_at != null ? Number(r.updated_at) : null;
 }
 
-export async function applyFoodEntryFromCloud(userId, row) {
+// `affectedDays` (optional Set): receives every day whose rollup this apply
+// changes, the day the row lands on AND the day it left when this device held
+// it on another one (a cross-device move), so the caller rebuilds both. The
+// return value stays the landing day, for the callers that read only that.
+export async function applyFoodEntryFromCloud(userId, row, affectedDays = null) {
   const quick = typeof row?.food_ref === 'string' && row.food_ref.startsWith('quick:');
   const times = _cloudTimes(row ?? {});
   if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
@@ -2578,31 +2740,65 @@ export async function applyFoodEntryFromCloud(userId, row) {
   // older cloud row. Returns null so the caller does not recompute the rollup.
   const localMs = await _localUpdatedMs(d, 'food_entries', row.id, userId);
   if (localMs != null && localMs >= updatedAt) return null;
-  // TZ-1: derive entry_date from logged_at (LOCAL day) rather than trusting the
-  // cloud value, which may be a UTC-day key from old data or the frozen AAB.
-  // This makes every pulled row land on the user's calendar day on apply, so a
-  // fresh-device pull is correct regardless of whether/when the one-time
-  // food-day-key migration has run (it no longer races the pull). Returns the
-  // local key so the caller rebuilds the right day's rollup.
-  const entryDate = localDayKey(loggedAt);
+  // TZ-1: the cloud entry_date is the day the writing device chose, and it is
+  // kept. It is corrected to the local day of logged_at ONLY when it carries
+  // the pre-phase-1 UTC-key signature (isPreTz1UtcKeyedRow), so a fresh-device
+  // pull lands those old rows on the local day whether or not the one-time
+  // re-key has run (no race), and a missing or unreadable cloud day falls
+  // back to that local day. Until 2026-10-16 the local day of logged_at was
+  // used for EVERY row; since the cloud's logged_at is the moment of the first
+  // push (food_sync_push never sends it), a meal logged today for yesterday,
+  // a copied day or an imported history moved to the day it was pushed as
+  // soon as its own push came back in the pull (dayKeyRepair.realdb.test.js).
+  // Returns the key so the caller rebuilds the right day's rollup.
+  const cloudDay = isLocalDayKey(row.entry_date) ? row.entry_date : null;
+  const entryDate = cloudDay != null && !isPreTz1UtcKeyedRow({ entryDate: cloudDay, loggedAt, createdAt })
+    ? cloudDay
+    : localDayKey(loggedAt);
   // Ultimate-Audit item 15 (D22 15b): eaten_at is NOT defaulted to loggedAt
   // here (unlike loggedAt's own `?? Date.now()` fallback above) -- NULL is a
   // real state (a bulk-confirmed row with no honest eaten time) and must
   // round-trip as NULL, never invented from the write timestamp.
   const eatenAt = _isoToMs(row.eaten_at);
+  // The row as this device holds it now (null when it is new here): its note
+  // may have to stand, and its day is the one the move leaves.
+  const local = await d.getFirstAsync(
+    'SELECT note, entry_date FROM food_entries WHERE id = ? AND user_id = ?',
+    [row.id, userId],
+  );
+  // D230 R20: the cloud note is read ONLY while this build pushes notes
+  // (FOOD_ENTRY_NOTE_PUSH). Once migrate_194 is applied, food_sync_pull's
+  // to_jsonb(t) carries `note` on every row, NULL for every row this build
+  // pushed (it never sends the key), so reading it with the flag off erased
+  // each local note on the device's own push-then-pull. With the flag off the
+  // local note always stands. With it on, a key the cloud does not carry
+  // leaves this device's note as it is; a present value is cleaned, and one
+  // that is not a clean note (not a string, over 120 characters) is dropped
+  // to NULL rather than stored.
+  let note;
+  if (FOOD_ENTRY_NOTE_PUSH && Object.prototype.hasOwnProperty.call(row, 'note')) {
+    const cleaned = cleanFoodNote(row.note);
+    note = cleaned === false || cleaned === undefined ? null : cleaned;
+  } else {
+    note = local?.note ?? null;
+  }
   await d.runAsync(
     `INSERT OR REPLACE INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
-      kcal, protein_g, carbs_g, fat_g, fibre_g, weight_state, eaten_at, logged_at,
+      kcal, protein_g, carbs_g, fat_g, fibre_g, weight_state, eaten_at, note, logged_at,
       deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, entryDate, row.meal_slot, row.food_ref,
       row.quantity_g, row.kcal, row.protein_g, row.carbs_g, row.fat_g,
-      row.fibre_g ?? null, _normaliseWeightState(row.weight_state), eatenAt, loggedAt,
+      row.fibre_g ?? null, _normaliseWeightState(row.weight_state), eatenAt, note, loggedAt,
       deletedAt, createdAt, updatedAt,
     ]
   );
+  if (affectedDays && typeof affectedDays.add === 'function') {
+    affectedDays.add(entryDate);
+    if (local?.entry_date && local.entry_date !== entryDate) affectedDays.add(local.entry_date);
+  }
   return entryDate;
 }
 
@@ -2619,6 +2815,17 @@ export async function applyCustomFoodFromCloud(userId, row) {
     || optionalText.some((value) => value != null && !isBoundedString(value, 5000))
     || !times) return false;
   const { createdAt, updatedAt, deletedAt } = times;
+  // D230 R20: portions_json is read ONLY while this build pushes it
+  // (CUSTOM_FOOD_PORTIONS_PUSH). Once migrate_195 is applied, food_sync_pull's
+  // to_jsonb(t) carries the key on every row, NULL for every food this build
+  // pushed (it never sends the key), so reading it with the flag off erased
+  // the local portions on the device's own push-then-pull. With the flag off
+  // the local portions always stand. With it on, a row that does not carry
+  // the key (an older shape) leaves this device's portions as they are; a
+  // present value is re-validated (parsePortions drops a bad item) before it
+  // is stored.
+  const hasPortionsKey = CUSTOM_FOOD_PORTIONS_PUSH
+    && Object.prototype.hasOwnProperty.call(row, 'portions_json');
   const d = await db();
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'custom_foods', row.id, userId);
@@ -2635,8 +2842,8 @@ export async function applyCustomFoodFromCloud(userId, row) {
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
       fibre_100g, sodium_100g, sugar_100g, ${microSqlColumns}, photo_url, notes,
-      barcode_ean, deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?, ?)
+      barcode_ean, portions_json, deleted_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       user_id = excluded.user_id,
       name = excluded.name,
@@ -2654,6 +2861,7 @@ export async function applyCustomFoodFromCloud(userId, row) {
       photo_url = excluded.photo_url,
       notes = excluded.notes,
       barcode_ean = excluded.barcode_ean,
+      portions_json = CASE WHEN ? = 1 THEN excluded.portions_json ELSE custom_foods.portions_json END,
       deleted_at = excluded.deleted_at,
       created_at = excluded.created_at,
       updated_at = excluded.updated_at`,
@@ -2665,7 +2873,9 @@ export async function applyCustomFoodFromCloud(userId, row) {
       ...microValues,
       row.photo_url ?? null, row.notes ?? null,
       row.barcode_ean ?? null,
+      hasPortionsKey ? serialisePortions(row.portions_json) : null,
       deletedAt, createdAt, updatedAt,
+      hasPortionsKey ? 1 : 0,
     ]
   );
   return true;

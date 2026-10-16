@@ -22,6 +22,13 @@ const FOOD_COL_LIST = [
 ];
 const FOOD_COLS = FOOD_COL_LIST.join(', ');
 const foodColsAs = (alias) => FOOD_COL_LIST.map((c) => `${alias}.${c}`).join(', ');
+// custom_foods rows also carry portions_json (D230 R20), the second and third
+// named portions, so every surface that opens a custom food (search, barcode,
+// the diary's edit and list reads) offers them, not only the More tab. The
+// `foods` table has no such column, so the global queries keep FOOD_COL_LIST.
+const CUSTOM_FOOD_COL_LIST = [...FOOD_COL_LIST, 'portions_json'];
+const CUSTOM_FOOD_COLS = CUSTOM_FOOD_COL_LIST.join(', ');
+const customFoodColsAs = (alias) => CUSTOM_FOOD_COL_LIST.map((c) => `${alias}.${c}`).join(', ');
 
 /**
  * Build an FTS5 MATCH expression from free text (E3): each word becomes a
@@ -85,7 +92,7 @@ async function _searchFts(d, userId, q, match, limit) {
   const customs = await d.getAllAsync(
     `SELECT
        'custom:' || c.id AS food_ref, 'custom' AS source, c.name, c.brand,
-       ${foodColsAs('c')},
+       ${customFoodColsAs('c')},
        CASE WHEN lower(c.name) LIKE ? THEN 0 ELSE 1 END AS rank
      FROM custom_foods_fts
      JOIN custom_foods c ON c.rowid = custom_foods_fts.rowid
@@ -118,7 +125,7 @@ async function _searchLike(d, userId, q, limit) {
   const customs = await d.getAllAsync(
     `SELECT
        'custom:' || id AS food_ref, 'custom' AS source, name, brand,
-       ${FOOD_COLS},
+       ${CUSTOM_FOOD_COLS},
        CASE WHEN lower(name) LIKE ? THEN 0 ELSE 1 END AS rank
      FROM custom_foods
      WHERE user_id = ? AND deleted_at IS NULL AND lower(name) LIKE ?
@@ -147,7 +154,7 @@ export async function findLocalByBarcode(ean, userId = null) {
          'custom:' || id AS food_ref, 'custom' AS source, name, brand,
          serving_g, serving_label,
          kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-         sodium_100g, sugar_100g
+         sodium_100g, sugar_100g, portions_json
        FROM custom_foods
        WHERE user_id = ? AND barcode_ean = ? AND deleted_at IS NULL
        ORDER BY updated_at DESC, created_at DESC
@@ -229,7 +236,7 @@ export async function resolveFoodRef(userId, foodRef) {
       `SELECT 'custom:' || id AS food_ref, 'custom' AS source, name, brand,
               serving_g, serving_label,
               kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-              sodium_100g, sugar_100g, ${microSqlColumns}
+              sodium_100g, sugar_100g, ${microSqlColumns}, portions_json
        FROM custom_foods
        WHERE id = ? AND user_id = ? AND deleted_at IS NULL LIMIT 1`,
       [id, userId]
@@ -384,7 +391,7 @@ export async function resolveFoodRefs(userId, refs) {
         `SELECT 'custom:' || id AS food_ref, 'custom' AS source, name, brand,
                 serving_g, serving_label,
                 kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-                sodium_100g, sugar_100g, ${microSqlColumns}
+                sodium_100g, sugar_100g, ${microSqlColumns}, portions_json
          FROM custom_foods
          WHERE id IN (${placeholders}) AND user_id = ? AND deleted_at IS NULL`,
         [...chunk, userId]

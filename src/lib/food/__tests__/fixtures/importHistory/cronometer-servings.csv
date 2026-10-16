@@ -1,0 +1,10 @@
+﻿Day,Time,Group,Food Name,Amount,Energy (kcal),Alcohol (g),Caffeine (mg),Water (g),B1 (Thiamine) (mg),Carbs (g),Fiber (g),Starch (g),Sugars (g),Net Carbs (g),Fat (g),Cholesterol (mg),Saturated (g),Protein (g),Sodium (mg),Category
+2026-03-03,8:05 AM,Breakfast,"Oats, rolled",60.00 g,227,0,0,5,0.3,36,6,30,1,30,5,0,1,8,2,Cereals
+2026-03-03,8:05 AM,Breakfast,Semi-skimmed milk,200.00 g,92,0,0,180,0.1,9.6,0,0,9.6,9.6,3.2,12,2,7,88,Dairy
+2026-03-03,13:10,Lunch,Egg,2.00 large,143,0,0,76,0.1,0.7,0,0,0.4,0.7,9.5,372,3.1,12.6,142,Eggs
+2026-03-04,,Dinner,"OATS,  rolled",90.00 g,340.5,0,0,8,0.4,54,9,45,1.5,45,7.5,0,1.5,12,3,Cereals
+2026-03-04,19:30,Dinner,Chicken breast,150.00 g,248,0,0,98,0.1,0,0,0,0,0,5.4,128,1.5,46.5,111,Poultry
+2026-03-04,21:00,Snacks,,1.00 bar,200,0,0,2,0,25,2,10,12,23,8,0,4,4,50,Snacks
+2026-03-05,7:45 PM,Uncategorized,Dark chocolate,"25,00 g",136,0,20,0.3,0,11.5,2.7,0,6,8.8,9.8,1,5.6,2,5,Sweets
+2026-03-05,7:50 PM,Uncategorized,Black coffee,240.00 g,2,0,95,237,0,,,,,,0,0,0,0.3,5,Beverages
+yesterday,09:00,Breakfast,Toast,1.00 slice,80,0,0,10,0.1,15,1,13,1,14,1,0,0.2,3,150,Bakery

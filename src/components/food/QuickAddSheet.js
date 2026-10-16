@@ -18,6 +18,7 @@ import { fromEnergy, toEnergy, energyUnitLabel } from '../../lib/format';
 import { parseDecimalInput } from '../../lib/parseDecimalInput';
 import { logError } from '../../lib/errorLog';
 import { touchTarget } from '../../styles/layout';
+import { FOOD_NOTE_MAX_LENGTH } from '../../lib/food/entryNote';
 
 /**
  * Quick add: log a bare calorie figure (and optional protein, carbs, fat)
@@ -27,7 +28,9 @@ import { touchTarget } from '../../styles/layout';
  * Props:
  *   visible          show / hide
  *   initialMealSlot  'breakfast' | 'lunch' | 'dinner' | 'preworkout' | 'postworkout' | 'snack'
- *   onSave           ({ kcal, protein, carbs, fat, mealSlot }) => Promise<void>
+ *   onSave           ({ kcal, protein, carbs, fat, mealSlot, note }) => Promise<void>
+ *                    (D230 R20: note is the optional "What was it?" line, trimmed,
+ *                    '' when blank; it becomes the entry's name in the diary)
  *   onClose          () => void
  */
 export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSave, onClose }) {
@@ -51,6 +54,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
+  const [note, setNote] = useState('');
   const [mealSlot, setMealSlot] = useState(initialMealSlot);
   const [submitting, setSubmitting] = useState(false);
   // M4: the save has landed; the sheet closes on the Button's onSettled so
@@ -60,7 +64,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   // Reset the form each time the sheet opens.
   useEffect(() => {
     if (!visible) return;
-    setKcal(''); setProtein(''); setCarbs(''); setFat('');
+    setKcal(''); setProtein(''); setCarbs(''); setFat(''); setNote('');
     setMealSlot(initialMealSlot);
     setSubmitting(false);
     setSaved(false);
@@ -93,7 +97,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
     }
     setSubmitting(true);
     try {
-      await onSave({ kcal: Math.round(k), protein: num(protein), carbs: num(carbs), fat: num(fat), mealSlot });
+      await onSave({ kcal: Math.round(k), protein: num(protein), carbs: num(carbs), fat: num(fat), mealSlot, ...(note.trim() ? { note: note.trim() } : null) });
       setSaved(true);
     } catch (e) {
       // D230 R18: the cause is logged (no amounts, no names), then the person
@@ -141,6 +145,18 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
               />
             ))}
           </View>
+
+          <TextField
+            label="What was it?"
+            value={note}
+            onChangeText={setNote}
+            maxLength={FOOD_NOTE_MAX_LENGTH}
+            placeholder="Anything worth remembering"
+            placeholderTextColor={t.colors.textMuted}
+            accessibilityLabel="What was it, optional"
+            returnKeyType="done"
+            testID="quick-add-note"
+          />
 
           <SectionLabel style={styles.fieldLabel}>Meal</SectionLabel>
           <View style={styles.mealRow}>

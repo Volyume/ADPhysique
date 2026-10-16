@@ -73,7 +73,9 @@ describe('confirmPlannedDay per-meal filter (food audit item 1)', () => {
     // Ultimate-Audit item 15 (D22 15b): the whole-day bulk confirm passes
     // eaten_at = NULL (params[1]) for every row it touches -- never a
     // false clumped instant.
-    expect(calls[0].params).toEqual([expect.any(Number), null, expect.any(Number), 'u1', '2026-07-08']);
+    // Re-pinned 2026-10-16 (Wave 4 review, lead ruling): confirming also
+    // stamps created_at, so a planned row (never pushed) goes up as created.
+    expect(calls[0].params).toEqual([expect.any(Number), null, expect.any(Number), expect.any(Number), 'u1', '2026-07-08']);
     expect(n).toBe(2); // the real changes count from the UPDATE, not a guess
   });
 
@@ -85,13 +87,15 @@ describe('confirmPlannedDay per-meal filter (food audit item 1)', () => {
     // Ultimate-Audit item 15 (D22 15b): a per-meal confirm IS a genuine
     // single action at a real moment, so it earns eaten_at = now
     // (params[1]), unlike the whole-day bulk confirm above.
-    expect(calls[0].params).toEqual([expect.any(Number), expect.any(Number), expect.any(Number), 'u1', '2026-07-08', 'meal_2']);
+    // Re-pinned 2026-10-16 (Wave 4 review, lead ruling): confirming also
+    // stamps created_at, so a planned row (never pushed) goes up as created.
+    expect(calls[0].params).toEqual([expect.any(Number), expect.any(Number), expect.any(Number), expect.any(Number), 'u1', '2026-07-08', 'meal_2']);
   });
 
   test('still flips is_planned via a real UPDATE against food_entries, not an in-memory/cosmetic flag', async () => {
     await food.confirmPlannedDay('u1', '2026-07-08', 'meal_1');
     const calls = updateCalls();
-    expect(calls[0].sql).toMatch(/UPDATE food_entries SET is_planned = 0, logged_at = \?, eaten_at = \?, updated_at = \?/);
+    expect(calls[0].sql).toMatch(/UPDATE food_entries SET is_planned = 0, logged_at = \?, eaten_at = \?, created_at = \?, updated_at = \?/);
     expect(calls[0].sql).toMatch(/WHERE user_id = \? AND entry_date = \? AND is_planned = 1 AND deleted_at IS NULL/);
   });
 
@@ -132,12 +136,14 @@ describe('confirmPlannedEntry (per-entry mark eaten, flat timeline)', () => {
     const n = await food.confirmPlannedEntry('u1', 'fe1');
     const calls = updateCalls();
     expect(calls).toHaveLength(1);
-    expect(calls[0].sql).toMatch(/UPDATE food_entries SET is_planned = 0, logged_at = \?, eaten_at = \?, updated_at = \?/);
+    expect(calls[0].sql).toMatch(/UPDATE food_entries SET is_planned = 0, logged_at = \?, eaten_at = \?, created_at = \?, updated_at = \?/);
     expect(calls[0].sql).toMatch(/WHERE id = \? AND user_id = \? AND is_planned = 1 AND deleted_at IS NULL/);
     // A single confirmed food is a genuine real-moment action -- eaten_at
     // (params[1]) is a real timestamp, never null, unlike the whole-day
     // bulk confirm.
-    expect(calls[0].params).toEqual([expect.any(Number), expect.any(Number), expect.any(Number), 'fe1', 'u1']);
+    // Re-pinned 2026-10-16 (Wave 4 review, lead ruling): confirming also
+    // stamps created_at, so a planned row (never pushed) goes up as created.
+    expect(calls[0].params).toEqual([expect.any(Number), expect.any(Number), expect.any(Number), expect.any(Number), 'fe1', 'u1']);
     expect(n).toBe(1);
   });
 

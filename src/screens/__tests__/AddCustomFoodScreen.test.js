@@ -45,10 +45,14 @@ jest.mock('../../lib/engineTelemetry', () => ({ track: jest.fn(() => Promise.res
 // "Save the food" (D230 4.11) is the second action, captured the same way.
 let mockSaveButton = null;
 let mockSaveOnlyButton = null;
+let mockAddPortionButton = null;
+let mockRemoveButtons = {};
 jest.mock('../../components/Button', () => (props) => {
   if (props.accessibilityLabel === 'Save food and add to diary'
     || props.accessibilityLabel === 'Save changes to food') mockSaveButton = props;
   if (props.title === 'Save the food') mockSaveOnlyButton = props;
+  if (props.title === 'Add another portion') mockAddPortionButton = props;
+  if (props.title === 'Remove this portion') mockRemoveButtons[props.accessibilityLabel] = props;
   return null;
 });
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
@@ -86,6 +90,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSaveButton = null;
   mockSaveOnlyButton = null;
+  mockAddPortionButton = null;
+  mockRemoveButtons = {};
   useAppStore.mockImplementation((selector) => selector(store));
 });
 
@@ -762,5 +768,193 @@ describe('AddCustomFoodScreen "Save the food" (D230 4.11)', () => {
     await mount({ params: { mealSlot: 'snack', entryDate: '2026-10-16', editFoodId: 'cf-9' } });
     expect(logError).toHaveBeenCalledWith('AddCustomFood.loadFood', expect.any(Error), { hasId: true });
     expect(mockToastShow).toHaveBeenCalledWith('That food did not load. Try again in a moment.', { variant: 'error' });
+  });
+});
+
+// D230 R20 (lane 4B): the serving block is "Portions". The single serving stays
+// portion one (serving_g / serving_label); "Add another portion" adds up to two
+// more rows, saved to portions_json through the same two save buttons, and an
+// edit reads them back. Every portion keeps the 1 to 5000 g bound.
+describe('AddCustomFoodScreen portions (D230 R20)', () => {
+  async function mountNew() {
+    const nav = makeNav();
+    let tree;
+    await act(async () => {
+      tree = create(<AddCustomFoodScreen navigation={nav} route={{ params: { mealSlot: 'snack', entryDate: '2026-10-16' } }} />);
+    });
+    await flush();
+    setInput(tree, 'Name', 'Toast');
+    setInput(tree, 'Serving name (optional)', '1 slice');
+    setInput(tree, 'Serving (g), grams', '36');
+    setInput(tree, 'Eaten (g), grams', '36');
+    return tree;
+  }
+
+  function addTwoPortions(tree) {
+    act(() => { mockAddPortionButton.onPress(); });
+    setInput(tree, 'Portion 2 name', '1 mug');
+    setInput(tree, 'Portion 2 weight, grams', '250');
+    act(() => { mockAddPortionButton.onPress(); });
+    setInput(tree, 'Portion 3 name', '1 tbsp');
+    setInput(tree, 'Portion 3 weight, grams', '15');
+  }
+
+  test('the section is titled Portions and the first portion keeps the existing field labels', async () => {
+    const tree = await mountNew();
+    const text = allText(tree);
+    expect(text).toContain('Portions');
+    expect(text).toContain('Quantity eaten');
+    expect(mockAddPortionButton).toBeTruthy();
+  });
+
+  test('Save and add to diary saves two extra portions beside the first', async () => {
+    const tree = await mountNew();
+    addTwoPortions(tree);
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({
+      servingG: 36,
+      servingLabel: '1 slice',
+      portions: [{ label: '1 mug', grams: 250 }, { label: '1 tbsp', grams: 15 }],
+    }));
+  });
+
+  test('Save the food carries them too', async () => {
+    const tree = await mountNew();
+    addTwoPortions(tree);
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({
+      portions: [{ label: '1 mug', grams: 250 }, { label: '1 tbsp', grams: 15 }],
+    }));
+    expect(logFoodEntry).not.toHaveBeenCalled();
+  });
+
+  test('no more than two extra rows: the add button goes once there are two', async () => {
+    const tree = await mountNew();
+    addTwoPortions(tree);
+    mockAddPortionButton = null;
+    setInput(tree, 'Name', 'Toast again');
+    expect(mockAddPortionButton).toBeNull();
+    expect(tree.root.findAll((n) => n.props && n.props.testID === 'portion-row-4')).toHaveLength(0);
+  });
+
+  test('a wholly blank extra row is ignored; a half-filled one blocks the save', async () => {
+    const tree = await mountNew();
+    act(() => { mockAddPortionButton.onPress(); });
+    expect(mockSaveButton.disabled).toBe(false);
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({ portions: [] }));
+
+    insertCustomFood.mockClear();
+    setInput(tree, 'Portion 2 name', '1 mug');
+    expect(mockSaveButton.disabled).toBe(true);
+    setInput(tree, 'Portion 2 weight, grams', '6000');
+    expect(mockSaveButton.disabled).toBe(true);
+    setInput(tree, 'Portion 2 weight, grams', '0');
+    expect(mockSaveButton.disabled).toBe(true);
+    setInput(tree, 'Portion 2 weight, grams', '250');
+    expect(mockSaveButton.disabled).toBe(false);
+  });
+
+  test('the remove control drops that row', async () => {
+    const tree = await mountNew();
+    addTwoPortions(tree);
+    act(() => { mockRemoveButtons['Remove portion 2'].onPress(); });
+    expect(tree.root.findAll((n) => n.props && n.props.testID === 'portion-row-3')).toHaveLength(0);
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({
+      portions: [{ label: '1 tbsp', grams: 15 }],
+    }));
+  });
+
+  test('editing reads both stored portions back and saves them again', async () => {
+    getCustomFoodById.mockResolvedValue({
+      id: 'cf-9', name: 'Toast', brand: null, serving_g: 36, serving_label: '1 slice',
+      kcal_100g: 250, protein_100g: 9, carbs_100g: 45, fat_100g: 3, fibre_100g: null,
+      portions_json: '[{"label":"1 mug","grams":250},{"label":"1 tbsp","grams":15}]',
+      barcode_ean: null, photo_url: null, notes: null,
+    });
+    let tree;
+    await act(async () => {
+      tree = create(<AddCustomFoodScreen navigation={makeNav()} route={{ params: { mealSlot: 'snack', entryDate: '2026-10-16', editFoodId: 'cf-9' } }} />);
+    });
+    await flush();
+    const value = (label) => tree.root.findAll((n) => n.props && n.props.accessibilityLabel === label)[0].props.value;
+    expect(value('Portion 2 name')).toBe('1 mug');
+    expect(value('Portion 2 weight, grams')).toBe('250');
+    expect(value('Portion 3 name')).toBe('1 tbsp');
+    expect(value('Portion 3 weight, grams')).toBe('15');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(updateCustomFood).toHaveBeenCalledWith('u1', 'cf-9', expect.objectContaining({
+      servingG: 36,
+      portions: [{ label: '1 mug', grams: 250 }, { label: '1 tbsp', grams: 15 }],
+    }));
+  });
+});
+
+// Wave 4 hostile review (2026-10-16), item 10. Each pin fails on the code
+// before it:
+//  (a) a portion weight typed with a decimal comma ("12,5", the decimal-pad on
+//      a comma-region phone) was stripped to "125" and saved as 125 g; it is
+//      now read as the amount sheet reads it (parseDecimalInput), 12.5 g. The
+//      first portion's weight is read the same way.
+//  (c) a serving over 5000 g greyed the save with no reason anywhere; the
+//      reason now sits under the field, and goes when the weight is fixed.
+describe('AddCustomFoodScreen portion weights (Wave 4 review, item 10)', () => {
+  async function mountNew() {
+    let tree;
+    await act(async () => {
+      tree = create(<AddCustomFoodScreen navigation={makeNav()} route={{ params: { mealSlot: 'snack', entryDate: '2026-10-16' } }} />);
+    });
+    await flush();
+    setInput(tree, 'Name', 'Toast');
+    setInput(tree, 'Eaten (g), grams', '36');
+    return tree;
+  }
+  const errorOf = (tree, label) => tree.root.findAll(
+    (n) => n.props && n.props.accessibilityLabel === label && typeof n.props.onChangeText === 'function',
+  )[0].props.error;
+
+  test('"12,5" in an extra portion is 12.5 g, never 125 g', async () => {
+    const tree = await mountNew();
+    act(() => { mockAddPortionButton.onPress(); });
+    setInput(tree, 'Portion 2 name', '1 tbsp');
+    setInput(tree, 'Portion 2 weight, grams', '12,5');
+    const field = tree.root.findAll((n) => n.props && n.props.accessibilityLabel === 'Portion 2 weight, grams')[0];
+    expect(field.props.value).toBe('12,5');
+    expect(errorOf(tree, 'Portion 2 weight, grams')).toBeUndefined();
+    expect(mockSaveButton.disabled).toBe(false);
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({
+      portions: [{ label: '1 tbsp', grams: 12.5 }],
+    }));
+  });
+
+  test('"36,5" as the serving weight saves 36.5 g', async () => {
+    const tree = await mountNew();
+    setInput(tree, 'Serving (g), grams', '36,5');
+    expect(mockSaveButton.disabled).toBe(false);
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({ servingG: 36.5 }));
+  });
+
+  test('a serving over 5000 g says why under the field, and the reason goes when it is fixed', async () => {
+    const tree = await mountNew();
+    expect(errorOf(tree, 'Serving (g), grams')).toBeUndefined();
+    setInput(tree, 'Serving (g), grams', '6000');
+    expect(mockSaveButton.disabled).toBe(true);
+    expect(errorOf(tree, 'Serving (g), grams')).toBe('Enter a serving of 5000 g or less.');
+    setInput(tree, 'Serving (g), grams', '');
+    expect(mockSaveButton.disabled).toBe(true);
+    expect(errorOf(tree, 'Serving (g), grams')).toBe('Enter the serving\'s weight in grams.');
+    setInput(tree, 'Serving (g), grams', '5000');
+    expect(mockSaveButton.disabled).toBe(false);
+    expect(errorOf(tree, 'Serving (g), grams')).toBeUndefined();
   });
 });

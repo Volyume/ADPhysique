@@ -1,3 +1,7 @@
+// 2026-10-16 (D230 R20, custom_foods.portions_json): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
+// 2026-10-16 (D230 R20, food_entries.note): a nullable column was appended after this file's window (inert against these
+// fixtures), so every last-N window and user_version offset below moved by one again (the same mechanical +1 re-anchor).
 // 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
 // after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
 // window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
@@ -64,6 +68,8 @@ function withExerciseIntent(raw) {
   // file's window, so every last-N window and user_version reset moves by one
   // (a mechanical +1 re-anchor); the workout_sets table below already carries
   // what that ALTER needs.
+  raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
+  raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
   raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
   return raw;
 }
@@ -74,7 +80,7 @@ function withExerciseIntent(raw) {
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
   const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 15}`);
+  raw.exec(`PRAGMA user_version = ${total - 17}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -99,7 +105,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 14}`);
+  raw.exec(`PRAGMA user_version = ${total - 16}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()
