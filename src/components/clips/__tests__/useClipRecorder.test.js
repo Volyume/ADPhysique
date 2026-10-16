@@ -35,6 +35,7 @@ const mockStoreListeners = new Set();
 const fireClipsChanged = () => { mockStoreListeners.forEach((fn) => fn()); };
 
 import useClipRecorder from '../useClipRecorder';
+import ClipsSheet from '../ClipsSheet';
 
 const SEEN = '@volyume_clip_primer_seen';
 let api;
@@ -160,6 +161,18 @@ describe('at three clips: the clips sheet, never the camera', () => {
     const json = JSON.stringify(tree.toJSON());
     expect(json).toContain('Your videos');
     expect(json).not.toContain('Delete one to record another.');
+    expect(tree.root.findByType(ClipsSheet).props.playOnOpenId).toBeNull();
+  });
+
+  test('openClips({ playId }) names the video the sheet opens playing ("Watch", addendum 13), and a close forgets it', async () => {
+    const tree = await mount();
+    await act(async () => { api.openClips({ playId: 'c0' }); });
+    const sheet = () => tree.root.findByType(ClipsSheet);
+    expect(sheet().props.visible).toBe(true);
+    expect(sheet().props.playOnOpenId).toBe('c0');
+    await act(async () => { sheet().props.onClose(); });
+    expect(sheet().props.visible).toBe(false);
+    expect(sheet().props.playOnOpenId).toBeNull();
   });
 });
 

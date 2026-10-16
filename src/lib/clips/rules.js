@@ -44,8 +44,9 @@ export const MAX_CLIP_MS = MAX_CLIP_SECONDS * 1000;
 /** A recording shorter than this is a stray tap and is discarded silently. */
 export const MIN_CLIP_MS = 1000;
 
-/** The lead-in lengths the camera cycles between, in seconds (tap to start). */
-export const LEAD_IN_OPTIONS = Object.freeze([3, 5, 10]);
+/** The lead-in lengths the camera cycles between, in seconds (tap to start).
+ *  15 and 20 (addendum 13, D) are for a rack a few steps from the phone. */
+export const LEAD_IN_OPTIONS = Object.freeze([3, 5, 10, 15, 20]);
 export const DEFAULT_LEAD_IN_SECONDS = 3;
 
 /** The recording lengths the camera cycles between, in seconds (tap to start;
@@ -126,6 +127,10 @@ export const CLIP_STRINGS = Object.freeze({
   flipA11y: 'Flip camera',
   saved: 'Your video is saved with this workout',
   undo: 'Undo',
+  // Addendum 13 (F): the second action on the saved toast, which opens the
+  // videos sheet with that video playing.
+  watch: 'Watch',
+  watchA11y: 'Watch the video you just recorded',
   undoFailed: "That video couldn't be removed. You can try again.",
   saveFailed: "That video couldn't be saved. You can try again.",
   // Said when the workout already holds the most clips. Nothing is replaced

@@ -75,8 +75,12 @@ export default function useClipRecorder({ navigation, userId, workoutId }) {
     return () => { if (typeof unsubscribe === 'function') unsubscribe(); stop(); };
   }, [refreshCount, navigation]);
 
-  const openClips = useCallback(() => {
+  // Addendum 13 (F): `openClips({ playId })` opens the sheet with that video
+  // playing ("Watch" on the saved toast); a bare `openClips()` is as before.
+  const [playOnOpenId, setPlayOnOpenId] = useState(null);
+  const openClips = useCallback((options = {}) => {
     setClipsBecauseFull(false);
+    setPlayOnOpenId(options && typeof options === 'object' && options.playId ? options.playId : null);
     setClipsOpen(true);
   }, []);
 
@@ -129,11 +133,12 @@ export default function useClipRecorder({ navigation, userId, workoutId }) {
       />
       <ClipsSheet
         visible={clipsOpen}
-        onClose={() => setClipsOpen(false)}
+        onClose={() => { setClipsOpen(false); setPlayOnOpenId(null); }}
         userId={userId}
         workoutId={workoutId}
         onChanged={refreshCount}
         notice={clipsBecauseFull ? CLIP_STRINGS.full : null}
+        playOnOpenId={playOnOpenId}
       />
     </>
   );

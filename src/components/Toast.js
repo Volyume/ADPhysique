@@ -117,6 +117,12 @@ export function ToastProvider({ children }) {
       // callback AND dismisses the toast. Use 'undo' variant for the
       // destructive-action pattern (8s window).
       action: options.action || null,
+      // Optional SECOND action, shown before the main one (D229 addendum 13,
+      // "Watch" beside Undo on the saved-video toast). { label, onPress }.
+      // Tapping it runs the callback and dismisses the toast the ordinary
+      // way, so an undo toast's pending commit (onTimeout) still happens:
+      // a second action is a way onwards, never a second Undo.
+      secondaryAction: options.secondaryAction || null,
       // Called when the toast dismisses WITHOUT the action being tapped.
       // For undo-style flows the caller registers the destructive commit
       // here (e.g. actually delete the row from SQLite + cloud).
@@ -264,6 +270,24 @@ export function ToastProvider({ children }) {
                 {current.message}
               </Text>
             </TouchableOpacity>
+            {current.secondaryAction && (
+              <TouchableOpacity
+                onPress={() => {
+                  try { current.secondaryAction.onPress?.(); } catch (_) {}
+                  // The ordinary dismiss: an undo toast's commit still runs.
+                  dismiss();
+                }}
+                style={styles.actionBtn}
+                accessibilityRole="button"
+                accessibilityLabel={current.secondaryAction.label}
+                accessibilityHint="Runs this action and closes this notification."
+                testID="toast-secondary-action"
+              >
+                <Text style={[styles.actionText, { fontSize: t.fontSize.sm, color: t.colors.textPrimary }]}>
+                  {current.secondaryAction.label}
+                </Text>
+              </TouchableOpacity>
+            )}
             {current.action && (
               <TouchableOpacity
                 onPress={() => {

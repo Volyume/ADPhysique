@@ -414,7 +414,7 @@ describe('setting the camera up first (addendum 10)', () => {
 });
 
 describe('the Countdown and Length controls', () => {
-  test('Countdown reads 3 s and cycles 3 -> 5 -> 10 -> 3 on tap, remembered', async () => {
+  test('Countdown reads 3 s and cycles 3 -> 5 -> 10 -> 15 -> 20 -> 3 on tap, remembered (addendum 13, D)', async () => {
     const tree = await mount();
     expect(text(tree)).toContain('"3 s"');
     await press(tree, 'clip-camera-leadin');
@@ -423,6 +423,11 @@ describe('the Countdown and Length controls', () => {
     await press(tree, 'clip-camera-leadin');
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_leadin', '10');
     expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 10 seconds');
+    await press(tree, 'clip-camera-leadin');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_leadin', '15');
+    await press(tree, 'clip-camera-leadin');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_leadin', '20');
+    expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 20 seconds');
     await press(tree, 'clip-camera-leadin');
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_leadin', '3');
   });
@@ -739,6 +744,16 @@ describe('after a save', () => {
     expect(mockDeleteClip).not.toHaveBeenCalled();
     await act(async () => { options.action.onPress(); });
     expect(mockDeleteClip).toHaveBeenCalledWith('clip-1');
+  });
+
+  test('workout: "Watch" beside Undo returns to the logger naming the video, which opens its videos sheet playing it (addendum 13, F)', async () => {
+    await recordFiveSeconds({ source: 'workout' });
+    const [, options] = mockShow.mock.calls[0];
+    expect(options.secondaryAction.label).toBe('Watch');
+    await act(async () => { options.secondaryAction.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith({ name: 'ActiveWorkout', params: { watchClipId: 'clip-1' }, merge: true });
+    // Watch is a way onwards, never an undo: the video stays.
+    expect(mockDeleteClip).not.toHaveBeenCalled();
   });
 
   test('the exercise and the set it was recorded for are kept with the video', async () => {

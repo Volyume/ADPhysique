@@ -345,6 +345,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // the count, the primer and the clips sheet; this screen only renders them.
   const clipsSuppressed = usePhotoSuppression(user?.id);
   const clipFlow = useClipRecorder({ navigation, userId: user?.id, workoutId: activeWorkout?.id });
+  // Addendum 13 (F): "Watch" on the saved-video toast brings the logger back
+  // with the video named in its params; the videos sheet opens with it
+  // playing, and the param is cleared so a later focus does not reopen it.
+  const watchClipId = route?.params?.watchClipId ?? null;
+  useEffect(() => {
+    if (!watchClipId) return;
+    navigation.setParams({ watchClipId: undefined });
+    clipFlow.openClips({ playId: watchClipId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchClipId]);
   // Single boolean selector (not the per-second remaining count): this flips
   // twice per rest, so it cannot re-introduce the per-tick re-render the
   // shallow selector above exists to prevent.

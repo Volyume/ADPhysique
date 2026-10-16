@@ -59,7 +59,9 @@ function secondsSpoken(ms) {
 
 // `notice` is an optional line shown above the list, used when the sheet opens
 // INSTEAD of the camera because the workout is full (CLIP_STRINGS.full).
-export default function ClipsSheet({ visible, onClose, userId, workoutId, onChanged, notice = null }) {
+// `playOnOpenId` (D229 addendum 13, "Watch" on the saved toast): the video
+// to start playing as soon as the sheet opens, when it is in the list.
+export default function ClipsSheet({ visible, onClose, userId, workoutId, onChanged, notice = null, playOnOpenId = null }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const toast = useToast();
@@ -80,15 +82,24 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
     try {
       const rows = await listClipsForWorkout(userId, workoutId);
       if (aliveRef.current) { setClips(rows); setLoaded(true); }
+      return rows;
     } catch (e) {
       logError('ClipsSheet.load', e, { workoutId });
       if (aliveRef.current) { setClips([]); setLoaded(true); }
+      return [];
     }
   }, [userId, workoutId]);
 
   useEffect(() => {
-    if (visible) load();
-  }, [visible, load]);
+    if (!visible) return;
+    load().then((rows) => {
+      // "Watch": the named video plays the moment the sheet opens, if it is
+      // still there (an Undo may have removed it in the meantime).
+      if (playOnOpenId && aliveRef.current && rows.some((c) => c.id === playOnOpenId)) {
+        setPlayingId(playOnOpenId);
+      }
+    });
+  }, [visible, load, playOnOpenId]);
 
   // One plain question before a person's own video goes (the house confirms
   // before deleting a progress photo too).

@@ -1350,6 +1350,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (!readOnly && displayWorkingSets > 0) { handleUseClip(returnedClipId); return; }
     toast.show(CLIP_STRINGS.saved, {
       variant: 'undo',
+      // Addendum 13 (F): "Watch" opens the videos sheet with this one playing.
+      secondaryAction: {
+        label: CLIP_STRINGS.watch,
+        onPress: () => clipFlow.openClips({ playId: returnedClipId }),
+      },
       action: {
         label: CLIP_STRINGS.undo,
         onPress: () => {

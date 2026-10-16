@@ -331,7 +331,16 @@ export default function ClipCameraScreen({ navigation, route }) {
     }
     // The house saved-with-Undo toast ("Quick add saved." uses the same
     // variant): 8 seconds, held open for a screen reader until Undo is heard.
-    toast.show(CLIP_STRINGS.saved, { variant: 'undo', action: undo });
+    // Addendum 13 (F): "Watch" beside Undo returns to the logger with the
+    // video named, and the logger opens its videos sheet with it playing
+    // (the camera is gone by then; the merged param carries the ask).
+    const watch = {
+      label: CLIP_STRINGS.watch,
+      onPress: () => {
+        navigation.navigate({ name: 'ActiveWorkout', params: { watchClipId: clip.id }, merge: true });
+      },
+    };
+    toast.show(CLIP_STRINGS.saved, { variant: 'undo', action: undo, secondaryAction: watch });
     navigation.goBack();
   }, [navigation, source, toast]);
 
@@ -584,6 +593,10 @@ export default function ClipCameraScreen({ navigation, route }) {
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
           facing={facing}
+          // Addendum 13 (G): with the front camera the saved video is
+          // mirrored, so what the person saw of themselves while setting up
+          // is what the video shows. The back camera is untouched.
+          mirror={facing === 'front'}
           mode="video"
           mute
           videoQuality="1080p"

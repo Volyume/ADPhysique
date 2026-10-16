@@ -34,8 +34,8 @@ describe('the rulings, as numbers', () => {
     expect(MIN_CLIP_MS).toBe(1000);
   });
 
-  test('the countdown cycles 3 / 5 / 10 seconds, default 3', () => {
-    expect(LEAD_IN_OPTIONS).toEqual([3, 5, 10]);
+  test('the countdown cycles 3 / 5 / 10 / 15 / 20 seconds, default 3 (15 and 20 for a far rack, addendum 13)', () => {
+    expect(LEAD_IN_OPTIONS).toEqual([3, 5, 10, 15, 20]);
     expect(DEFAULT_LEAD_IN_SECONDS).toBe(3);
   });
 
@@ -57,10 +57,12 @@ describe('the rulings, as numbers', () => {
 });
 
 describe('the two small controls', () => {
-  test('the countdown cycles 3 -> 5 -> 10 -> 3', () => {
+  test('the countdown cycles 3 -> 5 -> 10 -> 15 -> 20 -> 3', () => {
     expect(nextLeadIn(3)).toBe(5);
     expect(nextLeadIn(5)).toBe(10);
-    expect(nextLeadIn(10)).toBe(3);
+    expect(nextLeadIn(10)).toBe(15);
+    expect(nextLeadIn(15)).toBe(20);
+    expect(nextLeadIn(20)).toBe(3);
   });
 
   test('the length cycles 5 -> 10 -> 15 -> 5', () => {

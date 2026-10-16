@@ -62,6 +62,41 @@ describe('Toast auto-dismiss (QA repro)', () => {
     expect(text(tree)).not.toContain('Olive oil deleted');
   });
 
+  test('a second action (addendum 13, "Watch") runs and dismisses the ordinary way, so an undo toast\'s pending commit still happens', () => {
+    const onTimeout = jest.fn();
+    const onUndo = jest.fn();
+    const onWatch = jest.fn();
+    let tree;
+    act(() => {
+      tree = create(
+        <ToastProvider>
+          <Trigger
+            message="Your video is saved with this workout"
+            opts={{
+              variant: 'undo',
+              action: { label: 'Undo', onPress: onUndo },
+              secondaryAction: { label: 'Watch', onPress: onWatch },
+              onTimeout,
+            }}
+          />
+        </ToastProvider>,
+      );
+    });
+    act(() => { jest.advanceTimersByTime(50); });
+    // Both actions are there, the second before the first.
+    const labels = tree.root.findAll((n) => n.props.accessibilityRole === 'button').map((n) => n.props.accessibilityLabel);
+    expect(labels.indexOf('Watch')).toBeGreaterThan(-1);
+    expect(labels.indexOf('Watch')).toBeLessThan(labels.indexOf('Undo'));
+    const watch = tree.root.findByProps({ accessibilityLabel: 'Watch' });
+    act(() => { watch.props.onPress(); });
+    expect(onWatch).toHaveBeenCalledTimes(1);
+    expect(onUndo).not.toHaveBeenCalled();
+    // The ordinary dismiss: the pending commit runs, the toast goes.
+    act(() => { jest.advanceTimersByTime(1000); });
+    expect(onTimeout).toHaveBeenCalledTimes(1);
+    expect(text(tree)).not.toContain('Your video is saved');
+  });
+
   test('screen reader users keep undo toasts until they choose dismiss or undo', async () => {
     mockAccessibilityInfo.isScreenReaderEnabled.mockResolvedValueOnce(true);
     const onTimeout = jest.fn();

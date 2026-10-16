@@ -103,6 +103,15 @@ describe('ClipsSheet', () => {
     expect(json).not.toContain('Back squat, set 2');
   });
 
+  test('playOnOpenId ("Watch", addendum 13): the named video plays the moment the sheet opens; an unknown id plays nothing', async () => {
+    const players = (tree) => tree.root.findAll((n) => n.type === 'ClipPlayer');
+    const tree = await render({ playOnOpenId: CLIPS[1].id });
+    expect(players(tree)).toHaveLength(1);
+    expect(players(tree)[0].props.uri).toBe(CLIPS[1].uri);
+    const other = await render({ playOnOpenId: 'gone' });
+    expect(players(other)).toHaveLength(0);
+  });
+
   test('"Keep" deletes nothing', async () => {
     const onChanged = jest.fn();
     const tree = await render({ onChanged });
