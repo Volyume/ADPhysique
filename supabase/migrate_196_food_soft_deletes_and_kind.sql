@@ -53,9 +53,10 @@
 --                   before anything changes.
 -- Applied locally:  NOT APPLICABLE (the change is the cloud's reading of
 --                   the push; the local tables already soft-delete).
--- Applied remotely: NO. NOT APPLIED. HELD for the founder's exact phrase
---                   "run against production" naming 196. The app never
---                   applies it.
+-- Applied remotely: YES, 2026-10-16 23:04:58 UTC, under the founder's
+--                   "run against production 196" (checksum-verified apply,
+--                   then the read-only verification below, all true). The
+--                   app never applies it.
 -- Safe to re-run:   YES. The guard only reads the catalogue; the DROP
 --                   FUNCTION loop then CREATE OR REPLACE FUNCTION leave the
 --                   same single function each time. Its writes repeat

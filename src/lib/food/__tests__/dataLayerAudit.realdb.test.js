@@ -461,17 +461,27 @@ describe('cooked weight on a recipe (founder ruling "Add cooked weight")', () =>
     expect(await food.applyRecipeToDiary(u, id, { mealSlot: 'meal_1', entryDate: DAY, servings: 1 })).toEqual(expect.any(String));
   });
 
-  test('the pull keeps the local cooked weight while RECIPE_COOKED_WEIGHT_PUSH is off', async () => {
+  // Re-pinned 2026-10-16: migrate_196 is applied and RECIPE_COOKED_WEIGHT_PUSH
+  // ships on, so a newer cloud value is taken; a record without the key (an
+  // older build's push) still keeps this device's value.
+  test('the pull takes a newer cloud cooked weight, and keeps the local one when the key is absent', async () => {
     const u = freshUser();
     const id = await food.createRecipe(u, { name: 'Stew', totalServings: 4, cookedWeightG: 1500 });
     const later = new Date(clock + 60_000).toISOString();
     await food.applyRecipeFromCloud(u, {
-      id, name: 'Stew (edited elsewhere)', servings: 4, notes: null, cooked_weight_g: 700,
+      id, name: 'Stew (edited elsewhere)', servings: 4, notes: null,
       created_at: later, updated_at: later, deleted_at: null,
     });
-    const r = await food.getRecipeWithIngredients(u, id);
+    let r = await food.getRecipeWithIngredients(u, id);
     expect(r.name).toBe('Stew (edited elsewhere)');
     expect(r.cooked_weight_g).toBe(1500);
+    const later2 = new Date(clock + 120_000).toISOString();
+    await food.applyRecipeFromCloud(u, {
+      id, name: 'Stew (edited elsewhere)', servings: 4, notes: null, cooked_weight_g: 700,
+      created_at: later, updated_at: later2, deleted_at: null,
+    });
+    r = await food.getRecipeWithIngredients(u, id);
+    expect(r.cooked_weight_g).toBe(700);
   });
 });
 
