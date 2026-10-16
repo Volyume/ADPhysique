@@ -17,6 +17,11 @@
  * deletes the one row the write returned (it used to close in silence);
  * every failure is a full sentence and logs its cause first; the row icons
  * reach 48 dp; the servings sheet's title carries the header role.
+ * The servings sheet has a second unit, "Grams" (house Chips, a radio group):
+ * the cooked amount typed or stepped (10 g steps, 1 to 5000 g) is written as
+ * the row's quantity_g and its macros scale by the same per-100g formula the
+ * servings unit uses (applyRecipeToDiary's `grams`). The button reads
+ * "Add to <meal>" for either unit.
  *
  * Voice rules from CLAUDE.md and COACHING_VOICE_SYNTHESIS_LOCKED.
  * No em dashes; plain spoken voice; British English.
@@ -36,6 +41,8 @@ import { SkeletonRow } from '../components/Skeleton';
 import ModalHeader from '../components/ModalHeader';
 import EmptyState from '../components/EmptyState';
 import Stepper from '../components/Stepper';
+import Chip from '../components/Chip';
+import TextField from '../components/TextField';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import RecipeDetailSheet from '../components/food/RecipeDetailSheet';
@@ -50,6 +57,8 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import { mealSlotLabel } from '../lib/food/mealSlots';
+import { isValidEntryGrams, MAX_ENTRY_GRAMS } from '../lib/food/servingEntry';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { touchTarget } from '../styles/layout';
 import * as haptics from '../lib/haptics';
 
@@ -84,6 +93,11 @@ export default function MyRecipesScreen({ navigation, route }) {
   // user logs the portion they actually ate, instead of always one serving.
   const [servePrompt, setServePrompt] = useState(null); // the recipe being logged
   const [servings, setServings] = useState(1);
+  // The second unit (D230 R12): the cooked amount in grams, held as the text
+  // being typed. `servingG` is one serving's weight, read when the sheet opens.
+  const [unit, setUnit] = useState('servings'); // 'servings' | 'grams'
+  const [gramsText, setGramsText] = useState('');
+  const [servingG, setServingG] = useState(null);
   // Campaign 24 Wave B (IA_DEFECT finding): read-only "view contents" sheet,
   // matching MyMealsScreen's D6 inspect capability. Holds the already-loaded
   // list row (name/totals/total_servings); the per-ingredient breakdown
@@ -155,6 +169,22 @@ export default function MyRecipesScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [inspecting, userId]);
 
+  // One serving's weight, for the grams unit's starting amount. A read; if it
+  // fails the unit still works from a typed amount.
+  useEffect(() => {
+    if (!servePrompt) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const food = await resolveFoodRef(userId, `recipe:${servePrompt.id}`);
+        if (!cancelled) setServingG(Number(food?.serving_g) > 0 ? Number(food.serving_g) : null);
+      } catch (e) {
+        logError('MyRecipes.resolveServing', e, { hasId: !!servePrompt?.id });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [servePrompt, userId]);
+
   function onCreate() {
     navigation.navigate('RecipeBuilder', { mealSlot, entryDate });
   }
@@ -168,19 +198,43 @@ export default function MyRecipesScreen({ navigation, route }) {
   function onLog(recipe) {
     if (loggingId) return;
     setServings(1);
+    setUnit('servings');
+    setGramsText('');
+    setServingG(null);
     setServePrompt(recipe);
   }
 
   const fmtServings = (s) => (Number.isInteger(s) ? String(s) : s.toFixed(1));
 
+  // Grams unit: the typed amount, and whether it can be written (the diary's
+  // own 1 to 5000 g bound; logFoodEntry re-checks it).
+  const gramsNum = parseDecimalInput(gramsText);
+  const gramsValid = isValidEntryGrams(gramsNum);
+  const canLog = unit === 'servings' || gramsValid;
+
+  function pickUnit(next) {
+    if (next === unit) return;
+    haptics.selection();
+    if (next === 'grams' && gramsText === '') {
+      // Start from what the servings amount comes to.
+      const start = servingG ? Math.round(servingG * servings) : 100;
+      setGramsText(String(Math.min(MAX_ENTRY_GRAMS, Math.max(1, start))));
+    }
+    setUnit(next);
+  }
+
   // Commit the log with the chosen servings. applyRecipeToDiary returns null
   // when the recipe has no resolvable ingredients yet, so we tell them to add one.
   async function confirmLog() {
     const recipe = servePrompt;
-    if (!recipe || loggingId) return;
+    if (!recipe || loggingId || !canLog) return;
     setLoggingId(recipe.id);
     try {
-      const id = await applyRecipeToDiary(userId, recipe.id, { mealSlot, entryDate, servings });
+      const id = await applyRecipeToDiary(
+        userId,
+        recipe.id,
+        unit === 'grams' ? { mealSlot, entryDate, grams: gramsNum } : { mealSlot, entryDate, servings },
+      );
       if (id) {
         // The house undo toast (R12). The toast provider is app-level, so it
         // survives the goBack below; Undo deletes the one row this log wrote.
@@ -372,30 +426,84 @@ export default function MyRecipesScreen({ navigation, route }) {
       <BottomSheet
         visible={!!servePrompt}
         onClose={() => { if (!loggingId) setServePrompt(null); }}
-        accessibilityLabel="Choose recipe servings"
+        accessibilityLabel="Choose recipe amount"
+        keyboardAvoiding
         sheetStyle={styles.servingsSheet}
       >
         <Text style={[styles.sheetTitle, live.sheetTitle]} numberOfLines={1} accessibilityRole="header">{servePrompt?.name}</Text>
-        <Text style={[styles.sheetSub, live.sheetSub]}>How many servings did you eat?</Text>
-        <Stepper
-          value={servings}
-          onChange={setServings}
-          min={0.5}
-          max={20}
-          step={0.5}
-          label="servings"
-          formatValue={fmtServings}
-          valueLabel={`${fmtServings(servings)} servings`}
-          decreaseLabel="Fewer servings"
-          increaseLabel="More servings"
-          hitSlop={8}
-          style={styles.servingsStepper}
-        />
+        <View style={styles.unitRow} accessibilityRole="radiogroup" accessibilityLabel="Amount unit">
+          <Chip
+            label="Servings"
+            selected={unit === 'servings'}
+            onPress={() => pickUnit('servings')}
+            accessibilityRole="radio"
+          />
+          <Chip
+            label="Grams"
+            selected={unit === 'grams'}
+            onPress={() => pickUnit('grams')}
+            accessibilityRole="radio"
+          />
+        </View>
+        {unit === 'servings' ? (
+          <>
+            <Text style={[styles.sheetSub, live.sheetSub]}>How many servings did you eat?</Text>
+            <Stepper
+              value={servings}
+              onChange={setServings}
+              min={0.5}
+              max={20}
+              step={0.5}
+              label="servings"
+              formatValue={fmtServings}
+              valueLabel={`${fmtServings(servings)} servings`}
+              decreaseLabel="Fewer servings"
+              increaseLabel="More servings"
+              hitSlop={8}
+              style={styles.servingsStepper}
+            />
+          </>
+        ) : (
+          <>
+            <Text style={[styles.sheetSub, live.sheetSub]}>
+              {servingG
+                ? `How many grams of the cooked recipe did you eat? One serving is ${Math.round(servingG)} g.`
+                : 'How many grams of the cooked recipe did you eat?'}
+            </Text>
+            <Stepper
+              value={Number.isFinite(gramsNum) ? Math.min(MAX_ENTRY_GRAMS, Math.max(0, gramsNum)) : 0}
+              onChange={(g) => setGramsText(String(Math.round(g)))}
+              min={1}
+              max={MAX_ENTRY_GRAMS}
+              step={10}
+              label="grams"
+              formatValue={(v) => `${v} g`}
+              valueLabel={Number.isFinite(gramsNum) ? `${gramsNum} grams` : 'No amount'}
+              decreaseLabel="Fewer grams"
+              increaseLabel="More grams"
+              style={styles.gramsStepper}
+              centre={(
+                <TextField
+                  size="sm"
+                  value={gramsText}
+                  onChangeText={(v) => setGramsText(v.replace(/[^0-9.,]/g, ''))}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                  accessibilityLabel="Amount in grams"
+                  inputStyle={styles.gramsInput}
+                />
+              )}
+            />
+            {!gramsValid && gramsText !== '' ? (
+              <Text style={[styles.sheetSub, live.sheetSub]}>Enter an amount from 1 to 5000 grams.</Text>
+            ) : null}
+          </>
+        )}
         <Button
-          title={`Log ${fmtServings(servings)} ${servings === 1 ? 'serving' : 'servings'}`}
+          title={`Add to ${mealSlotLabel(mealSlot)}`}
           onPress={confirmLog}
           loading={!!loggingId}
-          accessibilityLabel={`Log ${fmtServings(servings)} ${servings === 1 ? 'serving' : 'servings'}`}
+          disabled={!canLog}
         />
       </BottomSheet>
 
@@ -457,6 +565,9 @@ const styles = StyleSheet.create({
   sheetTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   sheetSub: { color: colors.textMuted, fontSize: fontSize.sm },
   servingsStepper: { justifyContent: 'center', alignSelf: 'center' },
+  unitRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
+  gramsStepper: { alignSelf: 'stretch' },
+  gramsInput: { textAlign: 'center' },
 });
 
 // CP-10 batch D (2026-07-10): the frozen `styles` block above stays

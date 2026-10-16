@@ -173,12 +173,14 @@ describe('WORK 2: repeat logging and serving confirmation contracts', () => {
   test('a repeated saved meal also requires an explicit confirmation', () => {
     expect(screen).not.toMatch(/function quickLogRelogMeal\(/);
     expect(screen).toMatch(/confirmMealId: food\.savedMealId/);
-    expect(meals).toMatch(/visible=\{!!confirming\}/);
-    // RE-POINTED (D230 R15, food level-up 2026-10-16): the confirm sheet's
-    // button is "Add this meal" (it shared a label with the Diary's "Add
-    // another meal"). Same truth: a repeated saved meal logs only from the
-    // explicit button on the confirm sheet.
-    expect(meals).toMatch(/title="Add this meal"[\s\S]*onPress=\{confirmLog\}/);
+    // RE-POINTED (D230 lane 3B, R12): the confirmation prompt is now the saved
+    // meal's sheet, which lists the foods. Same truth: a repeated saved meal
+    // (confirmMealId) opens that sheet and nothing is written until its one
+    // explicit button ("Add to <meal>") is pressed, which calls confirmLog.
+    expect(meals).toMatch(/setOpened\(meal\)/);
+    expect(meals).toMatch(/<SavedMealDetailSheet[\s\S]*visible=\{!!opened\}[\s\S]*onConfirm=\{confirmLog\}/);
+    const sheet = source('src/components/food/SavedMealDetailSheet.js');
+    expect(sheet).toMatch(/title=\{`Add to \$\{mealLabel\}`\}[\s\S]*onPress=\{\(\) => onConfirm\?\.\(drafts\)\}/);
   });
 
   test('diary usuals log the DISCLOSED remembered portion in one tap, with undo; hold still opens the picker (D138)', () => {

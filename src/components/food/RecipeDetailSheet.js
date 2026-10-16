@@ -34,6 +34,9 @@ import { perServingTotals } from '../../lib/food/macros';
  * the already-loaded row. `items` arrives pre-resolved; this component does
  * no I/O of its own.
  *
+ * D230 R15 and R16: the title carries the header role, and the failed-read
+ * line is a full sentence (it used to read "Couldn't load ...").
+ *
  * Adherence-neutral (CLAUDE.md ED-safety): plain numbers, no colour-coded
  * good/bad framing, no target comparison — matching SavedMealDetailSheet's
  * existing treatment.
@@ -62,7 +65,7 @@ export default function RecipeDetailSheet({
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel={recipe ? `${recipe.name} details` : 'Recipe details'}>
       {recipe ? (
         <>
-          <Text style={[styles.title, live.title]} numberOfLines={2}>{recipe.name}</Text>
+          <Text style={[styles.title, live.title]} numberOfLines={2} accessibilityRole="header">{recipe.name}</Text>
           {perServing ? (
             <Text style={[styles.subtitle, live.subtitle]}>
               Per serving - {toEnergy(perServing.kcal, energyUnit)} {energyUnitLabel(energyUnit)} | {perServing.protein}g protein | {perServing.carbs}g carbs | {perServing.fat}g fat
@@ -79,7 +82,7 @@ export default function RecipeDetailSheet({
               <ActivityIndicator size="small" color={t.colors.primary} />
             </View>
           ) : loadError ? (
-            <Text style={[styles.emptyNote, live.emptyNote]}>Couldn't load the ingredient list. The totals above are still correct.</Text>
+            <Text style={[styles.emptyNote, live.emptyNote]}>The ingredient list did not load. The totals above are still correct.</Text>
           ) : rows.length ? (
             <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
               <View style={styles.section}>

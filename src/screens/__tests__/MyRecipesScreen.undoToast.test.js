@@ -121,7 +121,7 @@ function byLabel(tree, label) {
 // Open the servings sheet for Chilli and press the log button.
 async function logChilli(tree) {
   await act(async () => { byLabel(tree, 'Log Chilli').props.onPress(); });
-  await act(async () => { await byLabel(tree, 'Log 1 serving').props.onPress(); });
+  await act(async () => { await byLabel(tree, 'Add to Breakfast').props.onPress(); });
   await flush();
 }
 

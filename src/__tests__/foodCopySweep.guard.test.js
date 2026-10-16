@@ -48,6 +48,10 @@ const FILES = [
   'src/screens/RecipeBuilderScreen.js',
   'src/screens/MealPlanScreen.js',
   'src/screens/SettingsDisplayScreen.js',
+  // D230 lane 3B: the saved meal's two sheets and the recipe peek.
+  'src/components/food/SavedMealDetailSheet.js',
+  'src/components/food/SavedMealEditSheet.js',
+  'src/components/food/RecipeDetailSheet.js',
 ];
 
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -154,6 +158,7 @@ const ERROR_SENTENCES = {
     'That meal was not deleted. Try again in a moment.',
     'That meal was not renamed. Try again in a moment.',
     'That meal was not removed. You can remove its foods from the diary.',
+    'That meal was not saved. Try again in a moment.',
   ],
   'src/screens/MyRecipesScreen.js': [
     'That recipe was not logged. Try again in a moment.',
@@ -184,8 +189,15 @@ const OTHER_SENTENCES = {
   'src/screens/AddCustomFoodScreen.js': ['Per 100 g', 'Quantity eaten', 'Serving', 'Save the food', 'Hard to read. Check this value.', 'hard to read', 'Food saved. You can add it to your diary any time.'],
   'src/screens/ScanLabelScreen.js': ['Scan the label', 'The full food library could not be checked'],
   'src/screens/ScanBarcodeScreen.js': ['Scan barcode'],
-  'src/screens/MyMealsScreen.js': ['Add this meal', 'Your saved meals did not load', ' added to ${..}.'],
-  'src/screens/MyRecipesScreen.js': ['Your recipes did not load', ' added to ${..}.'],
+  // RE-POINTED (D230 lane 3B, R12): "Add this meal" was the old confirmation
+  // sheet's button. The saved meal's sheet now lists the foods and its button
+  // reads "Add to <meal>" (the sheet's own file below); the screen keeps the
+  // load sentence, the add toast and the new save toast.
+  'src/screens/MyMealsScreen.js': ['Your saved meals did not load', ' added to ${..}.', ' saved.'],
+  'src/components/food/SavedMealDetailSheet.js': ['Add to ${..}', 'Edit this meal'],
+  'src/components/food/SavedMealEditSheet.js': ['Edit this meal', 'Add a food', 'Save'],
+  'src/components/food/RecipeDetailSheet.js': ['The ingredient list did not load. The totals above are still correct.'],
+  'src/screens/MyRecipesScreen.js': ['Your recipes did not load', ' added to ${..}.', 'Add to ${..}', 'Servings', 'Grams'],
   'src/screens/RecipeBuilderScreen.js': ['This recipe did not load', 'Each ingredient is matched to a food with a rough amount.'],
   'src/screens/MealPlanScreen.js': ['The meal builder did not load', ' will not be suggested again.'],
   'src/screens/SettingsDisplayScreen.js': ['Show salt', 'Shown as salt, the way UK packs label it.'],
@@ -276,6 +288,9 @@ describe('section labels are sentence case; sheet titles are headings', () => {
     'src/components/food/QuickAddSheet.js': ['styles.title'],
     'src/screens/MyMealsScreen.js': ['styles.sheetTitle'],
     'src/screens/MyRecipesScreen.js': ['styles.sheetTitle'],
+    'src/components/food/SavedMealDetailSheet.js': ['styles.title'],
+    'src/components/food/SavedMealEditSheet.js': ['styles.title'],
+    'src/components/food/RecipeDetailSheet.js': ['styles.title'],
     'src/screens/ScanBarcodeScreen.js': ['styles.manualTitle'],
     'src/screens/ScanLabelScreen.js': ['styles.choiceTitle'],
     'src/screens/MealPlanScreen.js': ['styles.swapSheetTitle'],

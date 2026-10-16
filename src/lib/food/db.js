@@ -1970,6 +1970,46 @@ export async function renameSavedMeal(userId, id, name) {
 }
 
 /**
+ * Replace a saved meal's name and items in one write (D230 R12, "Edit this
+ * meal"). `items_json` keeps its current shape (see the item shape above), so
+ * no schema changes and the sync serialiser reads it exactly as before.
+ * `updated_at` is stamped so the whole row syncs (saved_meals syncs whole
+ * rows). Every item is held to the diary's own bound before anything is
+ * written (a foodRef, 1 to 5000 g, finite macros), so a saved meal can never
+ * hold a row that logFoodEntries would later refuse. Throws, writing nothing,
+ * on a blank name, no items, an invalid item, or a meal that is missing or
+ * deleted.
+ */
+export async function updateSavedMeal(userId, mealId, { name, items } = {}) {
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  if (!cleanName) {
+    throw new Error('updateSavedMeal: name cannot be blank');
+  }
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('updateSavedMeal: at least one item is required');
+  }
+  items.forEach((it, i) => {
+    const ok = it && typeof it === 'object'
+      && typeof it.foodRef === 'string' && it.foodRef !== ''
+      && typeof it.quantityG === 'number' && isValidEntryGrams(it.quantityG)
+      && [it.kcal, it.proteinG, it.carbsG, it.fatG].every((v) => validFoodMetric(v))
+      && validFoodMetric(it.fibreG, { nullable: true });
+    if (!ok) throw new Error(`updateSavedMeal: item ${i + 1} is not a valid food`);
+  });
+  const d = await db();
+  const now = Date.now();
+  const res = await d.runAsync(
+    `UPDATE saved_meals SET name = ?, items_json = ?, updated_at = ?
+     WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+    [cleanName, JSON.stringify(items), now, mealId, userId]
+  );
+  if (res && res.changes === 0) {
+    throw new Error('updateSavedMeal: meal not found');
+  }
+  _scheduleSync();
+}
+
+/**
  * Soft-delete a saved meal so the tombstone reaches the cloud.
  */
 export async function deleteSavedMeal(userId, id) {
@@ -2368,15 +2408,19 @@ export async function applyMealPlanRowFromCloud(userId, row) {
  * food-shaped row, so once it has a slot-recent row it joins that pool with
  * zero further changes. Derived memory only; never fails the log.
  */
-export async function applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate, servings = 1 } = {}) {
+export async function applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate, servings = 1, grams = null } = {}) {
   if (!mealSlot || !entryDate) {
     throw new Error('applyRecipeToDiary: mealSlot and entryDate are required');
   }
-  const n = Number(servings);
+  // D230 R12: `grams` is the second unit. The cooked amount typed in grams IS
+  // the row's quantity_g; the macros then scale by the one formula below (the
+  // recipe's per-100g profile times quantityG / 100), exactly as servings do.
+  const byGrams = grams != null;
+  const n = Number(byGrams ? grams : servings);
   if (!Number.isFinite(n) || n <= 0) return null;
   const food = await resolveFoodRef(userId, `recipe:${recipeId}`);
   if (!food || !(Number(food.serving_g) > 0)) return null;
-  const quantityG = Math.round(food.serving_g * n * 10) / 10;
+  const quantityG = byGrams ? Math.round(n * 10) / 10 : Math.round(food.serving_g * n * 10) / 10;
   const factor = quantityG / 100;
   const foodRef = `recipe:${recipeId}`;
   const entryId = await logFoodEntry(userId, {

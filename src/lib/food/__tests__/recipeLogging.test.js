@@ -146,3 +146,48 @@ describe('applyRecipeToDiary writes a food_slot_recents row (T1: joins the "Add 
     expect(slotRecentInserts()).toHaveLength(0);
   });
 });
+
+// D230 lane 3B (R12): the second unit. The cooked amount typed in grams is the
+// row's quantity_g; the macros scale by the SAME per-100g formula as servings.
+describe('applyRecipeToDiary by grams (the Grams unit)', () => {
+  const inserts = () => runCalls.filter((c) => /INSERT INTO food_entries/.test(c.sql));
+
+  test('quantity_g is the typed grams and the macros scale by the servings formula', async () => {
+    await food.applyRecipeToDiary('u1', 'r1', { mealSlot: 'dinner', entryDate: '2026-05-29', grams: 125 });
+    const [row] = inserts();
+    expect(row.params[4]).toBe('recipe:r1');
+    expect(row.params[5]).toBe(125);          // typed grams, as is
+    expect(row.params[6]).toBe(180);          // 144 kcal/100 g x 1.25 = 180
+  });
+
+  test('2 servings and serving_g x 2 grams write the same quantity and the same macros', async () => {
+    const resolved = await resolveFoodRef('u1', 'recipe:r1');
+    await food.applyRecipeToDiary('u1', 'r1', { mealSlot: 'lunch', entryDate: '2026-05-29', servings: 2 });
+    await food.applyRecipeToDiary('u1', 'r1', { mealSlot: 'lunch', entryDate: '2026-05-29', grams: resolved.serving_g * 2 });
+    const [bySvg, byGrams] = inserts();
+    // params: id, user, date, slot, ref, quantity_g, kcal, protein, carbs, fat, fibre
+    expect(byGrams.params.slice(4, 11)).toEqual(bySvg.params.slice(4, 11));
+    expect(byGrams.params[5]).toBe(500);
+  });
+
+  test('a non-positive or unreadable amount writes nothing', async () => {
+    for (const grams of [0, -5, NaN, 'abc']) {
+      // eslint-disable-next-line no-await-in-loop
+      expect(await food.applyRecipeToDiary('u1', 'r1', { mealSlot: 'lunch', entryDate: '2026-05-29', grams })).toBeNull();
+    }
+    expect(inserts()).toHaveLength(0);
+  });
+
+  test('an amount over the diary bound is refused by the write, not clamped', async () => {
+    await expect(food.applyRecipeToDiary('u1', 'r1', { mealSlot: 'lunch', entryDate: '2026-05-29', grams: 6000 }))
+      .rejects.toThrow(/between 1 and 5000/);
+    expect(inserts()).toHaveLength(0);
+  });
+
+  test('the serving memory carries the grams eaten', async () => {
+    await food.applyRecipeToDiary('u1', 'r1', { mealSlot: 'dinner', entryDate: '2026-05-29', grams: 330 });
+    const recent = runCalls.filter((c) => /INSERT INTO food_slot_recents/.test(c.sql));
+    expect(recent).toHaveLength(1);
+    expect(recent[0].params[4]).toBe(330);
+  });
+});
