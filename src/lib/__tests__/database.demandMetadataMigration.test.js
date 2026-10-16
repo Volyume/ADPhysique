@@ -1,3 +1,6 @@
+// 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
+// after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
+// window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
 /**
  * CC27 - the exercise-demand migration (database.js SCHEMA_MIGRATIONS
  * tail): ten nullable demand columns + a canonical-row backfill derived
@@ -93,7 +96,7 @@ const demandRow = (raw, id) => raw.prepare(
 
 test('a pre-CC27 database upgrades: canonical rows derive, matching the seed derivation exactly', async () => {
   const raw = freshDb();
-  await runLast(raw, 9);
+  await runLast(raw, 10);
 
   const squat = demandRow(raw, 'ex-squat');
   const expected = deriveDemandMetadata({
@@ -115,7 +118,7 @@ test('a pre-CC27 database upgrades: canonical rows derive, matching the seed der
 test('a custom with an equipment string gains EQUIPMENT metadata (section 34.1), demands stay NULL', async () => {
   const raw = freshDb();
   raw.prepare("UPDATE exercises SET equipment = 'dumbbell' WHERE id = 'ex-custom'").run();
-  await runLast(raw, 9);
+  await runLast(raw, 10);
 
   const custom = raw.prepare('SELECT equipment_category, equipment_profiles, position, grip_demand FROM exercises WHERE id = ?').get('ex-custom');
   expect(custom.equipment_category).toBe('dumbbell');
@@ -127,7 +130,7 @@ test('a custom with an equipment string gains EQUIPMENT metadata (section 34.1),
 
 test('custom rows stay NULL on every axis (CAP-8), and updated_at is untouched everywhere', async () => {
   const raw = freshDb();
-  await runLast(raw, 9);
+  await runLast(raw, 10);
 
   const custom = demandRow(raw, 'ex-custom');
   for (const col of ['position', 'floor_access', 'overhead_position', 'grip_demand',
@@ -141,10 +144,10 @@ test('custom rows stay NULL on every axis (CAP-8), and updated_at is untouched e
 
 test('is idempotent: a second run changes nothing and errors on neither run', async () => {
   const raw = freshDb();
-  const total = await runLast(raw, 9);
+  const total = await runLast(raw, 10);
   const once = ['ex-squat', 'ex-legpress', 'ex-custom'].map((id) => demandRow(raw, id));
 
-  raw.exec(`PRAGMA user_version = ${total - 4}`);
+  raw.exec(`PRAGMA user_version = ${total - 5}`);
   await expect(runMigrations(adapt(raw))).resolves.not.toThrow();
   expect(['ex-squat', 'ex-legpress', 'ex-custom'].map((id) => demandRow(raw, id))).toEqual(once);
 });

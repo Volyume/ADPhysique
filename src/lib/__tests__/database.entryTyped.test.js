@@ -1,3 +1,6 @@
+// 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
+// after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
+// window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
 /**
  * D219 learner data path: workout_sets.entry_typed, the one extra fact about a
  * logged set that says whether the person typed or changed its weight or reps
@@ -133,7 +136,7 @@ describe('the local migration', () => {
     // 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
     // inert against these fixtures), so every last-N window and user_version reset below moves by one
     // (a mechanical +1 re-anchor, as LR2 did before it).
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
     return raw;
   }
 
@@ -154,7 +157,7 @@ describe('the local migration', () => {
 
     // A second boot that still sees the pre-migration version (a restored
     // snapshot, an interrupted run): the column is already there.
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
     await expect(runMigrations(adaptRaw(raw))).resolves.not.toThrow();
 
     const columns = raw.prepare('PRAGMA table_info(workout_sets)').all().filter((c) => c.name === 'entry_typed');

@@ -1460,6 +1460,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // D229: the video row's words, which change with the workout's videos, and
   // (addendum 9) name a PR set's video when one was recorded.
   const clipRowCopy = summaryClipRowCopy(clipFlow.clips, sharePRs);
+  // Addendum 15: a video of a PR set is kept by the app, so the keep window
+  // never clears the one video most worth keeping. Best effort, once the
+  // PRs and the videos are both known; the store ignores a repeat.
+  useEffect(() => {
+    if (!user?.id || !workoutId || readOnly || !clipFlow.clips?.length || !sharePRs?.length) return;
+    // eslint-disable-next-line global-require
+    require('../lib/clips/store').keepClipsForPRs(user.id, workoutId, sharePRs).catch(() => {
+      // Logged in the store; a miss here only means the video follows the rule.
+    });
+  }, [user?.id, workoutId, readOnly, clipFlow.clips, sharePRs]);
   // Addendum 14: a video the share can use is on this workout (the video
   // row's own gate: not read-only, the calm and flag read settled and not
   // suppressed, a session with working sets to share).

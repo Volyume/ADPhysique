@@ -1,3 +1,6 @@
+// 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
+// after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
+// window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
 // CC27 appended one further migration (exercise demand columns + canonical
 // backfill; inert here), so both offsets widen by one more.
 // CC29 appended one further migration (swap cause + effective choice
@@ -71,7 +74,7 @@ function withExerciseIntent(raw) {
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
   const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 14}`);
+  raw.exec(`PRAGMA user_version = ${total - 15}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -96,7 +99,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 13}`);
+  raw.exec(`PRAGMA user_version = ${total - 14}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()

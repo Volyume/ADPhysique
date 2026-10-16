@@ -20,10 +20,15 @@ jest.mock('../../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.f
 jest.mock('../../../hooks/usePhotoSuppression', () => ({ __esModule: true, default: () => true }));
 const mockCount = jest.fn();
 const mockList = jest.fn();
+const mockSetKept = jest.fn(async () => true);
 jest.mock('../../../lib/clips/store', () => ({
   countClipsForWorkout: (...a) => mockCount(...a),
   listClipsForWorkout: (...a) => mockList(...a),
   deleteClip: jest.fn(async () => true),
+  // Addendum 15: keeping, the size line and the keep setting.
+  setClipKept: (...a) => mockSetKept(...a),
+  getClipsStorage: jest.fn(async () => ({ count: 2, bytes: 150 * 1024 * 1024 })),
+  getKeepDays: jest.fn(async () => 7),
   // The store's change subscription, fired by tests to play a save or a
   // delete elsewhere (the listeners live here: an import is hoisted above
   // any const of this file).

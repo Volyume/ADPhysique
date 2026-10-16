@@ -37,6 +37,8 @@ export default function PrivacyPolicyScreen() {
           <Body>
             If you record a short video of a set or of a workout, the video stays on this device. It is never
             uploaded, is not included in backups, and is deleted when you delete that workout or your account.
+            To save space, a video is cleared from this device after 7 days unless you keep it; you can choose
+            a longer time, or to keep every video, in Settings under Your data.
             The finished share image or video leaves the device only when you choose to share or save it.
           </Body>
           <Body>

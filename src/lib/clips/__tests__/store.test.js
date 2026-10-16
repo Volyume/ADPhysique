@@ -131,9 +131,11 @@ describe('the local migration', () => {
     const cols = await conn.getAllAsync('PRAGMA table_info(workout_clips)');
     const byName = Object.fromEntries(cols.map((c) => [c.name, c]));
     expect(Object.keys(byName).sort()).toEqual([
-      'created_at', 'duration_ms', 'exercise_id', 'exercise_name', 'height', 'id', 'set_number',
+      'created_at', 'duration_ms', 'exercise_id', 'exercise_name', 'height', 'id', 'kept_at', 'kept_reason', 'set_number',
       'source', 'uri', 'user_id', 'width', 'workout_id',
     ]);
+    // Addendum 15: the keep marks are nullable (NULL is "follows the rule").
+    for (const name of ['kept_at', 'kept_reason']) expect(byName[name].notnull).toBe(0);
     expect(byName.id.pk).toBe(1);
     for (const name of ['exercise_id', 'exercise_name', 'set_number', 'width', 'height']) expect(byName[name].notnull).toBe(0);
     for (const name of ['user_id', 'workout_id', 'uri', 'duration_ms', 'created_at', 'source']) expect(byName[name].notnull).toBe(1);
@@ -163,7 +165,8 @@ describe('the local migration', () => {
     await conn.execAsync('CREATE TABLE IF NOT EXISTS workout_clips (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, workout_id TEXT NOT NULL, exercise_id TEXT, exercise_name TEXT, set_number INTEGER, uri TEXT NOT NULL, duration_ms INTEGER NOT NULL, width INTEGER, height INTEGER, created_at INTEGER NOT NULL, source TEXT NOT NULL)');
     await conn.execAsync('CREATE INDEX IF NOT EXISTS idx_workout_clips_user_workout ON workout_clips(user_id, workout_id)');
     const cols = await conn.getAllAsync('PRAGMA table_info(workout_clips)');
-    expect(cols).toHaveLength(12);
+    // Twelve ruled columns, plus kept_at and kept_reason (addendum 15).
+    expect(cols).toHaveLength(14);
   });
 });
 
@@ -487,5 +490,117 @@ describe('the workout-delete paths and the account wipe call the store', () => {
     mockFiles.clear();
     const clean = await verifyUserWipeClean(U);
     expect(clean.residue).not.toContain('clip_files');
+  });
+});
+
+// ── Keeping and clearing (D229 addendum 15) ──────────────────────────────────
+// The founder: videos must not fill the phone. A video is kept for the
+// person's chosen number of days (default 7) and then cleared, unless it is
+// kept on purpose (by the person, or by the app for a PR set).
+const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+const {
+  setClipKept, keepClipsForPRs, sweepExpiredClips, getClipsStorage, getKeepDays, setKeepDays,
+} = require('../store');
+const { DAY_MS, KEEP_DAYS_KEY, KEEP_SINCE_KEY } = require('../rules');
+
+describe('keeping and clearing (addendum 15)', () => {
+  const NOW = 1_800_000_000_000;
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    await addWorkout('w-keep');
+  });
+
+  async function savedAt(createdAt, extra = {}) {
+    const res = await save('w-keep', extra);
+    await conn.runAsync('UPDATE workout_clips SET created_at = ? WHERE id = ?', [createdAt, res.clip.id]);
+    return res.clip;
+  }
+
+  test('a new clip follows the rule (not kept); Keep marks it, and the mark can be lifted', async () => {
+    const clip = (await save('w-keep')).clip;
+    expect(clip.keptAt).toBeNull();
+    expect(await setClipKept(clip.id, true)).toBe(true);
+    let row = await conn.getFirstAsync('SELECT kept_at, kept_reason FROM workout_clips WHERE id = ?', [clip.id]);
+    expect(row.kept_at).toBeGreaterThan(0);
+    expect(row.kept_reason).toBe('person');
+    expect(await setClipKept(clip.id, false)).toBe(true);
+    row = await conn.getFirstAsync('SELECT kept_at, kept_reason FROM workout_clips WHERE id = ?', [clip.id]);
+    expect(row.kept_at).toBeNull();
+    expect(await setClipKept('nope', true)).toBe(false);
+  });
+
+  test('the first sweep notes when the rule arrived, so a video recorded before the update is not cleared at once', async () => {
+    const old = await savedAt(NOW - 40 * DAY_MS);
+    expect(await sweepExpiredClips(U, { force: true, now: NOW })).toBe(0);
+    expect(Number(await AsyncStorage.getItem(KEEP_SINCE_KEY))).toBe(NOW);
+    expect(await conn.getFirstAsync('SELECT id FROM workout_clips WHERE id = ?', [old.id])).not.toBeNull();
+    // Seven days on from the rule's arrival, it goes.
+    expect(await sweepExpiredClips(U, { force: true, now: NOW + 7 * DAY_MS })).toBe(1);
+    expect(await conn.getFirstAsync('SELECT id FROM workout_clips WHERE id = ?', [old.id])).toBeNull();
+    expect(mockFiles.has(old.uri)).toBe(false);
+  });
+
+  test('with the rule already in place: a video older than the window is cleared, a newer one and a kept one stay, the file goes with the row', async () => {
+    await AsyncStorage.setItem(KEEP_SINCE_KEY, String(NOW - 100 * DAY_MS));
+    const old = await savedAt(NOW - 8 * DAY_MS);
+    const fresh = await savedAt(NOW - 6 * DAY_MS);
+    const kept = await savedAt(NOW - 30 * DAY_MS);
+    await setClipKept(kept.id, true);
+    expect(await sweepExpiredClips(U, { force: true, now: NOW })).toBe(1);
+    const left = (await conn.getAllAsync('SELECT id FROM workout_clips')).map((r) => r.id).sort();
+    expect(left).toEqual([fresh.id, kept.id].sort());
+    expect(mockFiles.has(old.uri)).toBe(false);
+    expect(mockFiles.has(fresh.uri)).toBe(true);
+  });
+
+  test('the setting: 30 days keeps a 20 day old video; "until I delete them" (0) clears nothing; a nonsense value reads as 7', async () => {
+    await AsyncStorage.setItem(KEEP_SINCE_KEY, String(NOW - 100 * DAY_MS));
+    const twenty = await savedAt(NOW - 20 * DAY_MS);
+    expect(await setKeepDays(30)).toBe(30);
+    expect(await getKeepDays()).toBe(30);
+    expect(await sweepExpiredClips(U, { force: true, now: NOW })).toBe(0);
+    await setKeepDays(0);
+    const ancient = await savedAt(NOW - 400 * DAY_MS);
+    expect(await sweepExpiredClips(U, { force: true, now: NOW })).toBe(0);
+    expect(await conn.getFirstAsync('SELECT id FROM workout_clips WHERE id = ?', [ancient.id])).not.toBeNull();
+    await AsyncStorage.setItem(KEEP_DAYS_KEY, 'banana');
+    expect(await getKeepDays()).toBe(7);
+    expect(await sweepExpiredClips(U, { force: true, now: NOW })).toBe(2);
+    expect(twenty.id).toBeDefined();
+  });
+
+  test('the sweep is throttled within a session unless forced, and never throws', async () => {
+    await AsyncStorage.setItem(KEEP_SINCE_KEY, String(NOW - 100 * DAY_MS));
+    await savedAt(NOW - 8 * DAY_MS);
+    expect(await sweepExpiredClips(U, { force: true, now: NOW })).toBe(1);
+    await savedAt(NOW - 9 * DAY_MS);
+    expect(await sweepExpiredClips(U, { now: NOW + 1000 })).toBe(0); // throttled
+    expect(await sweepExpiredClips(U, { force: true, now: NOW + 1000 })).toBe(1);
+    expect(await sweepExpiredClips(null, { force: true, now: NOW })).toBe(0);
+  });
+
+  test('a video of a PR set is kept by the app, by exercise and set; the rest follow the rule', async () => {
+    const pr = (await save('w-keep', { exerciseId: 'ex-1', setNumber: 3 })).clip;
+    const other = (await save('w-keep', { exerciseId: 'ex-1', setNumber: 1 })).clip;
+    expect(await keepClipsForPRs(U, 'w-keep', [{ exerciseId: 'ex-1', setNumber: 3, type: '1rm_estimate' }])).toBe(1);
+    const rows = Object.fromEntries((await conn.getAllAsync('SELECT id, kept_reason FROM workout_clips')).map((r) => [r.id, r.kept_reason]));
+    expect(rows[pr.id]).toBe('pr');
+    expect(rows[other.id]).toBeNull();
+    // A repeat keeps the earlier mark and reports nothing new.
+    expect(await keepClipsForPRs(U, 'w-keep', [{ exerciseId: 'ex-1', setNumber: 3 }])).toBe(0);
+    expect(await keepClipsForPRs(U, 'w-keep', [])).toBe(0);
+  });
+
+  test('the size on this phone: a count and the bytes of the files that exist, for the account or one workout', async () => {
+    await addWorkout('w-other');
+    await save('w-keep');
+    await save('w-keep');
+    await save('w-other');
+    const all = await getClipsStorage(U);
+    expect(all.count).toBe(3);
+    expect(all.bytes).toBeGreaterThanOrEqual(0);
+    const one = await getClipsStorage(U, 'w-other');
+    expect(one.count).toBe(1);
+    expect(await getClipsStorage(null)).toEqual({ count: 0, bytes: 0 });
   });
 });

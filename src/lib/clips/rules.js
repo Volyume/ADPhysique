@@ -73,6 +73,21 @@ export const CUE_OPTIONS = Object.freeze(['both', 'light', 'sound', 'off']);
 export const DEFAULT_CUES = 'both';
 export const CUES_KEY = '@volyume_clip_cues';
 
+/** How long a video is kept before the phone clears it on its own (D229
+ *  addendum 15, the founder: "A, default 7 days but they can have an option
+ *  for longer"). In days; 0 is "until I delete it". A video the person marks
+ *  Keep, and a video of a PR set, is never cleared. Remembered on the phone. */
+export const KEEP_OPTIONS = Object.freeze([7, 30, 90, 0]);
+export const DEFAULT_KEEP_DAYS = 7;
+export const KEEP_DAYS_KEY = '@volyume_clip_keep_days';
+/** The first sweep notes when the rule arrived, so a video recorded before
+ *  the update gets the full window from then, never a surprise clear. */
+export const KEEP_SINCE_KEY = '@volyume_clip_keep_since';
+export const DAY_MS = 24 * 60 * 60 * 1000;
+/** Recording refuses calmly under this much free space (a two minute video
+ *  is about 90 MB; the recorder and the export both need headroom). */
+export const MIN_FREE_BYTES = 500 * 1024 * 1024;
+
 /** Where a clip was recorded: for a set ('workout'), on the summary after the
  *  workout ('summary'), or from the share screen ('share', which can be during
  *  the workout, so it is not "after"). A clip with no exercise reads "After
@@ -154,6 +169,23 @@ export const CLIP_STRINGS = Object.freeze({
   viewWideA11y: 'View: wide. Fits more of the room into the video.',
   // Addendum 14: the logger's door to the videos a workout holds.
   yourVideos: 'Your videos',
+  // Addendum 15: keeping, clearing and space.
+  keepLabel: 'Keep',
+  keptLabel: 'Kept',
+  keepA11y: 'Keep this video until you delete it',
+  keptA11y: 'Kept until you delete it. Double tap to stop keeping it',
+  keptPRA11y: 'Kept, a PR set',
+  keepFailed: "That change wasn't saved. You can try again.",
+  noSpace: 'There is not enough space on this phone to record a video. Free up some space and try again.',
+  settingsVideosLabel: 'Videos on this phone',
+  settingsKeepLabel: 'Keep videos for',
+  settingsKeepSub: 'A video you keep, and a video of a PR set, stays until you delete it.',
+  settingsDeleteAllLabel: 'Delete all videos',
+  settingsDeleteAllSub: 'Removes every workout video from this phone. The workouts themselves stay.',
+  deleteAllConfirmTitle: 'Delete all videos?',
+  deleteAllConfirmBody: 'Every workout video on this phone will be removed. The workouts themselves stay. This cannot be undone.',
+  deleteAllDone: 'Your videos have been removed.',
+  deleteAllFailed: "Some videos couldn't be removed. You can try again.",
   permissionDenied: 'Volyume needs camera access to record a video.',
   closeA11y: 'Cancel recording',
   stopA11y: 'Stop recording',
@@ -221,6 +253,56 @@ export function lengthA11yLabel(lengthSeconds) {
   return n >= 120 && n % 60 === 0
     ? `Recording length, ${n / 60} minutes`
     : `Recording length, ${n} seconds`;
+}
+
+/** The keep setting's words: "7 days", "30 days", "90 days", "Until I delete them". */
+export function keepLabel(days) {
+  const n = Number(days);
+  if (!KEEP_OPTIONS.includes(n)) return keepLabel(DEFAULT_KEEP_DAYS);
+  return n === 0 ? 'Until I delete them' : `${n} days`;
+}
+
+/** A stored value back to a keep setting, else the default. */
+export function parseKeepDays(raw) {
+  // Nothing stored is the default, never "until I delete them" (Number(null)
+  // is 0, which is that option's value).
+  if (raw == null || raw === '') return DEFAULT_KEEP_DAYS;
+  const n = Number(raw);
+  return KEEP_OPTIONS.includes(n) ? n : DEFAULT_KEEP_DAYS;
+}
+
+/** The line under a workout's videos that says the rule, in the person's
+ *  own setting: "Kept for 7 days unless you keep one. Change this in Settings,
+ *  under Your data." */
+export function keepRuleLine(days) {
+  const n = parseKeepDays(days);
+  if (n === 0) return 'Kept until you delete them. Change this in Settings, under Your data.';
+  return `Kept for ${n} days unless you keep one. Change this in Settings, under Your data.`;
+}
+
+/** Bytes in plain words: "68 MB", "1.2 GB". */
+export function formatBytes(bytes) {
+  const b = Math.max(0, Number(bytes) || 0);
+  if (b >= 1024 * 1024 * 1024) return `${(b / (1024 * 1024 * 1024)).toFixed(1).replace(/\.0$/, '')} GB`;
+  return `${Math.round(b / (1024 * 1024))} MB`;
+}
+
+/** "3 videos, 210 MB" for a settings row or the sheet's foot. */
+export function storageLine(count, bytes) {
+  const n = Number(count) || 0;
+  if (n === 0) return 'No videos on this phone.';
+  return `${n} ${n === 1 ? 'video' : 'videos'}, ${formatBytes(bytes)}`;
+}
+
+/** Whether a video is due to be cleared: not kept, and older than the window
+ *  counted from the later of its recording and the rule's arrival. 0 days
+ *  means never. Pure. */
+export function clipExpired({ createdAt, keptAt }, { keepDays, since, now }) {
+  const days = parseKeepDays(keepDays);
+  if (days === 0) return false;
+  if (keptAt) return false;
+  const from = Math.max(Number(createdAt) || 0, Number(since) || 0);
+  return from + days * DAY_MS <= now;
 }
 
 /** The cues control's own text and accessibility label. */

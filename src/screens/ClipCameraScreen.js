@@ -92,6 +92,7 @@ import {
   parseLength, parseGuides, leadInLabel, leadInA11yLabel, lengthLabel, lengthA11yLabel, startA11yLabel,
   guidesLabel, guidesA11yLabel,
   CUES_KEY, DEFAULT_CUES, nextCues, parseCues, cuesLabel, cuesA11yLabel, cuesHaveSound, cuesHaveLight,
+  MIN_FREE_BYTES,
 } from '../lib/clips/rules';
 import { cameraTipFor } from '../lib/clips/cameraTips';
 import { cueFor, pickLenses, PULSE_MS, END_PULSE_GAP_MS } from '../lib/clips/cues';
@@ -509,20 +510,20 @@ export default function ClipCameraScreen({ navigation, route }) {
   }, [pulseLight]);
 
   // After a recording that ran to its length (never after a stop by hand:
-  // the person is at the phone then): two soft descending pips and two light
-  // pulses, once the recorder has finished the file so nothing is in the
-  // video. The screen waits for the second beat before it leaves.
+  // the person is at the phone then): two soft descending pips 300 ms apart
+  // and ONE light pulse on the first, once the recorder has finished the
+  // file so nothing is in the video. One pulse, not two: the light never
+  // flashes more than once a second (cues.js; fresh-eyes review 2026-10-16).
+  // The screen waits for the second beat before it leaves.
   const endCue = useCallback(() => {
     const mode = cuesRef.current;
     if (!cuesHaveSound(mode) && !cuesHaveLight(mode)) return;
     endCueUntilRef.current = Date.now() + END_CUE_TOTAL_MS;
-    const beat = (key) => {
-      if (!aliveRef.current) return;
-      if (cuesHaveSound(mode)) playCueBeep(key);
-      if (cuesHaveLight(mode)) pulseLight(endCueTimers);
-    };
-    beat('two');
-    endCueTimers.current.push(setTimeout(() => beat('three'), END_PULSE_GAP_MS));
+    if (cuesHaveSound(mode)) playCueBeep('two');
+    if (cuesHaveLight(mode)) pulseLight(endCueTimers);
+    if (cuesHaveSound(mode)) {
+      endCueTimers.current.push(setTimeout(() => { if (aliveRef.current) playCueBeep('three'); }, END_PULSE_GAP_MS));
+    }
   }, [pulseLight]);
 
   // Ask the recorder to stop, and keep asking every STOP_ASK_EVERY_MS until
@@ -625,6 +626,22 @@ export default function ClipCameraScreen({ navigation, route }) {
     return !isFull(held);
   }, [userId, workoutId]);
 
+  // Addendum 15: a phone that is nearly full is told so before anything is
+  // recorded, instead of a failed save after the set. A phone that cannot
+  // say its free space (an old build, a refused read) is allowed to try.
+  const hasSpace = useCallback(async () => {
+    try {
+      const free = await FileSystem.getFreeDiskStorageAsync?.();
+      if (typeof free === 'number' && Number.isFinite(free) && free < MIN_FREE_BYTES) {
+        toast.show(CLIP_STRINGS.noSpace, { variant: 'warning' });
+        return false;
+      }
+    } catch (e) {
+      logError('ClipCamera.freeSpace', e);
+    }
+    return true;
+  }, [toast]);
+
   // A TAP: while idle, the countdown; while recording, stop early.
   const handleRecordTap = useCallback(async () => {
     if (phaseRef.current === 'recording') { stopRecording(); return; }
@@ -634,8 +651,10 @@ export default function ClipCameraScreen({ navigation, route }) {
     const room = await hasRoom();
     if (!aliveRef.current || phaseRef.current !== 'starting') return;
     if (!room) { showFull(); return; }
+    if (!(await hasSpace())) { setPhase('ready'); return; }
+    if (!aliveRef.current || phaseRef.current !== 'starting') return;
     beginCountdown();
-  }, [ready, setPhase, stopRecording, hasRoom, showFull, beginCountdown]);
+  }, [ready, setPhase, stopRecording, hasRoom, hasSpace, showFull, beginCountdown]);
 
   // A HOLD: records at once, no countdown, for as long as the press lasts.
   // A long press DURING a tap recording stops it (the tap's release is not
@@ -649,8 +668,11 @@ export default function ClipCameraScreen({ navigation, route }) {
     if (!aliveRef.current || phaseRef.current !== 'starting') return;
     if (!holdActiveRef.current) { setPhase('ready'); return; } // let go while checking
     if (!room) { holdActiveRef.current = false; showFull(); return; }
+    if (!(await hasSpace())) { holdActiveRef.current = false; setPhase('ready'); return; }
+    if (!aliveRef.current || phaseRef.current !== 'starting') return;
+    if (!holdActiveRef.current) { setPhase('ready'); return; }
     startRecording('hold');
-  }, [ready, setPhase, hasRoom, showFull, startRecording, stopRecording]);
+  }, [ready, setPhase, hasRoom, hasSpace, showFull, startRecording, stopRecording]);
 
   // Letting go ends a hold. (A tap's release does nothing here.)
   const handleRelease = useCallback(() => {

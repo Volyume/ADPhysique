@@ -1,3 +1,6 @@
+// 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
+// after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
+// window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
 /**
  * D219 lane S1: programmes.plan_facts, the one synced JSON column that holds
  * the facts a plan built by the new planner carries (register D219 "Build
@@ -118,7 +121,7 @@ describe('the local migration', () => {
     // 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
     // inert against these fixtures), so every last-N window and user_version reset below moves by one
     // (a mechanical +1 re-anchor, as LR2 did before it).
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 4}`);
     await runMigrations(adaptRaw(raw));
 
     const row = raw.prepare('SELECT id, name, updated_at, plan_facts FROM programmes WHERE id = ?').get('p-old');
@@ -131,12 +134,12 @@ describe('the local migration', () => {
     raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT, updated_at INTEGER)');
     raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
     raw.prepare('INSERT INTO programmes (id, name, updated_at) VALUES (?, ?, ?)').run('p-old', 'Old plan', 111);
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 4}`);
     await runMigrations(adaptRaw(raw));
     raw.prepare('UPDATE programmes SET plan_facts = ? WHERE id = ?').run('{"version":2}', 'p-old');
     const before = raw.prepare('SELECT * FROM programmes WHERE id = ?').get('p-old');
 
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 4}`);
     await expect(runMigrations(adaptRaw(raw))).resolves.not.toThrow();
 
     expect(raw.prepare('SELECT * FROM programmes WHERE id = ?').get('p-old')).toEqual(before);

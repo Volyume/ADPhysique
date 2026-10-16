@@ -782,7 +782,7 @@ describe('the cues (addendum 13, A): sound and light for a phone propped away fr
     expect(text(tree)).not.toContain('"Light only"');
   });
 
-  test('the end cue (addendum 13, C): a recording that reached its length by itself gets two descending pips and two pulses, 300 ms apart, after the file is finished', async () => {
+  test('the end cue (addendum 13, C): a recording that reached its length by itself gets two descending pips 300 ms apart and ONE pulse, after the file is finished', async () => {
     const tree = await mount();
     await startTapRecording(tree);
     mockCueBeep.mockClear();
@@ -797,7 +797,8 @@ describe('the cues (addendum 13, A): sound and light for a phone propped away fr
     await advance(100);
     expect(mockCueBeep).toHaveBeenCalledTimes(2);
     expect(mockCueBeep).toHaveBeenLastCalledWith('three');
-    expect(torch()).toBe(true);
+    // The second beat is sound only: the light never flashes twice in a second.
+    expect(torch()).toBe(false);
     await advance(200);
     expect(torch()).toBe(false);
     expect(mockSaveClip).toHaveBeenCalledTimes(1);
@@ -1263,5 +1264,41 @@ describe('source rules', () => {
       expect(src).not.toMatch(/\brgba?\s*\(/);
       expect(src).not.toMatch(/\bfontSize\s*:\s*\d/);
     }
+  });
+});
+
+// D229 addendum 15: a phone that is nearly full is told so before anything
+// is recorded, instead of a failed save after the set.
+describe('free space (addendum 15)', () => {
+  afterEach(() => { FileSystem.getFreeDiskStorageAsync.mockReset(); FileSystem.getFreeDiskStorageAsync.mockResolvedValue(undefined); });
+
+  test('under 500 MB free: a calm warning and no countdown, for a tap and for a hold', async () => {
+    FileSystem.getFreeDiskStorageAsync.mockResolvedValue(200 * 1024 * 1024);
+    const tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    await advance(5000);
+    expect(mockRecordAsync).not.toHaveBeenCalled();
+    expect(mockShow).toHaveBeenCalledWith('There is not enough space on this phone to record a video. Free up some space and try again.', { variant: 'warning' });
+    expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 3 seconds');
+    mockShow.mockClear();
+    const node = await startHold(tree);
+    await release(node);
+    expect(mockRecordAsync).not.toHaveBeenCalled();
+    expect(mockShow).toHaveBeenCalledTimes(1);
+  });
+
+  test('with room to spare it records; a phone that cannot say its free space is allowed to try', async () => {
+    FileSystem.getFreeDiskStorageAsync.mockResolvedValue(4 * 1024 * 1024 * 1024);
+    let tree = await mount();
+    await startTapRecording(tree);
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+    await act(async () => { tree.unmount(); });
+    mockRecordAsync.mockClear();
+    FileSystem.getFreeDiskStorageAsync.mockRejectedValue(new Error('unsupported'));
+    tree = await mount();
+    await startTapRecording(tree);
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+    expect(mockShow).not.toHaveBeenCalled();
   });
 });

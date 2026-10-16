@@ -2953,6 +2953,24 @@ const SCHEMA_MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS idx_workout_clips_user_workout ON workout_clips(user_id, workout_id)',
   ],
+  // D229 addendum 15 (2026-10-16, the founder: videos must not fill the
+  // phone): a video is kept for a set number of days (default 7, the
+  // person's choice in Settings) unless it is kept on purpose, by the person
+  // ("Keep" in the videos sheet) or by the app (a video of a PR set).
+  //   Purpose: kept_at marks a video the sweep must never clear (epoch ms),
+  //             kept_reason says who kept it ('person' or 'pr').
+  //   Applied locally: yes, on every device that reaches this index. Two
+  //             nullable columns added; nothing existing moves. "duplicate
+  //             column" on a second run is proven benign above
+  //             (isProvenBenignMigrationError).
+  //   Applied remotely: NOT APPLICABLE (workout_clips has no cloud table).
+  //   Safe to re-run: yes.
+  //   Rollback: leave the columns in place; a reader treats NULL as not kept,
+  //             which is the state before this migration.
+  [
+    'ALTER TABLE workout_clips ADD COLUMN kept_at INTEGER',
+    'ALTER TABLE workout_clips ADD COLUMN kept_reason TEXT',
+  ],
 ];
 
 // Tests and diagnostics may compare a database's durable marker with the

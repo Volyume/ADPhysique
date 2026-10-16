@@ -26,7 +26,7 @@ To run the app and coach you, Volyume may use:
 - Crash and diagnostic events, scrubbed before they leave the device
 - If you join Community: your Community profile, posts, comments, reactions, messages, groups and the people you follow (section 5)
 
-Progress photo image files stay on your device unless you choose to share or export them. Workout video files stay on your device too: they are never uploaded, are not included in backups, and are deleted when you delete the workout or your account. Volyume Score is a visual progress feature, not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment.
+Progress photo image files stay on your device unless you choose to share or export them. Workout video files stay on your device too: they are never uploaded, are not included in backups, and are deleted when you delete the workout or your account. To save space, a video is cleared from your device after 7 days unless you keep it; you can choose a longer time, or to keep every video, in Settings under Your data. Volyume Score is a visual progress feature, not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment.
 
 ## 3. Why we collect this data
 

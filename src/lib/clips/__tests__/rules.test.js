@@ -366,3 +366,61 @@ describe('the ruled words', () => {
     expect(CLIP_STRINGS.full).toMatch(/Delete one/);
   });
 });
+
+// ── Keeping and clearing (D229 addendum 15) ──────────────────────────────────
+const {
+  KEEP_OPTIONS, DEFAULT_KEEP_DAYS, DAY_MS, MIN_FREE_BYTES, keepLabel, parseKeepDays, keepRuleLine,
+  formatBytes, storageLine, clipExpired,
+} = require('../rules');
+
+describe('the keep window (addendum 15: "A, default 7 days but they can have an option for longer")', () => {
+  test('7 days by default, with 30, 90 and until I delete them as the choices', () => {
+    expect(KEEP_OPTIONS).toEqual([7, 30, 90, 0]);
+    expect(DEFAULT_KEEP_DAYS).toBe(7);
+    expect(keepLabel(7)).toBe('7 days');
+    expect(keepLabel(90)).toBe('90 days');
+    expect(keepLabel(0)).toBe('Until I delete them');
+    expect(keepLabel(12)).toBe('7 days');
+  });
+
+  test('nothing stored, blank or nonsense reads as 7, never as "until I delete them"', () => {
+    expect(parseKeepDays(null)).toBe(7);
+    expect(parseKeepDays(undefined)).toBe(7);
+    expect(parseKeepDays('')).toBe(7);
+    expect(parseKeepDays('banana')).toBe(7);
+    expect(parseKeepDays('0')).toBe(0);
+    expect(parseKeepDays('30')).toBe(30);
+  });
+
+  test('the sheet says the rule in the person\'s own setting, and where to change it', () => {
+    expect(keepRuleLine(7)).toBe('Kept for 7 days unless you keep one. Change this in Settings, under Your data.');
+    expect(keepRuleLine(0)).toBe('Kept until you delete them. Change this in Settings, under Your data.');
+    expect(keepRuleLine(null)).toBe(keepRuleLine(7));
+  });
+
+  test('sizes in plain words', () => {
+    expect(formatBytes(68 * 1024 * 1024)).toBe('68 MB');
+    expect(formatBytes(1.25 * 1024 * 1024 * 1024)).toBe('1.3 GB');
+    expect(formatBytes(2 * 1024 * 1024 * 1024)).toBe('2 GB');
+    expect(storageLine(0, 0)).toBe('No videos on this phone.');
+    expect(storageLine(1, 70 * 1024 * 1024)).toBe('1 video, 70 MB');
+    expect(storageLine(3, 210 * 1024 * 1024)).toBe('3 videos, 210 MB');
+  });
+
+  test('a video is due when it is not kept and older than the window counted from the later of its recording and the rule\'s arrival; 0 is never', () => {
+    const now = 1_800_000_000_000;
+    const since = now - 100 * DAY_MS;
+    expect(clipExpired({ createdAt: now - 8 * DAY_MS, keptAt: null }, { keepDays: 7, since, now })).toBe(true);
+    expect(clipExpired({ createdAt: now - 6 * DAY_MS, keptAt: null }, { keepDays: 7, since, now })).toBe(false);
+    expect(clipExpired({ createdAt: now - 8 * DAY_MS, keptAt: now }, { keepDays: 7, since, now })).toBe(false);
+    expect(clipExpired({ createdAt: now - 400 * DAY_MS, keptAt: null }, { keepDays: 0, since, now })).toBe(false);
+    // Recorded long before the rule arrived: the window runs from the arrival.
+    expect(clipExpired({ createdAt: now - 400 * DAY_MS, keptAt: null }, { keepDays: 7, since: now - 6 * DAY_MS, now })).toBe(false);
+    expect(clipExpired({ createdAt: now - 400 * DAY_MS, keptAt: null }, { keepDays: 7, since: now - 7 * DAY_MS, now })).toBe(true);
+    expect(clipExpired({ createdAt: now - 31 * DAY_MS, keptAt: null }, { keepDays: 30, since, now })).toBe(true);
+  });
+
+  test('recording refuses under 500 MB free', () => {
+    expect(MIN_FREE_BYTES).toBe(500 * 1024 * 1024);
+  });
+});

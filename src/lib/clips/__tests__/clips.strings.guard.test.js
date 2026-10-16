@@ -86,6 +86,10 @@ const PR_MOMENT_KEYS = Object.freeze([
   'summaryLabelPR',
   'summarySubPRTail',
   'summarySubPRUnnamed',
+  // D229 addendum 15: a video of a PR set is kept by the app; these two say
+  // so in the same terms (the set's record, never a claim about the video).
+  'keptPRA11y',
+  'settingsKeepSub',
 ]);
 const PR_MOMENT_WORDS = PR_MOMENT_KEYS.map((k) => CLIP_STRINGS[k]);
 

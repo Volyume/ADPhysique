@@ -1,3 +1,6 @@
+// 2026-10-16 (D229 addendum 15, keep window): workout_clips gained kept_at and kept_reason in a migration appended
+// after this file's window (two nullable columns on a table these fixtures never touch), so every last-N
+// window and user_version offset below moved by one again (the same mechanical +1 re-anchor as 2026-10-15).
 /**
  * Exercise library expansion 2026-09-05, EL-9/EL-7 (database.js
  * SCHEMA_MIGRATIONS tail): two nullable columns on routine_exercises
@@ -77,7 +80,7 @@ async function runLast(raw, count) {
 
 test('a pre-migration database upgrades: existing rows read NULL on every new column', async () => {
   const raw = freshDb();
-  await runLast(raw, 5);
+  await runLast(raw, 6);
 
   const re = raw.prepare('SELECT group_kind, round_rest_seconds, updated_at FROM routine_exercises WHERE id = ?').get('re-1');
   expect(re.group_kind).toBeNull();
@@ -91,13 +94,13 @@ test('a pre-migration database upgrades: existing rows read NULL on every new co
 
 test('is idempotent: a second run changes nothing and errors on neither run', async () => {
   const raw = freshDb();
-  const total = await runLast(raw, 5);
+  const total = await runLast(raw, 6);
   const before = {
     re: raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1'),
     set: raw.prepare('SELECT * FROM workout_sets WHERE id = ?').get('set-1'),
   };
 
-  raw.exec(`PRAGMA user_version = ${total - 5}`);
+  raw.exec(`PRAGMA user_version = ${total - 6}`);
   await expect(runMigrations(adapt(raw))).resolves.not.toThrow();
 
   expect(raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1')).toEqual(before.re);
@@ -106,7 +109,7 @@ test('is idempotent: a second run changes nothing and errors on neither run', as
 
 test('the new columns round-trip a written value (group_kind/round_rest_seconds/evidence_class)', async () => {
   const raw = freshDb();
-  await runLast(raw, 5);
+  await runLast(raw, 6);
 
   raw.prepare('UPDATE routine_exercises SET group_kind = ?, round_rest_seconds = ? WHERE id = ?')
     .run('circuit', 90, 're-1');

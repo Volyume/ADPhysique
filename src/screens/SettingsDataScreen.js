@@ -21,6 +21,12 @@ import { formatLastSynced } from '../lib/syncStatusLabel';
 import { withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
+import Chip from '../components/Chip';
+import { spacing } from '../styles/theme';
+import {
+  getClipsStorage, getKeepDays, setKeepDays, sweepExpiredClips, deleteAllClipsForUser,
+} from '../lib/clips/store';
+import { CLIP_STRINGS, KEEP_OPTIONS, keepLabel, storageLine } from '../lib/clips/rules';
 
 // L05-SL1 (design audit 2026-07-09): the global "skip the name step" flag
 // ScanLabelScreen.js sets when a label scan's "Skip name" is tapped
@@ -53,6 +59,62 @@ export default function SettingsDataScreen({ navigation }) {
   // L05-SL1: mirrors the persisted flag so the row reflects the real state,
   // not just an intent. Defaults false (asks for a name) until read on focus.
   const [scanSkipName, setScanSkipName] = useState(false);
+  // D229 addendum 15: the workout videos on this phone (count and size) and
+  // how long they are kept. Read on focus; the sweep runs after a change so
+  // a shorter window takes effect at once.
+  const [videos, setVideos] = useState(null); // { count, bytes } | null
+  const [keepDays, setKeepDaysState] = useState(null);
+  const [deletingVideos, setDeletingVideos] = useState(false);
+
+  const refreshVideos = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const [storage, days] = await Promise.all([getClipsStorage(user.id), getKeepDays()]);
+      setVideos(storage);
+      setKeepDaysState(days);
+    } catch (e) {
+      logError('SettingsData.videos', e);
+    }
+  }, [user?.id]);
+
+  async function chooseKeepDays(days) {
+    if (days === keepDays) return;
+    haptics.selection();
+    setKeepDaysState(days);
+    try {
+      await setKeepDays(days);
+      await sweepExpiredClips(user?.id, { force: true });
+      await refreshVideos();
+    } catch (e) {
+      logError('SettingsData.keepDays', e);
+      toast.show(CLIP_STRINGS.keepFailed, { variant: 'error' });
+    }
+  }
+
+  function handleDeleteAllVideos() {
+    if (deletingVideos || !videos?.count) return;
+    appAlert(CLIP_STRINGS.deleteAllConfirmTitle, CLIP_STRINGS.deleteAllConfirmBody, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: CLIP_STRINGS.settingsDeleteAllLabel,
+        style: 'destructive',
+        onPress: async () => {
+          if (!user?.id) return;
+          setDeletingVideos(true);
+          try {
+            await deleteAllClipsForUser(user.id);
+            toast.show(CLIP_STRINGS.deleteAllDone, { variant: 'success' });
+          } catch (e) {
+            logError('SettingsData.deleteAllVideos', e);
+            toast.show(CLIP_STRINGS.deleteAllFailed, { variant: 'error' });
+          } finally {
+            setDeletingVideos(false);
+            refreshVideos();
+          }
+        },
+      },
+    ]);
+  }
 
   // Item 8 (D141): the runner's getStatus() snapshot only ever carried
   // queue_depth (the live retry queue). Extending this one path - rather
@@ -80,9 +142,10 @@ export default function SettingsDataScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       refreshSyncSnapshot();
+      refreshVideos();
       AsyncStorage.getItem(SCAN_SKIP_NAME_KEY)
         .then(v => setScanSkipName(v === 'true')).catch(() => {});
-    }, [refreshSyncSnapshot]),
+    }, [refreshSyncSnapshot, refreshVideos]),
   );
 
   // L05-SL1: the settings-side control for the flag ScanLabelScreen's "Skip
@@ -404,6 +467,49 @@ export default function SettingsDataScreen({ navigation }) {
         />
       </View>
 
+      {/* D229 addendum 15 (the founder: videos must not fill the phone):
+          how many workout videos this phone holds and their size, how long
+          they are kept (default 7 days; a kept video and a PR set's video
+          stay), and one way to remove them all. */}
+      <SectionHeader title="Workout videos" />
+      <View style={[styles.section, live.section]}>
+        <SettingRow
+          icon="videocam-outline"
+          label={CLIP_STRINGS.settingsVideosLabel}
+          sub={videos ? storageLine(videos.count, videos.bytes) : 'Working it out...'}
+          showArrow={false}
+          accessibilityLabel={`${CLIP_STRINGS.settingsVideosLabel}, ${videos ? storageLine(videos.count, videos.bytes) : 'working it out'}`}
+        />
+        <SettingRow
+          icon="time-outline"
+          label={CLIP_STRINGS.settingsKeepLabel}
+          sub={CLIP_STRINGS.settingsKeepSub}
+          showArrow={false}
+          accessibilityLabel={`${CLIP_STRINGS.settingsKeepLabel}, ${keepDays == null ? '' : keepLabel(keepDays)}`}
+        />
+        <View style={localStyles.keepRow} accessibilityRole="radiogroup" accessibilityLabel={CLIP_STRINGS.settingsKeepLabel}>
+          {KEEP_OPTIONS.map((days) => (
+            <Chip
+              key={days}
+              label={keepLabel(days)}
+              selected={keepDays === days}
+              onPress={() => chooseKeepDays(days)}
+              accessibilityRole="radio"
+              accessibilityLabel={keepLabel(days)}
+              testID={`settings-keep-${days}`}
+            />
+          ))}
+        </View>
+        <SettingRow
+          icon="trash-outline"
+          label={deletingVideos ? 'Removing...' : CLIP_STRINGS.settingsDeleteAllLabel}
+          sub={CLIP_STRINGS.settingsDeleteAllSub}
+          destructive
+          showArrow={!deletingVideos}
+          onPress={deletingVideos || !videos?.count ? null : handleDeleteAllVideos}
+        />
+      </View>
+
       {/* L04-9 (design audit 2026-07-09): isolated below the routine sync/
           export/backup rows, matching SettingsAccountScreen's "Account
           access" pattern, so a destructive tap is never next to a routine
@@ -424,3 +530,12 @@ export default function SettingsDataScreen({ navigation }) {
     </SettingsPage>
   );
 }
+
+// D229 addendum 15: the keep choices sit as a row of chips under their label
+// (the pattern SettingsDisplayScreen uses for the theme and energy units).
+const localStyles = {
+  keepRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
+  },
+};

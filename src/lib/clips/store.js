@@ -28,12 +28,18 @@
  * profileAvatar.js.
  */
 import * as FileSystem from 'expo-file-system/legacy';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, uid } from '../database';
 import { logError } from '../errorLog';
 import {
   MAX_CLIPS_PER_WORKOUT,
   MAX_CLIP_MS,
   CLIP_SOURCES,
+  KEEP_DAYS_KEY,
+  KEEP_SINCE_KEY,
+  parseKeepDays,
+  clipExpired,
+  clipMatchesPR,
 } from './rules';
 
 /** Where the clip files live. */
@@ -112,6 +118,9 @@ function rowToClip(row) {
     height: row.height ?? null,
     createdAt: Number(row.created_at) || 0,
     source: row.source,
+    // Addendum 15: kept on purpose (never cleared by the sweep), and by whom.
+    keptAt: row.kept_at != null ? Number(row.kept_at) || 0 : null,
+    keptReason: row.kept_reason ?? null,
   };
 }
 
@@ -296,6 +305,134 @@ export async function deleteClipsForWorkout(workoutId) {
   } finally {
     emitClipsChanged();
   }
+}
+
+// ── Keeping and clearing (D229 addendum 15) ──────────────────────────────────
+// A video is kept for the person's chosen number of days (Settings, default
+// 7) and then cleared by the sweep, unless it is kept on purpose: by the
+// person ("Keep" on its row) or by the app (a video of a PR set). Nothing
+// here consults a safety state: clearing a person's own old videos is
+// housekeeping, and viewing or deleting them is never withheld.
+
+/** Mark one clip kept (reason 'person' or 'pr') or not kept. False when
+ *  there was no such clip. Re-keeping a kept clip keeps the earlier mark. */
+export async function setClipKept(id, kept, reason = 'person') {
+  if (!id) return false;
+  const d = await db();
+  const row = await d.getFirstAsync('SELECT id, kept_at FROM workout_clips WHERE id = ?', [id]);
+  if (!row) return false;
+  if (kept) {
+    if (row.kept_at) return true;
+    await d.runAsync('UPDATE workout_clips SET kept_at = ?, kept_reason = ? WHERE id = ?', [Date.now(), reason === 'pr' ? 'pr' : 'person', id]);
+  } else {
+    await d.runAsync('UPDATE workout_clips SET kept_at = NULL, kept_reason = NULL WHERE id = ?', [id]);
+  }
+  emitClipsChanged();
+  return true;
+}
+
+/**
+ * Keep every clip of this workout that is a video of one of `prs` (the
+ * summary's PR list; the pairing is clipMatchesPR's, by exercise and set).
+ * Called by the summary once its PRs are known. Returns how many were newly
+ * kept. Best effort: a failure is logged, never thrown into the summary.
+ */
+export async function keepClipsForPRs(userId, workoutId, prs) {
+  if (!userId || !workoutId || !Array.isArray(prs) || prs.length === 0) return 0;
+  let kept = 0;
+  try {
+    const clips = await listClipsForWorkout(userId, workoutId);
+    for (const clip of clips) {
+      if (clip.keptAt) continue;
+      if (prs.some((pr) => clipMatchesPR(clip, pr))) {
+        // eslint-disable-next-line no-await-in-loop
+        if (await setClipKept(clip.id, true, 'pr')) kept += 1;
+      }
+    }
+  } catch (e) {
+    logError('clips.store.keepForPRs', e, { workoutId });
+  }
+  return kept;
+}
+
+/** The person's keep setting, in days (0 is never). */
+export async function getKeepDays() {
+  try {
+    return parseKeepDays(await AsyncStorage.getItem(KEEP_DAYS_KEY));
+  } catch (e) {
+    logError('clips.store.keepDaysRead', e);
+    return parseKeepDays(null);
+  }
+}
+
+/** Remember the keep setting. */
+export async function setKeepDays(days) {
+  const n = parseKeepDays(days);
+  await AsyncStorage.setItem(KEEP_DAYS_KEY, String(n));
+  return n;
+}
+
+// The sweep runs at most this often per app session: it reads every row,
+// and once a day is plenty for a rule counted in days.
+const SWEEP_EVERY_MS = 6 * 60 * 60 * 1000;
+let lastSweepAt = 0;
+
+/**
+ * Clear the videos that are past the person's keep window: not kept, and
+ * recorded (or, for a video recorded before the rule arrived, the rule's
+ * arrival) more than the window ago. `force` skips the once-per-session
+ * throttle (the settings screen after a change). Returns how many were
+ * cleared. Never throws: a failure is logged and the next sweep tries again.
+ */
+export async function sweepExpiredClips(userId, { force = false, now = Date.now() } = {}) {
+  if (!userId) return 0;
+  if (!force && now - lastSweepAt < SWEEP_EVERY_MS) return 0;
+  lastSweepAt = now;
+  try {
+    const keepDays = await getKeepDays();
+    let since = Number(await AsyncStorage.getItem(KEEP_SINCE_KEY)) || 0;
+    if (!since) {
+      since = now;
+      await AsyncStorage.setItem(KEEP_SINCE_KEY, String(since));
+    }
+    if (keepDays === 0) return 0;
+    const d = await db();
+    const rows = await d.getAllAsync('SELECT * FROM workout_clips WHERE user_id = ? AND kept_at IS NULL', [userId]);
+    const due = (Array.isArray(rows) ? rows : []).filter((row) => clipExpired(
+      { createdAt: row.created_at, keptAt: row.kept_at },
+      { keepDays, since, now },
+    ));
+    if (due.length === 0) return 0;
+    try {
+      return await deleteRowsAndFiles(d, due);
+    } finally {
+      emitClipsChanged();
+    }
+  } catch (e) {
+    logError('clips.store.sweep', e);
+    return 0;
+  }
+}
+
+/** How many videos the account holds on this phone, and their size in bytes
+ *  (a file that cannot be measured counts as 0). `workoutId` narrows it to one
+ *  workout. */
+export async function getClipsStorage(userId, workoutId = null) {
+  if (!userId) return { count: 0, bytes: 0 };
+  const d = await db();
+  const rows = workoutId
+    ? await d.getAllAsync('SELECT uri FROM workout_clips WHERE user_id = ? AND workout_id = ?', [userId, workoutId])
+    : await d.getAllAsync('SELECT uri FROM workout_clips WHERE user_id = ?', [userId]);
+  const list = Array.isArray(rows) ? rows : [];
+  let bytes = 0;
+  for (const row of list) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const info = await FileSystem.getInfoAsync(rebase(row.uri));
+      if (info?.exists) bytes += Number(info.size) || 0;
+    } catch (_) { /* a file that cannot be measured counts as 0 */ }
+  }
+  return { count: list.length, bytes };
 }
 
 /**

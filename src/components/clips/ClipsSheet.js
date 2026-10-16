@@ -36,11 +36,13 @@ import { appAlert } from '../AppAlert';
 import useTheme from '../../hooks/useTheme';
 import { colors, spacing, type } from '../../styles/theme';
 import { logError } from '../../lib/errorLog';
-import { listClipsForWorkout, deleteClip } from '../../lib/clips/store';
+import { listClipsForWorkout, deleteClip, setClipKept, getClipsStorage, getKeepDays } from '../../lib/clips/store';
 import {
   CLIP_STRINGS,
   clipDisplayName,
   clipRowTitle,
+  keepRuleLine,
+  storageLine,
 } from '../../lib/clips/rules';
 
 // The player decodes video through Skia and the worklet runtime: required
@@ -70,6 +72,10 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
   const [busyId, setBusyId] = useState(null);
   // The one video playing under its row, if any.
   const [playingId, setPlayingId] = useState(null);
+  // Addendum 15: the size of this workout's videos and the keep rule, said
+  // once under the list so the person knows what stays and what clears.
+  const [storage, setStorage] = useState(null); // { count, bytes } | null
+  const [keepDays, setKeepDays] = useState(null);
   const { width: windowWidth } = useWindowDimensions();
   const aliveRef = useRef(true);
 
@@ -82,6 +88,13 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
     try {
       const rows = await listClipsForWorkout(userId, workoutId);
       if (aliveRef.current) { setClips(rows); setLoaded(true); }
+      // The size and the rule, best effort: the list never waits on them.
+      getClipsStorage(userId, workoutId)
+        .then((s) => { if (aliveRef.current) setStorage(s); })
+        .catch((e) => { logError('ClipsSheet.storage', e, { workoutId }); });
+      getKeepDays()
+        .then((days) => { if (aliveRef.current) setKeepDays(days); })
+        .catch(() => { /* the line is omitted; the rule itself is unaffected */ });
       return rows;
     } catch (e) {
       logError('ClipsSheet.load', e, { workoutId });
@@ -89,6 +102,24 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
       return [];
     }
   }, [userId, workoutId]);
+
+  // Addendum 15: Keep marks a video the sweep never clears; tapping Kept
+  // lets it go back to the rule. A video of a PR set is kept by the app and
+  // reads "Kept" too; the person can still release it.
+  async function toggleKeep(clip) {
+    if (busyId) return;
+    setBusyId(clip.id);
+    try {
+      await setClipKept(clip.id, !clip.keptAt);
+      await load();
+      onChanged?.();
+    } catch (e) {
+      logError('ClipsSheet.keep', e, { clipId: clip.id });
+      toast.show(CLIP_STRINGS.keepFailed, { variant: 'error' });
+    } finally {
+      if (aliveRef.current) setBusyId(null);
+    }
+  }
 
   useEffect(() => {
     if (!visible) return;
@@ -167,6 +198,18 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
                     accessibilityLabel={`${playing ? CLIP_STRINGS.playStopA11y : CLIP_STRINGS.playA11y}, ${name}`}
                   />
                   <Button
+                    title={clip.keptAt ? CLIP_STRINGS.keptLabel : CLIP_STRINGS.keepLabel}
+                    variant={clip.keptAt ? 'primary' : 'secondary'}
+                    size="sm"
+                    fullWidth={false}
+                    disabled={!!busyId}
+                    onPress={() => toggleKeep(clip)}
+                    accessibilityLabel={`${clip.keptAt
+                      ? (clip.keptReason === 'pr' ? CLIP_STRINGS.keptPRA11y : CLIP_STRINGS.keptA11y)
+                      : CLIP_STRINGS.keepA11y}, ${name}`}
+                    testID={`clip-keep-${clip.id}`}
+                  />
+                  <Button
                     title={CLIP_STRINGS.deleteLabel}
                     variant="secondary"
                     size="sm"
@@ -183,6 +226,11 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
           })}
         </Card>
       )}
+      {loaded && clips.length > 0 ? (
+        <Text style={[styles.foot, live.foot]} testID="clips-sheet-foot">
+          {`${storage ? `${storageLine(storage.count, storage.bytes)}. ` : ''}${keepDays == null ? '' : keepRuleLine(keepDays)}`}
+        </Text>
+      ) : null}
     </BottomSheet>
   );
 }
@@ -201,6 +249,7 @@ const styles = StyleSheet.create({
   rowText: { flex: 1 },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   when: { ...type.num('label'), color: colors.textMuted, marginTop: spacing.xxs },
+  foot: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.md },
 });
 
 // Frozen styles above, live colour and type mirrors here (the CP-10 pattern).
@@ -212,5 +261,6 @@ function buildLiveStyles(t) {
     rowDivided: { borderTopColor: t.colors.borderSubtle },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     when: { ...t.type.num('label'), color: t.colors.textMuted },
+    foot: { ...t.type.bodySm, color: t.colors.textMuted },
   };
 }

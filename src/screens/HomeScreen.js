@@ -285,6 +285,13 @@ export default function HomeScreen({ navigation, route }) {
     }
     if (user?.id) {
       migrateFoodDayKeysOnce(user.id);
+      // D229 addendum 15: clear the workout videos past the person's keep
+      // window (default 7 days; kept and PR videos never). Housekeeping,
+      // off the critical path, once per session.
+      // eslint-disable-next-line global-require
+      require('../lib/clips/store').sweepExpiredClips(user.id).catch(() => {
+        // Best-effort: the next session sweeps again.
+      });
     }
     // Only on user change: re-running on every activeWorkout change is
     // unnecessary (the guard already prevents clobbering a live session).

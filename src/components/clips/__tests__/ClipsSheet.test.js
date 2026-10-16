@@ -25,10 +25,15 @@ jest.mock('../ClipPlayer', () => {
 });
 const mockList = jest.fn();
 const mockDelete = jest.fn();
+const mockSetKept = jest.fn(async () => true);
 jest.mock('../../../lib/clips/store', () => ({
   listClipsForWorkout: (...a) => mockList(...a),
   deleteClip: (...a) => mockDelete(...a),
   countClipsForWorkout: jest.fn(async () => 0),
+  // Addendum 15: keeping, the size line and the keep setting.
+  setClipKept: (...a) => mockSetKept(...a),
+  getClipsStorage: jest.fn(async () => ({ count: 2, bytes: 150 * 1024 * 1024 })),
+  getKeepDays: jest.fn(async () => 7),
 }));
 
 import ClipsSheet from '../ClipsSheet';
@@ -173,5 +178,35 @@ describe('ClipsSheet', () => {
   test('no thumbnails: the sheet draws no image and imports no frame extractor', () => {
     expect(SOURCE).not.toMatch(/<Image\b|expo-image|expo-video-thumbnails|expo-av/);
     expect(SOURCE).toMatch(/NO thumbnails/);
+  });
+});
+
+// D229 addendum 15: Keep, Kept, and the line that says the rule and the size.
+describe('keeping (addendum 15)', () => {
+  test('each row has Keep; tapping it keeps the video through the store and the row then reads Kept', async () => {
+    mockList.mockResolvedValueOnce(CLIPS).mockResolvedValueOnce(CLIPS.map((c) => (c.id === 'c3' ? { ...c, keptAt: 1, keptReason: 'person' } : c)));
+    const tree = await render();
+    const keep = tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'clip-keep-c3')[0];
+    expect(keep.props.accessibilityLabel).toBe('Keep this video until you delete it, Back squat, set 2');
+    await act(async () => { keep.props.onPress(); });
+    await act(async () => {});
+    expect(mockSetKept).toHaveBeenCalledWith('c3', true);
+    const kept = tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'clip-keep-c3')[0];
+    expect(kept.props.accessibilityLabel).toBe('Kept until you delete it. Double tap to stop keeping it, Back squat, set 2');
+  });
+
+  test('a PR set\'s video reads Kept, a PR set; tapping Kept lets it go back to the rule', async () => {
+    mockList.mockResolvedValue(CLIPS.map((c) => (c.id === 'c1' ? { ...c, keptAt: 1, keptReason: 'pr' } : c)));
+    const tree = await render();
+    const kept = tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'clip-keep-c1')[0];
+    expect(kept.props.accessibilityLabel).toBe('Kept, a PR set, Bench press, set 3');
+    await act(async () => { kept.props.onPress(); });
+    expect(mockSetKept).toHaveBeenCalledWith('c1', false);
+  });
+
+  test('under the list: the size and the rule in the person\'s own setting', async () => {
+    const tree = await render();
+    const foot = tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'clips-sheet-foot')[0];
+    expect(foot.props.children).toBe('2 videos, 150 MB. Kept for 7 days unless you keep one. Change this in Settings, under Your data.');
   });
 });

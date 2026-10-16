@@ -14,4 +14,7 @@ module.exports = {
   makeDirectoryAsync: jest.fn().mockResolvedValue(undefined),
   copyAsync: jest.fn().mockResolvedValue(undefined),
   moveAsync: jest.fn().mockResolvedValue(undefined),
+  // D229 addendum 15: the camera's free-space check. Undefined means "the
+  // phone cannot say", which lets a recording try.
+  getFreeDiskStorageAsync: jest.fn().mockResolvedValue(undefined),
 };

@@ -202,3 +202,34 @@ describe('WorkoutHistoryScreen: the Videos row', () => {
     expect(HISTORY).not.toMatch(/usePhotoSuppression|useSafetyState|safetyState|getOpenEdPatternFlag/);
   });
 });
+
+// D229 addendum 15 (the founder: videos must not fill the phone): the keep
+// window's wiring, outside the clip store's own suite.
+describe('addendum 15: the keep window is wired in', () => {
+  const HOME = read('screens/HomeScreen.js');
+  const SETTINGS = read('screens/SettingsDataScreen.js');
+  const POLICY = read('screens/PrivacyPolicyScreen.js');
+
+  test('Home sweeps the expired videos once per session, off the critical path, best effort', () => {
+    expect(HOME).toMatch(/require\('\.\.\/lib\/clips\/store'\)\.sweepExpiredClips\(user\.id\)\.catch\(/);
+  });
+
+  test('the summary keeps a PR set\'s video through the store once its PRs and videos are known, never in read-only', () => {
+    expect(SUMMARY).toMatch(/if \(!user\?\.id \|\| !workoutId \|\| readOnly \|\| !clipFlow\.clips\?\.length \|\| !sharePRs\?\.length\) return;[\s\S]*?keepClipsForPRs\(user\.id, workoutId, sharePRs\)/);
+  });
+
+  test('Settings > Your data has the Workout videos section: the size, the keep choices as a radio group, Delete all videos with one confirm', () => {
+    expect(SETTINGS).toContain('<SectionHeader title="Workout videos" />');
+    expect(SETTINGS).toContain('label={CLIP_STRINGS.settingsVideosLabel}');
+    expect(SETTINGS).toMatch(/accessibilityRole="radiogroup" accessibilityLabel=\{CLIP_STRINGS\.settingsKeepLabel\}/);
+    expect(SETTINGS).toMatch(/KEEP_OPTIONS\.map\(\(days\) => \([\s\S]*?onPress=\{\(\) => chooseKeepDays\(days\)\}[\s\S]*?accessibilityRole="radio"/);
+    expect(SETTINGS).toMatch(/await setKeepDays\(days\);\s*await sweepExpiredClips\(user\?\.id, \{ force: true \}\);/);
+    expect(SETTINGS).toMatch(/appAlert\(CLIP_STRINGS\.deleteAllConfirmTitle, CLIP_STRINGS\.deleteAllConfirmBody/);
+    expect(SETTINGS).toContain('await deleteAllClipsForUser(user.id);');
+  });
+
+  test('the privacy policy says the window and where to change it', () => {
+    expect(POLICY).toContain('a video is cleared from this device after 7 days unless you keep it');
+    expect(POLICY).toContain('in Settings under Your data');
+  });
+});
