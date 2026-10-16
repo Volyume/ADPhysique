@@ -66,10 +66,12 @@ Locked copy:
 > - Progress photos you choose to take, plus photo quality, result
 >   confidence, leanness band, Volyume Score and progress change when
 >   you use photo analysis
-> - Short workout videos you choose to record (up to 15 seconds, no
+> - Short workout videos you choose to record (up to two minutes, no
 >   sound), kept on your device only, never uploaded, deleted with the
->   workout (added 2026-10-15, register D229; the Article 9 consent text
->   is unchanged: a video of a set is not special-category data)
+>   workout, and removed after 7 days unless you tap Keep on one (the
+>   window is yours to change in Settings; added 2026-10-15, register
+>   D229, the keep window 2026-10-16, addendum 15; the Article 9 consent
+>   text is unchanged: a video of a set is not special-category data)
 >
 > Volyume Score is a simple progress read, not a medical measure,
 > DEXA scan, diagnosis, or medical advice. It may abstain or ask for
