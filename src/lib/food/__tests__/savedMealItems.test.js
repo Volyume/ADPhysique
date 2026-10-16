@@ -92,6 +92,17 @@ describe('savedMealItems', () => {
 // disagreed (FOOD-001). Now it stays at 0 g, fixed, and a real food stored
 // with no grams (a legacy row) is left out of the list.
 const { draftsFromItems: dfi, draftMacros: dm, draftsToEntries: dte, draftToItem: dti, isQuickAddRef } = require('../savedMealItems');
+describe('a legacy item with no food reference (D230 review #16)', () => {
+  test('is left out of the drafts, so the editor never carries it and Save can succeed', () => {
+    const broken = { name: 'Old row', quantityG: 100, kcal: 100, proteinG: 1, carbsG: 1, fatG: 1, fibreG: null };
+    const blank = { ...broken, foodRef: '' };
+    const drafts = dfi([broken, blank, CHICKEN]);
+    expect(drafts.map((d) => d.foodRef)).toEqual(['global:chicken']);
+    // every stored item the editor writes back has a reference, which is what updateSavedMeal requires
+    expect(drafts.map((d) => dti(d)).every((it) => typeof it.foodRef === 'string' && it.foodRef !== '')).toBe(true);
+  });
+});
+
 describe('a quick add inside a saved meal', () => {
   const quick = { foodRef: 'quick:adhoc', name: 'Quick add', quantityG: 0, kcal: 500, proteinG: 20, carbsG: 50, fatG: 20, fibreG: null };
   test('stays at 0 g, fixed, with its own figures at every read', () => {

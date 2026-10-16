@@ -365,8 +365,9 @@ export default function FoodInsightsScreen({ navigation }) {
       if (result.rowCount > 0) {
         toast.show(`${result.rowCount} ${result.rowCount === 1 ? 'entry' : 'entries'} exported to ${kind === 'pdf' ? 'PDF' : 'CSV'}.`, { variant: 'success' });
       }
-    } catch (_e) {
-      toast.show('Export failed. Try again.', { variant: 'error' });
+    } catch (e) {
+      logError('FoodInsights.export', e, { userId, kind });
+      toast.show('Your export was not created. Try again in a moment.', { variant: 'error' });
     } finally {
       setExporting(false);
     }
@@ -388,13 +389,13 @@ export default function FoodInsightsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <BackHeader title="Insights" onBack={() => navigation.goBack()} />
+      <BackHeader title="Trends" onBack={() => navigation.goBack()} />
 
       {/* Window selector (ULTIMATE-NUT-05). Pinned below the header so it stays
           visible while the cards scroll. D230 (R4, 4.8): the house WindowChips,
           ink-selected because the window is a control, not the screen's one
           amber. The accessibility prefix names the group (R16). */}
-      <View style={[styles.windowBar, { paddingHorizontal: t.screenPadding }]}>
+      <View style={[styles.windowBar, { paddingHorizontal: t.screenPadding }]} accessibilityLabel="Nutrition window">
         <WindowChips
           windows={WINDOW_OPTIONS}
           selectedKey={windowDays}
@@ -406,7 +407,7 @@ export default function FoodInsightsScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: t.screenPadding }]}>
         {loading ? (
-          <View style={styles.loadingStack} accessibilityLabel="Loading nutrition insights">
+          <View style={styles.loadingStack} accessibilityLabel="Loading your trends">
             <SkeletonCard height={120} />
             <SkeletonCard height={180} />
             <SkeletonCard height={140} />
@@ -414,8 +415,8 @@ export default function FoodInsightsScreen({ navigation }) {
         ) : loadError ? (
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load nutrition insights"
-            text="Something went wrong loading these. Try again."
+            title="Your trends did not load"
+            text="Something went wrong. Try again in a moment."
             actionLabel="Try again"
             onAction={load}
           />
@@ -427,7 +428,7 @@ export default function FoodInsightsScreen({ navigation }) {
             no score, no streak, no nagging to log more. */}
         {insights.length > 0 ? (
           <>
-            <SectionLabel heading style={styles.sectionLabelSpacing}>What we can see</SectionLabel>
+            <SectionLabel heading style={styles.sectionLabelSpacing}>What the week shows</SectionLabel>
             <Card style={styles.card}>
               {insights.map((ins, i) => (
                 <View
@@ -754,7 +755,7 @@ function AdherenceRow({ label, hit, total }) {
   // AddCustomFoodScreen's Field/NumField precedent from batch D), own
   // useTheme() call and shared buildLiveStyles(t).
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const enoughDays = total >= MIN_DAYS_FOR_ADHERENCE_BAR;
   const pct = total > 0 ? Math.round((hit / total) * 100) : 0;
   return (

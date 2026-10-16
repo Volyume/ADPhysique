@@ -248,7 +248,7 @@ describe('AddCustomFoodScreen OCR-unsure confirm gate (D138 item 5)', () => {
     await flush();
 
     expect(appAlert).toHaveBeenCalledWith(
-      "Some figures weren't read clearly",
+      "Some figures were not read clearly",
       'Save anyway?',
       expect.any(Array),
       expect.any(Object),
@@ -703,7 +703,7 @@ describe('AddCustomFoodScreen "Save the food" (D230 4.11)', () => {
     });
     await act(async () => { await mockSaveOnlyButton.onPress(); });
     await flush();
-    expect(appAlert).toHaveBeenCalledWith("Some figures weren't read clearly", 'Save anyway?', expect.any(Array), expect.any(Object));
+    expect(appAlert).toHaveBeenCalledWith("Some figures were not read clearly", 'Save anyway?', expect.any(Array), expect.any(Object));
     expect(insertCustomFood).not.toHaveBeenCalled();
   });
 

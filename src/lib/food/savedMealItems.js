@@ -96,10 +96,15 @@ export function draftFromFood(food, grams) {
 
 /** The drafts for a stored items array; `names` is an optional Map<foodRef, { name }>.
  *  A real food stored with no grams (a legacy row) is left out: it could not
- *  be logged honestly at any amount (applySavedMealToDiary skipped it too). */
+ *  be logged honestly at any amount (applySavedMealToDiary skipped it too).
+ *  An item with no food reference is left out too. */
 export function draftsFromItems(items, names) {
   const list = Array.isArray(items) ? items : [];
   return list
+    // An item with no food reference is left out as well (D230 review #16):
+    // it can never be logged or saved (updateSavedMeal rejects it every time),
+    // so the editor never carries it and Save can succeed.
+    .filter((it) => typeof it?.foodRef === 'string' && it.foodRef !== '')
     .filter((it) => isQuickAddRef(it?.foodRef) || num(it?.quantityG) > 0)
     .map((it) => draftFromItem(it, names?.get?.(it?.foodRef)?.name));
 }

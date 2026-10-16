@@ -216,7 +216,7 @@ describe('the user actually SEES it', () => {
   });
 
   test('and they lead, so every figure below is read in that light', () => {
-    const insightsAt = SCREEN.indexOf('>What we can see<');
+    const insightsAt = SCREEN.indexOf('>What the week shows<');
     const chartAt = SCREEN.indexOf('>Calorie trend<');
     const adherenceAt = SCREEN.indexOf('>Macro balance<');
     expect(insightsAt).toBeGreaterThan(-1);

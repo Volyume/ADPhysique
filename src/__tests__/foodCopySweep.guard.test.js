@@ -52,6 +52,15 @@ const FILES = [
   'src/components/food/SavedMealDetailSheet.js',
   'src/components/food/SavedMealEditSheet.js',
   'src/components/food/RecipeDetailSheet.js',
+  // D230 review sweep (#6): the files the first sweep did not cover.
+  'src/screens/DiaryScreen.js',
+  'src/screens/FoodInsightsScreen.js',
+  'src/components/food/WeeklyMicronutrientsCard.js',
+  'src/components/food/FoodRow.js',
+  'src/components/food/EntryRow.js',
+  'src/components/food/MealSection.js',
+  'src/components/food/FoodLineReviewSheet.js',
+  'src/components/food/SavedMealItemRow.js',
 ];
 
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');

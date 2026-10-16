@@ -314,7 +314,7 @@ export default function DiaryScreen({ navigation, route }) {
       // denormalises macros at log time but NOT the name, so without this
       // enrichment the row falls through to a generic "Food" label).
       const [foodMap, yEntries] = await Promise.all([
-        resolveRefsBatched(userId, (es ?? []).map((e) => e.food_ref)).catch(() => new Map()),
+        resolveRefsBatched(userId, (es ?? []).map((e) => e.food_ref)).catch((e) => { logError('DiaryScreen.resolveRefs', e, { userId }); return new Map(); }),
         needYesterday
           ? getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => [])
           : Promise.resolve([]),
@@ -408,8 +408,9 @@ export default function DiaryScreen({ navigation, route }) {
       if (n > 0) dismissMarkEatenHint(); // discovery: bulk mark-as-eaten used
       if (n > 0) dismissPlanAddedHint(); // same discovery, plan-added teach's signal
       toast.show(n > 0 ? `${mealsConfirmed} planned ${mealsConfirmed === 1 ? 'meal' : 'meals'} marked as eaten.` : 'Nothing to confirm.', { variant: n > 0 ? 'success' : 'info' });
-    } catch (_) {
-      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('DiaryScreen.confirmPlannedDay', e, { userId, plannedCount });
+      toast.show('Your planned meals were not marked as eaten. Try again in a moment.', { variant: 'error' });
     }
   }, [userId, selectedDate, plannedCount, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
@@ -429,8 +430,9 @@ export default function DiaryScreen({ navigation, route }) {
         dismissPlanAddedHint(); // same discovery, plan-added teach's signal
         toast.show('Marked as eaten.', { variant: 'success' });
       }
-    } catch (_) {
-      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('DiaryScreen.confirmPlannedSlot', e, { userId, slotKey });
+      toast.show('That meal was not marked as eaten. Try again in a moment.', { variant: 'error' });
     }
   }, [userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
@@ -440,8 +442,9 @@ export default function DiaryScreen({ navigation, route }) {
       await clearPlannedDay(userId, selectedDate);
       await load();
       toast.show('Planned meals cleared.', { variant: 'info' });
-    } catch (_) {
-      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('DiaryScreen.clearPlanned', e, { userId });
+      toast.show('Your planned meals were not cleared. Try again in a moment.', { variant: 'error' });
     }
   }, [userId, selectedDate, load, toast]);
 
@@ -524,8 +527,9 @@ export default function DiaryScreen({ navigation, route }) {
         perDayDeltaKcal: bank?.perDayDeltaKcal, floorKcal, startDate: isoDate(new Date()),
       });
       perDayChanges = res.perDayChanges || [];
-    } catch (_) {
-      toast.show("Couldn't plan your higher-calorie day. Nothing has changed, so try again in a moment.", { variant: 'error' });
+    } catch (e) {
+      logError('DiaryScreen.planBank', e, { userId });
+      toast.show('Your higher-calorie day was not planned. Nothing has changed. Try again in a moment.', { variant: 'error' });
       return;
     }
     await setCalorieBank(bank);
@@ -565,8 +569,9 @@ export default function DiaryScreen({ navigation, route }) {
       await restoreUnbankedPlannedFood(userId, {
         perDayDeltaKcal: calorieBank?.perDayDeltaKcal, startDate: isoDate(new Date()),
       });
-    } catch (_) {
-      toast.show("Couldn't undo your higher-calorie day. It is still planned, so try again in a moment.", { variant: 'error' });
+    } catch (e) {
+      logError('DiaryScreen.clearBank', e, { userId });
+      toast.show('Your higher-calorie day was not undone. It is still planned. Try again in a moment.', { variant: 'error' });
       return;
     }
     await setCalorieBank(null);
@@ -582,7 +587,7 @@ export default function DiaryScreen({ navigation, route }) {
   // triggers doubled every load's concurrency for no benefit and made the
   // stale-result race easier to hit. One trigger is enough: mount, refocus,
   // and every dependency change while this tab is the one in view.
-  useFocusEffect(useCallback(() => { load().catch(() => {}); }, [load]));
+  useFocusEffect(useCallback(() => { load().catch(() => {}); }, [load])); // load() reports its own failure
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -629,12 +634,12 @@ export default function DiaryScreen({ navigation, route }) {
   const [showOffCard, setShowOffCard] = useState(false);
   useFocusEffect(useCallback(() => {
     let active = true;
-    shouldShowOffConsentCard().then((show) => { if (active) setShowOffCard(show); }).catch(() => {});
+    shouldShowOffConsentCard().then((show) => { if (active) setShowOffCard(show); }).catch(() => {}); // the optional food-source card; a failed read shows no card
     return () => { active = false; };
   }, []));
   const onDismissOffCard = useCallback(() => {
     setShowOffCard(false);
-    dismissOffConsentCard().catch(() => {});
+    dismissOffConsentCard().catch(() => {}); // the dismissal is a convenience; the card returns next time at worst
   }, []);
 
   // Item 9(c) (D141): a calm, one-time, dismissible offer for the opt-in
@@ -685,7 +690,7 @@ export default function DiaryScreen({ navigation, route }) {
         try {
           const parsedReminders = remindersRaw ? JSON.parse(remindersRaw) : null;
           mealRemindersEnabled = Array.isArray(parsedReminders) && parsedReminders.some((r) => r?.enabled === true);
-        } catch (_) { mealRemindersEnabled = false; }
+        } catch (e) { logError('DiaryScreen.mealReminderOffer.parse', e, { userId }); mealRemindersEnabled = false; }
         // A null read (key never set) legitimately means 'unspecified', not
         // a failure; only the .catch above maps an actual read error to the
         // 'read_failed' sentinel, matching every other fail-closed read on
@@ -700,7 +705,8 @@ export default function DiaryScreen({ navigation, route }) {
           edFlagOpen: !!edFlagOpen,
           dismissed: dismissedRaw === 'true',
         }));
-      } catch (_) {
+      } catch (e) {
+        logError('DiaryScreen.mealReminderOffer', e, { userId });
         if (active) setMealReminderOfferVisible(false);
       }
     })();
@@ -708,14 +714,14 @@ export default function DiaryScreen({ navigation, route }) {
   }, [loaded, userId, targets, edFlagOpen, selectedDate]);
   const dismissMealReminderOffer = useCallback(() => {
     setMealReminderOfferVisible(false);
-    AsyncStorage.setItem(MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR(userId), 'true').catch(() => {});
+    AsyncStorage.setItem(MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR(userId), 'true').catch(() => {}); // the dismissal marker is a convenience; the offer returns at worst
   }, [userId]);
   useFocusEffect(useCallback(() => {
     let active = true;
     AsyncStorage.getItem('@volyume_meals_per_day').then((v) => {
       const n = parseInt(v, 10);
       if (active && Number.isFinite(n) && n >= 1) setPrefMeals(n);
-    }).catch(() => {});
+    }).catch(() => {}); // a missing preference keeps the default
     return () => { active = false; };
   }, []));
 
@@ -728,7 +734,7 @@ export default function DiaryScreen({ navigation, route }) {
     AsyncStorage.getItem(WATER_TARGET_KEY).then((v) => {
       const n = parseInt(v, 10);
       if (active && Number.isFinite(n) && n >= 1000 && n <= 6000) setWaterTargetMl(n);
-    }).catch(() => {});
+    }).catch(() => {}); // a missing preference keeps the default
     return () => { active = false; };
   }, []);
   const changeWaterTarget = useCallback(() => {
@@ -740,7 +746,7 @@ export default function DiaryScreen({ navigation, route }) {
           text: `${(n / 1000).toFixed(1)} L`,
           onPress: () => {
             setWaterTargetMl(n);
-            AsyncStorage.setItem(WATER_TARGET_KEY, String(n)).catch(() => {});
+            AsyncStorage.setItem(WATER_TARGET_KEY, String(n)).catch(() => {}); // the water target is a preference; the next change writes it again
           },
         })),
         { text: 'Cancel', style: 'cancel' },
@@ -773,10 +779,10 @@ export default function DiaryScreen({ navigation, route }) {
     let active = true;
     AsyncStorage.getItem(DIARY_WATER_HINT_KEY).then((v) => {
       if (active && v !== 'true') setShowWaterHint(true);
-    }).catch(() => {});
+    }).catch(() => {}); // a missing hint marker shows the hint once more
     AsyncStorage.getItem(DIARY_MARKEATEN_HINT_KEY).then((v) => {
       if (active && v !== 'true') setShowMarkEatenHint(true);
-    }).catch(() => {});
+    }).catch(() => {}); // a missing hint marker shows the hint once more
     return () => { active = false; };
   }, []);
   // One-shot: only when the nav param is actually present (arriving straight
@@ -791,23 +797,23 @@ export default function DiaryScreen({ navigation, route }) {
     let active = true;
     AsyncStorage.getItem(DIARY_PLANADDED_HINT_KEY).then((v) => {
       if (active && v !== 'true') setShowPlanAddedHint(true);
-    }).catch(() => {});
+    }).catch(() => {}); // a missing hint marker shows the hint once more
     return () => { active = false; };
   }, [route?.params?.justAddedPlan, navigation]);
   const dismissFoodHint = useCallback(() => {
-    AsyncStorage.setItem(DIARY_FOOD_HINT_KEY, 'true').catch(() => {});
+    AsyncStorage.setItem(DIARY_FOOD_HINT_KEY, 'true').catch(() => {}); // a hint marker is a convenience; the hint shows once more at worst
   }, []);
   const dismissWaterHint = useCallback(() => {
     setShowWaterHint(false);
-    AsyncStorage.setItem(DIARY_WATER_HINT_KEY, 'true').catch(() => {});
+    AsyncStorage.setItem(DIARY_WATER_HINT_KEY, 'true').catch(() => {}); // a hint marker is a convenience; the hint shows once more at worst
   }, []);
   const dismissMarkEatenHint = useCallback(() => {
     setShowMarkEatenHint(false);
-    AsyncStorage.setItem(DIARY_MARKEATEN_HINT_KEY, 'true').catch(() => {});
+    AsyncStorage.setItem(DIARY_MARKEATEN_HINT_KEY, 'true').catch(() => {}); // a hint marker is a convenience; the hint shows once more at worst
   }, []);
   const dismissPlanAddedHint = useCallback(() => {
     setShowPlanAddedHint(false);
-    AsyncStorage.setItem(DIARY_PLANADDED_HINT_KEY, 'true').catch(() => {});
+    AsyncStorage.setItem(DIARY_PLANADDED_HINT_KEY, 'true').catch(() => {}); // a hint marker is a convenience; the hint shows once more at worst
   }, []);
 
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
@@ -853,7 +859,7 @@ export default function DiaryScreen({ navigation, route }) {
       // D138 item 6: one batched resolve for every slot's recents together,
       // instead of a resolve per row per slot (up to 3 x slots round trips).
       const refs = rowsPerSlot.flat().map((row) => row?.food_ref).filter(Boolean);
-      const foodMap = await resolveRefsBatched(userId, refs).catch(() => new Map());
+      const foodMap = await resolveRefsBatched(userId, refs).catch((e) => { logError('DiaryScreen.resolveRefs.usual', e, { userId }); return new Map(); });
       const next = {};
       emptyKeys.forEach((slotKey, i) => {
         const foods = (rowsPerSlot[i] ?? []).map((row) => {
@@ -941,7 +947,7 @@ export default function DiaryScreen({ navigation, route }) {
       });
     } catch (e) {
       logError('DiaryScreen.logUsual', e, { userId, slotKey });
-      toast.show("Couldn't log that. Try again.", { variant: 'error' });
+      toast.show("That food was not logged. Try again in a moment.", { variant: 'error' });
     } finally {
       loggingUsualRef.current = false;
     }
@@ -990,7 +996,7 @@ export default function DiaryScreen({ navigation, route }) {
       });
     } catch (e) {
       logError('DiaryScreen.copyYesterdaySlot', e, { userId, slotKey });
-      toast.show("Couldn't copy that meal. Try again.", { variant: 'error' });
+      toast.show("That meal was not copied. Try again in a moment.", { variant: 'error' });
     }
   }, [userId, selectedDate, yesterdaySlotEntries, load, toast]);
 
@@ -1050,7 +1056,8 @@ export default function DiaryScreen({ navigation, route }) {
           if (suggestions.length) next[slot.key] = suggestions[0];
         });
         if (active) setSlotMealSuggestion(next);
-      } catch (_) {
+      } catch (e) {
+        logError('DiaryScreen.slotMealSuggestion', e, { userId });
         if (active) setSlotMealSuggestion({});
       }
     })();
@@ -1078,11 +1085,12 @@ export default function DiaryScreen({ navigation, route }) {
     audit('food.suggestMeal', { surface: 'diary_periworkout', mealId: suggestion.id, mealSlot: slotKey });
     try {
       const logged = await applyCuratedMealToDiary(userId, suggestion.id, { mealSlot: slotKey, entryDate: selectedDate });
-      if (!logged) { toast.show("Couldn't add that meal. Try again.", { variant: 'error' }); return; }
+      if (!logged) { toast.show('That meal was not added. Try again in a moment.', { variant: 'error' }); return; }
       await load();
       toast.show(`${suggestion.name ?? 'Meal'} added.`, { variant: 'success' });
-    } catch (_) {
-      toast.show("Couldn't add that meal. Try again.", { variant: 'error' });
+    } catch (e) {
+      logError('DiaryScreen.logMealSuggestion', e, { userId, mealId: suggestion?.id, slotKey });
+      toast.show('That meal was not added. Try again in a moment.', { variant: 'error' });
     } finally {
       loggingMealSuggestionRef.current = false;
     }
@@ -1343,8 +1351,9 @@ export default function DiaryScreen({ navigation, route }) {
       audit('food.saveMeal', { count: items.length });
       exitSelection();
       toast.show(`"${name}" is in Saved meals.`, { variant: 'success' });
-    } catch (_) {
-      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
+    } catch (e) {
+      logError('DiaryScreen.saveMeal', e, { userId, count: items.length });
+      toast.show('That meal was not saved. Try again in a moment.', { variant: 'error' });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveMealName, saveMealItems, userId, exitSelection]);
@@ -1846,7 +1855,7 @@ export default function DiaryScreen({ navigation, route }) {
           <View style={{ paddingHorizontal: spacing.lg }}>
             <EmptyState
               icon="cloud-offline-outline"
-              title="Couldn't load this day"
+              title="This day did not load"
               text="Check your connection and try again. Nothing has been lost."
               actionLabel="Retry"
               onAction={load}

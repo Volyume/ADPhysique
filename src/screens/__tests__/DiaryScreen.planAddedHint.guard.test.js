@@ -63,7 +63,7 @@ describe('DiaryScreen: one-time plan-added teach', () => {
 
   test('dismissing the hint persists the flag so it never returns', () => {
     expect(SRC).toMatch(
-      /const dismissPlanAddedHint = useCallback\(\(\) => \{\s*setShowPlanAddedHint\(false\);\s*AsyncStorage\.setItem\(DIARY_PLANADDED_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
+      /const dismissPlanAddedHint = useCallback\(\(\) => \{\s*setShowPlanAddedHint\(false\);\s*AsyncStorage\.setItem\(DIARY_PLANADDED_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);(?: \/\/[^\n]*)?\s*\}, \[\]\);/,
     );
   });
 

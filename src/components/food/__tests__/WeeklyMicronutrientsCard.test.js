@@ -121,6 +121,6 @@ describe('WeeklyMicronutrientsCard', () => {
   test('load failure -> a calm retry-less error line, never a crash', async () => {
     getFoodEntriesForRange.mockRejectedValue(new Error('boom'));
     const tree = await mount({ userId: 'u1', startDate: '2026-07-01', endDate: '2026-07-07' });
-    expect(flatten(tree)).toContain("Couldn't load this. Try again later.");
+    expect(flatten(tree)).toContain("Your vitamins and minerals did not load. Try again in a moment.");
   });
 });

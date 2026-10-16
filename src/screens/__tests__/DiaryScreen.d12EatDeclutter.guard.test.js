@@ -100,7 +100,7 @@ describe('D12 item 3: one-time hint teaching mark-as-eaten', () => {
 
   test('dismissing the hint persists the flag so it never returns', () => {
     expect(SRC).toMatch(
-      /const dismissMarkEatenHint = useCallback\(\(\) => \{\s*setShowMarkEatenHint\(false\);\s*AsyncStorage\.setItem\(DIARY_MARKEATEN_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
+      /const dismissMarkEatenHint = useCallback\(\(\) => \{\s*setShowMarkEatenHint\(false\);\s*AsyncStorage\.setItem\(DIARY_MARKEATEN_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);(?: \/\/[^\n]*)?\s*\}, \[\]\);/,
     );
   });
 

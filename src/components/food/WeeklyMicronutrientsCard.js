@@ -111,7 +111,7 @@ export default function WeeklyMicronutrientsCard({ userId, startDate, endDate })
             <SkeletonRow />
           </View>
         ) : error ? (
-          <Text style={[styles.emptyText, live.emptyText]}>Couldn't load this. Try again later.</Text>
+          <Text style={[styles.emptyText, live.emptyText]}>Your vitamins and minerals did not load. Try again in a moment.</Text>
         ) : !result?.hasEntries ? (
           <Text style={[styles.emptyText, live.emptyText]}>
             Log food across the week to see a picture build here.

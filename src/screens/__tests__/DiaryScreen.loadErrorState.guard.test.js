@@ -104,7 +104,7 @@ describe('DiaryScreen EP-09/P-06 false empty-state guard', () => {
     expect(idxError).toBeGreaterThan(idxSkeleton);
     expect(idxEmpty).toBeGreaterThan(idxError);
     const errorBlock = SRC.slice(idxError, idxEmpty);
-    expect(errorBlock).toMatch(/title="Couldn't load this day"/);
+    expect(errorBlock).toMatch(/title="This day did not load"/);
     expect(errorBlock).toMatch(/actionLabel="Retry"/);
     expect(errorBlock).toMatch(/onAction=\{load\}/);
     expect(errorBlock).not.toMatch(/Nothing logged/);

@@ -9,10 +9,16 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { resolveFoodRef } from './sources/localCache';
+import { logError } from '../errorLog';
 
 const CSV_HEADERS = [
   'date', 'meal', 'food', 'brand', 'quantity_g',
   'kcal', 'protein_g', 'carbs_g', 'fat_g', 'fibre_g',
+  // D230 R14 (plan 4.6): water joins the export as one row per day with water
+  // logged (meal "water", food "Water", the amount in this trailing column).
+  // The columns above keep their positions; the food cells of a water row are
+  // blank, so a sum over kcal or grams is unchanged.
+  'water_ml',
 ];
 
 function csvEscape(value) {
@@ -35,7 +41,7 @@ function csvEscape(value) {
  * Build a CSV string from an array of food_entries rows and a
  * food-ref lookup map keyed by food_ref. Pure, no I/O.
  */
-export function buildDiaryCsv(entries, foodLookup) {
+export function buildDiaryCsv(entries, foodLookup, water = []) {
   const lines = [CSV_HEADERS.join(',')];
   for (const e of entries) {
     const food = foodLookup.get(e.food_ref) ?? null;
@@ -50,8 +56,19 @@ export function buildDiaryCsv(entries, foodLookup) {
       e.carbs_g,
       e.fat_g,
       e.fibre_g ?? '',
+      '',
     ];
     lines.push(row.map(csvEscape).join(','));
+  }
+  // One water row per day with water logged, after the food rows, by date.
+  const waterRows = (water || [])
+    .filter((w) => w && w.entry_date && Number(w.ml) > 0)
+    .sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date)));
+  for (const w of waterRows) {
+    lines.push(
+      [w.entry_date, 'water', 'Water', '', '', '', '', '', '', '', Math.round(Number(w.ml))]
+        .map(csvEscape).join(','),
+    );
   }
   return lines.join('\n');
 }
@@ -161,6 +178,34 @@ export async function exportDiaryPdf({ userId, entries, startDate, endDate }) {
 }
 
 /**
+ * Water per day across the range, read through food/db.js getWater (lazy
+ * require: the pure builders above load without the database). A failed read
+ * leaves water out of the file rather than blocking the food export.
+ */
+async function readWaterForRange(userId, startDate, endDate) {
+  try {
+    // eslint-disable-next-line global-require
+    const { getWater } = require('./db');
+    const { parseLocalDay, localDayKey, addLocalCalendarDays } = require('../dayKey');
+    const out = [];
+    const end = parseLocalDay(endDate);
+    let d = parseLocalDay(startDate);
+    if (!Number.isFinite(d.getTime()) || !Number.isFinite(end.getTime())) return out;
+    for (let i = 0; i < 400 && d.getTime() <= end.getTime(); i += 1) {
+      const key = localDayKey(d.getTime());
+      // eslint-disable-next-line no-await-in-loop
+      const ml = await getWater(userId, key);
+      if (ml > 0) out.push({ entry_date: key, ml });
+      d = addLocalCalendarDays(d, 1);
+    }
+    return out;
+  } catch (e) {
+    logError('csvExport.readWater', e, { userId });
+    return [];
+  }
+}
+
+/**
  * One-shot: build the CSV string from a range of entries, write to
  * the cache dir, hand to the native share sheet.
  *
@@ -169,7 +214,8 @@ export async function exportDiaryPdf({ userId, entries, startDate, endDate }) {
 export async function exportDiaryCsv({ userId, entries, startDate, endDate }) {
   if (!entries?.length) return { rowCount: 0 };
   const lookup = await buildFoodLookup(userId, entries);
-  const csv = buildDiaryCsv(entries, lookup);
+  const water = await readWaterForRange(userId, startDate, endDate);
+  const csv = buildDiaryCsv(entries, lookup, water);
   const stamp = `${startDate}_${endDate}`.replace(/-/g, '');
   const fileUri = `${FileSystem.cacheDirectory}volyume_diary_${stamp}.csv`;
   await FileSystem.writeAsStringAsync(fileUri, csv, {

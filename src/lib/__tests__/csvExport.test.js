@@ -14,7 +14,7 @@ import { buildDiaryCsv, buildDiaryHtml } from '../food/csvExport';
 describe('buildDiaryCsv', () => {
   test('emits the header row first', () => {
     const csv = buildDiaryCsv([], new Map());
-    expect(csv).toBe('date,meal,food,brand,quantity_g,kcal,protein_g,carbs_g,fat_g,fibre_g');
+    expect(csv).toBe('date,meal,food,brand,quantity_g,kcal,protein_g,carbs_g,fat_g,fibre_g,water_ml');
   });
 
   test('joins entries with newlines and resolves the food name from the lookup', () => {
@@ -35,7 +35,7 @@ describe('buildDiaryCsv', () => {
     const csv = buildDiaryCsv(entries, lookup);
     const lines = csv.split('\n');
     expect(lines).toHaveLength(2);
-    expect(lines[1]).toBe('2026-05-23,lunch,Chicken breast,Tesco,150,248,46,0,5.4,0');
+    expect(lines[1]).toBe('2026-05-23,lunch,Chicken breast,Tesco,150,248,46,0,5.4,0,');
   });
 
   test('falls back to food_ref when the lookup misses', () => {
@@ -45,7 +45,7 @@ describe('buildDiaryCsv', () => {
     }];
     const csv = buildDiaryCsv(entries, new Map());
     const lines = csv.split('\n');
-    expect(lines[1]).toBe('2026-05-22,snack,custom:xyz,,30,100,1,20,0,');
+    expect(lines[1]).toBe('2026-05-22,snack,custom:xyz,,30,100,1,20,0,,');
   });
 
   test('quotes values that contain commas, quotes, or newlines', () => {
@@ -59,6 +59,20 @@ describe('buildDiaryCsv', () => {
     const csv = buildDiaryCsv(entries, lookup);
     expect(csv).toContain('"Beans, baked"');
     expect(csv).toContain('"Heinz ""classic"""');
+  });
+
+  test('water joins as one row per day with water, after the food rows, existing columns unchanged (D230 R14)', () => {
+    const entries = [{ entry_date: '2026-05-23', meal_slot: 'lunch', food_ref: 'x', quantity_g: 100, kcal: 100, protein_g: 1, carbs_g: 2, fat_g: 3, fibre_g: 4 }];
+    const water = [
+      { entry_date: '2026-05-24', ml: 750 },
+      { entry_date: '2026-05-23', ml: 1500 },
+      { entry_date: '2026-05-25', ml: 0 },
+    ];
+    const lines = buildDiaryCsv(entries, new Map(), water).split('\n');
+    expect(lines).toHaveLength(4);
+    expect(lines[1]).toBe('2026-05-23,lunch,x,,100,100,1,2,3,4,');
+    expect(lines[2]).toBe('2026-05-23,water,Water,,,,,,,,1500');
+    expect(lines[3]).toBe('2026-05-24,water,Water,,,,,,,,750');
   });
 
   test('renders an empty fibre cell when the entry has no fibre value', () => {
@@ -146,7 +160,7 @@ describe('buildDiaryCsv', () => {
         quantity_g: 120, kcal: 105, protein_g: 1, carbs_g: 27, fat_g: 0, fibre_g: 3,
       }];
       const cell = buildDiaryCsv(entries, lookup).split('\n')[1];
-      expect(cell).toBe('2026-05-17,breakfast,Banana,,120,105,1,27,0,3');
+      expect(cell).toBe('2026-05-17,breakfast,Banana,,120,105,1,27,0,3,');
     });
 
     test('a negative number value is not mangled (numbers are not formulas here)', () => {

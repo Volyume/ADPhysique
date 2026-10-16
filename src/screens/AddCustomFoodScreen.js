@@ -326,7 +326,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         if (stillUnsure) {
           const proceed = await new Promise((resolve) => {
             appAlert(
-              "Some figures weren't read clearly",
+              "Some figures were not read clearly",
               'Save anyway?',
               [
                 { text: 'Check first', style: 'cancel', onPress: () => resolve(false) },

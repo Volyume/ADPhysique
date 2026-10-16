@@ -163,11 +163,11 @@ describe('FoodInsightsScreen — protein-consistency headline (ULTIMATE-NUT-04)'
     await act(async () => { tree = create(<FoodInsightsScreen navigation={nav} />); });
     await flush();
     const text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load nutrition insights");
+    expect(text).toContain('Your trends did not load');
     // L05-MM2 (2026-07-09 design audit): this is a local SQLite read failure,
     // not a network failure, so "check your connection" was misleading —
     // "Check your connection and try again." -> "Something went wrong loading these. Try again."
-    expect(text).toContain('Something went wrong loading these. Try again.');
+    expect(text).toContain('Something went wrong. Try again in a moment.');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Log food on a few days to see this view fill out.');
   });
@@ -443,6 +443,12 @@ describe('FoodInsightsScreen - house chrome (D230 4.8)', () => {
     expect(chips.props.selectedKey).toBe(7);
     expect(chips.props.inkSelected).toBe(true);
     expect(chips.props.accessibilityPrefix).toBe('Nutrition window');
+    // D230 review #17 (R16): the window row is one labelled group; the chips keep their own labels.
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Nutrition window' && n.type === 'View').length).toBeGreaterThan(0);
+    // R15: the screen is "Trends" everywhere.
+    const SRC = require('fs').readFileSync(require('path').join(__dirname, '..', 'FoodInsightsScreen.js'), 'utf8');
+    expect(SRC).toMatch(/<BackHeader title="Trends"/);
+    expect(SRC).not.toMatch(/<BackHeader title="Insights"/);
     const group = tree.root.findAll((n) => n.props?.accessibilityRole === 'tablist');
     expect(group.length).toBeGreaterThan(0);
   });
@@ -452,7 +458,7 @@ describe('FoodInsightsScreen - house chrome (D230 4.8)', () => {
     const headers = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'header')
       .map((n) => flattenText(n)).filter(Boolean);
     const titles = [...new Set(headers)];
-    for (const want of ['What we can see', 'This week', 'Calorie trend', 'Calories', 'Protein', 'Macro balance', 'Averages', 'Vitamins and minerals']) {
+    for (const want of ['What the week shows', 'This week', 'Calorie trend', 'Calories', 'Protein', 'Macro balance', 'Averages', 'Vitamins and minerals']) {
       expect(titles).toContain(want);
     }
     for (const title of titles) expect(title).not.toMatch(/[A-Z]{3,}/);

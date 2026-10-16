@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -34,7 +35,7 @@ export default function FoodLineReviewSheet({
   onRowPress, onRemove, onAdd, onClose,
 }) {
   const t = useTheme();
-  const live = buildLiveStyles(t);
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const matched = items.filter((it) => it.food);
   const skipped = items.length - matched.length;
   const addLabel = `Add ${matched.length} ${matched.length === 1 ? 'food' : 'foods'} to ${mealName}`;

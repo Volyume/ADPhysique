@@ -61,10 +61,10 @@ describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
 
   test('dismissing either hint persists the flag so it never returns', () => {
     expect(SRC).toMatch(
-      /const dismissFoodHint = useCallback\(\(\) => \{\s*AsyncStorage\.setItem\(DIARY_FOOD_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
+      /const dismissFoodHint = useCallback\(\(\) => \{\s*AsyncStorage\.setItem\(DIARY_FOOD_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);(?: \/\/[^\n]*)?\s*\}, \[\]\);/,
     );
     expect(SRC).toMatch(
-      /const dismissWaterHint = useCallback\(\(\) => \{\s*setShowWaterHint\(false\);\s*AsyncStorage\.setItem\(DIARY_WATER_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
+      /const dismissWaterHint = useCallback\(\(\) => \{\s*setShowWaterHint\(false\);\s*AsyncStorage\.setItem\(DIARY_WATER_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);(?: \/\/[^\n]*)?\s*\}, \[\]\);/,
     );
   });
 
