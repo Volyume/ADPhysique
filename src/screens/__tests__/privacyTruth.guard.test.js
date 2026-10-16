@@ -146,11 +146,13 @@ describe('privacy, consent, export and store-copy truth', () => {
     const entry = sheet.slice(start, sheet.indexOf('],', start));
     expect(entry).toContain('Videos stay on your phone, are never uploaded, and are deleted with the workout.');
     expect(entry).toContain('Our privacy policy now covers Community and your workout videos');
-    // 2.17.0 (D229 addendum 15): the keep window is announced in the app,
-    // with how to keep a video and where to change the days.
+    // 2.17.0 (D229 addenda 15 and 17): one videos line carries recording,
+    // sharing on a session or a PR, the keep window with how to keep a video
+    // and where to change the days, and the privacy line.
     const start17 = sheet.indexOf("'2.17.0': [");
     const entry17 = sheet.slice(start17, sheet.indexOf('],', start17));
     expect(entry17).toContain('A video is kept for 7 days unless you tap Keep on it, and you can change that in Settings, under Your data.');
+    expect(entry17).toContain('share it the way you share an image: on your session or on a PR');
     expect(entry17).toContain('Videos stay on your phone and are never uploaded');
     expect(entry17).toContain('Settings, under Privacy and legal');
   });

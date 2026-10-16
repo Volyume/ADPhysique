@@ -230,7 +230,7 @@ describe('Set as wallpaper, under Full screen', () => {
       await press(hostsByLabel(tree, WALLPAPER)[0]);
       await waitFor(() => mockEngine.setLockScreenWallpaper.mock.calls.length > 0);
       expect(mockEngine.setLockScreenWallpaper.mock.calls[0][0]).toMatch(/^file:\/\/\/cache\/volyume-session-full-\d+\.png$/);
-      await waitFor(() => mockToastShow.mock.calls.some((c) => c[0] === 'Set as your lock screen wallpaper.'));
+      await waitFor(() => mockToastShow.mock.calls.some((c) => c[0] === 'Set as your lock screen wallpaper'));
       // Gone again on another format.
       await press(hostsByLabel(tree, 'Square')[0]);
       expect(hostsByLabel(tree, WALLPAPER)).toHaveLength(0);
@@ -254,7 +254,7 @@ describe('Set as wallpaper, under Full screen', () => {
       await press(hostsByLabel(tree, 'Full screen')[0]);
       await waitFor(() => hostsByLabel(tree, WALLPAPER).length > 0);
       await press(hostsByLabel(tree, WALLPAPER)[0]);
-      await waitFor(() => mockToastShow.mock.calls.some((c) => c[0] === "The wallpaper could not be set. Try again."));
+      await waitFor(() => mockToastShow.mock.calls.some((c) => c[0] === "Couldn't set the wallpaper, try again"));
     });
   });
 
