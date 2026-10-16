@@ -15,8 +15,13 @@
  *
  * Every drag runs on the UI thread with shared values; the caller learns the
  * window once, at the end of the gesture (`onChange`), rounded to 100 ms.
- * The frames are decoded OFFSCREEN through videoFrame.js and shown as plain
- * Images: no live Skia view is ever mounted (Sentry VOLYUME-3M).
+ * The frames come from the app's native module in ONE call (videoStripUris
+ * in videoFrame.js: decoded off the JS thread, upright, written as small JPEG
+ * files) and are shown as plain Images by file URI. Skia is not involved: no
+ * live Skia view, and never Skia's video object (Sentry VOLYUME-3M, lead
+ * ruling 2026-10-16). A `Skia` prop from an older caller is accepted and
+ * ignored. The request is dropped if the bar unmounts or its video or width
+ * changes before the frames arrive.
  *
  * Screen readers get the same control as actions on the bar, in 1 s steps.
  */
@@ -28,7 +33,7 @@ import Text from '../Text';
 import useTheme from '../../hooks/useTheme';
 import { colors, radius, spacing, type, withAlpha } from '../../styles/theme';
 import { formatClipDuration } from '../../lib/clips/rules';
-import { videoStripBase64 } from '../../lib/shareVideo/videoFrame';
+import { videoStripUris } from '../../lib/shareVideo/videoFrame';
 
 export const STRIP_HEIGHT = 56;
 export const FRAME_BOX = 48;
@@ -96,7 +101,6 @@ export default function VideoTrimBar({
   maxWindowMs = 15000,
   minWindowMs = 1000,
   width,
-  Skia = null,
   onChange,
   blocksGesture = null,
   disabled = false,
@@ -114,17 +118,15 @@ export default function VideoTrimBar({
   useEffect(() => {
     let cancelled = false;
     setFrames(new Array(count).fill(null));
-    if (!Skia || !uri || !dur) return undefined;
-    // Best effort: a frame that will not decode stays a tinted box.
-    const id = setTimeout(() => {
-      let out = null;
-      try { out = videoStripBase64(Skia, uri, dur, count, FRAME_BOX, STRIP_HEIGHT); } catch (_e) { out = null; }
-      if (!cancelled && Array.isArray(out)) setFrames(out);
-    }, 0);
-    return () => { cancelled = true; clearTimeout(id); };
-    // Decoded once per video and width (dur and count follow from them).
+    if (!uri || !dur) return undefined;
+    // Best effort: a frame that fails stays a tinted box.
+    videoStripUris(uri, dur, count)
+      .then((out) => { if (!cancelled && Array.isArray(out)) setFrames(out); })
+      .catch(() => { /* the tinted boxes stay */ });
+    return () => { cancelled = true; };
+    // Read once per video and width (dur and count follow from them).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uri, barW, Skia]);
+  }, [uri, barW]);
 
   const committed = useMemo(
     () => clampWindow({ startMs, endMs, durationMs: dur, minWindowMs, maxWindowMs, moved: 'window' }),
@@ -225,11 +227,11 @@ export default function VideoTrimBar({
 
   const strip = (
     <View style={[styles.strip, live.strip, { left: HANDLE_WIDTH, width: trackW }]}>
-      {frames.map((b64, i) => (b64 ? (
+      {frames.map((frameUri, i) => (frameUri ? (
         <Image
           key={`f${i}`}
           testID="video-trim-frame"
-          source={{ uri: `data:image/png;base64,${b64}` }}
+          source={{ uri: frameUri }}
           style={{ width: boxW, height: STRIP_HEIGHT }}
           resizeMode="cover"
         />

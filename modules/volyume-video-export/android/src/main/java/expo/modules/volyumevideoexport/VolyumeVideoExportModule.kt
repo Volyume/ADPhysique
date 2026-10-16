@@ -9,10 +9,14 @@ import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.IOException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * VolyumeVideoExport (D229, research report sections 1 and 6): probe a clip,
- * export the share video, cancel it, and set the lock screen wallpaper.
+ * export the share video, cancel it, set the lock screen wallpaper, and
+ * extract still frames as JPEG files for the share screen (extractFrames,
+ * deleteFrames; FrameExtractor.kt).
  *
  * The JS side is src/lib/shareVideo/engine.js. Every number from JS is checked
  * for finiteness and range BEFORE it is converted (adversarial audit
@@ -25,6 +29,18 @@ class VolyumeVideoExportModule : Module() {
 
   private fun exporterFor(context: Context): ShareVideoExporter =
     exporter ?: ShareVideoExporter(context.applicationContext).also { exporter = it }
+
+  // Frame extraction runs on its own single thread, never the JS thread and
+  // never Expo's shared AsyncFunction queue (one HandlerThread for every
+  // module's async functions in expo-modules-core 3.0), so a slow decode
+  // cannot hold up anything else. One thread also means one retriever at a
+  // time, and deleteFrames queues behind any extraction still writing.
+  private val frameLock = Any()
+  private var frameExecutor: ExecutorService? = null
+
+  private fun frameThread(): ExecutorService = synchronized(frameLock) {
+    frameExecutor ?: Executors.newSingleThreadExecutor().also { frameExecutor = it }
+  }
 
   override fun definition() = ModuleDefinition {
     Name("VolyumeVideoExport")
@@ -39,6 +55,50 @@ class VolyumeVideoExportModule : Module() {
       }
       try {
         promise.resolve(Probe.read(context, uri))
+      } catch (_: Throwable) {
+        promise.resolve(null)
+      }
+    }
+
+    // Still frames as JPEG files (lead ruling 2026-10-16: Skia's video object
+    // is never used). Resolves one slot per time, null where that time failed;
+    // rejects only for bad options or a source that cannot be opened.
+    AsyncFunction("extractFrames") { uri: String, timesMs: List<Double>, maxEdge: Double, promise: Promise ->
+      val context = appContext.reactContext
+      if (context == null) {
+        promise.reject(ExportCodes.UNAVAILABLE, "No React context.", null)
+        return@AsyncFunction
+      }
+      if (SourceUris.parse(uri) == null) {
+        promise.reject(ExportCodes.SOURCE, "Not a file or content URI.", null)
+        return@AsyncFunction
+      }
+      val request = FrameExtractor.parse(uri, timesMs, maxEdge)
+      if (request == null) {
+        promise.reject(ExportCodes.INVALID, "Frame options failed validation.", null)
+        return@AsyncFunction
+      }
+      val appCtx = context.applicationContext
+      try {
+        frameThread().execute { FrameExtractor.extract(appCtx, request, promise) }
+      } catch (e: Throwable) {
+        promise.reject(ExportCodes.UNAVAILABLE, e.message ?: "Frames are unavailable.", null)
+      }
+    }
+
+    // Removes every frame file. Best effort: always resolves.
+    AsyncFunction("deleteFrames") { promise: Promise ->
+      val context = appContext.reactContext
+      if (context == null) {
+        promise.resolve(null)
+        return@AsyncFunction
+      }
+      val appCtx = context.applicationContext
+      try {
+        frameThread().execute {
+          FrameExtractor.deleteAll(appCtx)
+          promise.resolve(null)
+        }
       } catch (_: Throwable) {
         promise.resolve(null)
       }
@@ -132,6 +192,11 @@ class VolyumeVideoExportModule : Module() {
 
     OnDestroy {
       main.post { exporter?.cancel(ExportCodes.CANCELLED) }
+      // Queued extractions still run to the end and settle their promises.
+      synchronized(frameLock) {
+        frameExecutor?.shutdown()
+        frameExecutor = null
+      }
     }
   }
 }

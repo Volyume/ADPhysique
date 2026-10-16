@@ -2,7 +2,8 @@ import ExpoModulesCore
 import Foundation
 
 /// VolyumeVideoExport (D229, research report sections 3 and 6): probe a clip,
-/// export the share video, cancel it. The JS side is
+/// export the share video, cancel it, and extract still frames as JPEG files
+/// for the share screen (extractFrames, deleteFrames). The JS side is
 /// src/lib/shareVideo/engine.js. iOS has no app API for the lock screen, so
 /// setLockScreenWallpaper rejects E_UNSUPPORTED ("Save, then set from Photos",
 /// D229 addendum 6, level-up 2).
@@ -17,6 +18,36 @@ public class VolyumeVideoExportModule: Module {
 
     AsyncFunction("probeVideo") { (uri: String) async -> [String: Any]? in
       return await VideoProbe.read(uri: uri)
+    }
+
+    // Still frames as JPEG files (lead ruling 2026-10-16: Skia's video object
+    // is never used). Resolves one slot per time, NSNull where that time
+    // failed; rejects only for bad options or a source that cannot be opened.
+    // The work runs in a Task, off the JS thread and off Expo's shared
+    // AsyncFunction queue.
+    AsyncFunction("extractFrames") { (uri: String, timesMs: [Double], maxEdge: Double, promise: Promise) in
+      guard let url = SourceURL.parse(uri) else {
+        promise.reject(ExportCode.source, "Not a file URI.")
+        return
+      }
+      guard let request = FrameRequest.parse(url: url, timesMs: timesMs, maxEdge: maxEdge) else {
+        promise.reject(ExportCode.invalid, "Frame options failed validation.")
+        return
+      }
+      Task {
+        let result = await FrameExtractor.extract(request)
+        switch result {
+        case .success(let frames):
+          promise.resolve(frames)
+        case .failure(let failure):
+          promise.reject(failure.code, failure.message)
+        }
+      }
+    }
+
+    // Removes every frame file. Best effort: always resolves.
+    AsyncFunction("deleteFrames") { () -> Void in
+      FrameExtractor.deleteAll()
     }
 
     AsyncFunction("exportShareVideo") { (options: [String: Any], promise: Promise) in

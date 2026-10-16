@@ -283,6 +283,77 @@ export async function probeVideo(uri) {
   };
 }
 
+/** The most times one extractFrames call takes (native refuses more). */
+export const MAX_FRAME_TIMES = 64;
+const MIN_FRAME_EDGE = 16;
+const MAX_FRAME_EDGE = 4096;
+
+function toFrame(raw) {
+  if (!raw || typeof raw !== 'object' || !isUri(raw.uri)) return null;
+  const width = Number(raw.width);
+  const height = Number(raw.height);
+  if (!(width > 0) || !(height > 0) || !Number.isFinite(width) || !Number.isFinite(height)) return null;
+  const timeMs = Number(raw.timeMs);
+  return {
+    uri: raw.uri,
+    width: Math.round(width),
+    height: Math.round(height),
+    timeMs: Number.isFinite(timeMs) && timeMs >= 0 ? timeMs : 0,
+  };
+}
+
+/**
+ * Still frames of a video as JPEG files (lead ruling 2026-10-16, after
+ * Sentry VOLYUME-3M: Skia's video object is never used for this). Native
+ * decodes off the JS thread, turns each frame upright, scales it so its
+ * longer edge is at most `maxEdge`, keeps every time inside the video and
+ * writes `share-frames/<random>.jpg` under the caches directory.
+ *
+ * Resolves one slot per time, `{ uri, width, height, timeMs }` (the upright
+ * pixel size) or null where that time failed. Rejects only for a source that
+ * cannot be opened (E_SOURCE, E_DECODE) or options that fail validation
+ * (E_INVALID), with the calm line as the message. A build without the native
+ * function resolves all nulls, so the caller shows its empty state.
+ *
+ * @param {string} uri a file:// (or, on Android, content://) video
+ * @param {number[]} timesMs
+ * @param {{ maxEdge?: number }} [options]
+ * @returns {Promise<Array<{ uri: string, width: number, height: number, timeMs: number } | null>>}
+ */
+export async function extractFrames(uri, timesMs, { maxEdge = 1440 } = {}) {
+  const list = Array.isArray(timesMs) ? timesMs : [];
+  const native = getNative();
+  if (!native || typeof native.extractFrames !== 'function') return list.map(() => null);
+  if (!isUri(uri)) throw exportError(EXPORT_ERROR.SOURCE, 'invalid uri');
+  if (list.length === 0) return [];
+  if (list.length > MAX_FRAME_TIMES || !list.every(isFiniteNumber)) {
+    throw exportError(EXPORT_ERROR.INVALID, 'invalid timesMs');
+  }
+  if (!isFiniteNumber(maxEdge) || maxEdge < MIN_FRAME_EDGE || maxEdge > MAX_FRAME_EDGE) {
+    throw exportError(EXPORT_ERROR.INVALID, 'invalid maxEdge');
+  }
+  const times = list.map((t) => Math.max(0, t));
+  let raw;
+  try {
+    raw = await native.extractFrames(uri, times, Math.round(maxEdge));
+  } catch (e) {
+    throw fromNativeError(e, EXPORT_ERROR.DECODE);
+  }
+  const slots = Array.isArray(raw) ? raw : [];
+  return times.map((_t, i) => toFrame(slots[i]));
+}
+
+/** Removes every frame file extractFrames wrote. Best effort: never rejects. */
+export async function deleteFrames() {
+  const native = getNative();
+  if (!native || typeof native.deleteFrames !== 'function') return;
+  try {
+    await native.deleteFrames();
+  } catch (_e) {
+    // The caches directory is the system's to clear as well.
+  }
+}
+
 /**
  * Sets the lock screen picture (D229 addendum 6, level-up 2). Android only;
  * iOS rejects E_UNSUPPORTED, where the screen offers "Save, then set from

@@ -15,6 +15,10 @@
  *     -> { uri, width, height, durationMs, fileSizeBytes }
  *   cancelExport()
  *   setLockScreenWallpaper(uri) (Android; iOS rejects E_UNSUPPORTED)
+ *   extractFrames(uri, timesMs, maxEdge) -> Array<{ uri (file:// JPEG in
+ *     share-frames/), width, height (upright), timeMs } | null>; a time that
+ *     fails is null, a bad source rejects (lead ruling 2026-10-16)
+ *   deleteFrames() (best effort, never rejects)
  *   event 'onExportProgress' { progress: 0..1 }
  */
 import { requireNativeModule } from 'expo-modules-core';
