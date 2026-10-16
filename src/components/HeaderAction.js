@@ -12,6 +12,10 @@
  * label type), but generic: no Community badge/dot state, just an icon,
  * a label and an onPress the caller supplies. CommunityHeaderAction
  * itself is untouched.
+ *
+ * `ink` (D230 R2, optional): the glyph takes the `textSecondary` ink instead
+ * of amber, for a screen whose one amber belongs to another action (the
+ * Nutrition tab's scan button). Absent, the action is unchanged.
  */
 import { Pressable, StyleSheet } from 'react-native';
 import Text from './Text';
@@ -22,7 +26,7 @@ import useTheme from '../hooks/useTheme';
 const MIN_HEIGHT = 44;
 const GLYPH = 18;
 
-export default function HeaderAction({ icon, label, onPress, accessibilityLabel }) {
+export default function HeaderAction({ icon, label, onPress, accessibilityLabel, ink = false }) {
   const t = useTheme();
   return (
     <Pressable
@@ -35,7 +39,7 @@ export default function HeaderAction({ icon, label, onPress, accessibilityLabel 
         { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
       ]}
     >
-      <Ionicons name={icon} size={GLYPH} color={t.colors.primary} />
+      <Ionicons name={icon} size={GLYPH} color={ink ? t.colors.textSecondary : t.colors.primary} />
       <Text style={[styles.label, { color: t.colors.textPrimary }]}>{label}</Text>
     </Pressable>
   );

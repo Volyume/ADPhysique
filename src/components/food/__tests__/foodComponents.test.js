@@ -1,15 +1,21 @@
 /**
  * Mount + snapshot tests for the src/components/food/ component set
- * per UI_FLOWS_LOCKED.md lines 18-28. Covers the four added in the
- * prior batch (EmptyDiary, SourceChip) plus the three extracted from inline
- * DiaryScreen / FoodSearchScreen (MealSection, EntryRow, FoodRow).
+ * per UI_FLOWS_LOCKED.md lines 18-28. Covers SourceChip and FeatureRow plus
+ * the three extracted from inline DiaryScreen / FoodSearchScreen
+ * (MealSection, EntryRow, FoodRow).
  *
  * D138: HeldDecisionCard and ServingPicker were deleted (zero live
  * importers - the coach's held-decision copy and the serving picker both
  * live inside their real surfaces now), so their blocks went with them.
  *
- * Also locks the EmptyDiary copy to the exact spec string
- * (UI_FLOWS_LOCKED.md line 275) so any future drift breaks here.
+ * RE-POINTED (D230 R1, food level-up 2026-10-16): EmptyDiary is retired;
+ * the workspace is the same on every day. Its block here pinned three
+ * truths, and each now lives where the thing itself lives: an empty meal
+ * still offers "Add food" (the MealSection block below); the day's doors
+ * ("Meal builder", "Copy yesterday") are FeatureRow, pinned below with its
+ * ink tile (D230 R2); and "Copy yesterday" appears only when yesterday has
+ * food, which is a DiaryScreen decision pinned mounted in
+ * src/screens/__tests__/DiaryScreen.foodLevelUp.test.js.
  */
 import { create } from 'react-test-renderer';
 
@@ -17,8 +23,9 @@ import { create } from 'react-test-renderer';
 // rather than the native Alert.alert.
 jest.mock('../../AppAlert', () => ({ appAlert: jest.fn(), AppAlertHost: () => null }));
 
-// EmptyDiary now uses Button, which reaches the haptic vocabulary. Expo's
-// native haptics module is not loadable in this bare component test env.
+// MealSection's "Add food" is the house Button, which reaches the haptic
+// vocabulary. Expo's native haptics module is not loadable in this bare
+// component test env.
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   impactAsync: jest.fn(),
@@ -34,49 +41,46 @@ jest.mock('react-native-gesture-handler/Swipeable', () => {
   };
 });
 
-import EmptyDiary, { EMPTY_DIARY_COPY } from '../EmptyDiary';
+import FeatureRow from '../FeatureRow';
 import SourceChip from '../SourceChip';
 import MealSection from '../MealSection';
 import { EntryRow, SwipeableEntryRow, friendlyFoodName } from '../EntryRow';
 import FoodRow, { SOURCE_LABEL, kcalForServing } from '../FoodRow';
 import { colors } from '../../../styles/theme';
 
-describe('EmptyDiary', () => {
-  // Redesigned 2026-06-01 (supersedes the locked single-sentence copy): a calm
-  // card with a short line and the primary actions.
-  test('renders the prompt and the add / copy-yesterday actions', () => {
-    const tree = create(<EmptyDiary onAdd={() => {}} onCopyYesterday={() => {}} />).toJSON();
-    const txt = JSON.stringify(tree);
-    expect(txt).toContain(EMPTY_DIARY_COPY); // 'Nothing logged yet.'
-    expect(txt).toContain('Add food');
-    expect(txt).toContain('Copy yesterday');
-  });
-
-  test('omits actions when no handlers are supplied', () => {
-    const tree = create(<EmptyDiary />).toJSON();
-    const txt = JSON.stringify(tree);
-    expect(txt).toContain(EMPTY_DIARY_COPY);
-    expect(txt).not.toContain('Copy yesterday');
-    expect(txt).not.toContain('Try a suggested meal');
-  });
-
-  test('keeps the premium empty state focused when there is no yesterday to copy', () => {
-    const tree = create(<EmptyDiary onAdd={() => {}} onPlanDay={() => {}} />).toJSON();
-    const txt = JSON.stringify(tree);
-    expect(txt).toContain('Meal builder');
-    expect(txt).toContain('Add food');
-    expect(txt).toContain(`"backgroundColor":"${colors.surface}"`);
-    expect(txt).not.toContain('Copy yesterday');
-    expect(txt).not.toContain('Try a suggested meal');
-  });
-
-  test('shows Copy yesterday when a real yesterday handler is passed', () => {
+describe('FeatureRow (the diary doors, D230 R1 and R2)', () => {
+  // The empty day's "Meal builder" and "Copy yesterday" were EmptyDiary's
+  // actions; both are FeatureRow doors now, so the door itself is pinned.
+  test('renders its title and one-line sub, and speaks its own label', () => {
     const tree = create(
-      <EmptyDiary onAdd={() => {}} onCopyYesterday={() => {}} onPlanDay={() => {}} />,
-    ).toJSON();
-    const txt = JSON.stringify(tree);
+      <FeatureRow
+        icon="copy-outline"
+        title="Copy yesterday"
+        sub="Copy yesterday's foods into this day, under the same meals."
+        onPress={() => {}}
+        accessibilityLabel="Copy yesterday's entries"
+        bordered={false}
+      />,
+    );
+    const txt = JSON.stringify(tree.toJSON());
     expect(txt).toContain('Copy yesterday');
-    expect(txt).not.toContain('Try a suggested meal');
+    expect(txt).toContain("Copy yesterday's foods into this day, under the same meals.");
+    const row = tree.root.findAll(
+      (n) => n.props?.accessibilityRole === 'button' && n.props?.accessibilityLabel === "Copy yesterday's entries",
+    );
+    expect(row.length).toBeGreaterThan(0);
+  });
+
+  test('the icon tile is ink: surface2 behind a textSecondary glyph, never amber', () => {
+    const tree = create(
+      <FeatureRow icon="restaurant-outline" title="Meal builder" sub="Build a day or week from your targets." onPress={() => {}} bordered={false} />,
+    );
+    const glyph = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'restaurant-outline')[0];
+    expect(glyph.props.color).toBe(colors.textSecondary);
+    const txt = JSON.stringify(tree.toJSON());
+    expect(txt).toContain(`"backgroundColor":"${colors.surface2}"`);
+    expect(txt).not.toContain(colors.primary);
+    expect(txt).not.toContain(colors.primaryBg);
   });
 });
 
@@ -127,7 +131,9 @@ describe('EntryRow', () => {
     const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('"143"');
-    expect(txt).toContain('170g'); // quantity is shown in the meta line ("170g", + a logged time when present)
+    // D230 4.3: "170 g" (a space before the unit) in the meta line, plus a
+    // logged time when present.
+    expect(txt).toContain('170 g');
     expect(txt).toContain('"10"');
     expect(txt).toContain('"4"');
   });
@@ -139,7 +145,8 @@ describe('EntryRow', () => {
     const tree = create(<EntryRow entry={{ ...baseEntry, eaten_at: new Date('2026-06-29T13:42:00').getTime() }} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('13:42');
-    expect(txt).toContain('170g');
+    // D230 4.3: one spaced middle dot between the amount and the time.
+    expect(txt).toContain('170 g · 13:42');
   });
 
   // ED-safety non-goal (Ultimate-Audit item 15, D22 15a/15b timeline food
@@ -154,7 +161,7 @@ describe('EntryRow', () => {
       <EntryRow entry={{ ...baseEntry, eaten_at: null }} onEdit={() => {}} mealLabel="Lunch" />,
     ).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('170g');
+    expect(txt).toContain('170 g');
     expect(txt).toContain('Lunch');
     expect(txt).not.toMatch(/\d{1,2}:\d{2}/); // no clock time rendered
     expect(txt).not.toMatch(/ago|since|time since|hours? (ago|since)/i);
@@ -177,7 +184,18 @@ describe('EntryRow', () => {
   test('accessibilityLabel includes name and rounded kcal', () => {
     const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('Greek yoghurt, 143 kcal. Tap to edit.');
+    // RE-POINTED (D230 R16, 4.3): the spoken label now also says the
+    // macros in words, so the caption's letters are never read out.
+    expect(txt).toContain('Greek yoghurt, 143 kcal, 10 grams protein, 4 carbs, 10 fat. Tap to edit.');
+  });
+
+  test('the macro caption reads "10 P · 4 C · 10 F" (D230 R15, 4.3)', () => {
+    const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />);
+    const caption = tree.root.findAll(
+      (n) => typeof n.type === 'string' && /Text/.test(n.type)
+        && Array.isArray(n.props.children) && n.props.children.join('') === '10 P · 4 C · 10 F',
+    );
+    expect(caption.length).toBeGreaterThan(0);
   });
 
   // Item 9 (campaign 2026-07-10): quiet inline weighing-basis chip. Shown
@@ -243,7 +261,9 @@ describe('MealSection', () => {
     expect(txt).not.toContain('BREAKFAST');
     expect(txt).toContain('305'); // summed kcal
     expect(txt).toContain('kcal');
-    expect(txt).toContain('g P'); // protein readout present (7 + 1 = 8)
+    // RE-POINTED (D230 R15): "305 kcal · 8 g protein", a word not a letter.
+    expect(txt).toContain(' g protein'); // protein readout present (7 + 1 = 8)
+    expect(txt).toContain(' · ');
   });
 
   test('an empty section shows the name and Add food, no zero subtotal', () => {
@@ -276,7 +296,11 @@ describe('MealSection', () => {
     expect(JSON.stringify(tree)).toContain('Add food to Breakfast');
   });
 
-  test('empty slots with usuals explain every fast path', () => {
+  // RE-POINTED (D230 R3, explanation on demand): the standing line "Your
+  // usual foods are below..." is gone. The chip's own label says what it
+  // logs and its accessibility hint says how to change the portion first,
+  // so the same fast path is still explained, at the chip.
+  test('empty slots with usuals explain their fast path at the chip, not in a standing line', () => {
     const tree = create(
       <MealSection
         slot={slot}
@@ -293,7 +317,8 @@ describe('MealSection', () => {
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Eggs');
-    expect(txt).toContain('Your usual foods are below. Pick something else if this meal was different.');
+    expect(txt).not.toContain('Your usual foods are below');
+    expect(txt).toContain('Hold to change the portion first');
   });
 
   test('meal action hub stays focused on the single add-food action', () => {

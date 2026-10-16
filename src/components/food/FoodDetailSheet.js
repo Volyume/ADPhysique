@@ -402,6 +402,10 @@ export default function FoodDetailSheet({
                 ))}
               </View>
             ) : null}
+            {/* The typed field IS the Stepper's centre (the house Stepper's
+                `centre` slot, D230 lane 2B note 1): one number, between the
+                two buttons; a screen reader reaches the buttons and the
+                field each as themselves. */}
             <View style={styles.amountRow}>
               <Stepper
                 value={amountValue}
@@ -413,16 +417,19 @@ export default function FoodDetailSheet({
                 label="Amount"
                 decreaseLabel="Decrease amount"
                 increaseLabel="Increase amount"
-              />
-              <TextField
-                size="sm"
-                containerStyle={styles.amountField}
-                inputStyle={styles.amountInput}
-                value={amount}
-                onChangeText={v => setAmount(v.replace(/[^0-9.,]/g, ''))}
-                keyboardType="decimal-pad"
-                selectTextOnFocus
-                accessibilityLabel={isServing ? 'Amount in servings' : 'Amount in grams'}
+                style={styles.amountStepper}
+                centre={(
+                  <TextField
+                    size="sm"
+                    containerStyle={styles.amountField}
+                    inputStyle={styles.amountInput}
+                    value={amount}
+                    onChangeText={v => setAmount(v.replace(/[^0-9.,]/g, ''))}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    accessibilityLabel={isServing ? 'Amount in servings' : 'Amount in grams'}
+                  />
+                )}
               />
             </View>
             {isServing ? (
@@ -647,8 +654,10 @@ const styles = StyleSheet.create({
   },
   // The house Stepper with the typed field beside it. At the largest text
   // sizes the field wraps under the Stepper rather than squeezing it.
-  amountRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
-  amountField: { flexGrow: 1, flexBasis: touchTarget.minimum * 2 },
+  amountRow: { alignItems: 'stretch' },
+  // The Stepper spans the row; its centre slot holds the field.
+  amountStepper: { alignSelf: 'stretch' },
+  amountField: { flexGrow: 1 },
   amountInput: {
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     textAlign: 'center',

@@ -8,6 +8,20 @@
  * Controlled: pass `value` (number) + `onChange(next)`. Clamps to
  * [min, max] and steps by `step`. The centre shows the value (and optional
  * `unit`); pass `formatValue` to override the display.
+ *
+ * Optional extras (D230 R14, the diary's water row): `onDecreaseLongPress`
+ * and `onIncreaseLongPress` give each button a hold action (a bigger step),
+ * and `onValuePress` makes the centre value a control of its own (the water
+ * row opens its target picker there), spoken as `valuePressLabel` and also
+ * offered to a screen reader as the adjustable's activate action, since the
+ * adjustable container hides its children from TalkBack. Absent (every
+ * other caller), the control renders exactly as before.
+ *
+ * `centre` (D230 R8, the add sheet's amount): a node rendered in place of
+ * the value, for a caller whose centre is a typed field. The row then stops
+ * being one adjustable (an adjustable hides its children from a screen
+ * reader, which would hide the field): the two buttons keep their own
+ * labels and the field is reached as itself. Absent, nothing changes.
  */
 
 import { View, StyleSheet } from 'react-native';
@@ -41,6 +55,11 @@ export default function Stepper({
   size = 'md',
   hitSlop,
   style,
+  onDecreaseLongPress,
+  onIncreaseLongPress,
+  onValuePress,
+  valuePressLabel,
+  centre = null,
 }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
@@ -70,21 +89,47 @@ export default function Stepper({
       if (!atMax) inc();
     } else if (event.nativeEvent.actionName === 'decrement') {
       if (!atMin) dec();
+    } else if (event.nativeEvent.actionName === 'activate' && onValuePress) {
+      onValuePress();
     }
   };
+  const accessibilityActions = onValuePress
+    ? [{ name: 'increment' }, { name: 'decrement' }, { name: 'activate', label: valuePressLabel }]
+    : [{ name: 'increment' }, { name: 'decrement' }];
+  const valueText = (
+    <Text
+      style={[
+        styles.value,
+        live.value,
+        {
+          minWidth: sizeStyle.valueMinWidth,
+          fontSize: sizeStyle.fontSize,
+        },
+      ]}
+      accessibilityLabel={valueLabel || `${label} ${display}`}
+      // A pressable value fills the space between the buttons and may wrap
+      // at the largest text sizes rather than clip its own figure.
+      numberOfLines={onValuePress ? 2 : 1}
+    >
+      {display}
+    </Text>
+  );
 
   return (
     <View
-      accessible={true}
-      accessibilityRole="adjustable"
-      accessibilityLabel={label}
-      accessibilityValue={{ text: String(display) }}
-      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-      onAccessibilityAction={handleAccessibilityAction}
+      // With a `centre` node the row is not one adjustable: its children (the
+      // two buttons and the caller's field) are each reached as themselves.
+      accessible={!centre}
+      accessibilityRole={centre ? undefined : 'adjustable'}
+      accessibilityLabel={centre ? undefined : label}
+      accessibilityValue={centre ? undefined : { text: String(display) }}
+      accessibilityActions={centre ? undefined : accessibilityActions}
+      onAccessibilityAction={centre ? undefined : handleAccessibilityAction}
       style={[styles.row, { gap: sizeStyle.gap }, isCompact && [styles.rowCompact, live.rowCompact], style]}
     >
       <PressableCard
         onPress={dec}
+        onLongPress={onDecreaseLongPress}
         disabled={atMin}
         hitSlop={effectiveHitSlop}
         accessibilityRole="button"
@@ -98,22 +143,21 @@ export default function Stepper({
           color={atMin ? t.colors.textDisabled : t.colors.textPrimary}
         />
       </PressableCard>
-      <Text
-        style={[
-          styles.value,
-          live.value,
-          {
-            minWidth: sizeStyle.valueMinWidth,
-            fontSize: sizeStyle.fontSize,
-          },
-        ]}
-        accessibilityLabel={valueLabel || `${label} ${display}`}
-        numberOfLines={1}
-      >
-        {display}
-      </Text>
+      {centre ? (
+        <View style={styles.centreSlot}>{centre}</View>
+      ) : onValuePress ? (
+        <PressableCard
+          onPress={onValuePress}
+          accessibilityRole="button"
+          accessibilityLabel={valuePressLabel}
+          style={styles.valuePress}
+        >
+          {valueText}
+        </PressableCard>
+      ) : valueText}
       <PressableCard
         onPress={inc}
+        onLongPress={onIncreaseLongPress}
         disabled={atMax}
         hitSlop={effectiveHitSlop}
         accessibilityRole="button"
@@ -179,6 +223,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   btnDisabled: { opacity: 0.5 },
+  // `centre` only: the caller's node fills the space between the buttons.
+  centreSlot: { flex: 1, minWidth: touchTarget.minimum * 2, justifyContent: 'center' },
+  // onValuePress only: the value is a full-height control between the two
+  // buttons.
+  valuePress: {
+    flex: 1,
+    minHeight: touchTarget.minimum,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   value: {
     textAlign: 'center',
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,

@@ -5,6 +5,14 @@
  * logged row (clearer edit affordance, entries.map block) and the DiaryScreen
  * call site keeps a doc comment on why onSavedMeals/onScan/onQuickAdd stay
  * wired-but-unused. Neither change touches anything this file asserts.
+ *
+ * RE-POINTED (D230 R4, food level-up 2026-10-16): the one quiet "Add food"
+ * CTA is now the house Button (variant secondary: the base surface, the
+ * border, an ink label and an ink search glyph, at the 48 dp target)
+ * instead of a hand-rolled TouchableOpacity that restyled itself to look
+ * like one. The truths pinned are the same: one centred add-food action,
+ * the search glyph in ink (never amber), a full touch target, no icon pile
+ * and none of the retired saved / barcode / quick-add buttons.
  */
 import fs from 'fs';
 import path from 'path';
@@ -25,11 +33,12 @@ describe('Eat meal-card polish', () => {
     // `t.colors.X` for the icon prop), so the pins match that form instead
     // of the bare `styles.X`/`colors.X` references. Same call sites, same
     // frozen style objects underneath, still asserted below.
-    expect(MEAL_SECTION).toContain('style={[styles.addFoodButton, live.addFoodButton]}');
-    expect(MEAL_SECTION).toContain('<Text style={[styles.addFoodText, live.addFoodText]}>Add food</Text>');
-    expect(MEAL_SECTION).toContain('<Ionicons name="search-outline" size={16} color={t.colors.textSecondary} />');
-    expect(MEAL_SECTION).toMatch(/addFoodButton: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(MEAL_SECTION).toContain('addFoodText: { ...type.label, color: colors.textPrimary }');
+    // One Button, titled "Add food", with the search glyph, in the
+    // secondary variant (Button.js: iconFg c.textSecondary, never amber).
+    expect(MEAL_SECTION).toMatch(/<Button\s+title="Add food"\s+icon="search-outline"\s+variant="secondary"/);
+    expect((MEAL_SECTION.match(/title="Add food"/g) || []).length).toBe(1);
+    expect(MEAL_SECTION).toContain('style={styles.addFoodButton}');
+    expect(MEAL_SECTION).toContain('addFoodButton: { flex: 1, minHeight: touchTarget.minimum }');
     expect(MEAL_SECTION).not.toContain('style={styles.shortcutButton}');
     expect(MEAL_SECTION).not.toContain('accessibilityLabel={`Add saved meal to ${slot.label}`}');
     expect(MEAL_SECTION).not.toContain('accessibilityLabel={`Scan barcode for ${slot.label}`}');

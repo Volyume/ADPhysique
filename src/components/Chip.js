@@ -6,6 +6,8 @@
  * goal / phase / protein / day-hour chip styling the audit found drifting.
  *
  * Pass `selected` + `onPress`. `icon` is an optional leading Ionicons name.
+ * `onLongPress` is optional (D230 R4: the diary's one-tap usual chips log on
+ * tap and open the portion editor on a hold); absent, the chip is unchanged.
  */
 
 import { Platform, StyleSheet } from 'react-native';
@@ -19,6 +21,7 @@ export default function Chip({
   label,
   selected = false,
   onPress,
+  onLongPress,
   icon,
   disabled = false,
   // 'button' for a plain toggle; pass 'radio' for single-select groups so
@@ -62,6 +65,7 @@ export default function Chip({
   return (
     <PressableCard
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={disabled}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel || label}

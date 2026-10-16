@@ -5,21 +5,24 @@
  * Founder order 2026-09-22/23, on a live screenshot of the Nutrition tab:
  * the day-tools Chips ("Meal builder" / "Higher-calorie day") read as
  * "ugly pills... only to one side", not features in their own right. This
- * is THE shared anatomy behind that fix -- lifted unchanged from the row
- * EmptyDiary.js used to hand-roll for its own "Meal builder" promo.
- * EmptyDiary.js (its own single row, inside the empty-day card) and
- * DiaryScreen.js (the day-with-entries feature list, directly under the
- * log) render this SAME component, never a copy, so the two can never
- * drift apart.
+ * is THE shared anatomy behind that fix, first lifted from the row the
+ * retired EmptyDiary card hand-rolled for its "Meal builder" promo.
+ * D230 R1 retired EmptyDiary (the workspace is the same on every day), so
+ * DiaryScreen.js's feature list under the log is the one caller: "Meal
+ * builder", "Copy yesterday" and "Higher-calorie day" are all this row.
  *
- * `bordered` (default true) draws the row's own border/radius/surface2
- * background -- the look EmptyDiary's row always had, for a row standing
- * alone on a card. Pass `bordered={false}` when the caller already wraps
- * a short LIST of these rows in one bordered/rounded surface (DiaryScreen's
- * two-row feature list), so the list reads as one card with flush rows
- * inside it, never cards inside a card. `divider` draws a bottom hairline
- * on a flush row that has another row directly below it in that shared
- * list -- never a full border, so the list still reads as one card.
+ * D230 R2 (one amber on the Diary): the icon tile is INK, NavRow's
+ * treatment (NavRow.js header, D214): a `surface2` tile behind a
+ * `textSecondary` glyph, so a list of doors carries no accent of its own.
+ *
+ * `bordered` (default true) draws the row's own border/radius on the
+ * `surface` tier, for a row standing alone. Pass `bordered={false}` when
+ * the caller already wraps a short LIST of these rows in one
+ * bordered/rounded surface (DiaryScreen's feature list), so the list reads
+ * as one card with flush rows inside it, never cards inside a card.
+ * `divider` draws a bottom hairline on a flush row that has another row
+ * directly below it in that shared list -- never a full border, so the
+ * list still reads as one card.
  */
 import { TouchableOpacity, View, StyleSheet } from 'react-native';
 import Text from '../Text';
@@ -41,7 +44,7 @@ export default function FeatureRow({
     <TouchableOpacity
       style={[
         styles.row,
-        bordered && [styles.rowBordered, { borderColor: t.colors.border, backgroundColor: t.colors.surface2 }],
+        bordered && [styles.rowBordered, { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface }],
         divider && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.colors.borderSubtle },
       ]}
       onPress={onPress}
@@ -49,7 +52,7 @@ export default function FeatureRow({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <View style={[styles.iconBox, { backgroundColor: t.colors.surface }]}>
+      <View style={[styles.iconBox, { backgroundColor: t.colors.surface2 }]}>
         <Ionicons name={icon} size={18} color={t.colors.textSecondary} />
       </View>
       <View style={styles.copy}>

@@ -102,8 +102,13 @@ describe('P9: placeholder-only inputs now carry labels', () => {
     expect(src).toMatch(/'Carbohydrates in grams'/);
     expect(src).toMatch(/'Fat in grams'/);
   });
+  // RE-POINTED (D230 R4, food level-up 2026-10-16): the save-as-meal sheet
+  // moved out of DiaryScreen.js into its own component; the field and its
+  // label moved with it, and DiaryScreen renders that sheet.
   test('save-as-meal name input', () => {
-    expect(read('src/screens/DiaryScreen.js'))
+    expect(read('src/components/food/SaveAsMealSheet.js'))
       .toMatch(/accessibilityLabel="Meal name"/);
+    expect(read('src/screens/DiaryScreen.js'))
+      .toMatch(/<SaveAsMealSheet\b/);
   });
 });

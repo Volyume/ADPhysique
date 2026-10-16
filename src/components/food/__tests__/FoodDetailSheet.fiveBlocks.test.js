@@ -197,7 +197,12 @@ describe('(a) five blocks at open, the rest on demand', () => {
     expect(amount).toContain('Amount');
     expect(amount).toContain('bagel (90 g)');
     expect(amount).toContain('Grams');
-    expect(amount).toContain('1 serving');
+    // The lead's ruling on lane 2B's note 1: the typed field IS the
+    // Stepper's centre (the house Stepper's `centre` slot), so the number
+    // appears once, in the field, never mirrored beside it.
+    expect(amount).not.toContain('1 serving');
+    const amountField = tree.root.findAll((n) => n.props.accessibilityLabel === 'Amount in servings' && typeof n.props.onChangeText === 'function')[0];
+    expect(amountField.props.value).toBe('1');
     expect(amount).toContain('= |90| g');
 
     expect(blockText(hostByTestID(tree, 'food-sheet-summary')))
@@ -318,14 +323,18 @@ describe('(d) a decimal comma is a decimal point', () => {
     expect(point.props.onSave).toHaveBeenCalledWith(expect.objectContaining({ quantityG: 135 }));
   });
 
-  test('the Stepper mirrors the typed amount and steps 0.5 serving from it', () => {
+  test('the buttons step 0.5 serving from the typed amount, and the field is the one number (no adjustable mirrors it)', () => {
     const { tree } = render();
     typeAmount(tree, 'Amount in servings', '1,5');
-    const stepper = tree.root.find((n) => n.props.accessibilityRole === 'adjustable' && typeof n.type === 'string');
-    expect(stepper.props.accessibilityValue).toEqual({ text: '1.5 servings' });
+    // With the field in the Stepper's centre the row is not one adjustable
+    // (that would hide the field from a screen reader): the buttons and the
+    // field are reached each as themselves.
+    expect(tree.root.findAll((n) => n.props.accessibilityRole === 'adjustable' && typeof n.type === 'string')).toHaveLength(0);
     act(() => { byLabel(tree, 'Increase amount').props.onPress(); });
     const field = tree.root.findAll((n) => n.props.accessibilityLabel === 'Amount in servings' && typeof n.props.onChangeText === 'function')[0];
     expect(field.props.value).toBe('2');
+    act(() => { byLabel(tree, 'Decrease amount').props.onPress(); });
+    expect(field.props.value).toBe('1.5');
   });
 
   test('the 1 to 5000 g bound still refuses an amount over it', async () => {

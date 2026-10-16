@@ -32,14 +32,17 @@ import PressableCard from './PressableCard';
 // FOUNDER DECISION (fully free, no tier split): the `pro` flag (ProBadge +
 // "Part of Pro" accessibility suffix) is retired -- no row on this screen
 // gates on tier any more.
-export function NavRow({ icon, label, sub, onPress }) {
+export function NavRow({ icon, label, sub, onPress, haptic = true }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   // R9 (D70): the house selection() beat on every nav-row tap, added once
   // here so all consumers gain it together (haptics vocabulary rule;
   // navigation taps are never the ED diary-marking exception).
+  // D230 R4: `haptic={false}` is for a row whose tap WRITES the diary (the
+  // Diary's copy-from-another-day rows), which keeps the recorded no-haptic
+  // exception for diary-marking moments. Absent, every row ticks as before.
   const handlePress = onPress
-    ? () => { haptics.selection(); onPress(); }
+    ? (haptic ? () => { haptics.selection(); onPress(); } : onPress)
     : onPress;
   return (
     <PressableCard

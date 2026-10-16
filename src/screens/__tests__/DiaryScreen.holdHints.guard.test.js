@@ -18,12 +18,24 @@
  * wiring, or the water row's own long-press handlers (do-not-touch list from
  * the task: the gesture, the selection bar logic, ED-flag areas, read-only
  * lapse mode).
+ *
+ * RE-POINTED (D230 R4 and R14, food level-up 2026-10-16): WaterRow moved out
+ * of DiaryScreen.js into src/components/food/WaterRow.js with the same props,
+ * and its +/- are now the house Stepper's 48 dp buttons. The water pins
+ * below read that file. The truths are the same: a hold still moves 500 ml
+ * each way (the Stepper's hold actions now carry onSub(500) / onAdd(500)),
+ * the one-time "Hold to add 500 ml." caption still renders inside WaterRow,
+ * and the hint is still dismissed at DiaryScreen's call site.
  */
 import fs from 'fs';
 import path from 'path';
 
 const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'DiaryScreen.js'),
+  'utf8',
+);
+const WATER_SRC = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'food', 'WaterRow.js'),
   'utf8',
 );
 
@@ -73,8 +85,8 @@ describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
   });
 
   test('the water row long-press handlers are unchanged (still onSub(500) / onAdd(500))', () => {
-    expect(SRC).toMatch(/onLongPress=\{\(\) => onSub\(500\)\}/);
-    expect(SRC).toMatch(/onLongPress=\{\(\) => onAdd\(500\)\}/);
+    expect(WATER_SRC).toMatch(/onDecreaseLongPress=\{\(\) => onSub\(500\)\}/);
+    expect(WATER_SRC).toMatch(/onIncreaseLongPress=\{\(\) => onAdd\(500\)\}/);
   });
 
   test('the water hint is dismissed via the onAdd/onSub wrapper at the call site, not inside WaterRow', () => {
@@ -93,13 +105,14 @@ describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
   });
 
   test('the water caption renders inside WaterRow', () => {
-    expect(SRC).toMatch(
+    expect(WATER_SRC).toMatch(
       /\{showHint \? \(\s*<HintCaption\s*text="Hold to add 500 ml\."\s*onDismiss=\{onDismissHint\}\s*style=\{styles\.waterHint\}\s*\/>\s*\) : null\}/,
     );
   });
 
   test('WaterRow accepts the hint props and DiaryScreen passes them through', () => {
-    expect(SRC).toMatch(/showHint = false, onDismissHint,/);
+    expect(WATER_SRC).toMatch(/showHint = false, onDismissHint,/);
+    expect(SRC).toMatch(/import WaterRow from '\.\.\/components\/food\/WaterRow';/);
     expect(SRC).toMatch(/showHint=\{showWaterHint\}/);
     expect(SRC).toMatch(/onDismissHint=\{dismissWaterHint\}/);
   });

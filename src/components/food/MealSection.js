@@ -3,6 +3,9 @@ import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import Card from '../Card';
+import Chip from '../Chip';
+import Button from '../Button';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
@@ -24,6 +27,16 @@ import { touchTarget } from '../../styles/layout';
 // where yesterday had food in this same slot, a "Yesterday's <meal>" chip
 // leads the row and copies that meal across. Both write paths are the
 // diary's own (logFoodEntry + an undo toast), never a silent shortcut.
+//
+// D230 (food level-up, rulings R1-R4, R15, R16): the card is the house
+// `Card`; the chips are the house `Chip` (role "button", an action, at the
+// 48 dp touch target, the glyph in the chip's own ink); "Add food" is the
+// house `Button`; the meal name is a heading; the subtotal reads
+// "420 kcal · 32 g protein". R1: the chips render on an empty DAY too, not
+// only once the day has an entry, so the first food of the day is one tap.
+// R3: the two standing lines that explained the chips are gone; the chip's
+// label states what it logs and its accessibility hint says how to change
+// the portion first.
 // D138 (one-tap usual): a usual chip now LOGS on tap, so it must disclose the
 // portion it will write before the tap, not after. `pluralise` keeps a
 // household serving readable ("2 slices", "1 slice"); a label that already
@@ -128,7 +141,6 @@ export default function MealSection({
   // generic library pick; the suggestion only shows once usuals have
   // nothing to offer.
   const showMealSuggestion = !hasEntries && !selectionMode && !readOnly && !showUsualsRow && !!mealSuggestion;
-  const showEmptyActions = !hasEntries && !selectionMode && !readOnly;
   const showActionHub = !selectionMode && !readOnly;
   // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on
   // the day, carry its free additions into the diary too. Only shows when the
@@ -148,71 +160,64 @@ export default function MealSection({
   // is not currently a multi-select target.
   const showRowEditHint = !selectionMode && !readOnly;
   return (
-    <View style={[styles.card, live.card]}>
+    <Card padding="none" style={styles.card}>
       <View style={styles.header}>
-        <Text style={[styles.mealName, live.mealName]}>{slot.label}</Text>
+        {/* D230 R16: the meal name is a heading, so the screen-reader
+            heading rotor walks the Diary meal by meal. */}
+        <Text style={[styles.mealName, live.mealName]} accessibilityRole="header">{slot.label}</Text>
         {hasEntries ? (
-          <Text style={[styles.subtotal, live.subtotal]}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
+          <Text style={[styles.subtotal, live.subtotal]}>
+            {toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {slotProtein} g protein
+          </Text>
         ) : null}
       </View>
-      {showEmptyActions && showUsuals ? (
-        <View style={styles.emptySlot}>
-          <Text style={[styles.emptySlotText, live.emptySlotText]}>
-            Your usual foods are below. Pick something else if this meal was different.
-          </Text>
-        </View>
-      ) : null}
-      {showEmptyActions && showMealSuggestion ? (
-        <View style={styles.emptySlot}>
-          <Text style={[styles.emptySlotText, live.emptySlotText]}>
-            A meal that fits what's left of your day. Pick something else if this doesn't suit.
-          </Text>
-        </View>
-      ) : null}
       {showMealSuggestion ? (
         <View style={styles.usuals}>
-          <TouchableOpacity
-            style={[styles.usualChip, live.usualChip]}
+          <Chip
+            label={mealSuggestion.name ?? 'Meal'}
+            icon="add"
             onPress={() => onLogMealSuggestion?.(mealSuggestion)}
             accessibilityRole="button"
             accessibilityLabel={`Add ${mealSuggestion.name ?? 'meal'} to ${slot.label}`}
-          >
-            <Ionicons name="add" size={14} color={t.colors.primary} />
-            <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{mealSuggestion.name ?? 'Meal'}</Text>
-          </TouchableOpacity>
+            numberOfLines={1}
+            style={styles.usualChip}
+            labelStyle={styles.usualChipText}
+          />
         </View>
       ) : null}
       {showUsualsRow ? (
         <View style={styles.usuals}>
           {showYesterdayCopy ? (
-            <TouchableOpacity
-              style={[styles.usualChip, live.usualChip]}
+            <Chip
+              label={yesterdayCopy.label}
+              icon="copy-outline"
               onPress={() => onCopyYesterday?.()}
               accessibilityRole="button"
               accessibilityLabel={
                 `${yesterdayCopy.label}, copy ${yesterdayCopy.count} `
                 + `${yesterdayCopy.count === 1 ? 'entry' : 'entries'} into ${slot.label}`
               }
-            >
-              <Ionicons name="copy-outline" size={14} color={t.colors.primary} />
-              <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{yesterdayCopy.label}</Text>
-            </TouchableOpacity>
+              numberOfLines={1}
+              style={styles.usualChip}
+              labelStyle={styles.usualChipText}
+            />
           ) : null}
           {showUsuals ? usuals.map((food) => (
             // D138: one tap LOGS the remembered portion (the label states it);
             // a hold opens the search/detail path to change the portion first.
-            <TouchableOpacity
+            <Chip
               key={food.food_ref}
-              style={[styles.usualChip, live.usualChip]}
+              label={usualChipLabel(food)}
+              icon="add"
               onPress={() => onLogUsual?.(food)}
               onLongPress={() => onEditUsual?.(food)}
               accessibilityRole="button"
               accessibilityLabel={usualChipAccessibilityLabel(food, slot.label)}
               accessibilityHint="Hold to change the portion first"
-            >
-              <Ionicons name="add" size={14} color={t.colors.primary} />
-              <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{usualChipLabel(food)}</Text>
-            </TouchableOpacity>
+              numberOfLines={1}
+              style={styles.usualChip}
+              labelStyle={styles.usualChipText}
+            />
           )) : null}
         </View>
       ) : null}
@@ -279,36 +284,37 @@ export default function MealSection({
             accessibilityRole="button"
             accessibilityLabel={`Mark ${slot.label} as eaten`}
           >
-            <Text style={[styles.markEatenText, live.markEatenText]}>Mark eaten</Text>
+            {/* D230 R15: one wording, the same as the day's banner. */}
+            <Text style={[styles.markEatenText, live.markEatenText]}>Mark as eaten</Text>
           </TouchableOpacity>
         </View>
       ) : null}
       {/* E10 read-only lapse views: no add affordances on a view-only diary. */}
+      {/* D230 R4: "Add food" is the house Button (secondary: the ink
+          sibling, its search glyph in the same ink), full width at the 48 dp
+          touch target. It is TAP #1 of the pinned three-tap log
+          (DiaryScreen.foodLogTapCount.guard.test.js). */}
       {showActionHub ? (
-        <View style={[styles.actionHub, hasEntries && styles.actionHubDivided]}>
-          <TouchableOpacity
-            style={[styles.addFoodButton, live.addFoodButton]}
+        <View style={[styles.actionHub, hasEntries && [styles.actionHubDivided, live.actionHubDivided]]}>
+          <Button
+            title="Add food"
+            icon="search-outline"
+            variant="secondary"
             onPress={() => { haptics.selection(); onAdd?.(); }}
-          accessibilityRole="button"
-          accessibilityLabel={`Add food to ${slot.label}`}
-        >
-            <Ionicons name="search-outline" size={16} color={t.colors.textSecondary} />
-            <Text style={[styles.addFoodText, live.addFoodText]}>Add food</Text>
-          </TouchableOpacity>
+            accessibilityLabel={`Add food to ${slot.label}`}
+            style={styles.addFoodButton}
+          />
         </View>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  // D230 R4: the surface, the `lg` radius and the `borderSubtle` edge come
+  // from the house Card; this carries only the clip (so a swiping row stays
+  // inside the rounded corners) and the space between cards.
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    // borderSubtle, matching Card's own edge: a meal card is a content
-    // container, and 5-8 of them stack down the diary. On `border` each one
-    // carried a brighter outline than every real Card beside it.
-    borderWidth: 1, borderColor: colors.borderSubtle,
     overflow: 'hidden',
     marginBottom: spacing.lg,
   },
@@ -319,23 +325,16 @@ const styles = StyleSheet.create({
   mealName: { ...type.bodyStrong, color: colors.textPrimary },
   subtotal: { color: colors.textMuted, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   // One-tap "usuals" chips: a quiet wrap of the foods most logged into this
-  // slot, sitting between the header and the Add row on an empty card.
+  // slot, sitting between the header and the Add row on an empty card. Each
+  // is the house Chip at the platform touch target (D230 R4, R16).
   usuals: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, paddingTop: spacing.xxs,
   },
-  usualChip: {
-    flexDirection: 'row', alignItems: 'center', maxWidth: '100%',
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2,
-  },
-  usualChipText: { ...type.label, color: colors.textPrimary, marginLeft: 4, flexShrink: 1 },
-  emptySlot: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  emptySlotText: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
+  usualChip: { minHeight: touchTarget.minimum, maxWidth: '100%' },
+  // Layout only: a long food name ellipsises inside the chip rather than
+  // pushing it past the card.
+  usualChipText: { flexShrink: 1 },
   actionHub: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -348,20 +347,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     paddingTop: spacing.md,
   },
-  addFoodButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    flex: 1,
-    minHeight: touchTarget.minimum,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.md,
-  },
-  addFoodText: { ...type.label, color: colors.textPrimary },
+  // Layout only: the house Button owns the surface, border, label and glyph.
+  addFoodButton: { flex: 1, minHeight: touchTarget.minimum },
   // L05-D1/D6: the entry row keeps its own full-bleed background/border
   // (EntryRow.js, untouched by this fix); this outer row only adds a
   // narrow decorative lane for the edit chevron, so the row itself must be
@@ -407,18 +394,14 @@ const styles = StyleSheet.create({
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
 // frozen `styles` block above, same "frozen base + live override" pattern as
-// BillingPeriodSelector.js's buildLiveStyles. header/emptySlot/actionHub/
-// actionHubDivided/entryRowOuter/entryFlex have no colour tokens.
+// BillingPeriodSelector.js's buildLiveStyles. card/header/usuals/usualChip/
+// usualChipText/actionHub/addFoodButton/entryRowOuter/entryFlex have no
+// colour tokens (the house Card, Chip and Button own their own colours).
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     mealName: { color: t.colors.textPrimary },
     subtotal: { color: t.colors.textMuted },
-    usualChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    usualChipText: { color: t.colors.textPrimary },
-    emptySlotText: { color: t.colors.textMuted },
-    addFoodButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    addFoodText: { color: t.colors.textPrimary },
+    actionHubDivided: { borderTopColor: t.colors.border },
     entryChevron: { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle },
     plannedRowText: { color: t.colors.textMuted },
     markEatenButton: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },

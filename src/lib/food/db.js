@@ -1123,6 +1123,43 @@ export async function setWater(userId, entryDate, ml) {
   _scheduleSync();
 }
 
+// D230 R14: apply a water DELTA atomically, so two taps inside one await
+// window can never write the same base twice (the lost update setWater's
+// read-then-write caller allowed). The day's row is created at 0 if absent,
+// then one UPDATE adds the delta in SQL: a tombstoned day counts from 0 and
+// comes back to life (the same rule setWater keeps), and the result stays
+// inside setWater's own 0..20000 bounds. Runs on the transaction queue, so
+// each call reads back exactly its own result; sync is scheduled as setWater
+// does. Returns the day's new ml.
+export async function adjustWaterMl(userId, entryDate, deltaMl) {
+  const now = Date.now();
+  if (!isBoundedString(userId, 300) || !isLocalDayKey(entryDate)
+    || !isStrictNumberInRange(deltaMl, -20000, 20000, { integer: true })
+    || !isPersistedEpochMs(now)) throw new TypeError('adjustWaterMl: invalid hydration values');
+  const d = await db();
+  const ml = await runInTransaction(d, async () => {
+    await d.runAsync(
+      `INSERT INTO daily_water (user_id, entry_date, ml, updated_at, deleted_at) VALUES (?, ?, 0, ?, NULL)
+       ON CONFLICT(user_id, entry_date) DO NOTHING`,
+      [userId, entryDate, now]
+    );
+    await d.runAsync(
+      `UPDATE daily_water
+       SET ml = MAX(0, MIN(20000, (CASE WHEN deleted_at IS NULL THEN ml ELSE 0 END) + ?)),
+           updated_at = ?, deleted_at = NULL
+       WHERE user_id = ? AND entry_date = ?`,
+      [deltaMl, now, userId, entryDate]
+    );
+    const row = await d.getFirstAsync(
+      `SELECT ml FROM daily_water WHERE user_id = ? AND entry_date = ?`,
+      [userId, entryDate]
+    );
+    return row?.ml ?? 0;
+  });
+  _scheduleSync();
+  return ml;
+}
+
 // D1-#8: SOFT-delete a day's water so the deletion propagates cross-device via
 // the food sync `deleted` slice. Set deleted_at + bump updated_at so the
 // tombstone out-clocks an older edit on the other device.

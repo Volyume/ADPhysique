@@ -89,10 +89,17 @@ describe('DiaryScreen EP-09/P-06 false empty-state guard', () => {
     expect(SRC).toMatch(/import EmptyState from '\.\.\/components\/EmptyState';/);
   });
 
-  test('a failed load with nothing to show renders a retryable error, ahead of the real empty state', () => {
+  // RE-POINTED (D230 R1, food level-up 2026-10-16): EmptyDiary is retired,
+  // so an empty day no longer has a branch of its own; it renders the same
+  // meal cards as any day. The truth pinned is unchanged: a FAILED load with
+  // nothing to show gets the retryable error, never the day's workspace (an
+  // empty day's cards would read as "nothing logged"), and it is decided
+  // ahead of that workspace.
+  test('a failed load with nothing to show renders a retryable error, ahead of the day\'s workspace', () => {
     const idxSkeleton = SRC.indexOf('{!loaded ? (');
     const idxError = SRC.indexOf('loadError && viewEntries.length === 0 ? (');
-    const idxEmpty = SRC.indexOf('viewEntries.length === 0 ? (\n          <EmptyDiary');
+    const idxEmpty = SRC.indexOf('visibleSlots.map(');
+    expect(SRC).not.toMatch(/<EmptyDiary/);
     expect(idxSkeleton).toBeGreaterThan(-1);
     expect(idxError).toBeGreaterThan(idxSkeleton);
     expect(idxEmpty).toBeGreaterThan(idxError);

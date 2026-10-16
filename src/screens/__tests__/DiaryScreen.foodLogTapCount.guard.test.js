@@ -5,7 +5,7 @@
  * from the diary screen. The canonical path is:
  *   TAP #1: Tap "Add food" button in MealSection (on DiaryScreen)
  *   TAP #2: Tap a food row (on FoodSearchScreen) -> opens FoodDetailSheet
- *   TAP #3: Tap "Add to diary" button (on FoodDetailSheet) -> logs the entry
+ *   TAP #3: Tap the "Add to <meal>" button (on FoodDetailSheet) -> logs the entry
  *
  * BASELINE: 3 taps (documented below at line ~62, TAP_BUDGET constant).
  *
@@ -27,6 +27,15 @@
  * addFoodButton style and onPress={onAdd} wiring); the new per-row edit
  * chevron and the DiaryScreen doc comment on the unused onSavedMeals/onScan/
  * onQuickAdd props do not touch any regex this file matches.
+ *
+ * RE-POINTED (D230 R4, food level-up 2026-10-16): TAP #1 is now the house
+ * `Button` titled "Add food" (variant secondary, the search glyph, full
+ * width at the 48 dp target) instead of a hand-rolled TouchableOpacity. It
+ * is the same one tap with the same onPress wiring into onAdd, so the TAP #1
+ * regexes below follow the new control and TAP_BUDGET stays 3; TAP #2 and
+ * TAP #3 are untouched. D230 R1 also puts this button on every meal card of
+ * an empty day (EmptyDiary's own "Add food" is retired), so the path is the
+ * same three taps on every day.
  */
 import fs from 'fs';
 import path from 'path';
@@ -57,14 +66,17 @@ const TAP_BUDGET = 3;
 
 describe('DiaryScreen food-logging tap count (§15 item 10)', () => {
   describe(`baseline is TAP_BUDGET = ${TAP_BUDGET}`, () => {
-    test('TAP #1: MealSection has a TouchableOpacity button labelled "Add food"', () => {
-      expect(MEAL_SECTION_SRC).toMatch(/TouchableOpacity/);
+    test('TAP #1: MealSection has a house Button labelled "Add food"', () => {
+      expect(MEAL_SECTION_SRC).toMatch(/import Button from '\.\.\/Button';/);
       expect(MEAL_SECTION_SRC).toMatch(/addFoodButton/);
+      // ONE Button element carries the title and the onAdd wiring together.
       // Haptics completion pass (2026-07-10): a haptics.selection() call was
       // added alongside onAdd (neutral navigation into FoodSearchScreen,
       // not a log write); still exactly ONE tap, TAP_BUDGET unaffected, so
       // the regex tolerates the wrap without loosening the tap-count pin.
-      expect(MEAL_SECTION_SRC).toMatch(/onPress=\{\(\) => \{ (?:haptics\.selection\(\); )?onAdd\?\.\(\); \}\}/);
+      expect(MEAL_SECTION_SRC).toMatch(
+        /<Button\s+title="Add food"[^>]*?onPress=\{\(\) => \{ (?:haptics\.selection\(\); )?onAdd\?\.\(\); \}\}[^>]*?\/>/,
+      );
       expect(MEAL_SECTION_SRC).toMatch(/Add food/);
     });
 
@@ -94,8 +106,12 @@ describe('DiaryScreen food-logging tap count (§15 item 10)', () => {
       expect(FOOD_SEARCH_SRC).toMatch(/FoodDetailSheet[\s\S]*?food=\{picker/);
     });
 
-    test('TAP #3: FoodDetailSheet has an "Add to diary" button wired to handleSave', () => {
-      expect(FOOD_DETAIL_SHEET_SRC).toMatch(/Add to diary/);
+    test('TAP #3: FoodDetailSheet has an "Add to <meal>" button wired to handleSave', () => {
+      // D230 R5 (food level-up, 2026-10-16): the primary button names the
+      // meal it adds to ("Add to Breakfast", through mealSlotLabel) instead
+      // of "Add to diary". Still the one press that logs; TAP_BUDGET is
+      // unchanged at 3.
+      expect(FOOD_DETAIL_SHEET_SRC).toMatch(/`Add to \$\{mealSlotLabel\(mealSlot\)\}`/);
       expect(FOOD_DETAIL_SHEET_SRC).toMatch(/onPress=\{handleSave\}/);
       expect(FOOD_DETAIL_SHEET_SRC).toMatch(/Button/);
     });

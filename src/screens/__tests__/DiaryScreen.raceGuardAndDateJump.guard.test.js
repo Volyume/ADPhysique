@@ -28,6 +28,10 @@
 import fs from 'fs';
 import path from 'path';
 
+const DAY_TOOLS_SRC = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'food', 'DayToolsSheet.js'),
+  'utf8',
+);
 const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'DiaryScreen.js'),
   'utf8',
@@ -131,13 +135,20 @@ describe('DiaryScreen NAV-3 date-jump wiring', () => {
 });
 
 describe('DiaryScreen empty-day add flow', () => {
+  // RE-POINTED (D230 R1, food level-up 2026-10-16): EmptyDiary is retired;
+  // an empty day shows the same meal cards as any day. Its one "Add food"
+  // (to the clock's likely meal) is now the "Add food" on every meal card,
+  // each to its own meal, and its meal-builder promo is the Meal builder
+  // door. The truths are the same: an empty day adds food in one tap into a
+  // named meal, meal planning stays one plain route carrying the day, and
+  // the scan button still files to the clock's likely meal.
   test('the empty diary uses the same inferred meal slot as barcode scanning and keeps meal planning primary', () => {
     expect(SRC).toMatch(/const likelyMealSlot = useMemo\(\(\) => \{/);
     expect(SRC).toMatch(/inferMealSlotForHour\(new Date\(\)\.getHours\(\), keys\)/);
-    expect(SRC).toMatch(/onAdd=\{\(\) => addFood\(likelyMealSlot \|\| 'meal_1'\)\}/);
-    expect(SRC).toMatch(/onPlanDay=\{\(\) => navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)\}/);
+    expect(SRC).not.toMatch(/<EmptyDiary/);
+    expect(SRC).toMatch(/onAdd=\{\(\) => addFood\(slot\.key\)\}/);
+    expect(SRC).toMatch(/<FeatureRow\s+icon="restaurant-outline"\s+title="Meal builder"[\s\S]{0,240}navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
     expect(SRC).not.toMatch(/initialTab: 'suggested'/);
-    expect(SRC).toMatch(/addLabel="Add food"/);
     expect(SRC).not.toMatch(/likelyMealLabel/);
     expect(SRC).toMatch(/navigation\.navigate\('ScanBarcode', \{ entryDate: selectedDate, mealSlot: likelyMealSlot \}\)/);
   });
@@ -152,20 +163,22 @@ describe('DiaryScreen macro detail entry points', () => {
 });
 
 describe('DiaryScreen diary tools', () => {
+  // RE-POINTED (D230 R4, 4.1 and 4.7, food level-up 2026-10-16): the Day
+  // tools sheet moved out of DiaryScreen.js into DayToolsSheet.js, its rows
+  // are the house NavRow (ink tiles) and its title is a heading. The truths
+  // are the same: copy and trends live in one clear tools sheet opened from
+  // the day pager, never a generic alert. The sheet's old intro line is now
+  // carried by each row's own sub line, and "Trends and export" reads
+  // "Trends", one name for the screen everywhere (D230 R15).
   test('copy and insights live in a clear tools sheet, not a generic alert', () => {
     expect(SRC).toMatch(/accessibilityLabel="Open diary tools"/);
-    expect(SRC).toMatch(/accessibilityLabel="Diary tools"/);
-    // Batch 2 wave B (B-5 section-label consolidation): moveTitle is now a raw
-    // <Text> routed through the shared SectionLabel overline role, not a plain <Text>.
-    expect(SRC).toMatch(/<SectionLabel style=\{styles\.moveTitle\}>Day tools<\/SectionLabel>/);
-    // CP-10 batch E (2026-07-10): DiaryScreen now reads a live theme
-    // (src/hooks/useTheme.js), so styles.diaryToolTitle gained a
-    // live.diaryToolTitle override in a style array. The pinned contract
-    // (which frozen style backs this text) is unchanged -- widened only to
-    // allow the insertion.
-    expect(SRC).toMatch(/<Text style=\{\[styles\.diaryToolTitle, live\.diaryToolTitle\]\}>Copy from another day<\/Text>/);
-    expect(SRC).toMatch(/<Text style=\{\[styles\.diaryToolTitle, live\.diaryToolTitle\]\}>Trends and export<\/Text>/);
-    expect(SRC).toMatch(/Copy foods from another day, check nutrition trends, or export your diary\./);
+    expect(SRC).toMatch(/<DayToolsSheet\s+visible=\{diaryToolsOpen\}/);
+    expect(DAY_TOOLS_SRC).toMatch(/accessibilityLabel="Diary tools"/);
+    expect(DAY_TOOLS_SRC).toMatch(/<SectionLabel heading style=\{styles\.title\}>Day tools<\/SectionLabel>/);
+    expect(DAY_TOOLS_SRC).toMatch(/<NavRow\s+icon="copy-outline"\s+label="Copy from another day"/);
+    expect(DAY_TOOLS_SRC).toMatch(/<NavRow\s+icon="analytics-outline"\s+label="Trends"/);
+    expect(DAY_TOOLS_SRC).toMatch(/Choose a recent logged day and copy its foods into this one\./);
+    expect(DAY_TOOLS_SRC).toMatch(/Calorie, macro and consistency trends, and your diary export\./);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
 });
@@ -179,9 +192,8 @@ describe('DiaryScreen meal-planning entry point', () => {
   // promo row uses (never a copy); "Trends" moved into the header's right
   // slot as a HeaderAction. The pinned contract is unchanged in substance:
   // meal planning is still ONE plain route out of the diary carrying the
-  // day in view, never another summary block. The two-line promo copy
-  // itself survives where it still earns its space, on the empty state
-  // (EmptyDiary.js, pinned by foodComponents.test.js).
+  // day in view, never another summary block. (D230 R1 retired EmptyDiary,
+  // so this one door is the meal builder's only Diary entry, on every day.)
   test('meal planning stays as one plain route, not another summary block', () => {
     expect(SRC).toMatch(/navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/accessibilityLabel="Open meal builder for this day or week"/);
@@ -234,8 +246,13 @@ describe('DiaryScreen meal-planning entry point', () => {
 });
 
 describe('the feature-row list never renders as an empty box, and no chip remains (fresh-eyes review 2026-09-23)', () => {
+  // RE-POINTED (D230 R1, food level-up 2026-10-16): "Meal builder" is now a
+  // door on every day, so it is the list's first, unconditional row and the
+  // container needs no "at least one row" clause of its own: it can never be
+  // an empty box. Copy yesterday and Higher-calorie day keep their own gates.
   test('the container is gated on at least one row rendering', () => {
-    expect(SRC).toMatch(/\{loaded && !selectionMode && \(viewEntries\.length > 0 \|\| bankingAvailable\) \? \(\s*<View style=\{\[styles\.featureRows, live\.featureRows\]\}>/);
+    expect(SRC).toMatch(/\{loaded && !selectionMode \? \(\s*<View style=\{\[styles\.featureRows, live\.featureRows\]\}>\s*<FeatureRow\s+icon="restaurant-outline"\s+title="Meal builder"/);
+    expect(SRC).toMatch(/\{showCopyYesterdayDoor \? \(\s*<FeatureRow\s+icon="copy-outline"\s+title="Copy yesterday"/);
   });
 
   test('no Chip is rendered or imported on this screen any more', () => {
@@ -290,7 +307,8 @@ describe('DiaryScreen saved food entry points', () => {
     expect(SRC).toMatch(/accessibilityLabel="Saved meals and recipes"/);
     // CP-10 batch E (2026-07-10): live-themed, so each style prop now carries
     // the style-array form with a live.* override. Same pins, new shape.
-    expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodTitle, live\.savedFoodTitle\]\}>Saved meals and recipes<\/Text>/);
+    // D230 R16: the sheet title is a heading (every sheet title is).
+    expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodTitle, live\.savedFoodTitle\]\} accessibilityRole="header">Saved meals and recipes<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Saved meals<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Recipes<\/Text>/);
     expect(SRC).toMatch(/is in Saved meals/);

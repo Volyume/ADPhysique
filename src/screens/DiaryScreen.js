@@ -25,6 +25,23 @@
  * full-width FeatureRow doors under the log (styles.featureRows); "Trends"
  * moved into the ScreenHeader's right slot as a HeaderAction. See the
  * featureRows block and the ScreenHeader render below for the detail.
+ *
+ * D230 (food level-up, wave 1, lane 1A; docs/audit/food-levelup-2026-10-16/
+ * 03-ASSESSMENT-AND-PLAN.md sections 3 and 4.1):
+ *  - R1: the workspace is the same on every day. The EmptyDiary card is
+ *    retired; an empty day shows the meal cards with their one-tap usual
+ *    chips, "Yesterday's <meal>" and the hour's suggestion, exactly as a
+ *    started day does. "Copy yesterday" is a FeatureRow door on an empty day
+ *    whose yesterday has food; "Meal builder" is a door on every day.
+ *  - R2: one amber on the Diary, the scan button. The header's Trends glyph,
+ *    the doors' tiles, the water glyph and the saved-food glyphs are ink.
+ *  - R4: the sheets this screen used to define inline (move, save as meal,
+ *    Day tools, copy from another day) and WaterRow are named components in
+ *    src/components/food/; the offer cards sit on the house Card.
+ *  - R11/R19: Day tools gains "Meals" (MealsSheet) and "Nutrition targets".
+ *  - R14: water moves by an atomic delta (food/db.js adjustWaterMl).
+ *  - R16: the scan button says it opens the camera; the targets-changed
+ *    chip is a full touch target.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
@@ -44,7 +61,7 @@ import Card from '../components/Card';
 import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   applyCuratedMealToDiary,
-  setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
+  adjustWaterMl, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
   getSlotRecents, logFoodEntry, upsertSlotRecent,
 } from '../lib/food/db';
 // D138 one-tap usual: the SAME payload builders FoodSearchScreen's confirmLog
@@ -81,7 +98,6 @@ import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import BottomSheet from '../components/BottomSheet';
-import EmptyDiary from '../components/food/EmptyDiary';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import MealSection, { usualPortionText } from '../components/food/MealSection';
@@ -89,17 +105,20 @@ import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
-import SectionLabel from '../components/SectionLabel';
 import FeatureRow from '../components/food/FeatureRow';
+import WaterRow from '../components/food/WaterRow';
+import DiaryMoveSheet from '../components/food/DiaryMoveSheet';
+import SaveAsMealSheet from '../components/food/SaveAsMealSheet';
+import DayToolsSheet from '../components/food/DayToolsSheet';
+import CopyFromDaySheet from '../components/food/CopyFromDaySheet';
+import MealsSheet from '../components/food/MealsSheet';
 import HeaderAction from '../components/HeaderAction';
-import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 import { scaleMacros } from '../lib/food/macros';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
-import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
 import { touchTarget } from '../styles/layout';
 import { getRecentIntakeSummary } from '../lib/food/db';
@@ -203,9 +222,9 @@ export default function DiaryScreen({ navigation, route }) {
   // The safe per-day floor banking must never breach: max(sex floor, FFM floor)
   // (CB-1 blueprint line 90). Computed on load from latest weight + body comp.
   const [floorKcal, setFloorKcal] = useState(() => safeDayFloorKcal({ sex }));
-  // Whether the day before the one in view has any food logged. Drives
-  // EmptyDiary's optional "Copy yesterday" action; the premium meal builder
-  // now owns planning for a day with no history.
+  // Whether the day before the one in view has any food logged. Drives the
+  // "Copy yesterday" door an empty day offers (D230 R1, formerly EmptyDiary's
+  // action); the meal builder door owns planning a day with no history.
   const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
   // D138 item 2: yesterday's rows, kept so an empty meal can offer to copy
   // just THAT meal across. Loaded by the same (conditional) read that feeds
@@ -277,11 +296,12 @@ export default function DiaryScreen({ navigation, route }) {
         } catch (_) { /* keep sex floor */ }
       }
       // D138 item 5: yesterday's entries are only READ when this day can
-      // actually use them - the day is empty (the EmptyDiary "Copy yesterday"
-      // CTA) or at least one visible meal is empty (the per-meal
-      // "Yesterday's <meal>" chip). A day with every meal already filled
-      // pays nothing for a fetch it cannot show. mealSlotKeysRef carries the
-      // currently rendered slot ladder (assigned during render below).
+      // actually use them - any visible meal is empty (the per-meal
+      // "Yesterday's <meal>" chip; an empty day is every meal empty, which
+      // also feeds the "Copy yesterday" door, D230 R1). A day with every
+      // meal already filled pays nothing for a fetch it cannot show.
+      // mealSlotKeysRef carries the currently rendered slot ladder (assigned
+      // during render below).
       const loggedSlotKeys = new Set((es ?? []).map((e) => e.meal_slot));
       const needYesterday = (es ?? []).length === 0
         || (mealSlotKeysRef.current ?? []).some((k) => !loggedSlotKeys.has(k));
@@ -312,9 +332,9 @@ export default function DiaryScreen({ navigation, route }) {
       setTargets(targetsRow);
       setEdFlagOpen(!!edFlag);
       setFloorKcal(floor);
-      // Only meaningful when the fetch actually ran; it gates the EmptyDiary
-      // "Copy yesterday" CTA, which can only render on a day with no entries
-      // at all - exactly one of the cases that forces the fetch above.
+      // Only meaningful when the fetch actually ran; it gates the "Copy
+      // yesterday" door, which can only render on a day with no entries at
+      // all - exactly one of the cases that forces the fetch above.
       setYesterdayEntries(yEntries ?? []);
       setYesterdayHasFood((yEntries?.length ?? 0) > 0);
       setLatestCoachOutput(coachOut ?? null);
@@ -567,6 +587,13 @@ export default function DiaryScreen({ navigation, route }) {
   const [prefMeals, setPrefMeals] = useState(DEFAULT_MEALS_PER_DAY);
   const [addedMeals, setAddedMeals] = useState(0);
   useEffect(() => { setAddedMeals(0); }, [selectedDate]);
+  // D230 R11: the Meals sheet (Day tools -> Meals) sets the same pref and
+  // names each meal through mealSlots.setMealLabel. A label lives in
+  // mealSlots' module cache, so a bump here re-derives the meal cards'
+  // labels the moment a name is saved.
+  const [mealsSheetOpen, setMealsSheetOpen] = useState(false);
+  const [mealLabelsVersion, setMealLabelsVersion] = useState(0);
+  const onMealLabelsChanged = useCallback(() => setMealLabelsVersion((v) => v + 1), []);
 
   // COMP-022 one-time OFF-consent card: offered after a first completed
   // barcode-heal chain, never mid-task. Re-checked on focus so flipping consent
@@ -664,7 +691,7 @@ export default function DiaryScreen({ navigation, route }) {
     return () => { active = false; };
   }, []));
 
-  // NU-9: per-user daily water target (device-local preference). Defaults to
+  // NU-9: per-user daily water target (a synced preference). Defaults to
   // the old hardcoded 3.0 L; tapping the water value picks a new one. Purely
   // a hydration nudge, so it stays well away from calorie/coaching targets.
   const [waterTargetMl, setWaterTargetMl] = useState(WATER_TARGET_ML);
@@ -758,7 +785,10 @@ export default function DiaryScreen({ navigation, route }) {
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
   const mealSlots = useMemo(
     () => buildMealSlots(viewEntries, mealsPerDay, periWorkoutSlots),
-    [viewEntries, mealsPerDay, periWorkoutSlots],
+    // mealLabelsVersion is not read by the builder: it is the signal that a
+    // meal name changed in mealSlots' own label cache (D230 R11).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewEntries, mealsPerDay, periWorkoutSlots, mealLabelsVersion],
   );
   const likelyMealSlot = useMemo(() => {
     const keys = mealSlots.map((m) => m.key);
@@ -1294,11 +1324,30 @@ export default function DiaryScreen({ navigation, route }) {
     haptics.press();
   }
 
+  // D230 R14: the write carries the DELTA and the database applies it in one
+  // statement (adjustWaterMl), so two taps inside one await window both land;
+  // the old closure read of `waterMl` wrote the same base twice. The screen
+  // shows what the database returns, only for the day it was written to (a
+  // day change mid-write must not paint one day's water on another), and
+  // never an older write's total over a newer one's.
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
+  const waterWriteSeqRef = useRef(0);
+  const waterShownSeqRef = useRef(0);
   async function logWaterDelta(deltaMl) {
-        if (deltaMl > 0) lightTap();
-    const next = Math.max(0, waterMl + deltaMl);
-    await setWater(userId, selectedDate, next);
-    setWaterMl(next);
+    if (deltaMl > 0) lightTap();
+    const day = selectedDate;
+    const seq = ++waterWriteSeqRef.current;
+    try {
+      const next = await adjustWaterMl(userId, day, deltaMl);
+      if (selectedDateRef.current === day && seq > waterShownSeqRef.current) {
+        waterShownSeqRef.current = seq;
+        setWaterMl(next);
+      }
+    } catch (e) {
+      logError('DiaryScreen.adjustWater', e, { userId, selectedDate: day, deltaMl });
+      toast.show('That water was not saved. Try again in a moment.', { variant: 'error' });
+    }
   }
 
   // Swipe-to-delete handler used by EntryRow. Optimistic delete + Undo toast
@@ -1324,7 +1373,7 @@ export default function DiaryScreen({ navigation, route }) {
       // row is still in the list and the swipe panel just needs to close.
       logError('DiaryScreen.deleteFoodEntry', e, { entryId: entry?.id, mealSlot: entry?.mealSlot ?? 'unknown' });
       closeSwipe?.();
-      toast.show("Couldn't delete that entry, try again", { variant: 'error' });
+      toast.show('That entry was not deleted. Try again in a moment.', { variant: 'error' });
     }
   }, [userId, load, toast]);
 
@@ -1409,6 +1458,9 @@ export default function DiaryScreen({ navigation, route }) {
 
   const todayIso = isoDate(new Date());
   const isViewingToday = selectedDate === todayIso;
+  // D230 R1: "Copy yesterday" is offered on a day with nothing logged whose
+  // yesterday has food (the condition EmptyDiary's action had).
+  const showCopyYesterdayDoor = viewEntries.length === 0 && yesterdayHasFood;
   const dateHeading = isViewingToday ? 'Today' : friendlyDate(selectedDate);
   const dateSubCopy = selectedDateDetail;
   const bottomInset = Math.max(0, Number(insets?.bottom) || 0);
@@ -1446,18 +1498,22 @@ export default function DiaryScreen({ navigation, route }) {
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: t.screenPadding }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.primary} />}
+        // D230 R2: the pull-to-refresh spinner is ink; the scan button is
+        // the Diary's one amber.
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.textSecondary} />}
       >
         {/* Founder order 2026-09-22/23: "Trends" moved out of the day-tools
             chip row and into the header's right slot as a labelled
             HeaderAction, same accessibility label and destination
-            (FoodInsights) the old Chip carried. */}
+            (FoodInsights) the old Chip carried. D230 R2: its glyph is ink,
+            so the scan button stays the Diary's one amber. */}
         <ScreenHeader
           title="Nutrition"
           right={(
             <HeaderAction
               icon="analytics-outline"
               label="Trends"
+              ink
               onPress={() => { lightTap(); navigation.navigate('FoodInsights'); }}
               accessibilityLabel="Open nutrition trends and export"
             />
@@ -1528,7 +1584,7 @@ export default function DiaryScreen({ navigation, route }) {
             <TouchableOpacity
               style={styles.targetsChangedRow}
               onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart }); }}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              hitSlop={{ left: spacing.md, right: spacing.md }}
               accessibilityRole="button"
               accessibilityLabel="Targets updated. See why."
             >
@@ -1577,7 +1633,7 @@ export default function DiaryScreen({ navigation, route }) {
         </View>
 
         {showOffCard && selectedDate === isoDate(new Date()) ? (
-          <View style={[styles.offCard, live.offCard]}>
+          <Card padding="md" style={styles.offCard}>
             <Text style={[styles.offCardText, live.offCardText]}>
               Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
             </Text>
@@ -1610,15 +1666,16 @@ export default function DiaryScreen({ navigation, route }) {
                 accessibilityLabel="Open sharing settings"
               />
             </View>
-          </View>
+          </Card>
         ) : null}
 
         {/* Item 9(c) (D141): calm, dismissible, one-time discovery offer for
             the opt-in meal-log reminder. Same card shape as the OFF-consent
             card above (offCard styles reused, not duplicated), with a title
-            line added since this offer needs one. */}
+            line added since this offer needs one. D230 R4: both offers sit
+            on the house Card. */}
         {mealReminderOfferVisible ? (
-          <View style={[styles.offCard, live.offCard]}>
+          <Card padding="md" style={styles.offCard}>
             <Text style={[styles.mealReminderOfferTitle, live.mealReminderOfferTitle]}>
               Want a nudge to log?
             </Text>
@@ -1654,7 +1711,7 @@ export default function DiaryScreen({ navigation, route }) {
                 accessibilityLabel="Set up meal reminders"
               />
             </View>
-          </View>
+          </Card>
         ) : null}
 
         {!loaded ? (
@@ -1678,15 +1735,14 @@ export default function DiaryScreen({ navigation, route }) {
               actionAccessibilityLabel="Retry loading this day"
             />
           </View>
-        ) : viewEntries.length === 0 ? (
-          <EmptyDiary
-            onAdd={() => addFood(likelyMealSlot || 'meal_1')}
-            addLabel="Add food"
-            addAccessibilityLabel="Add food"
-            onCopyYesterday={yesterdayHasFood ? copyYesterday : undefined}
-            onPlanDay={() => navigation.navigate('MealPlan', { entryDate: selectedDate })}
-          />
         ) : (
+          // D230 R1: the workspace is the same on every day. An empty day
+          // renders these same meal cards, each in its empty state with its
+          // one-tap usual chips, "Yesterday's <meal>" and the hour's
+          // suggestion (MealSection), so the first food of the day is one
+          // tap. The EmptyDiary card that used to replace them is retired;
+          // its "Copy yesterday" and "Meal builder" are doors in the feature
+          // list below.
           <>
             {/* Founder ask (2026-07-09): the moment meals from the meal
                 builder / meal plan land here (arrival flagged by
@@ -1789,18 +1845,19 @@ export default function DiaryScreen({ navigation, route }) {
                 </AnimatedEntrance>
               </View>
             ))}
+            {/* D230 R11: "Add another meal", the house outline Button, so it
+                no longer shares a label with MyMeals' "Add meal" (log a saved
+                meal). It extends today's ladder by one; Day tools -> Meals
+                sets the standing number. */}
             {!selectionMode ? (
-              <>
-                <Button
-                  title="Add meal"
-                  icon="add"
-                  onPress={() => { lightTap(); setAddedMeals((n) => n + 1); }}
-                  variant="outline"
-                  style={[styles.addMealRow, live.addMealRow]}
-                  textStyle={[styles.addMealLabel, live.addMealLabel]}
-                  accessibilityLabel="Add another meal"
-                />
-              </>
+              <Button
+                title="Add another meal"
+                icon="add"
+                onPress={() => { lightTap(); setAddedMeals((n) => n + 1); }}
+                variant="outline"
+                style={styles.addMealRow}
+                accessibilityLabel="Add another meal"
+              />
             ) : null}
           </>
         )}
@@ -1808,34 +1865,39 @@ export default function DiaryScreen({ navigation, route }) {
         {/* RE-ANCHORED 2026-09-22/23 (founder order, live screenshot of the
             Nutrition tab: the day-tools Chips read as "ugly pills... only
             to one side", not features in their own right). The chip row
-            (D138 item 3) is gone. "Meal builder" (day with entries) and
-            "Higher-calorie day" are now full-width FeatureRow doors -- the
-            SAME shared component and anatomy (icon box, title, sub,
-            chevron) EmptyDiary's own promo row uses, never a copy -- flush
-            in ONE bordered surface as a short list, a hairline between
-            them when both show, never cards inside a card, never confined
-            to one side. "Trends" moved into the header's right slot
-            (HeaderAction, in the ScreenHeader above); it is not repeated
-            here.
-            "Higher-calorie day" keeps the EXACT banking gate the old chip
-            had (bankingAvailable: targets present, not floored, no open ED
-            flag) and its accessibility label, so the ED-safety carve-out
-            reads and tests the same. On a day with nothing logged,
-            EmptyDiary carries its own meal-builder promo (also FeatureRow),
-            so this list is dropped there rather than shown twice. */}
-        {/* Fresh-eyes review F1 (2026-09-23): the container renders only
-            when at least one row will, so an empty day with banking
-            unavailable (no targets yet, a floored day, an open ED flag)
-            never shows a stray bordered box. */}
-        {loaded && !selectionMode && (viewEntries.length > 0 || bankingAvailable) ? (
+            (D138 item 3) is gone. The day's doors are full-width FeatureRow
+            rows -- the SAME shared component and anatomy (icon tile, title,
+            sub, chevron), never a copy -- flush in ONE bordered surface as a
+            short list, a hairline between them, never cards inside a card,
+            never confined to one side. "Trends" moved into the header's
+            right slot (HeaderAction, in the ScreenHeader above); it is not
+            repeated here.
+            D230 R1 (the workspace is the same on every day): the list now
+            renders on every loaded day, empty or not. "Meal builder" is
+            always a door; "Copy yesterday" (formerly EmptyDiary's action)
+            is a door only on a day with no entries whose yesterday has food,
+            behind the same confirm as before; "Higher-calorie day" keeps the
+            EXACT banking gate (bankingAvailable: targets present, not
+            floored, no open ED flag) and its accessibility label, so the
+            ED-safety carve-out reads and tests the same. */}
+        {loaded && !selectionMode ? (
           <View style={[styles.featureRows, live.featureRows]}>
-            {viewEntries.length > 0 ? (
+            <FeatureRow
+              icon="restaurant-outline"
+              title="Meal builder"
+              sub="Build a day or week from your targets."
+              onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
+              accessibilityLabel="Open meal builder for this day or week"
+              bordered={false}
+              divider={showCopyYesterdayDoor || bankingAvailable}
+            />
+            {showCopyYesterdayDoor ? (
               <FeatureRow
-                icon="restaurant-outline"
-                title="Meal builder"
-                sub="Build a day or week from your targets."
-                onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
-                accessibilityLabel="Open meal builder for this day or week"
+                icon="copy-outline"
+                title="Copy yesterday"
+                sub="Copy yesterday's foods into this day, under the same meals."
+                onPress={copyYesterday}
+                accessibilityLabel="Copy yesterday's entries"
                 bordered={false}
                 divider={bankingAvailable}
               />
@@ -1940,7 +2002,7 @@ export default function DiaryScreen({ navigation, route }) {
         onClose={() => setSavedPickerSlot(null)}
         accessibilityLabel="Saved meals and recipes"
       >
-        <Text style={[styles.savedFoodTitle, live.savedFoodTitle]}>Saved meals and recipes</Text>
+        <Text style={[styles.savedFoodTitle, live.savedFoodTitle]} accessibilityRole="header">Saved meals and recipes</Text>
         <Text style={[styles.savedFoodIntro, live.savedFoodIntro]}>Use a saved meal from your diary, or a recipe you built.</Text>
         <TouchableOpacity
           style={styles.savedFoodOption}
@@ -1949,7 +2011,7 @@ export default function DiaryScreen({ navigation, route }) {
           accessibilityLabel="Open saved meals"
         >
           <View style={[styles.savedFoodIcon, live.savedFoodIcon]}>
-            <Ionicons name="bookmark-outline" size={20} color={t.colors.primary} />
+            <Ionicons name="bookmark-outline" size={20} color={t.colors.textSecondary} />
           </View>
           <View style={styles.savedFoodText}>
             <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Saved meals</Text>
@@ -1964,7 +2026,7 @@ export default function DiaryScreen({ navigation, route }) {
           accessibilityLabel="Open recipes"
         >
           <View style={[styles.savedFoodIcon, live.savedFoodIcon]}>
-            <Ionicons name="restaurant-outline" size={20} color={t.colors.primary} />
+            <Ionicons name="restaurant-outline" size={20} color={t.colors.textSecondary} />
           </View>
           <View style={styles.savedFoodText}>
             <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Recipes</Text>
@@ -1980,6 +2042,9 @@ export default function DiaryScreen({ navigation, route }) {
         dateLabel={friendlyDate(selectedDate)}
         onClose={() => setBreakdownVisible(false)}
         onSelectMeal={jumpToMeal}
+        // D230 R3 (lane 1B): the one on-demand line about planned food, where
+        // the rings card's standing line used to be.
+        hasPlanned={plannedCount > 0}
       />
 
       {/* FABs hide while selecting so the bottom toolbar owns the
@@ -1997,6 +2062,8 @@ export default function DiaryScreen({ navigation, route }) {
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Scan barcode"
+          // D230 R16: say what the tap does before it opens the camera.
+          accessibilityHint="Opens the camera to scan a barcode."
         >
           <Ionicons name="barcode-outline" size={26} color={t.colors.primary} />
         </TouchableOpacity>
@@ -2035,143 +2102,52 @@ export default function DiaryScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <BottomSheet
+      {/* D230 R4 (4.7): the four sheets this screen used to define inline
+          are named components now, same behaviour and same state here. */}
+      <DiaryMoveSheet
         visible={movePickerVisible}
         onClose={() => setMovePickerVisible(false)}
-        accessibilityLabel="Move selected foods"
-      >
-        <SectionLabel style={styles.moveTitle}>Move to</SectionLabel>
-        {mealSlots.map((s) => (
-          <TouchableOpacity
-            key={s.key}
-            style={styles.moveOption}
-            onPress={() => { haptics.selection(); doMoveSelected(s.key); }}
-            accessibilityRole="button"
-            accessibilityLabel={`Move to ${s.label}`}
-          >
-            <Text style={[styles.moveOptionText, live.moveOptionText]}>{s.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </BottomSheet>
+        mealSlots={mealSlots}
+        onMove={doMoveSelected}
+      />
 
-      <BottomSheet
+      <SaveAsMealSheet
         visible={!!saveMealItems}
+        count={saveMealItems?.length ?? 0}
+        name={saveMealName}
+        onChangeName={setSaveMealName}
         onClose={() => setSaveMealItems(null)}
-        keyboardAvoiding
-        accessibilityLabel="Save as meal"
-      >
-        <SectionLabel style={styles.moveTitle}>Save as meal</SectionLabel>
-        <Text style={[styles.saveMealHint, live.saveMealHint]}>
-          {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'entry' : 'entries'} saved together. Name it.
-        </Text>
-        <TextField
-          fieldStyle={styles.saveMealInputField}
-          inputStyle={[styles.saveMealInput, live.saveMealInput]}
-          value={saveMealName}
-          onChangeText={setSaveMealName}
-          placeholder="e.g. My breakfast"
-          placeholderTextColor={t.colors.textMuted}
-          accessibilityLabel="Meal name"
-          autoFocus
-          maxLength={60}
-          returnKeyType="done"
-          onSubmitEditing={submitSaveMeal}
-        />
-        <View style={styles.saveMealActions}>
-          <Button
-            title="Cancel"
-            variant="secondary"
-            size="sm"
-            fullWidth={false}
-            style={styles.saveMealBtn}
-            textStyle={[styles.saveMealBtnText, live.saveMealBtnText]}
-            onPress={() => setSaveMealItems(null)}
-            accessibilityLabel="Cancel"
-          />
-          <Button
-            title="Save"
-            size="sm"
-            fullWidth={false}
-            style={styles.saveMealBtn}
-            textStyle={[styles.saveMealBtnTextPrimary, live.saveMealBtnTextPrimary]}
-            onPress={submitSaveMeal}
-            disabled={!saveMealName.trim()}
-            accessibilityLabel="Save meal"
-            accessibilityState={{ disabled: !saveMealName.trim() }}
-          />
-        </View>
-      </BottomSheet>
+        onSave={submitSaveMeal}
+      />
 
-      <BottomSheet
+      <DayToolsSheet
         visible={diaryToolsOpen}
         onClose={() => setDiaryToolsOpen(false)}
-        accessibilityLabel="Diary tools"
-      >
-        <SectionLabel style={styles.moveTitle}>Day tools</SectionLabel>
-        <Text style={[styles.saveMealHint, live.saveMealHint]}>
-          Copy foods from another day, check nutrition trends, or export your diary.
-        </Text>
-        <TouchableOpacity
-          style={styles.diaryToolRow}
-          onPress={() => { haptics.selection(); setDiaryToolsOpen(false); openCopyPicker(); }}
-          accessibilityRole="button"
-          accessibilityLabel="Copy food from another logged day"
-        >
-          <View style={[styles.diaryToolIcon, live.diaryToolIcon]}>
-            <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
-          </View>
-          <View style={styles.diaryToolCopy}>
-            <Text style={[styles.diaryToolTitle, live.diaryToolTitle]}>Copy from another day</Text>
-            <Text style={[styles.diaryToolText, live.diaryToolText]}>Choose a recent logged day and copy its foods into this one.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.diaryToolRow}
-          onPress={() => { haptics.selection(); setDiaryToolsOpen(false); navigation.navigate('FoodInsights'); }}
-          accessibilityRole="button"
-          accessibilityLabel="Open nutrition trends and export"
-        >
-          <View style={[styles.diaryToolIcon, live.diaryToolIcon]}>
-            <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
-          </View>
-          <View style={styles.diaryToolCopy}>
-            <Text style={[styles.diaryToolTitle, live.diaryToolTitle]}>Trends and export</Text>
-            <Text style={[styles.diaryToolText, live.diaryToolText]}>See calorie, macro and consistency trends, or export your diary.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
-      </BottomSheet>
+        onTrends={() => { setDiaryToolsOpen(false); navigation.navigate('FoodInsights'); }}
+        onCopyFromDay={() => { setDiaryToolsOpen(false); openCopyPicker(); }}
+        onMeals={() => { setDiaryToolsOpen(false); setMealsSheetOpen(true); }}
+        // D230 R19: the same cross-tab door the no-targets state uses.
+        onNutritionTargets={() => { setDiaryToolsOpen(false); navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets'); }}
+      />
 
-      <BottomSheet
-        visible={copyDays != null}
+      <MealsSheet
+        visible={mealsSheetOpen}
+        onClose={() => setMealsSheetOpen(false)}
+        mealsPerDay={prefMeals}
+        onChangeMealsPerDay={setPrefMeals}
+        slots={mealSlots}
+        onLabelsChanged={onMealLabelsChanged}
+      />
+
+      {/* Haptics completion pass (2026-07-10): copying a day's foods is a
+          direct diary-write (food-logging), excluded per the campaign's
+          ED-pattern-detection rule -- the rows carry no haptic. */}
+      <CopyFromDaySheet
+        days={copyDays}
         onClose={() => setCopyDays(null)}
-        accessibilityLabel="Copy from another day"
-      >
-        <SectionLabel style={styles.moveTitle}>Copy from another day</SectionLabel>
-        {copyDays && copyDays.length === 0 ? (
-          <Text style={[styles.saveMealHint, live.saveMealHint]}>No earlier days with food logged yet.</Text>
-        ) : (
-          (copyDays || []).map((d) => (
-            // Haptics completion pass (2026-07-10): copying a day's foods is
-            // a direct diary-write (food-logging), excluded per the
-            // campaign's ED-pattern-detection rule -- left without an added
-            // haptic.
-            <TouchableOpacity
-              key={d.entry_date}
-              style={styles.moveOption}
-              onPress={() => { setCopyDays(null); copyFromDate(d.entry_date); }}
-              accessibilityRole="button"
-              accessibilityLabel={`Copy ${friendlyDate(d.entry_date)}, ${d.count} ${d.count === 1 ? 'entry' : 'entries'}`}
-            >
-              <Text style={[styles.moveOptionText, live.moveOptionText]}>{friendlyDate(d.entry_date)}</Text>
-              <Text style={[styles.copyRowMeta, live.copyRowMeta]}>
-                {d.count} {d.count === 1 ? 'entry' : 'entries'} - {toEnergy(Math.round(d.kcal ?? 0), energyUnit)} {energyUnitLabel(energyUnit)}
-              </Text>
-            </TouchableOpacity>
-          ))
-        )}
-      </BottomSheet>
+        onPick={(day) => { setCopyDays(null); copyFromDate(day); }}
+        energyUnit={energyUnit}
+      />
       <CalorieBankSheet
         visible={bankSheetVisible}
         onClose={() => setBankSheetVisible(false)}
@@ -2198,7 +2174,8 @@ export default function DiaryScreen({ navigation, route }) {
 }
 
 // Default daily hydration target; NU-9 made it a per-user preference (tap the
-// value to change it, stored device-locally) instead of a hardcoded 3.0 L.
+// value to change it; the key is in sync.js's synced pref list) instead of a
+// hardcoded 3.0 L. WaterRow itself lives in src/components/food/ (D230 R4).
 const WATER_TARGET_ML = 3000;
 const WATER_TARGET_KEY = '@volyume_water_target_ml';
 
@@ -2214,81 +2191,6 @@ const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';
 // planned-meals teach). Same once-ever convention; the two never render at
 // once (see the mutually-exclusive gating where showMarkEatenHint is read).
 const DIARY_PLANADDED_HINT_KEY = '@volyume_seen_diary_planadded_hint';
-
-function WaterRow({
-  ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget,
-  showHint = false, onDismissHint,
-}) {
-  // CP-10 batch E (2026-07-10): sibling function-component scope (not
-  // prop-drilled `live`/`t` from DiaryScreen, matching AddCustomFoodScreen's
-  // Field/NumField precedent from batch D), own useTheme() call and shared
-  // buildLiveStyles(t).
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  const litres = (ml / 1000).toFixed(1);
-  const targetL = (targetMl / 1000).toFixed(1);
-  const progress = Math.max(0, Math.min(1, ml / targetMl));
-  return (
-    <Card padding="md" style={styles.waterRow}>
-      <View style={styles.waterHeader}>
-        <View style={styles.waterLeft}>
-          <Ionicons name="water-outline" size={18} color={t.colors.primary} />
-          <Text style={[styles.waterLabel, live.waterLabel]}>Water</Text>
-        </View>
-        <View style={styles.waterButtons}>
-          {/* NU-9: the value doubles as the target editor. */}
-          <TouchableOpacity
-            onPress={() => { haptics.selection(); onEditTarget?.(); }}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Water ${litres} of ${targetL} litres. Tap to change your daily target.`}
-          >
-            <Text style={[styles.waterValue, live.waterValue]}>{litres} / {targetL} L</Text>
-          </TouchableOpacity>
-          {/* NU-9: long-press moves a bottle (500 ml) at a time, so a full day
-              of water no longer needs 12 taps. */}
-          <TouchableOpacity
-            style={[styles.waterBtn, live.waterBtn]}
-            onPress={() => onSub(250)}
-            onLongPress={() => onSub(500)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Remove 250 millilitres of water. Long press to remove 500."
-          >
-            <Ionicons name="remove" size={16} color={t.colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.waterBtn, live.waterBtn]}
-            onPress={() => onAdd(250)}
-            onLongPress={() => onAdd(500)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Add 250 millilitres of water. Long press to add 500."
-          >
-            <Ionicons name="add" size={16} color={t.colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View
-        style={[styles.waterTrack, live.waterTrack]}
-        accessibilityRole="progressbar"
-        accessibilityLabel="Water intake"
-        accessibilityValue={{ min: 0, max: targetMl, now: Math.round(ml) }}
-      >
-        <View style={[styles.waterFill, live.waterFill, { width: `${Math.round(progress * 100)}%` }]} />
-      </View>
-      {/* Wave A C7: the +/- long-press-for-500 move had no visible affordance
-          (accessibilityLabel only). Gone once discovered or dismissed. */}
-      {showHint ? (
-        <HintCaption
-          text="Hold to add 500 ml."
-          onDismiss={onDismissHint}
-          style={styles.waterHint}
-        />
-      ) : null}
-    </Card>
-  );
-}
 
 const styles = StyleSheet.create({
   // D148: the one floating action is a raised charcoal disc with an amber
@@ -2319,52 +2221,6 @@ const styles = StyleSheet.create({
   selActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   selAction: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  moveTitle: {
-    paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm,
-  },
-  moveOption: {
-    minHeight: 48, justifyContent: 'center',
-    paddingHorizontal: spacing.sm, borderRadius: radius.md,
-  },
-  moveOptionText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  copyRowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
-  diaryToolRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-  },
-  diaryToolIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-  },
-  diaryToolCopy: { flex: 1, minWidth: 0 },
-  diaryToolTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  diaryToolText: { ...type.bodySm, color: colors.textMuted, marginTop: 2 },
-  saveMealHint: {
-    color: colors.textMuted, fontSize: fontSize.sm,
-    paddingHorizontal: spacing.sm, paddingBottom: spacing.md,
-  },
-  saveMealInputField: { borderRadius: radius.md, marginHorizontal: spacing.sm },
-  saveMealInput: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: fontSize.md,
-  },
-  saveMealActions: {
-    flexDirection: 'row', justifyContent: 'flex-end',
-    marginTop: spacing.md, gap: spacing.sm,
-  },
-  saveMealBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
-  saveMealBtnText: { ...type.body, color: colors.textPrimary },
-  saveMealBtnTextPrimary: { ...type.label, color: colors.textPrimary },
   savedFoodTitle: { ...type.bodyStrong, color: colors.textPrimary },
   savedFoodIntro: { ...type.bodySm, color: colors.textMuted },
   savedFoodOption: {
@@ -2380,7 +2236,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
+    // D230 R2: ink, NavRow's tile (surface2 behind a textSecondary glyph).
+    backgroundColor: colors.surface2,
   },
   savedFoodText: { flex: 1 },
   savedFoodOptionTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -2486,21 +2343,25 @@ const styles = StyleSheet.create({
   // Audit item 6: the quiet coach-receipt chip, same row shape as
   // targetModeRow but sits ABOVE the rings and is always a link (never just
   // informational), so it reads distinctly from the NU-2 exit rows below.
+  // D230 R16: a full 48 dp touch target. A top/bottom hit slop could not do
+  // it here: the row is its parent's first child (the slop is clipped at the
+  // parent's top edge) and the rings below it are a later, pressable sibling
+  // (which wins the overlap), so the row itself is the target's height and
+  // the hit slop widens it sideways only.
   targetsChangedRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xxs, marginBottom: spacing.sm,
+    alignSelf: 'center', gap: spacing.xxs, minHeight: touchTarget.minimum,
+    paddingHorizontal: spacing.sm,
   },
   targetsChangedText: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   bankOffNote: {
     color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'center',
     marginTop: spacing.sm, paddingHorizontal: spacing.lg,
   },
+  // D230 R4: the house Card owns the surface, edge, radius and padding.
   offCard: {
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
-    padding: spacing.md, marginBottom: spacing.lg,
+    marginBottom: spacing.lg,
   },
   offCardText: { ...type.bodySm, color: colors.textSecondary },
   // Item 9(c) (D141): the meal-reminder offer's title line, the offCard
@@ -2522,14 +2383,8 @@ const styles = StyleSheet.create({
   },
   offCardDismiss: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted },
   offCardCta: { ...type.label, color: colors.textPrimary },
-  addMealRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, minHeight: touchTarget.minimum,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
-    marginBottom: spacing.sm,
-  },
-  addMealLabel: { ...type.label, color: colors.textPrimary },
+  // D230 R11: layout only; the house outline Button owns its look.
+  addMealRow: { minHeight: touchTarget.minimum, marginBottom: spacing.md },
   plannedBanner: {
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
@@ -2558,29 +2413,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   plannedBtnGhost: { ...type.label, color: colors.textPrimary },
-  waterRow: {
-    marginBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  waterHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
-  waterLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  waterLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  waterValue: { color: colors.textMuted, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], marginRight: spacing.xs },
-  waterButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  waterBtn: {
-    width: 36, height: 36, borderRadius: radius.md,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-  },
-  waterTrack: {
-    height: 6, borderRadius: radius.full,
-    backgroundColor: colors.surface2, overflow: 'hidden',
-  },
-  waterFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
-  // waterRow already pads/gaps its children; HintCaption's own padding would
-  // double up, so this instance is flush.
-  waterHint: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
 });
 
 // CP-10 batch E (2026-07-10): the frozen `styles` block above stays byte-
@@ -2609,18 +2441,9 @@ function buildLiveStyles(t) {
     selectionBar: { backgroundColor: t.colors.surface, borderTopColor: t.colors.border },
     selCount: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     selActionLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.xs },
-    moveOptionText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
-    copyRowMeta: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    diaryToolIcon: { backgroundColor: t.colors.primaryBg },
-    diaryToolTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    diaryToolText: { ...t.type.bodySm, color: t.colors.textMuted },
-    saveMealHint: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    saveMealInput: { fontSize: t.fontSize.md },
-    saveMealBtnText: { ...t.type.body, color: t.colors.textPrimary },
-    saveMealBtnTextPrimary: { ...t.type.label, color: t.colors.textPrimary },
     savedFoodTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     savedFoodIntro: { ...t.type.bodySm, color: t.colors.textMuted },
-    savedFoodIcon: { backgroundColor: t.colors.primaryBg },
+    savedFoodIcon: { backgroundColor: t.colors.surface2 },
     savedFoodOptionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     savedFoodOptionSub: { ...t.type.bodySm, color: t.colors.textMuted },
     dateCluster: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
@@ -2632,26 +2455,20 @@ function buildLiveStyles(t) {
     targetModeText: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     targetsChangedText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
     bankOffNote: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
-    offCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     offCardText: { ...t.type.bodySm, color: t.colors.textSecondary },
     mealReminderOfferTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     offCardButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     offCardButtonMuted: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     offCardDismiss: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     offCardCta: { ...t.type.label, color: t.colors.textPrimary },
-    addMealRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    featureRows: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    addMealLabel: { ...t.type.label, color: t.colors.textPrimary },
+    // D230 R2: the list sits on `surface` with the card edge, so the doors'
+    // `surface2` ink tiles read against it (NavGroup's own pairing).
+    featureRows: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     plannedBanner: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     plannedBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
     plannedBtnPrimary: {},
     plannedBtnPrimaryText: { fontSize: t.fontSize.sm },
     plannedBtnGhostButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     plannedBtnGhost: { ...t.type.label, color: t.colors.textPrimary },
-    waterLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
-    waterValue: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    waterBtn: { backgroundColor: t.colors.surface2 },
-    waterTrack: { backgroundColor: t.colors.surface2 },
-    waterFill: { backgroundColor: t.colors.primary },
   };
 }

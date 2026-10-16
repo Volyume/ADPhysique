@@ -54,8 +54,14 @@ export function EntryRow({
   const eatenTime = Number.isFinite(entry?.eaten_at)
     ? new Date(entry.eaten_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     : null;
-  const metaLine = [isQuick ? null : `${Math.round(entry.quantity_g)}g`, eatenTime]
-    .filter(Boolean).join('  ·  ');
+  // D230 4.3: "60 g · 08:15", one spaced middle dot, the separator every
+  // food row uses.
+  const metaLine = [isQuick ? null : `${Math.round(entry.quantity_g)} g`, eatenTime]
+    .filter(Boolean).join(' · ');
+  // D230 R15/R16 (4.3): the caption reads "8 P · 36 C · 5 F"; the row's
+  // spoken label says the same thing in words, never the letters.
+  const spokenMacros = `${p} grams protein, ${c} carbs, ${f} fat`;
+  const energy = `${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}`;
   // Item 9 (campaign 2026-07-10): weight_state (raw/cooked/as_weighed) only
   // showed in FoodDetailSheet's edit sheet before. A quiet inline chip on
   // the row itself surfaces the weighing basis without opening the sheet --
@@ -91,10 +97,10 @@ export function EntryRow({
         : undefined}
       accessibilityLabel={
         readOnly
-          ? `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`
+          ? `${name}, ${energy}, ${spokenMacros}.`
           : selectionMode
-            ? `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
-            : `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Tap to edit.`
+            ? `${name}, ${energy}, ${spokenMacros}. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
+            : `${name}, ${energy}, ${spokenMacros}. Tap to edit.`
       }
       // D94 (Campaign 3, Phase 10): the long press is now an accelerator
       // (the edit sheet carries the visible route), but screen-reader users
@@ -132,7 +138,7 @@ export function EntryRow({
       </View>
       <View style={styles.entryMacros}>
         <Text style={[styles.entryKcal, live.entryKcal]}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
-        <Text style={[styles.entryMacroLine, live.entryMacroLine]}>{p}P {c}C {f}F</Text>
+        <Text style={[styles.entryMacroLine, live.entryMacroLine]}>{p} P · {c} C · {f} F</Text>
       </View>
     </TouchableOpacity>
   );
@@ -237,7 +243,8 @@ const styles = StyleSheet.create({
   entryBrand: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
   entryQuantity: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   entryMacros: { alignItems: 'flex-end' },
-  entryKcal: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  // D230 4.3: tabular bodyStrong, so a column of kcal figures lines up.
+  entryKcal: { ...type.num('bodyStrong'), color: colors.textPrimary },
   entryMacroLine: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   swipeDelete: {
     backgroundColor: colors.error,
@@ -271,7 +278,7 @@ function buildLiveStyles(t) {
     weightStateTagText: { color: t.colors.textMuted },
     entryBrand: { color: t.colors.textMuted },
     entryQuantity: { color: t.colors.textMuted },
-    entryKcal: { color: t.colors.textPrimary },
+    entryKcal: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     entryMacroLine: { color: t.colors.textMuted },
     swipeDelete: { backgroundColor: t.colors.error },
     swipeDeleteText: { color: t.colors.textPrimary },

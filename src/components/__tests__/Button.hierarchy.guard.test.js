@@ -77,7 +77,11 @@ describe('the emphatic set is curated: committing actions only', () => {
   test('the routine daily actions are NOT emphatic', () => {
     expect(read('screens/HomeScreen.js')).not.toMatch(/variant="emphatic"[\s\S]{0,200}Start workout/);
     expect(read('screens/PlansScreen.js')).not.toMatch(/variant="emphatic"[\s\S]{0,120}title="Start next workout"/);
-    expect(read('components/food/EmptyDiary.js')).not.toMatch(/variant="emphatic"/);
+    // RE-POINTED (D230 R1): EmptyDiary is retired. Its routine actions live
+    // on the meal card ("Add food", the house Button) and in the Diary's
+    // door list ("Copy yesterday", "Meal builder"); none of them is emphatic.
+    expect(read('components/food/MealSection.js')).not.toMatch(/variant="emphatic"/);
+    expect(read('screens/DiaryScreen.js')).not.toMatch(/variant="emphatic"/);
   });
 });
 

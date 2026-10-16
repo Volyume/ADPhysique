@@ -29,6 +29,12 @@
  * shim) are taken from DiaryScreen.bankingAvailable.test.js in this
  * directory; see its header for why a mount test needs them.
  *
+ * RE-POINTED (D230 R1, food level-up 2026-10-16): the workspace is the same
+ * on every day. EmptyDiary is retired, so the usual chips and the
+ * "Yesterday's <meal>" chip render on an EMPTY day too: the chip cases below
+ * now seed an empty day (they used to seed one entry in another meal only
+ * because an empty day hid the cards). Every expectation is unchanged.
+ *
  * NOTE: `resolveFoodRefs` is landing in src/lib/food/sources/localCache.js on
  * a concurrent lane. It is mocked here with the single-ref semantics
  * (ref -> food row, missing refs absent from the Map), which is the contract
@@ -83,6 +89,7 @@ jest.mock('../../lib/food/db', () => ({
   getRollupForDay: jest.fn(() => Promise.resolve(null)),
   applyCuratedMealToDiary: jest.fn(() => Promise.resolve()),
   setWater: jest.fn(() => Promise.resolve()),
+  adjustWaterMl: jest.fn(() => Promise.resolve(0)),
   getWater: jest.fn(() => Promise.resolve(0)),
   createSavedMeal: jest.fn(() => Promise.resolve()),
   confirmPlannedDay: jest.fn(() => Promise.resolve(0)),
@@ -137,11 +144,11 @@ const entry = (over = {}) => ({
   ...over,
 });
 
-// The meal cards (and so the usual / copy chips) only render once the day has
-// started: an entirely empty day shows EmptyDiary instead. That is the
-// existing diary structure, and D138 item 2 is written to it ("yesterday's
-// meal must be reusable per meal AFTER the day has started"), so every chip
-// case seeds one entry in a DIFFERENT meal and leaves meal_1 empty.
+// D230 R1 (RE-POINTED): the meal cards, and so the usual / copy chips,
+// render on every day, an entirely empty one included; EmptyDiary no longer
+// replaces them. So the chip cases seed an EMPTY day (meal_1 is empty either
+// way). `startedDay` stays for the cases that need a day with an entry (one
+// in meal_3), such as the door list on a started day.
 function dayWith({ today = [], yesterday = [] } = {}) {
   mockGetFoodEntriesForDay.mockImplementation((userId, date) => Promise.resolve(
     date === TODAY ? today : (date === YESTERDAY ? yesterday : []),
@@ -208,7 +215,7 @@ beforeEach(() => {
 
 describe('D138 item 1: one-tap usual', () => {
   const withRecents = (grams = 60) => {
-    dayWith({ today: startedDay });
+    dayWith({ today: [] });
     mockGetSlotRecents.mockImplementation((userId, slotKey) => Promise.resolve(
       slotKey === 'meal_1' ? [{ food_ref: 'global:oats', last_quantity_g: grams, log_count: 9 }] : [],
     ));
@@ -255,7 +262,7 @@ describe('D138 item 1: one-tap usual', () => {
   });
 
   test('a usual with no remembered portion opens the sheet instead of guessing one', async () => {
-    dayWith({ today: startedDay });
+    dayWith({ today: [] });
     mockGetSlotRecents.mockImplementation((userId, slotKey) => Promise.resolve(
       slotKey === 'meal_1' ? [{ food_ref: 'global:oats', last_quantity_g: 0, log_count: 2 }] : [],
     ));
@@ -270,7 +277,7 @@ describe('D138 item 1: one-tap usual', () => {
 });
 
 describe('D138 item 2: per-meal copy from yesterday', () => {
-  const withYesterday = (rows) => dayWith({ today: startedDay, yesterday: rows });
+  const withYesterday = (rows) => dayWith({ today: [], yesterday: rows });
 
   test('an empty meal offers yesterday, and copies only that meal', async () => {
     withYesterday([
@@ -349,10 +356,10 @@ describe('D138 item 3, RE-ANCHORED 2026-09-22/23: meal builder, higher-calorie d
     expect(nav.navigate).toHaveBeenCalledWith('FoodInsights');
   });
 
-  test('the two-line meal-builder promo is not repeated over the empty state', async () => {
+  test('the meal-builder door appears exactly once on an empty day too', async () => {
     const tree = await mountDiary();
-    // EmptyDiary still carries its own promo; the day's feature list does
-    // not duplicate it.
+    // RE-POINTED (D230 R1): EmptyDiary and its own promo are retired; the
+    // feature list's Meal builder door renders on every day, once.
     expect(textOf(tree)).toContain('Meal builder');
     expect(byLabel(tree, 'Open nutrition trends and export')).toHaveLength(1);
     // RE-ANCHORED 2026-09-22/23: the row is now FeatureRow, a wrapper
