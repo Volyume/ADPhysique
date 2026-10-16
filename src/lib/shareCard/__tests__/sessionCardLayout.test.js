@@ -267,14 +267,14 @@ describe('the app\'s style, not a poster template (2026-09-26 restyle)', () => {
 
   // Founder, 2026-09-27: "fix it so that the image only goes within the
   // outline". The photo and its shading are clipped to the outline's shape.
-  // RE-WORDED 2026-10-15 (D229 addendum 6, the backdrop bleed, the founder's
-  // later order): outside the outline the photo now shows softened under
-  // the theme's ink rather than the plain ground; the same two clips hold.
-  test('the sharp photo is drawn only inside the outline, with the ink outside it', () => {
+  // RE-WORDED 2026-10-15 for the backdrop bleed, and RE-WORDED BACK
+  // 2026-10-16 (founder decision, option A, which withdrew the bleed): the
+  // card's own ground is drawn outside the outline, the photo inside it.
+  test('a photo is drawn only inside the outline, with the card\'s own ground outside it', () => {
     for (const aspect of ['square', 'portrait', 'story']) {
       const { clips, rrects } = record(SESSION({ aspect }), 1080, { width: () => 1000, height: () => 1500 });
       const [o] = rrects;
-      // 0: everything but the outline's shape (the ink); 1: inside it (the photo).
+      // 0: everything but the outline's shape (the ground); 1: inside it (the photo).
       expect(clips.map((c) => c.op)).toEqual([0, 1]);
       clips.forEach((c) => { expect(c.rect).toEqual(o); });
       expect(record(SESSION({ aspect })).clips).toEqual([]);

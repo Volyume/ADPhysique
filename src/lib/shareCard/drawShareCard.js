@@ -50,23 +50,25 @@
  * ... not wider, taller", "We don't want to encourage too much blank
  * space", "elegant perhaps"):
  *
- *  - BACKDROP BLEED, the default. With a photo, the photo (in the chosen
- *    look) is drawn over the WHOLE canvas first, softened (a Skia blur image
- *    filter, BLEED_BLUR_RATIO of W as the Gaussian's standard deviation) and
- *    covered outside the outline by the theme's ground at BLEED_INK_ALPHA,
- *    so the outlined card still reads as the card and the image has no flat
- *    band. Inside the outline nothing changed: the photo in its look, the
- *    vignette, the scrim. On the light theme the outside wash is the light
- *    ground, so the outside still follows the theme as it always has. A card
- *    with no photo gets a quiet vertical gradient of the theme's own ground
- *    (two of its own tones, no colour cast) instead of one flat fill.
+ *  - THE QUIET GROUND. A card with no photo gets a quiet vertical gradient
+ *    of the theme's own ground (two of its own tones, no colour cast)
+ *    instead of one flat fill.
+ *  - THE PICTURE ONLY INSIDE THE OUTLINE (founder decision 2026-10-16,
+ *    option A, which withdrew the backdrop bleed of addendum 6: "where the
+ *    back is visible beyond the outline ... It looks a bit silly. I think we
+ *    only displayed from within the outline on photos?"). With a photo or a
+ *    clip, the picture is drawn only inside the outline's rounded shape;
+ *    outside it the card draws exactly what a card with no picture draws
+ *    there, the theme's ground and its quiet gradient, opaque, on the dark
+ *    and the light theme alike. Inside the outline: the photo in its look,
+ *    the vignette, the scrim.
  *  - OMIT_PHOTO (the live photo preview, and the video overlay) draws no
- *    photo at all, so it can soften nothing: outside the outline it paints
- *    the same BLEED_INK_ALPHA ink, translucent, so the photo or clip under
- *    it reads darkened there exactly as on the saved image; only the
- *    softening belongs to the saved image alone. The overlay is drawn with a
- *    frame of the clip (or the photo) as `bgPhoto`, so the layout is the
- *    photo layout and the scrim is sampled from real pixels.
+ *    photo, and is opaque outside the outline (the same ground and
+ *    gradient) and clear inside it except for the vignette, the scrim and
+ *    the text, so the photo or clip laid full frame under it can only be
+ *    seen inside the outline, exactly as on the saved image. The overlay is
+ *    drawn with a frame of the clip (or the photo) as `bgPhoto`, so the
+ *    layout is the photo layout and the scrim is sampled from real pixels.
  *  - FULL SCREEN (aspect 'full'): height is width x params.fullAspect (the
  *    phone's own height over width, held to FULL_ASPECT_MIN..MAX), and the
  *    outline's band clears the phone's own status bar and home indicator
@@ -205,12 +207,6 @@ function clampSafeRatio(r) {
   const n = Number(r);
   return Number.isFinite(n) ? Math.min(0.25, Math.max(0, n)) : 0;
 }
-
-// The backdrop bleed (level-up 1): the softening of the photo outside the
-// outline, as the Gaussian's standard deviation in a fraction of W (CSS's
-// blur radius), and the theme ink laid over it there.
-export const BLEED_BLUR_RATIO = 0.015;
-export const BLEED_INK_ALPHA = 0.55;
 
 // How far the athlete can zoom into their photo on top of the cover fit. The
 // screen's positioning view clamps to the same value.
@@ -669,31 +665,6 @@ function drawCraftedBackground(canvas, Skia, W, H) {
   } catch (_e) { /* the flat ground stands */ }
 }
 
-// The ink of the backdrop bleed outside the outline (level-up 1): the
-// theme's own ground at BLEED_INK_ALPHA, so a dark card darkens the
-// photo there and a light card washes it pale, the outside following the
-// theme as the plain ground always did.
-function bleedInk() {
-  return rgba(groundColour(), BLEED_INK_ALPHA);
-}
-
-// A paint that draws the photo in the chosen look, softened by a Gaussian of
-// standard deviation `sigma` px where this Skia build has the image-filter
-// API (react-native-skia's ImageFilter.MakeBlur and Paint.setImageFilter,
-// on the device and under CanvasKit alike). Best effort: a build without
-// them, or a filter that fails to build, draws the look unsoftened.
-function softLookPaint(Skia, sigma) {
-  let p = lookPaint(Skia, PHOTO_LOOK, PHOTO_LOOK_STRENGTH);
-  if (!p) { p = Skia.Paint(); p.setAntiAlias(true); }
-  try {
-    if (sigma > 0 && Skia.ImageFilter && typeof Skia.ImageFilter.MakeBlur === 'function'
-      && typeof p.setImageFilter === 'function') {
-      p.setImageFilter(Skia.ImageFilter.MakeBlur(sigma, sigma, CLAMP, null));
-    }
-  } catch (_e) { /* the softening is decorative; the look still draws */ }
-  return p;
-}
-
 // Skia ClipOp, as numbers like FILL and STROKE above. On device JsiSkCanvas
 // takes the numeric ClipOp directly; the CanvasKit/Node path maps it through
 // PathOp, whose Difference (0) and Intersect (1) share the same values, so
@@ -702,15 +673,17 @@ const CLIP_DIFFERENCE = 0;
 const CLIP_INTERSECT = 1;
 
 // `frame`: the outline's rectangle (layoutCard, bandFrame). With a photo, the
-// sharp photo and its scrim are drawn only inside the outline's rounded
-// shape (founder, 2026-09-27: "fix it so that the image only goes within the
-// outline"); since the backdrop bleed (D229 addendum 6, level-up 1, the
-// founder's later "full screen ... not wider, taller" and "We don't want to
-// encourage too much blank space") the same photo, softened and under the
-// theme's ink, fills the canvas outside it, where the plain ground used to
-// be. Positioning the photo (OMIT_PHOTO) leaves the inside clear for the
-// photo underneath and paints only the translucent ink outside, so the photo
-// there reads darkened as on the saved image.
+// photo and its scrim are drawn only inside the outline's rounded shape
+// (founder, 2026-09-27: "fix it so that the image only goes within the
+// outline", and again on 2026-10-16, option A, which withdrew the backdrop
+// bleed). Outside it the card draws exactly what a card with no picture
+// draws there: the theme's ground and its quiet gradient
+// (drawCraftedBackground over the whole canvas, under the outline-shaped
+// hole), opaque. The same holds with OMIT_PHOTO, so the photo the
+// positioning view moves underneath, or the clip the video engine lays
+// full frame underneath, can only be seen inside the outline. The picture
+// itself is still covered against the whole canvas (photoCoverRect) and
+// simply masked, so the framing contract is unchanged.
 function drawBackground(canvas, Skia, W, H, bands, frame = null, s = 1) {
   if (hasPhoto()) {
     // The athlete's photo, framed where they put it, under a tone-sampled
@@ -721,20 +694,12 @@ function drawBackground(canvas, Skia, W, H, bands, frame = null, s = 1) {
       const r = Math.round(FRAME_RADIUS * s);
       const clip = frame ? Skia.RRectXY(Skia.XYWHRect(frame.x, frame.y, frame.w, frame.h), r, r) : null;
       if (clip) {
-        // The bleed, under everything: the theme's ground (shown only where
-        // a zoomed-out photo leaves the canvas uncovered), then the photo in
-        // its look, softened, over the whole canvas. Decorative, so a
-        // failure leaves the plain ground outside the outline, never a lost
-        // card.
-        if (!OMIT_PHOTO) {
-          fillRect(canvas, Skia, 0, 0, W, H, groundColour());
-          try {
-            drawImageCover(canvas, Skia, BG, W, H, BG_CROP, softLookPaint(Skia, Math.max(1, W * BLEED_BLUR_RATIO)));
-          } catch (_e) { /* the plain ground stands outside the outline */ }
-        }
+        // Outside the outline: the no-picture card's own ground, with the
+        // gradient laid over the whole canvas exactly as that card lays it,
+        // so every pixel out there is the no-picture card's pixel.
         canvas.save();
         canvas.clipRRect(clip, CLIP_DIFFERENCE, true);
-        fillRect(canvas, Skia, 0, 0, W, H, bleedInk());
+        drawCraftedBackground(canvas, Skia, W, H);
         canvas.restore();
         canvas.save();
         canvas.clipRRect(clip, CLIP_INTERSECT, true);
@@ -1696,9 +1661,10 @@ function safeBandFor(params) {
  * @param deps.photoCrop the athlete's framing of bgPhoto ({ zoom, cx, cy },
  *   see photoCoverRect), or null for the centre crop
  * @param deps.omitPhoto true to draw everything EXCEPT the photo itself (the
- *   scrim and the text over a transparent inside, and the bleed's ink alone,
- *   translucent, outside the outline): the screen's positioning view, and
- *   the video overlay, lay this over the photo or clip
+ *   scrim and the text over a transparent inside, and the theme's ground
+ *   and gradient, opaque, outside the outline): the screen's positioning
+ *   view, and the video overlay, lay this over the photo or clip, which can
+ *   then only be seen inside the outline
  * @param deps.photos { before, after } SkImages for the beforeAfter card, or null
  * @param deps.toneOverride a tone ({ r, g, b, luminance, topLuminance }) to
  *   draw the scrim from instead of sampling bgPhoto: a video's brightest
