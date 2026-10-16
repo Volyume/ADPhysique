@@ -13,15 +13,22 @@ import BottomSheet from '../BottomSheet';
 // idle → loading → success morph; the commit haptic is its success beat.
 import Button from '../Button';
 import Chip from '../Chip';
+import CollapsibleSection from '../CollapsibleSection';
+import SectionLabel from '../SectionLabel';
+import Stepper from '../Stepper';
 import TextField from '../TextField';
 import SourceChip from './SourceChip';
 import { useToast } from '../Toast';
-import { pickerMealSlots } from '../../lib/food/mealSlots';
-import { scaleMacros, scaleSugarG, scaleSodiumMg } from '../../lib/food/macros';
-import { buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams } from '../../lib/food/servingEntry';
+import { pickerMealSlots, mealSlotLabel } from '../../lib/food/mealSlots';
+import { scaleMacros, scaleSugarG, scaleSodiumMg, saltGFromSodiumMg } from '../../lib/food/macros';
+import {
+  buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams, MAX_ENTRY_GRAMS,
+} from '../../lib/food/servingEntry';
+import { parseDecimalInput } from '../../lib/parseDecimalInput';
 import { isNetworkSourced, formatLastVerified } from '../../lib/food/freshness';
 import { refetchStaleFood } from '../../lib/food/waterfall';
 import { defaultWeightStateFor } from '../../lib/food/foodRoles';
+import { entryDateLine } from '../../lib/food/diaryDates';
 import { parseLocalDay } from '../../lib/dayKey';
 import EatenTimePicker from './EatenTimePicker';
 // Ultimate-Audit item 16 (MN-1), D22 16b: separate file, see its own header
@@ -46,10 +53,35 @@ function macrosFor(food, qtyG) {
   return { kcal: m.kcal, protein: m.proteinG, carbs: m.carbsG, fat: m.fatG, fibre: m.fibreG };
 }
 
+// D230 R5: the day line is diaryDates' entryDateLine, shared with the add
+// screen; re-exported here for this sheet's own suite.
+export { entryDateLine };
+
+// D230 R8: the one line of what this amount is. Each part keeps its words
+// together (no-break spaces inside a part), so at large text the line wraps
+// between parts, never inside "8 g protein".
+const NBSP = '\u00A0';
+const keepTogether = (part) => part.replace(/ /g, NBSP);
+const gramsWord = (n) => (n === 1 ? 'gram' : 'grams');
+
 /**
  * Bottom sheet for adding or editing a food entry. Replaces the
  * centred Modal pattern in FoodSearchScreen and the long-press-delete
  * footgun on Diary entries.
+ *
+ * D230 R8 (docs/audit/food-levelup-2026-10-16/03-ASSESSMENT-AND-PLAN.md,
+ * 4.5): five blocks at open, in this order: (1) the title (a heading) with
+ * the brand and the source chip on one line beneath it; (2) Amount: the
+ * unit chips, the house Stepper with the typed field beside it (Stepper has
+ * no custom centre, and its adjustable root hides its children from a
+ * screen reader, so the field sits beside a Stepper whose value mirrors it),
+ * then "= 72 g" for a serving; (3) one line of what this amount is; (4) the
+ * day line when it is not today, the meal chips, and in edit mode "Eaten
+ * at"; (5) the actions, the primary reading "Add to <meal>" in add mode.
+ * A collapsed "More about this food" row (closed on every open) holds the
+ * last-verified line, the weigh-basis chips, sugar, salt and the vitamins
+ * and minerals. The sheet scrolls, so no block relies on the window cap at
+ * the largest text size.
  *
  * Props:
  *   visible          show / hide
@@ -94,9 +126,9 @@ export default function FoodDetailSheet({
   // stored/scaled value scaleMacros returns); only the rendered energy number +
   // label convert at the point of display.
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
-  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
-  // gap #16: which extra per-food nutrients to surface under the macro summary.
-  // Both default on; both are grams and display-only (never a target or total).
+  // gap #16: which extra per-food nutrients to surface. All default on; all
+  // display-only (never a target or total). D230 R8: the sodium toggle now
+  // governs the salt line (salt is sodium x 2.5, as UK packs print it).
   const showFibre = useAppStore((s) => s.accessibility?.showFibre !== false);
   const showSugar = useAppStore((s) => s.accessibility?.showSugar !== false);
   const showSodium = useAppStore((s) => s.accessibility?.showSodium !== false);
@@ -124,6 +156,8 @@ export default function FoodDetailSheet({
   // M4 (audit 03b §3.3b): the save has landed; the sheet closes on the save
   // Button's onSettled so the checkmark beat is seen before the sheet goes.
   const [saved, setSaved] = useState(false);
+  // D230 R8: "More about this food" is closed on every open.
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // Ultimate-Audit item 12 (raw/cooked basis toggle). Only curated foods with
   // a dry/cooked distinction show the choice (foodRoles.hasWeightChoice via
@@ -152,7 +186,20 @@ export default function FoodDetailSheet({
   const [showTimePicker, setShowTimePicker] = useState(false);
 
   const unit = units.find(u => u.key === unitKey) || units[units.length - 1];
-  const quantityG = resolveGrams(amount, unit);
+  const isServing = unitKey === 'serving';
+  // D230 R8 (inventory section 6, decimal comma): the typed amount is read
+  // through the app's one number parser, so "1,5" from a comma-decimal
+  // keyboard means 1.5, never 15. resolveGrams takes the parsed number as it
+  // always has; the 1 to 5000 g bound (isValidEntryGrams) is untouched.
+  const parsedAmount = parseDecimalInput(amount);
+  const amountValue = Number.isFinite(parsedAmount) ? parsedAmount : 0;
+  const quantityG = resolveGrams(parsedAmount, unit);
+  // The Stepper's bounds are servingEntry's own: never below 1 g and never
+  // above MAX_ENTRY_GRAMS, expressed in the chosen unit on the 0.1 grid the
+  // amount is rounded to.
+  const unitGrams = Number(unit?.grams) || 1;
+  const stepMin = isServing ? Math.ceil((1 / unitGrams) * 10) / 10 : 1;
+  const stepMax = isServing ? Math.floor((MAX_ENTRY_GRAMS / unitGrams) * 10) / 10 : MAX_ENTRY_GRAMS;
 
   useEffect(() => {
     if (!visible) return;
@@ -164,6 +211,7 @@ export default function FoodDetailSheet({
     setShowTimePicker(false);
     setSubmitting(false);
     setSaved(false);
+    setMoreOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, curatedKey]);
 
@@ -206,11 +254,19 @@ export default function FoodDetailSheet({
       : String(Math.round(g)));
   }
 
-  function adjustAmount(dir) {
-    const step = unitKey === 'serving' ? 0.5 : 10;
-    const cur = Number(amount) || 0;
-    const next = Math.max(0, Math.round((cur + dir * step) * 10) / 10);
-    setAmount(String(next));
+  // The Stepper steps 0.5 serving or 10 g, as the hand-rolled buttons did;
+  // its clamp has already applied the bounds above.
+  function onStepAmount(next) {
+    haptics.selection();
+    setAmount(String(Math.round(next * 10) / 10));
+  }
+
+  // The Stepper's centre mirrors the typed field (two decimals at most, so a
+  // typed 1.25 reads as 1.25, and floating-point noise never shows).
+  function formatAmount(v) {
+    const n = Math.round(v * 100) / 100;
+    if (isServing) return `${n} ${n === 1 ? 'serving' : 'servings'}`;
+    return `${n} g`;
   }
 
   function handleClose() {
@@ -237,7 +293,8 @@ export default function FoodDetailSheet({
       setSaved(true);
     } catch (_e) {
       setSubmitting(false);
-      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
+      // R15: what happened, then what to do, as a full sentence.
+      toast.show('That entry was not saved. Try again in a moment.', { variant: 'error' });
     }
   }
 
@@ -263,205 +320,250 @@ export default function FoodDetailSheet({
   }
 
   const macros = macrosFor(food, quantityG);
-  // Extra per-food nutrients (gap #16): shown only when the food actually
-  // carries the datum (null = "no data", never a fake 0) and the user keeps the
-  // toggle on. Display-only, not logged, not totalled, not scored.
+  // D230 R8: the one line of what this amount is, replacing the four macro
+  // pills. Fibre joins it when the food carries the datum (null = "no data",
+  // never a fake 0) and the Display toggle is on. The spoken label says the
+  // same things in full words.
+  const energyValue = toEnergy(macros.kcal, energyUnit);
+  const energySpoken = energyUnit === 'kj'
+    ? (energyValue === 1 ? 'kilojoule' : 'kilojoules')
+    : (energyValue === 1 ? 'calorie' : 'calories');
+  const fibreShown = showFibre && macros.fibre != null;
+  const summaryLine = [
+    `${energyValue} ${energyUnitLabel(energyUnit)}`,
+    `${macros.protein} g protein`,
+    `${macros.carbs} g carbs`,
+    `${macros.fat} g fat`,
+    fibreShown ? `${macros.fibre} g fibre` : null,
+  ].filter(Boolean).map(keepTogether).join(' · ');
+  const summarySpoken = [
+    `${energyValue} ${energySpoken}`,
+    `${macros.protein} ${gramsWord(macros.protein)} protein`,
+    `${macros.carbs} ${gramsWord(macros.carbs)} carbs`,
+    `${macros.fat} ${gramsWord(macros.fat)} fat`,
+    fibreShown ? `${macros.fibre} ${gramsWord(macros.fibre)} fibre` : null,
+  ].filter(Boolean).join(', ');
+  // Extra per-food nutrients (gap #16), now inside "More about this food":
+  // shown only when the food actually carries the datum and the user keeps
+  // the toggle on. Display-only, not logged, not totalled, not scored.
   const sugarG = showSugar ? scaleSugarG(food, quantityG) : null;
-  // E4: sodium displays in mg (stored grams per 100g; implausible values read
-  // as no data inside the scaler). Same shown-when-the-food-carries-it rule.
+  // E4: sodium scales in mg (stored grams per 100g; implausible values read
+  // as no data inside the scaler). D230 R8: shown as salt, sodium x 2.5, the
+  // figure UK packs print; the sodium figure stays in the spoken label.
   const sodiumMg = showSodium ? scaleSodiumMg(food, quantityG) : null;
-  const extraNutrients = [
-    showFibre && macros.fibre != null ? { key: 'fibre', label: 'Fibre', value: `${macros.fibre}g` } : null,
-    sugarG != null ? { key: 'sugar', label: 'Sugars', value: `${sugarG}g` } : null,
-    sodiumMg != null ? { key: 'sodium', label: 'Sodium', value: `${sodiumMg}mg` } : null,
-  ].filter(Boolean);
+  const saltG = sodiumMg != null ? saltGFromSodiumMg(sodiumMg) : null;
+  // D230 R5: the day being logged to, when it is not today.
+  const dateLine = entryDateLine(initialEntryDate);
 
   if (!food) return null;
 
+  // Audit §15 item 4: a calm "last verified" line for network-sourced
+  // (off/usda) rows only, reusing foods.fetched_at. Never implies the food
+  // is wrong -- it only states when it was last checked.
+  const lastVerified = isNetworkSourced(food.source) && food.fetched_at
+    ? formatLastVerified(food.fetched_at)
+    : null;
+
   return (
     <>
-    <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel={food.name}>
-          <Text style={[styles.title, live.title]} numberOfLines={2}>{food.name}</Text>
-          {food.brand ? <Text style={[styles.subtitle, live.subtitle]}>{food.brand}</Text> : null}
-          {/* A6: the shared SourceChip replaces the inline uppercase text so
-              CoFID rows carry their verified treatment + "what is CoFID?"
-              gloss at the point of use. */}
-          {food.source ? <SourceChip source={food.source} /> : null}
-          {/* Audit §15 item 4: a calm "last verified" line for network-sourced
-              (off/usda) rows only, reusing foods.fetched_at. Never implies the
-              food is wrong -- it only states when it was last checked. */}
-          {isNetworkSourced(food.source) && food.fetched_at ? (
-            <Text style={[styles.lastVerified, live.lastVerified]}>{formatLastVerified(food.fetched_at)}</Text>
-          ) : null}
-
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Amount</Text>
-          {units.length > 1 ? (
-            <View style={styles.unitRow}>
-              {units.map(u => (
-                <Chip
-                  key={u.key}
-                  label={u.key === 'serving' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
-                  selected={unitKey === u.key}
-                  onPress={() => { haptics.selection(); selectUnit(u.key); }}
-                  style={styles.unitBtn}
-                  labelStyle={[styles.unitBtnText, live.unitBtnText]}
-                  selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
-                  accessibilityRole="radio"
-                  accessibilityLabel={u.key === 'serving' ? `Per ${u.label}` : 'Grams'}
-                  numberOfLines={1}
-                />
-              ))}
-            </View>
-          ) : null}
-          <View style={styles.stepper}>
-            <Pressable
-              onPress={() => { haptics.selection(); adjustAmount(-1); }}
-              style={({ pressed }) => [styles.stepBtn, live.stepBtn, pressed && { opacity: 0.7 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Decrease amount"
-              accessibilityValue={{ text: `${amount} ${unit?.label ?? ''}`.trim() }}
-            >
-              <Ionicons name="remove" size={22} color={t.colors.textPrimary} />
-            </Pressable>
-            <TextField
-              containerStyle={styles.stepInputContainer}
-              fieldStyle={styles.stepInputField}
-              inputStyle={styles.stepInput}
-              value={amount}
-              onChangeText={v => setAmount(v.replace(/[^0-9.]/g, ''))}
-              keyboardType="decimal-pad"
-              selectTextOnFocus
-              accessibilityLabel="Amount"
-            />
-            <Pressable
-              onPress={() => { haptics.selection(); adjustAmount(1); }}
-              style={({ pressed }) => [styles.stepBtn, live.stepBtn, pressed && { opacity: 0.7 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Increase amount"
-              accessibilityValue={{ text: `${amount} ${unit?.label ?? ''}`.trim() }}
-            >
-              <Ionicons name="add" size={22} color={t.colors.textPrimary} />
-            </Pressable>
-          </View>
-          {unitKey === 'serving' ? (
-            <Text style={[styles.gramHint, live.gramHint]}>= {Math.round(quantityG)} g</Text>
-          ) : null}
-
-          {/* Ultimate-Audit item 12: only shown for a curated food with a real
-              raw/cooked distinction. Choosing an option never changes the
-              grams above or the macros below -- it only records which basis
-              this entry's grams are in (founder ruling: store the basis, no
-              conversion). */}
-          {showWeightChoice ? (
-            <>
-              <Text style={[styles.fieldLabel, live.fieldLabel]}>Weighed</Text>
-              <View style={styles.unitRow}>
-                <Chip
-                  label="Raw"
-                  selected={weightState === 'raw'}
-                  onPress={() => { haptics.selection(); setWeightState('raw'); }}
-                  style={styles.unitBtn}
-                  labelStyle={[styles.unitBtnText, live.unitBtnText]}
-                  selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
-                  accessibilityRole="radio"
-                  accessibilityLabel="Weighed raw"
-                />
-                <Chip
-                  label="Cooked"
-                  selected={weightState === 'cooked'}
-                  onPress={() => { haptics.selection(); setWeightState('cooked'); }}
-                  style={styles.unitBtn}
-                  labelStyle={[styles.unitBtnText, live.unitBtnText]}
-                  selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
-                  accessibilityRole="radio"
-                  accessibilityLabel="Weighed cooked"
-                />
+    <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding scroll accessibilityLabel={food.name}>
+          {/* (1) The title, a heading, with the brand and the source on one
+              line beneath it. A6: the shared SourceChip carries CoFID's
+              verified treatment and every source's gloss at the point of use. */}
+          <View style={styles.block} testID="food-sheet-title">
+            <Text accessibilityRole="header" style={[styles.title, live.title]} numberOfLines={2}>{food.name}</Text>
+            {food.brand || food.source ? (
+              <View style={styles.titleMeta}>
+                {food.brand ? <Text style={[styles.brand, live.brand]} numberOfLines={1}>{food.brand}</Text> : null}
+                {food.source ? <SourceChip source={food.source} /> : null}
               </View>
-            </>
-          ) : null}
+            ) : null}
+          </View>
 
+          {/* (2) Amount. The common case, one named serving, needs zero
+              keystrokes: step it, type it, or just add it. */}
+          <View style={styles.block} testID="food-sheet-amount">
+            <SectionLabel>Amount</SectionLabel>
+            {units.length > 1 ? (
+              <View style={styles.unitRow}>
+                {units.map(u => (
+                  <Chip
+                    key={u.key}
+                    label={u.key === 'serving' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
+                    selected={unitKey === u.key}
+                    onPress={() => { haptics.selection(); selectUnit(u.key); }}
+                    style={styles.unitBtn}
+                    labelStyle={[styles.unitBtnText, live.unitBtnText]}
+                    selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
+                    accessibilityRole="radio"
+                    accessibilityLabel={u.key === 'serving' ? `Per ${u.label}` : 'Grams'}
+                    numberOfLines={1}
+                  />
+                ))}
+              </View>
+            ) : null}
+            <View style={styles.amountRow}>
+              <Stepper
+                value={amountValue}
+                onChange={onStepAmount}
+                min={stepMin}
+                max={stepMax}
+                step={isServing ? 0.5 : 10}
+                formatValue={formatAmount}
+                label="Amount"
+                decreaseLabel="Decrease amount"
+                increaseLabel="Increase amount"
+              />
+              <TextField
+                size="sm"
+                containerStyle={styles.amountField}
+                inputStyle={styles.amountInput}
+                value={amount}
+                onChangeText={v => setAmount(v.replace(/[^0-9.,]/g, ''))}
+                keyboardType="decimal-pad"
+                selectTextOnFocus
+                accessibilityLabel={isServing ? 'Amount in servings' : 'Amount in grams'}
+              />
+            </View>
+            {isServing ? (
+              <Text style={[styles.gramHint, live.gramHint]}>= {Math.round(quantityG)} g</Text>
+            ) : null}
+          </View>
+
+          {/* (3) What this amount is, on one wrapping line. */}
           <View
-            style={styles.macroSummary}
+            testID="food-sheet-summary"
             accessible
             accessibilityLiveRegion="polite"
-            accessibilityLabel={`${toEnergy(macros.kcal, energyUnit)} ${energyWord}, protein ${macros.protein} grams, carbs ${macros.carbs} grams, fat ${macros.fat} grams`}
+            accessibilityLabel={summarySpoken}
           >
-            {/* O35 (comprehension/trust audit 2026-08-06): full words on this
-                DETAIL surface (one tap from every food row); the bare-letter
-                compact rows elsewhere (EntryRow etc.) are unchanged. */}
-            <MacroPill label={energyUnitLabel(energyUnit)} value={toEnergy(macros.kcal, energyUnit)} />
-            <MacroPill label="Protein" value={`${macros.protein}g`} />
-            <MacroPill label="Carbs"   value={`${macros.carbs}g`} />
-            <MacroPill label="Fat"     value={`${macros.fat}g`} />
+            <Text style={[styles.summary, live.summary]}>{summaryLine}</Text>
           </View>
 
-          {extraNutrients.length ? (
-            <View style={styles.extraRow}>
-              {extraNutrients.map((n) => (
-                <Text key={n.key} style={[styles.extraText, live.extraText]}>
-                  <Text style={[styles.extraLabel, live.extraLabel]}>{n.label} </Text>{n.value}
+          {/* D230 R8: the rest, on demand, closed on every open. It sits before
+              the meal and the actions (the lead's ruling on lane 2B's note 4):
+              content first, the action last, as every house sheet reads. */}
+          <View testID="food-sheet-more">
+            <CollapsibleSection
+              title="More about this food"
+              open={moreOpen}
+              onToggle={() => { haptics.selection(); setMoreOpen((v) => !v); }}
+            >
+              {lastVerified ? (
+                <Text style={[styles.lastVerified, live.lastVerified]}>{lastVerified}</Text>
+              ) : null}
+              {/* Ultimate-Audit item 12: only shown for a curated food with a
+                  real raw/cooked distinction. Choosing an option never changes
+                  the grams or the macros -- it only records which basis this
+                  entry's grams are in (founder ruling: store the basis, no
+                  conversion). */}
+              {showWeightChoice ? (
+                <View style={styles.block}>
+                  <SectionLabel>Weighed</SectionLabel>
+                  <View style={styles.unitRow}>
+                    <Chip
+                      label="Raw"
+                      selected={weightState === 'raw'}
+                      onPress={() => { haptics.selection(); setWeightState('raw'); }}
+                      style={styles.unitBtn}
+                      labelStyle={[styles.unitBtnText, live.unitBtnText]}
+                      selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
+                      accessibilityRole="radio"
+                      accessibilityLabel="Weighed raw"
+                    />
+                    <Chip
+                      label="Cooked"
+                      selected={weightState === 'cooked'}
+                      onPress={() => { haptics.selection(); setWeightState('cooked'); }}
+                      style={styles.unitBtn}
+                      labelStyle={[styles.unitBtnText, live.unitBtnText]}
+                      selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
+                      accessibilityRole="radio"
+                      accessibilityLabel="Weighed cooked"
+                    />
+                  </View>
+                </View>
+              ) : null}
+              {sugarG != null ? (
+                <Text
+                  style={[styles.nutrientLine, live.nutrientLine]}
+                  accessibilityLabel={`${sugarG} ${gramsWord(sugarG)} of sugars`}
+                >
+                  <Text style={[styles.nutrientLabel, live.nutrientLabel]}>Sugars </Text>{`${sugarG} g`}
                 </Text>
+              ) : null}
+              {saltG != null ? (
+                <Text
+                  style={[styles.nutrientLine, live.nutrientLine]}
+                  accessibilityLabel={`${saltG} ${gramsWord(saltG)} of salt, ${sodiumMg} milligrams sodium`}
+                >
+                  <Text style={[styles.nutrientLabel, live.nutrientLabel]}>Salt </Text>{`${saltG} g`}
+                </Text>
+              ) : null}
+              {/* Ultimate-Audit item 16 (MN-1), D22 16b primary surface. */}
+              <MicronutrientDetail food={food} quantityG={quantityG} />
+            </CollapsibleSection>
+          </View>
+
+          {/* (4) Where it goes: the day when it is not today, the meal, and
+              in edit mode the time it was eaten. */}
+          <View style={styles.block} testID="food-sheet-meal">
+            {dateLine ? <Text style={[styles.dateLine, live.dateLine]}>{dateLine}</Text> : null}
+            <SectionLabel>Meal</SectionLabel>
+            <View style={styles.mealRow}>
+              {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
+                <Chip
+                  key={s.key}
+                  label={s.label}
+                  selected={mealSlot === s.key}
+                  onPress={() => { haptics.selection(); setMealSlot(s.key); }}
+                  style={styles.mealBtn}
+                  labelStyle={[styles.mealBtnText, live.mealBtnText]}
+                  selectedLabelStyle={[styles.mealBtnTextActive, live.mealBtnTextActive]}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`Meal: ${s.label}`}
+                />
               ))}
             </View>
-          ) : null}
-
-          {/* Ultimate-Audit item 16 (MN-1), D22 16b primary surface. */}
-          <MicronutrientDetail food={food} quantityG={quantityG} />
-
-          {/* Ultimate-Audit item 15 (D22 15b): the calm, optional "eaten at"
-              time. Edit mode only. A bulk-confirmed entry opens here with no
-              time set (D22 15b's honest untimed state); setting one here is
-              the one place a user can give it a real, editable time. */}
-          {mode === 'edit' ? (
-            <>
-              <Text style={[styles.fieldLabel, live.fieldLabel]}>Eaten at</Text>
-              <View style={styles.unitRow}>
-                <Pressable
-                  onPress={() => { haptics.selection(); setShowTimePicker(true); }}
-                  style={({ pressed }) => [styles.unitBtn, styles.eatenAtBtn, live.eatenAtBtn, pressed && { opacity: 0.7 }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={eatenAt
-                    ? `Change the time you ate this, currently ${new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-                    : 'Set the time you ate this'}
-                >
-                  <Text style={[styles.unitBtnTextActive, live.unitBtnTextActive]}>
-                    {eatenAt
-                      ? new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-                      : 'No time set'}
-                  </Text>
-                </Pressable>
-                {eatenAt != null ? (
+            {/* Ultimate-Audit item 15 (D22 15b): the calm, optional "eaten at"
+                time. Edit mode only. A bulk-confirmed entry opens here with no
+                time set (D22 15b's honest untimed state); setting one here is
+                the one place a user can give it a real, editable time. */}
+            {mode === 'edit' ? (
+              <>
+                <SectionLabel>Eaten at</SectionLabel>
+                <View style={styles.unitRow}>
                   <Pressable
-                    onPress={() => { haptics.selection(); setEatenAt(null); }}
-                    style={({ pressed }) => [styles.unitBtn, pressed && { opacity: 0.7 }]}
+                    onPress={() => { haptics.selection(); setShowTimePicker(true); }}
+                    style={({ pressed }) => [styles.unitBtn, styles.eatenAtBtn, live.eatenAtBtn, pressed && { opacity: 0.7 }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Clear the eaten time"
+                    accessibilityLabel={eatenAt
+                      ? `Change the time you ate this, currently ${new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                      : 'Set the time you ate this'}
                   >
-                    <Text style={[styles.unitBtnText, live.unitBtnText]}>Clear</Text>
+                    <Text style={[styles.unitBtnTextActive, live.unitBtnTextActive]}>
+                      {eatenAt
+                        ? new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                        : 'No time set'}
+                    </Text>
                   </Pressable>
-                ) : null}
-              </View>
-            </>
-          ) : null}
-
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
-          <View style={styles.mealRow}>
-            {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
-              <Chip
-                key={s.key}
-                label={s.label}
-                selected={mealSlot === s.key}
-                onPress={() => { haptics.selection(); setMealSlot(s.key); }}
-                style={styles.mealBtn}
-                labelStyle={[styles.mealBtnText, live.mealBtnText]}
-                selectedLabelStyle={[styles.mealBtnTextActive, live.mealBtnTextActive]}
-                accessibilityRole="radio"
-                accessibilityLabel={`Meal: ${s.label}`}
-              />
-            ))}
+                  {eatenAt != null ? (
+                    <Pressable
+                      onPress={() => { haptics.selection(); setEatenAt(null); }}
+                      style={({ pressed }) => [styles.unitBtn, pressed && { opacity: 0.7 }]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear the eaten time"
+                    >
+                      <Text style={[styles.unitBtnText, live.unitBtnText]}>Clear</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </>
+            ) : null}
           </View>
 
-          <View style={styles.actions}>
+          {/* (5) The actions. */}
+          <View style={styles.actions} testID="food-sheet-actions">
             {/* Phase 10 finding #2 (discoverability audit 2026-08-10): the
                 only other way into multi-select is an undisclosed long
                 press on the diary row. This gives a visible route from the
@@ -491,18 +593,19 @@ export default function FoodDetailSheet({
               variant="secondary"
               fullWidth={false}
               style={styles.cancelBtn}
-              textStyle={[styles.cancelText, live.cancelText]}
             />
+            {/* D230 R5: the button names the meal it adds to, and follows
+                the meal chips above. */}
             <Button
-              title={mode === 'edit' ? 'Save changes' : 'Add to diary'}
+              title={mode === 'edit' ? 'Save changes' : `Add to ${mealSlotLabel(mealSlot)}`}
               onPress={handleSave}
               state={saved ? 'success' : submitting ? 'loading' : 'idle'}
               onSettled={handleClose}
               fullWidth={false}
-              style={[styles.saveBtn, live.saveBtn]}
-              textStyle={[styles.saveText, live.saveText]}
+              style={styles.saveBtn}
             />
           </View>
+
     </BottomSheet>
     {mode === 'edit' ? (
       <EatenTimePicker
@@ -516,30 +619,17 @@ export default function FoodDetailSheet({
   );
 }
 
-function MacroPill({ label, value }) {
-  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  return (
-    <View style={[styles.macroPill, live.macroPill]}>
-      <Text style={[styles.macroPillValue, live.macroPillValue]}>{value}</Text>
-      <Text style={[styles.macroPillLabel, live.macroPillLabel]}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  title: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
-  lastVerified: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  fieldLabel: {
-    fontSize: fontSize.xs, color: colors.textSecondary,
-    textTransform: 'uppercase', fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    marginTop: spacing.xs,
-  },
-  // Unit selector (household serving vs grams) + amount stepper. The common
-  // case, one named serving, needs zero keystrokes: tap +/− or just Add.
-  unitRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
+  // Each block keeps its own parts close; the sheet's own gap separates blocks.
+  block: { gap: spacing.sm },
+  title: { ...type.w('title', 'bold'), color: colors.textPrimary },
+  // The brand and the source chip share one line beneath the title.
+  titleMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  brand: { ...type.bodySm, color: colors.textMuted, flexShrink: 1 },
+  lastVerified: { ...type.caption, color: colors.textMuted },
+  // Unit selector (household serving vs grams), and the weigh-basis and
+  // eaten-at rows that share its shape.
+  unitRow: { flexDirection: 'row', gap: spacing.xs },
   unitBtn: {
     flex: 1,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
@@ -555,62 +645,30 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     backgroundColor: colors.surface2,
   },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  stepBtn: {
-    // Height matches stepInputField.minHeight (54) so the -/+ buttons and the
-    // amount field they flank are the same height and their edges line up in
-    // the row (the row is alignItems:'center', so a shorter button floated a
-    // few dp inside the taller field before).
-    width: 48, height: 54,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepInputContainer: {
-    flex: 1,
-  },
-  stepInputField: {
-    minHeight: 54,
-  },
-  stepInput: {
-    paddingVertical: spacing.md,
+  // The house Stepper with the typed field beside it. At the largest text
+  // sizes the field wraps under the Stepper rather than squeezing it.
+  amountRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  amountField: { flexGrow: 1, flexBasis: touchTarget.minimum * 2 },
+  amountInput: {
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     textAlign: 'center',
   },
-  gramHint: {
-    fontSize: fontSize.sm, color: colors.textMuted,
-    textAlign: 'center', marginTop: spacing.xs,
-  },
-  macroSummary: {
-    flexDirection: 'row', gap: spacing.sm,
-  },
-  macroPill: {
-    flex: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  macroPillValue: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  macroPillLabel: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  // gap #16: a quiet secondary line for extra per-food nutrients, below the
-  // primary kcal/P/C/F pills so it never competes with the macros that matter.
-  extraRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm, paddingHorizontal: spacing.xxs },
-  extraText: { fontSize: fontSize.sm, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
-  extraLabel: { color: colors.textMuted },
+  gramHint: { ...type.bodySm, color: colors.textMuted },
+  summary: { ...type.num('body'), color: colors.textPrimary },
+  dateLine: { ...type.bodySm, color: colors.textSecondary },
+  nutrientLine: { ...type.num('bodySm'), color: colors.textPrimary },
+  nutrientLabel: { color: colors.textMuted },
   mealRow: { flexDirection: 'row', gap: spacing.xs },
   mealBtn: {
     flex: 1,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xs,
     alignSelf: 'stretch',
-    alignItems: 'center',
+    alignItems: 'center', justifyContent: 'center', minHeight: touchTarget.minimum,
   },
   mealBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   mealBtnTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   actions: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   deleteBtn: {
     width: touchTarget.minimum, height: touchTarget.minimum,
@@ -618,47 +676,32 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  cancelBtn: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-  },
-  cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  saveBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center',
-  },
-  saveText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  cancelBtn: { minHeight: touchTarget.minimum },
+  // The primary variant as the house draws it; this only fills the row.
+  saveBtn: { flex: 1, minHeight: touchTarget.minimum },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
 // frozen `styles` block above, same "frozen base + live override" pattern as
-// BillingPeriodSelector.js's buildLiveStyles. unitRow/unitBtn/stepper/
-// stepInputContainer/stepInputField/stepInput/macroSummary/extraRow/mealRow/
-// mealBtn/actions have no colour tokens.
+// BillingPeriodSelector.js's buildLiveStyles. block/titleMeta/unitRow/
+// unitBtn/amountRow/amountField/amountInput/mealRow/mealBtn/actions/
+// cancelBtn/saveBtn have no colour tokens.
 function buildLiveStyles(t) {
   return {
-    title: { color: t.colors.textPrimary },
-    subtitle: { color: t.colors.textMuted },
-    lastVerified: { color: t.colors.textMuted },
-    fieldLabel: { color: t.colors.textSecondary },
+    title: { ...t.type.w('title', 'bold'), color: t.colors.textPrimary },
+    brand: { ...t.type.bodySm, color: t.colors.textMuted },
+    lastVerified: { ...t.type.caption, color: t.colors.textMuted },
     unitBtnText: { color: t.colors.textSecondary },
     unitBtnTextActive: { color: t.colors.primary },
     eatenAtBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    stepBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    gramHint: { color: t.colors.textMuted },
-    macroPill: { backgroundColor: t.colors.surface2 },
-    macroPillValue: { color: t.colors.textPrimary },
-    macroPillLabel: { color: t.colors.textMuted },
-    extraText: { color: t.colors.textPrimary },
-    extraLabel: { color: t.colors.textMuted },
+    gramHint: { ...t.type.bodySm, color: t.colors.textMuted },
+    summary: { ...t.type.num('body'), color: t.colors.textPrimary },
+    dateLine: { ...t.type.bodySm, color: t.colors.textSecondary },
+    nutrientLine: { ...t.type.num('bodySm'), color: t.colors.textPrimary },
+    nutrientLabel: { color: t.colors.textMuted },
     mealBtnText: { color: t.colors.textSecondary },
     mealBtnTextActive: { color: t.colors.primary },
     deleteBtn: { borderColor: t.colors.border },
     selectBtn: { borderColor: t.colors.border },
-    cancelText: { color: t.colors.textSecondary },
-    saveBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    saveText: { color: t.colors.textPrimary },
   };
 }

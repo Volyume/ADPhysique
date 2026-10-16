@@ -32,7 +32,12 @@ describe('FoodDetailSheet: eaten-at field (edit mode only)', () => {
     // `[styles.fieldLabel, live.fieldLabel]`), so the pin matches that form
     // instead of the bare `styles.fieldLabel`. Same call site, same frozen
     // style object underneath, still asserted below.
-    expect(SRC).toMatch(/\{mode === 'edit' \? \(\s*<>\s*<Text style=\{\[styles\.fieldLabel, live\.fieldLabel\]\}>Eaten at<\/Text>/);
+    // D230 R8/R15 (food level-up, 2026-10-16): the hand-rolled uppercase
+    // field label (`styles.fieldLabel`) is retired for the house
+    // SectionLabel on every label in the sheet, "Eaten at" included. Same
+    // truth pinned: the label and its field render only inside the
+    // edit-mode branch.
+    expect(SRC).toMatch(/\{mode === 'edit' \? \(\s*<>\s*<SectionLabel>Eaten at<\/SectionLabel>/);
   });
 
   test('a bulk-confirmed entry (no eaten_at) opens with "No time set", never a false timestamp', () => {

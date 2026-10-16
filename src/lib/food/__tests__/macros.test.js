@@ -1,7 +1,9 @@
 /**
  * macros.test.js — the single per-100g -> portion scaler (food review U-M2).
  */
-import { scaleMacros, resolveServingG, scaleSugarG, scaleSodiumMg, perServingTotals } from '../macros';
+import {
+  scaleMacros, resolveServingG, scaleSugarG, scaleSodiumMg, saltGFromSodiumMg, perServingTotals,
+} from '../macros';
 
 describe('scaleMacros', () => {
   test('scales the resolved/diary shape (kcal_100g ...) by grams', () => {
@@ -140,5 +142,37 @@ describe('scaleSodiumMg (E4: stored grams per 100g, displayed as whole mg)', () 
 
   test('a real 0 sodium stays 0, not null', () => {
     expect(scaleSodiumMg({ sodium_100g: 0 }, 100)).toBe(0);
+  });
+});
+
+// D230 R8 (food level-up, 2026-10-16): UK packs print salt, not sodium. The
+// UK-retained labelling rule is salt = sodium x 2.5; the sheet shows it to
+// one decimal, as packs do. Display-only: never a target or a limit.
+describe('saltGFromSodiumMg (salt = sodium x 2.5, to one decimal)', () => {
+  test('160 mg sodium is 0.4 g salt', () => {
+    expect(saltGFromSodiumMg(160)).toBe(0.4);
+  });
+
+  test('rounds to one decimal, as packs print it', () => {
+    expect(saltGFromSodiumMg(360)).toBe(0.9);
+    expect(saltGFromSodiumMg(1450)).toBe(3.6);
+    expect(saltGFromSodiumMg(2000)).toBe(5);
+  });
+
+  test('chains from scaleSodiumMg: 0.4 g sodium per 100 g, 90 g eaten, is 0.9 g salt', () => {
+    expect(saltGFromSodiumMg(scaleSodiumMg({ sodium_100g: 0.4 }, 90))).toBe(0.9);
+  });
+
+  test('a real 0 stays 0; a tiny figure rounds to 0, never a negative', () => {
+    expect(saltGFromSodiumMg(0)).toBe(0);
+    expect(saltGFromSodiumMg(10)).toBe(0);
+  });
+
+  test('no datum, or an unreadable one, is null (never a fake 0)', () => {
+    expect(saltGFromSodiumMg(null)).toBeNull();
+    expect(saltGFromSodiumMg(undefined)).toBeNull();
+    expect(saltGFromSodiumMg(NaN)).toBeNull();
+    expect(saltGFromSodiumMg(-5)).toBeNull();
+    expect(saltGFromSodiumMg(scaleSodiumMg({ sodium_100g: 649 }, 100))).toBeNull();
   });
 });

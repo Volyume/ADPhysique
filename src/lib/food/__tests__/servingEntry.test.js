@@ -7,6 +7,7 @@
 import {
   buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams, MAX_ENTRY_GRAMS,
 } from '../servingEntry';
+import { parseDecimalInput } from '../../parseDecimalInput';
 
 const slice = { serving_g: 36, serving_label: 'slice' };
 const noServing = { kcal_100g: 250 };
@@ -114,5 +115,32 @@ describe('isValidEntryGrams — the 1–5000 g safety bound binds on resolved gr
     expect(isValidEntryGrams(resolveGrams('200', { grams: 36 }))).toBe(false);
     // 2 × 2500 g = 5000 g -> allowed at the boundary.
     expect(isValidEntryGrams(resolveGrams('2', { grams: 2500 }))).toBe(true);
+  });
+});
+
+// D230 R8 (inventory section 6): the sheet reads the typed amount through
+// parseDecimalInput, so a comma-decimal keyboard's "1,5" means 1.5, then hands
+// resolveGrams the parsed number, which it accepts exactly as before. The
+// sheet used to strip the comma, so "1,5" silently became 15.
+describe('decimal comma: the parsed amount resolves to the same grams', () => {
+  const servingUnit = { key: 'serving', label: 'slice', grams: 36 };
+  const gUnit = { key: 'g', label: 'g', grams: 1 };
+
+  test('"1,5" slices is 54 g, the same as "1.5"', () => {
+    expect(resolveGrams(parseDecimalInput('1,5'), servingUnit)).toBe(54);
+    expect(resolveGrams(parseDecimalInput('1,5'), servingUnit))
+      .toBe(resolveGrams(parseDecimalInput('1.5'), servingUnit));
+  });
+
+  test('"82,5" in grams is 82.5 g, never 82 or 825', () => {
+    expect(resolveGrams(parseDecimalInput('82,5'), gUnit)).toBe(82.5);
+  });
+
+  test('a blank field parses to NaN and still resolves to 0, never NaN', () => {
+    expect(resolveGrams(parseDecimalInput(''), servingUnit)).toBe(0);
+  });
+
+  test('the bound is unchanged on parsed input: "200,0" slices is still refused', () => {
+    expect(isValidEntryGrams(resolveGrams(parseDecimalInput('200,0'), servingUnit))).toBe(false);
   });
 });

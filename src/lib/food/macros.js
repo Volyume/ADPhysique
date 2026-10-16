@@ -96,6 +96,26 @@ export function scaleSodiumMg(per100, grams) {
 }
 
 /**
+ * Salt in grams from sodium in milligrams, for the food-detail display only
+ * (D230 R8). UK packs label salt, not sodium: the UK-retained food
+ * information regulation (EU No 1169/2011, Annex I, item 11) defines "salt"
+ * as the salt equivalent, sodium x 2.5, so the sheet shows the figure a
+ * person can hold against the pack. Rounded to one decimal, as packs print
+ * it. Display-only, like scaleSodiumMg: not stored, not totalled, never a
+ * target or a limit.
+ *
+ * @param mg  sodium in milligrams (scaleSodiumMg's output)
+ * @returns {number|null} grams of salt to one decimal, or null when there is
+ *                        no (plausible) sodium figure
+ */
+export function saltGFromSodiumMg(mg) {
+  if (mg == null) return null;
+  const v = Number(mg);
+  if (!Number.isFinite(v) || v < 0) return null;
+  return Math.round((v * 2.5) / 100) / 10;
+}
+
+/**
  * Divide a whole-recipe macro total into a per-serving figure, so a recipe
  * list row can show "how much is one serving" alongside its serving count
  * rather than an unlabelled whole-recipe number (L05-MR1, 2026-07-09 design

@@ -49,3 +49,26 @@ export function friendlyDate(isoStr, todayIso = isoDate(new Date())) {
   const d = parseLocalDay(isoStr);
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
+
+// D230 R5: the quiet line that says which day an add lands on, shown only
+// when that day is not today ("For Wednesday 14 October."). Built from the
+// local day-key helpers and fixed English names, as weekdayShort is, so the
+// words never depend on the device's date-format data. The year is added
+// only when it differs from this year's. Returns null for today or an
+// unreadable key. Shared by the add sheet (FoodDetailSheet) and the add
+// screen (FoodSearchScreen), so the two say the day the same way.
+const WEEKDAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTH_LONG = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+export function entryDateLine(entryDate, todayIso = isoDate(new Date())) {
+  if (!entryDate || entryDate === todayIso) return null;
+  const d = parseLocalDay(entryDate);
+  if (Number.isNaN(d.getTime())) return null;
+  const today = parseLocalDay(todayIso);
+  const year = !Number.isNaN(today.getTime()) && d.getFullYear() !== today.getFullYear()
+    ? ` ${d.getFullYear()}`
+    : '';
+  return `For ${WEEKDAY_LONG[d.getDay()]} ${d.getDate()} ${MONTH_LONG[d.getMonth()]}${year}.`;
+}
