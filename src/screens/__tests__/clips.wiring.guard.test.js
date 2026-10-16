@@ -85,8 +85,18 @@ describe('ActiveWorkoutScreen: "Film" is a footer action on the exercise card, f
     expect(CARD).toContain("import { CLIP_STRINGS } from '../../../lib/clips/rules';");
   });
 
-  test('the More sheet carries no video row any more: one quiet place, the footer', () => {
-    expect(SHEETS).not.toMatch(/clips\/rules|handleRecordClip|clipsSuppressed|videocam-outline/);
+  test('the More sheet carries no record row: one quiet place to film, the footer', () => {
+    expect(SHEETS).not.toMatch(/clips\/rules|handleRecordClip|clipsSuppressed|filmLabel/);
+  });
+
+  test('addendum 14: the exercise options sheet has a "Your videos · N" door, only once there is one to find, that opens the videos sheet', () => {
+    expect(SHEETS).toMatch(/\{clipCount > 0 && onOpenClips \? \(\s*<TouchableOpacity[\s\S]*?onPress=\{\(\) => \{ setShowOverflow\(false\); onOpenClips\(\); \}\}[\s\S]*?accessibilityLabel=\{`Your videos, \$\{clipCount\}`\}[\s\S]*?testID="volyume-row-your-videos"[\s\S]*?name="videocam-outline"[\s\S]*?\{`Your videos · \$\{clipCount\}`\}/);
+    // The door sits above Remove exercise, the sheet's last and destructive row.
+    expect(SHEETS.indexOf('testID="volyume-row-your-videos"')).toBeLessThan(SHEETS.indexOf('accessibilityLabel="Remove exercise from workout"'));
+    // The logger hands it the count and the opener only when videos are not
+    // suppressed (the same explicit-false gate as Film; fail closed).
+    expect(ACTIVE).toContain('clipCount={clipsSuppressed === false ? clipFlow.count : 0}');
+    expect(ACTIVE).toContain('onOpenClips={clipsSuppressed === false ? () => clipFlow.openClips() : null}');
   });
 
   test('the handler films the next pending set, the number the Now card shows', () => {
@@ -106,6 +116,15 @@ describe('WorkoutSummaryScreen: the video row, in its two forms', () => {
     expect(SUMMARY).toContain("import { NavRow, NavGroup } from '../components/NavRow';");
     expect(rowSource()).toContain('icon="videocam-outline"');
     expect(rowSource()).toContain('sub={clipRowCopy.sub}');
+  });
+
+  test('addendum 14: with a video the share can use, the footer Share steps up (secondary, video glyph, "Share with your video") behind the same calm and flag gate as the row, and opens the share with that video', () => {
+    expect(SUMMARY).toMatch(/const videoReadyForShare = !!clipRowCopy\.newest && summaryClipRowVisible\(\{\s*readOnly, workoutId, settled: calmKnown, suppressed: calmSuppressed, shareable: displayWorkingSets > 0,\s*\}\);/);
+    expect(SUMMARY).toMatch(/title=\{videoReadyForShare \? 'Share with your video' : 'Share'\}/);
+    expect(SUMMARY).toMatch(/variant=\{videoReadyForShare \? 'secondary' : 'tertiary'\}/);
+    expect(SUMMARY).toMatch(/onPress=\{videoReadyForShare && clipRowCopy\.newest\s*\? \(\) => handleUseClip\(clipRowCopy\.newest\.id\)\s*: handleShareCard\}/);
+    // Done stays the one primary: the share never becomes a second amber.
+    expect(SUMMARY).not.toMatch(/variant=\{videoReadyForShare \? 'primary'/);
   });
 
   test("its words come from the one rule, and change with the workout's videos and its PRs", () => {
@@ -137,9 +156,11 @@ describe('WorkoutSummaryScreen: the video row, in its two forms', () => {
     expect(rowSource()).toContain("clipFlow.openRecorder({ source: 'summary' })");
   });
 
-  test('the footer is untouched: no video control beside Done and Share', () => {
+  test('the footer gains no third control: Done and Share only, and no recorder from here (addendum 14 changes Share, never adds a button)', () => {
     const footer = SUMMARY.slice(footerAt, SUMMARY.indexOf('{/* Template name prompt.'));
-    expect(footer).not.toMatch(/clip|video/i);
+    expect(footer.match(/<Button/g)).toHaveLength(2);
+    expect(footer).not.toMatch(/openRecorder|handleRecordClip|clipFlow\./);
+    expect(footer).toContain('videoReadyForShare');
   });
 
   test("gated by the fail-closed rule over the screen's own settled calm and flag read, the read-only flag and a Share to use", () => {

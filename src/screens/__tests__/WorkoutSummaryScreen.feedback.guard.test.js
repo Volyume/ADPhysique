@@ -42,7 +42,10 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain('<TouchableOpacity');
     expect(SOURCE).toContain("title={saving ? 'Saving' : 'Done'}");
     expect(SOURCE).toMatch(/title=\{saving \? 'Saving' : 'Done'\}[\s\S]*?variant="primary"/);
-    expect(SOURCE).toMatch(/title="Share"[\s\S]*?icon="share-social-outline"[\s\S]*?variant="tertiary"[\s\S]*?size="sm"/);
+    // D229 addendum 14: the footer's Share steps up to the ink-filled
+    // secondary with the video glyph when the workout holds a video the
+    // share can use; its plain form is unchanged (the tertiary text link).
+    expect(SOURCE).toMatch(/title=\{videoReadyForShare \? 'Share with your video' : 'Share'\}[\s\S]*?icon=\{videoReadyForShare \? 'videocam-outline' : 'share-social-outline'\}[\s\S]*?variant=\{videoReadyForShare \? 'secondary' : 'tertiary'\}[\s\S]*?size="sm"/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*flex: 1/);

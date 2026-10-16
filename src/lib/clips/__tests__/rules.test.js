@@ -2,10 +2,13 @@
  * clips rules (D229 addendum 5 and the founder's additions of 2026-10-15): the
  * numbers and the words every video surface shares. Written to fail if any
  * ruling drifts:
- *   - up to three videos for each workout, 15 seconds, a 1 second floor;
- *   - TWO ways to record: a tap (countdown 3 / 5 / 10 s, then a length of
- *     5 / 10 / 15 s that stops by itself) and a hold (no countdown, capped at
- *     15 s); both remembered, defaults 3 s and 15 s;
+ *   - up to three videos for each workout, two minutes at the longest
+ *     (addendum 13: a whole set with its walkout and re-rack), a 1 second
+ *     floor;
+ *   - TWO ways to record: a tap (countdown 3 / 5 / 10 / 15 / 20 s, then a
+ *     length of 60 / 90 s / 2 min that stops by itself) and a hold (no
+ *     countdown, capped at two minutes); both remembered, defaults 3 s and
+ *     90 s; the cues control's four states, remembered;
  *   - the exercise-menu row's second line for none, one, two and three videos;
  *   - a video is named by its exercise and set ("Bench press, set 3, 0:12"), or
  *     "After the workout" when it was made on the summary;
@@ -27,10 +30,13 @@ import {
 } from '../rules';
 
 describe('the rulings, as numbers', () => {
-  test('three videos for each workout, 15 seconds at the longest, 1 second at the shortest', () => {
+  test('three videos for each workout, two minutes at the longest, 1 second at the shortest', () => {
     expect(MAX_CLIPS_PER_WORKOUT).toBe(3);
-    expect(MAX_CLIP_SECONDS).toBe(15);
-    expect(MAX_CLIP_MS).toBe(15000);
+    // Addendum 13: two minutes, so a whole ordinary set with its walkout
+    // and re-rack fits (06-SET-LENGTH-AND-CUES-RESEARCH.md); the share's own
+    // window is still 15 seconds, in the share engine.
+    expect(MAX_CLIP_SECONDS).toBe(120);
+    expect(MAX_CLIP_MS).toBe(120000);
     expect(MIN_CLIP_MS).toBe(1000);
   });
 
@@ -39,9 +45,9 @@ describe('the rulings, as numbers', () => {
     expect(DEFAULT_LEAD_IN_SECONDS).toBe(3);
   });
 
-  test('the length cycles 5 / 10 / 15 seconds, default 15, never past the cap', () => {
-    expect(LENGTH_OPTIONS).toEqual([5, 10, 15]);
-    expect(DEFAULT_LENGTH_SECONDS).toBe(15);
+  test('the length cycles 60 / 90 s / 2 min, default 90, never past the cap', () => {
+    expect(LENGTH_OPTIONS).toEqual([60, 90, 120]);
+    expect(DEFAULT_LENGTH_SECONDS).toBe(90);
     expect(Math.max(...LENGTH_OPTIONS)).toBe(MAX_CLIP_SECONDS);
   });
 
@@ -66,35 +72,37 @@ describe('the two small controls', () => {
   });
 
   test('the length cycles 5 -> 10 -> 15 -> 5', () => {
-    expect(nextLength(5)).toBe(10);
-    expect(nextLength(10)).toBe(15);
-    expect(nextLength(15)).toBe(5);
+    expect(nextLength(60)).toBe(90);
+    expect(nextLength(90)).toBe(120);
+    expect(nextLength(120)).toBe(60);
   });
 
   test('a corrupt stored value cannot strand either control', () => {
     expect(nextLeadIn(7)).toBe(3);
     expect(nextLeadIn(undefined)).toBe(3);
-    expect(nextLength(7)).toBe(15);
-    expect(nextLength(undefined)).toBe(15);
+    expect(nextLength(7)).toBe(90);
+    expect(nextLength(undefined)).toBe(90);
     expect(parseLeadIn('10')).toBe(10);
     expect(parseLeadIn('5')).toBe(5);
     expect(parseLeadIn('banana')).toBe(3);
     expect(parseLeadIn(null)).toBe(3);
-    expect(parseLength('5')).toBe(5);
-    expect(parseLength('10')).toBe(10);
-    expect(parseLength('20')).toBe(15);
-    expect(parseLength(null)).toBe(15);
+    expect(parseLength('60')).toBe(60);
+    expect(parseLength('120')).toBe(120);
+    expect(parseLength('15')).toBe(90);
+    expect(parseLength(null)).toBe(90);
   });
 
   test('their text and accessibility words', () => {
     expect(leadInLabel(3)).toBe('3 s');
     expect(leadInLabel(10)).toBe('10 s');
-    expect(lengthLabel(5)).toBe('5 s');
-    expect(lengthLabel(15)).toBe('15 s');
+    expect(lengthLabel(60)).toBe('60 s');
+    expect(lengthLabel(90)).toBe('90 s');
+    expect(lengthLabel(120)).toBe('2 min');
     expect(startA11yLabel(3)).toBe('Start recording in 3 seconds');
     expect(startA11yLabel(10)).toBe('Start recording in 10 seconds');
     expect(leadInA11yLabel(10)).toBe('Countdown before recording, 10 seconds');
-    expect(lengthA11yLabel(15)).toBe('Recording length, 15 seconds');
+    expect(lengthA11yLabel(90)).toBe('Recording length, 90 seconds');
+    expect(lengthA11yLabel(120)).toBe('Recording length, 2 minutes');
   });
 
   test('each carries a plain word above its value, and the line under the button says both ways', () => {
@@ -152,7 +160,7 @@ describe('the summary row changes with the workout', () => {
     const copy = summaryClipRowCopy([]);
     expect(copy).toEqual({
       label: 'Record a video',
-      sub: "Up to 15 seconds, with no sound. You can also film a set during a workout, from an exercise's menu.",
+      sub: 'Up to two minutes, with no sound. You can also film a set from an exercise card during a workout.',
       newest: null,
     });
     expect(summaryClipRowCopy(undefined).label).toBe('Record a video');
@@ -319,14 +327,17 @@ describe('the ruled words', () => {
   test('the primer, exactly: the only explanation anywhere', () => {
     expect(CLIP_STRINGS.primerTitle).toBe('Videos stay on this phone');
     // Addendum 12: the light line and the clear band are said once, here.
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
+    // Addenda 13 and 14: the length, the light, the clear band, and where
+    // the videos are kept, said once.
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under Your videos, and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
     expect(CLIP_STRINGS.primerOpen).toBe('Open camera');
     expect(CLIP_STRINGS.primerNotNow).toBe('Not now');
   });
 
   test('the camera words', () => {
     expect(CLIP_STRINGS.permissionDenied).toBe('Volyume needs camera access to record a video.');
-    expect(CLIP_STRINGS.saved).toBe('Your video is saved with this workout');
+    // Addendum 14: where it went and where to find it, in the toast itself.
+    expect(CLIP_STRINGS.saved).toBe('Saved with this workout. Find it under Your videos, and on your share at the end.');
     expect(CLIP_STRINGS.undo).toBe('Undo');
     expect(CLIP_STRINGS.closeA11y).toBe('Cancel recording');
     expect(CLIP_STRINGS.stopA11y).toBe('Stop recording');

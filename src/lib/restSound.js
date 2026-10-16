@@ -188,8 +188,17 @@ function restSoundsMuted() {
 }
 
 export function playRestBeep(key) {
-  if (!Audio) return; // build doesn't have expo-av, silent fallback
   if (restSoundsMuted()) return;
+  playCueBeep(key);
+}
+
+/**
+ * The same pips for the camera's countdown cues (D229 addendum 13), which
+ * have their OWN switch on the camera ("Cues"), so the rest timer's sound
+ * setting does not gate them. Silent when expo-av is absent.
+ */
+export function playCueBeep(key) {
+  if (!Audio) return; // build doesn't have expo-av, silent fallback
   (async () => {
     try {
       if (!soundsCache) await preload();

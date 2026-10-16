@@ -67,7 +67,7 @@
  * later, in case the first arrived before the recorder was running).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet, BackHandler } from 'react-native';
+import { View, Pressable, StyleSheet, BackHandler, Platform } from 'react-native';
 import Text from '../components/Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -91,8 +91,11 @@ import {
   MAX_CLIP_MS, MIN_CLIP_MS, isFull, nextLeadIn, nextLength, parseLeadIn,
   parseLength, parseGuides, leadInLabel, leadInA11yLabel, lengthLabel, lengthA11yLabel, startA11yLabel,
   guidesLabel, guidesA11yLabel,
+  CUES_KEY, DEFAULT_CUES, nextCues, parseCues, cuesLabel, cuesA11yLabel, cuesHaveSound, cuesHaveLight,
 } from '../lib/clips/rules';
 import { cameraTipFor } from '../lib/clips/cameraTips';
+import { cueFor, pickLenses, PULSE_MS, END_PULSE_GAP_MS } from '../lib/clips/cues';
+import { playCueBeep } from '../lib/restSound';
 
 // expo-camera is a native module (config plugin). Lazy-require at module load
 // like ProgressGhostCapture, so a stale or rebuild-pending binary takes the
@@ -117,6 +120,13 @@ const useCameraPermissions = ExpoCamera?.useCameraPermissions || useNoCameraPerm
 const KEEP_AWAKE_TAG = 'volyume-clip-camera';
 
 const COUNTDOWN_TICK_MS = 1000;
+// Addendum 13: 1080p at about 6 million bits a second, so a 90 second video
+// is about 68 MB and two minutes about 90 MB (the research's section 2.3);
+// iOS honours it because recordAsync passes a codec.
+const VIDEO_BITRATE = 6000000;
+// The end cue is two beats; the screen waits this long before it leaves, so
+// the second beat is heard and seen.
+const END_CUE_TOTAL_MS = END_PULSE_GAP_MS + PULSE_MS + 100;
 // A press this long on the record control is a hold (record while held). A
 // shorter press is a tap (countdown). Long enough that a slow tap is a tap.
 const HOLD_DELAY_MS = 400;
@@ -176,6 +186,15 @@ export default function ClipCameraScreen({ navigation, route }) {
   // Setting up first (addendum 10): the guide lines over the live view,
   // on until turned off, remembered on the phone.
   const [guides, setGuides] = useState(true);
+  // Addendum 13 (A): the countdown cues (sound, light, both, off), remembered
+  // on the phone; the torch (back camera) and the screen pulse (front camera)
+  // that carry the light cue.
+  const [cues, setCues] = useState(DEFAULT_CUES);
+  const [torchOn, setTorchOn] = useState(false);
+  const [screenPulse, setScreenPulse] = useState(false);
+  // Addendum 13 (E): the lenses the phone reports (iOS only) and the view.
+  const [lenses, setLenses] = useState({ normal: null, wide: null });
+  const [wideView, setWideView] = useState(false);
   // ready | starting | countdown | recording | saving
   const [phase, setPhaseState] = useState('ready');
   const [countdownN, setCountdownN] = useState(0);
@@ -196,10 +215,25 @@ export default function ClipCameraScreen({ navigation, route }) {
   const modeRef = useRef('tap');
   const limitMsRef = useRef(MAX_CLIP_MS);
   const holdActiveRef = useRef(false);
+  const cuesRef = useRef(DEFAULT_CUES);
+  const facingRef = useRef('back');
+  const wideViewRef = useRef(false);
+  // The light pulses of the countdown (cleared with the other timers) and of
+  // the end cue (cleared only on unmount: they outlive the recording).
+  const pulseTimers = useRef([]);
+  const endCueTimers = useRef([]);
+  const endCueUntilRef = useRef(0);
+  // The wait for the end cue's second beat before the screen leaves; cleared
+  // on unmount so it never navigates a screen that is already gone.
+  const leaveTimer = useRef(null);
   const askedRef = useRef(false);
   const closedRef = useRef(false);
   const discardRef = useRef(false);
   const stopFeltRef = useRef(false);
+  // Set by the screen's own length timer, so a recording that ran to its
+  // length is told apart from one stopped by hand (both go through
+  // stopRecording; only the first gets the end cue).
+  const limitStopRef = useRef(false);
   const startedAtRef = useRef(0);
   const countdownTimer = useRef(null);
   const autoStopTimer = useRef(null);
@@ -211,6 +245,15 @@ export default function ClipCameraScreen({ navigation, route }) {
   }, []);
 
   const clearTimers = useCallback(() => {
+    pulseTimers.current.forEach(clearTimeout);
+    pulseTimers.current = [];
+    // The light goes off with the countdown's pulses, unless the end cue is
+    // mid-flight (it runs past the recording's finish and puts its own
+    // pulses out).
+    if (Date.now() >= endCueUntilRef.current) {
+      setTorchOn(false);
+      setScreenPulse(false);
+    }
     if (countdownTimer.current) { clearInterval(countdownTimer.current); countdownTimer.current = null; }
     if (autoStopTimer.current) { clearTimeout(autoStopTimer.current); autoStopTimer.current = null; }
     if (stopAskTimer.current) { clearInterval(stopAskTimer.current); stopAskTimer.current = null; }
@@ -233,6 +276,9 @@ export default function ClipCameraScreen({ navigation, route }) {
       aliveRef.current = false;
       holdActiveRef.current = false;
       clearTimers();
+      endCueTimers.current.forEach(clearTimeout);
+      endCueTimers.current = [];
+      if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null; }
       // Leaving mid-recording discards it: the recorder resolves later and the
       // discard flag sends its file to the bin.
       if (phaseRef.current === 'recording') {
@@ -263,7 +309,33 @@ export default function ClipCameraScreen({ navigation, route }) {
       if (!aliveRef.current || raw == null) return;
       setGuides(parseGuides(raw));
     }).catch((e) => { logError('ClipCamera.guidesRead', e); });
+    AsyncStorage.getItem(CUES_KEY).then((raw) => {
+      if (!aliveRef.current || raw == null) return;
+      const m = parseCues(raw);
+      cuesRef.current = m;
+      setCues(m);
+    }).catch((e) => { logError('ClipCamera.cuesRead', e); });
   }, []);
+
+  // Addendum 13 (E): which lenses this phone has, asked of the camera once it
+  // is up (iOS only: Android reports none and cannot reach an ultra-wide).
+  // Asked twice, at once and a moment later, because the view's ref lands
+  // just after the first render that shows it.
+  useEffect(() => {
+    if (!ready || Platform.OS !== 'ios' || facing !== 'back') return undefined;
+    let cancelled = false;
+    const ask = async () => {
+      try {
+        const names = await cameraRef.current?.getAvailableLensesAsync?.();
+        if (!cancelled && aliveRef.current && Array.isArray(names)) setLenses(pickLenses(names));
+      } catch (e) {
+        logError('ClipCamera.lenses', e);
+      }
+    };
+    ask();
+    const later = setTimeout(ask, 300);
+    return () => { cancelled = true; clearTimeout(later); };
+  }, [ready, facing]);
 
   // The phone's back button while a finished recording is being saved: the
   // save takes well under a second, and leaving then would throw the video
@@ -308,6 +380,15 @@ export default function ClipCameraScreen({ navigation, route }) {
   }, [setPhase]);
 
   const afterSave = useCallback((clip) => {
+    // The end cue's second beat is still to come: leave after it.
+    const leaveAfter = Math.max(0, endCueUntilRef.current - Date.now());
+    const leave = (go) => {
+      if (leaveAfter <= 0) { go(); return; }
+      leaveTimer.current = setTimeout(() => {
+        leaveTimer.current = null;
+        if (aliveRef.current) go();
+      }, leaveAfter);
+    };
     const undo = {
       label: CLIP_STRINGS.undo,
       onPress: () => {
@@ -320,13 +401,13 @@ export default function ClipCameraScreen({ navigation, route }) {
     if (source === 'share') {
       // Back to the share screen it came from, which keeps its own card data;
       // only the video to use is handed over.
-      navigation.navigate({ name: 'ShareCard', params: { clipId: clip.id }, merge: true });
+      leave(() => navigation.navigate({ name: 'ShareCard', params: { clipId: clip.id }, merge: true }));
       return;
     }
     if (source === 'summary') {
       // The summary builds the share screen's params and opens it with clipId
       // (and says "saved" itself when it has no Share to open).
-      navigation.navigate({ name: 'WorkoutSummary', params: { clipId: clip.id }, merge: true });
+      leave(() => navigation.navigate({ name: 'WorkoutSummary', params: { clipId: clip.id }, merge: true }));
       return;
     }
     // The house saved-with-Undo toast ("Quick add saved." uses the same
@@ -341,7 +422,7 @@ export default function ClipCameraScreen({ navigation, route }) {
       },
     };
     toast.show(CLIP_STRINGS.saved, { variant: 'undo', action: undo, secondaryAction: watch });
-    navigation.goBack();
+    leave(() => navigation.goBack());
   }, [navigation, source, toast]);
 
   const finishRecording = useCallback(async (uri, measuredMs) => {
@@ -403,10 +484,51 @@ export default function ClipCameraScreen({ navigation, route }) {
     setNumber, source, afterSave, showFull, toast,
   ]);
 
+  // ── Cues (addendum 13) ─────────────────────────────────────────────────────
+  // One light pulse: the torch with the back camera, a brief white screen
+  // pulse with the front (phones have no front torch), never while the wide
+  // lens is in use (an iPhone forum report of the camera freezing with the
+  // torch and the ultra-wide lens together; the sound still cues). Timers
+  // are kept so a cancel or an unmount leaves nothing lit.
+  const pulseLight = useCallback((timers) => {
+    if (!aliveRef.current) return;
+    const back = facingRef.current === 'back';
+    if (back && wideViewRef.current) return;
+    const set = back ? setTorchOn : setScreenPulse;
+    set(true);
+    timers.current.push(setTimeout(() => { set(false); }, PULSE_MS));
+  }, []);
+
+  // The countdown's cue at a given second (cues.js decides what, this plays
+  // it): the rest timer's own pips, and the light on its beats.
+  const fireCue = useCallback((secondsLeft) => {
+    const mode = cuesRef.current;
+    const cue = cueFor(secondsLeft, leadInRef.current);
+    if (cue.sound && cuesHaveSound(mode)) playCueBeep(cue.sound);
+    if (cue.light && cuesHaveLight(mode)) pulseLight(pulseTimers);
+  }, [pulseLight]);
+
+  // After a recording that ran to its length (never after a stop by hand:
+  // the person is at the phone then): two soft descending pips and two light
+  // pulses, once the recorder has finished the file so nothing is in the
+  // video. The screen waits for the second beat before it leaves.
+  const endCue = useCallback(() => {
+    const mode = cuesRef.current;
+    if (!cuesHaveSound(mode) && !cuesHaveLight(mode)) return;
+    endCueUntilRef.current = Date.now() + END_CUE_TOTAL_MS;
+    const beat = (key) => {
+      if (!aliveRef.current) return;
+      if (cuesHaveSound(mode)) playCueBeep(key);
+      if (cuesHaveLight(mode)) pulseLight(endCueTimers);
+    };
+    beat('two');
+    endCueTimers.current.push(setTimeout(() => beat('three'), END_PULSE_GAP_MS));
+  }, [pulseLight]);
+
   // Ask the recorder to stop, and keep asking every STOP_ASK_EVERY_MS until
   // recordAsync resolves (finishRecording clears the timers): a stop that
   // arrives before CameraX has begun is ignored, and a hold let go in that
-  // window must still end the recording, never run on to the 15 s cap.
+  // window must still end the recording, never run on to the cap.
   const stopRecording = useCallback(() => {
     if (phaseRef.current !== 'recording') return;
     stopFeltRef.current = true;
@@ -433,10 +555,11 @@ export default function ClipCameraScreen({ navigation, route }) {
       return;
     }
     // A tap records for the chosen length; a hold for as long as it is held,
-    // up to the 15 second cap.
+    // up to the two minute cap.
     const limitMs = mode === 'hold' ? MAX_CLIP_MS : lengthRef.current * 1000;
     discardRef.current = false;
     stopFeltRef.current = false;
+    limitStopRef.current = false;
     modeRef.current = mode;
     setRecordMode(mode);
     limitMsRef.current = limitMs;
@@ -447,7 +570,12 @@ export default function ClipCameraScreen({ navigation, route }) {
     haptics.commit();
     // The recorder's own maxDuration ends the video too; this is the screen's
     // own hand on the same limit, so the length holds even if that is late.
-    autoStopTimer.current = setTimeout(stopRecording, limitMs);
+    // It marks the stop as the length's own, unless a hand got there first
+    // (a stop asked for just before the limit is still a stop by hand).
+    autoStopTimer.current = setTimeout(() => {
+      if (!stopFeltRef.current) limitStopRef.current = true;
+      stopRecording();
+    }, limitMs);
     let result = null;
     try {
       result = await camera.recordAsync({ maxDuration: limitMs / 1000, codec: 'avc1' });
@@ -455,26 +583,36 @@ export default function ClipCameraScreen({ navigation, route }) {
       logError('ClipCamera.record', e, { workoutId });
     }
     recordingCameraRef.current = null;
+    // Addendum 13 (C): a tap recording that reached its length on its own,
+    // whether the recorder or the screen's timer ended it. Never after a
+    // stop by hand, and never for a hold (a finger is on the button, so the
+    // person is at the phone).
+    const reachedLength = mode === 'tap' && (!stopFeltRef.current || limitStopRef.current);
+    if (reachedLength && !discardRef.current && aliveRef.current && result?.uri) endCue();
     await finishRecording(result?.uri ?? null, Date.now() - startedAtRef.current);
-  }, [setPhase, stopRecording, finishRecording, workoutId]);
+  }, [setPhase, stopRecording, finishRecording, workoutId, endCue]);
 
   const beginCountdown = useCallback(() => {
     let n = leadInRef.current;
     setPhase('countdown');
     setCountdownN(n);
     haptics.clipCountdown();
+    fireCue(n);
     countdownTimer.current = setInterval(() => {
       n -= 1;
       if (n <= 0) {
         clearInterval(countdownTimer.current);
         countdownTimer.current = null;
+        // The start: the longer tone, and no light before the first frame.
+        fireCue(0);
         startRecording('tap');
         return;
       }
       setCountdownN(n);
       haptics.clipCountdown();
+      fireCue(n);
     }, COUNTDOWN_TICK_MS);
-  }, [setPhase, startRecording]);
+  }, [setPhase, startRecording, fireCue]);
 
   // Is there room for another video? Read fresh: the number on screen may be old.
   const hasRoom = useCallback(async () => {
@@ -563,6 +701,23 @@ export default function ClipCameraScreen({ navigation, route }) {
     });
   }, []);
 
+  const handleCues = useCallback(() => {
+    if (phaseRef.current !== 'ready') return;
+    const next = nextCues(cuesRef.current);
+    cuesRef.current = next;
+    setCues(next);
+    AsyncStorage.setItem(CUES_KEY, String(next)).catch((e) => {
+      logError('ClipCamera.cuesWrite', e);
+    });
+  }, []);
+
+  // Addendum 13 (E): Normal or Wide, while the camera waits. Not remembered:
+  // the room decides it each time.
+  const handleView = useCallback(() => {
+    if (phaseRef.current !== 'ready') return;
+    setWideView((w) => { wideViewRef.current = !w; return !w; });
+  }, []);
+
   const handleLength = useCallback(() => {
     if (phaseRef.current !== 'ready') return;
     const next = nextLength(lengthRef.current);
@@ -577,6 +732,12 @@ export default function ClipCameraScreen({ navigation, route }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const isRecording = phase === 'recording';
   const idle = phase === 'ready';
+  facingRef.current = facing;
+  // Addendum 13 (E): the View control shows only with a wide lens to offer
+  // (iOS, back camera); the chosen lens is named explicitly, since the plain
+  // back view on some phones is already the widest lens.
+  const showView = Platform.OS === 'ios' && facing === 'back' && !!lenses.wide && !!lenses.normal;
+  const selectedLens = showView ? (wideView ? lenses.wide : lenses.normal) : undefined;
   const counting = phase === 'countdown';
   // The record control stays pressable while a hold is being checked, so the
   // release of a hold is never lost; only the countdown and the save grey it.
@@ -600,12 +761,19 @@ export default function ClipCameraScreen({ navigation, route }) {
           mode="video"
           mute
           videoQuality="1080p"
+          videoBitrate={VIDEO_BITRATE}
+          enableTorch={torchOn}
+          selectedLens={selectedLens}
         />
       ) : null}
 
       {/* Setting up first: the thirds grid and the level, over the live view
           until the recording starts (they are not in the video). */}
       <CameraGuides visible={guides && ready && !isRecording && phase !== 'saving'} reduceMotion={!!reduceMotion} />
+
+      {/* The light cue with the front camera: a brief white pulse of the
+          screen, which faces the lifter then (addendum 13). */}
+      {screenPulse ? <View pointerEvents="none" style={styles.screenPulse} testID="clip-camera-screen-pulse" /> : null}
 
       {isRecording ? (
         <RecordingProgress
@@ -628,16 +796,42 @@ export default function ClipCameraScreen({ navigation, route }) {
           <Ionicons name="close" size={iconSize.lg} color={CAM.textPrimary} style={styles.shadow} />
         </Pressable>
         <View style={styles.topSpacer}>
-          <ValueControl
-            caption={CLIP_STRINGS.guidesCaption}
-            value={guidesLabel(guides)}
-            onPress={handleGuides}
-            disabled={!idle}
-            accessibilityLabel={guidesA11yLabel(guides)}
-            testID="clip-camera-guides-control"
-            captionStyle={live.caption}
-            valueStyle={live.value}
-          />
+          <View style={styles.topControls}>
+            <ValueControl
+              caption={CLIP_STRINGS.guidesCaption}
+              value={guidesLabel(guides)}
+              onPress={handleGuides}
+              disabled={!idle}
+              accessibilityLabel={guidesA11yLabel(guides)}
+              testID="clip-camera-guides-control"
+              captionStyle={live.caption}
+              valueStyle={live.value}
+            />
+            {/* Addendum 13 (A): the cues, on the camera itself, because the
+                person is standing at the propped phone. */}
+            <ValueControl
+              caption={CLIP_STRINGS.cuesCaption}
+              value={cuesLabel(cues)}
+              onPress={handleCues}
+              disabled={!idle}
+              accessibilityLabel={cuesA11yLabel(cues)}
+              testID="clip-camera-cues"
+              captionStyle={live.caption}
+              valueStyle={live.value}
+            />
+            {showView ? (
+              <ValueControl
+                caption={CLIP_STRINGS.viewCaption}
+                value={wideView ? CLIP_STRINGS.viewWide : CLIP_STRINGS.viewNormal}
+                onPress={handleView}
+                disabled={!idle}
+                accessibilityLabel={wideView ? CLIP_STRINGS.viewWideA11y : CLIP_STRINGS.viewNormalA11y}
+                testID="clip-camera-view"
+                captionStyle={live.caption}
+                valueStyle={live.value}
+              />
+            ) : null}
+          </View>
         </View>
         <Pressable
           onPress={handleFlip}
@@ -762,6 +956,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   topSpacer: { flex: 1, alignItems: 'center' },
+  topControls: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: spacing.md, flexWrap: 'wrap' },
+  screenPulse: { ...StyleSheet.absoluteFillObject, backgroundColor: withAlpha(CAM.textPrimary, alpha.half) },
   setupRow: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   glyph: { width: GLYPH, height: GLYPH, alignItems: 'center', justifyContent: 'center' },
   dimmed: { opacity: alpha.strong },

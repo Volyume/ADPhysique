@@ -250,10 +250,10 @@ describe('saveClip', () => {
     expect(odd.clip.uri.endsWith('.mp4')).toBe(true);
   });
 
-  test('a clip made on the summary has no exercise, and the length is held to 15 s', async () => {
+  test('a clip made on the summary has no exercise, and the length is held to the two minute cap (addendum 13)', async () => {
     await addWorkout('w-sum');
-    const res = await save('w-sum', { exerciseId: null, exerciseName: null, durationMs: 99999, source: 'summary' });
-    expect(res.clip).toMatchObject({ exerciseId: null, exerciseName: null, durationMs: 15000, source: 'summary' });
+    const res = await save('w-sum', { exerciseId: null, exerciseName: null, durationMs: 999999, source: 'summary' });
+    expect(res.clip).toMatchObject({ exerciseId: null, exerciseName: null, durationMs: 120000, source: 'summary' });
   });
 
   test('refuses a fourth clip with { ok: false, reason: "full" }, leaving the file with the caller and no row', async () => {

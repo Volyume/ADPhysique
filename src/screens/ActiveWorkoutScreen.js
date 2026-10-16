@@ -6397,6 +6397,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         />
 
         <SessionSheets
+          clipCount={clipsSuppressed === false ? clipFlow.count : 0}
+          onOpenClips={clipsSuppressed === false ? () => clipFlow.openClips() : null}
           supersetHeadsUp={supersetHeadsUp}
           reduceMotion={reduceMotion}
           setSupersetHeadsUp={setSupersetHeadsUp}

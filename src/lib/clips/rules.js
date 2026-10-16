@@ -37,8 +37,10 @@ import { CAMERA_TIPS } from './cameraTips';
 
 export const MAX_CLIPS_PER_WORKOUT = 3;
 
-/** A clip is 15 seconds at the longest, in whole milliseconds. */
-export const MAX_CLIP_SECONDS = 15;
+/** A recording is two minutes at the longest, in whole milliseconds (addendum
+ *  13: the longest Length; a hold films the whole set too). The share card's
+ *  own window is MAX_VIDEO_MS in the share engine, 15 seconds, unchanged. */
+export const MAX_CLIP_SECONDS = 120;
 export const MAX_CLIP_MS = MAX_CLIP_SECONDS * 1000;
 
 /** A recording shorter than this is a stray tap and is discarded silently. */
@@ -50,9 +52,26 @@ export const LEAD_IN_OPTIONS = Object.freeze([3, 5, 10, 15, 20]);
 export const DEFAULT_LEAD_IN_SECONDS = 3;
 
 /** The recording lengths the camera cycles between, in seconds (tap to start;
- *  press and hold is always capped at MAX_CLIP_SECONDS). */
-export const LENGTH_OPTIONS = Object.freeze([5, 10, 15]);
-export const DEFAULT_LENGTH_SECONDS = 15;
+ *  press and hold is always capped at MAX_CLIP_SECONDS).
+ *  Addendum 13 (the founder: "My sets aren't often within 15 seconds"): the
+ *  research in docs/audit/video-shares-2026-10-15/06-SET-LENGTH-AND-CUES-RESEARCH.md
+ *  puts the 99th percentile of a whole ordinary set, walkout and re-rack
+ *  included, at 89 to 106 seconds, so 90 seconds is the default (it cuts one
+ *  to four sets in a hundred), two minutes keeps essentially every set and a
+ *  myo-rep or drop-set run, and 60 seconds is there for singles, machine
+ *  work and smaller files. The share card's window stays 15 seconds; its
+ *  trim bar picks the window from the longer video. */
+export const LENGTH_OPTIONS = Object.freeze([60, 90, 120]);
+export const DEFAULT_LENGTH_SECONDS = 90;
+
+/** The countdown cues when the phone is propped away from the lifter
+ *  (addendum 13, A): sound (the rest timer's own pips), light (the torch
+ *  with the back camera, a screen pulse with the front), both, or neither.
+ *  Remembered on the phone; the default is both, because earbuds and a loud
+ *  gym make either alone unreliable. */
+export const CUE_OPTIONS = Object.freeze(['both', 'light', 'sound', 'off']);
+export const DEFAULT_CUES = 'both';
+export const CUES_KEY = '@volyume_clip_cues';
 
 /** Where a clip was recorded: for a set ('workout'), on the summary after the
  *  workout ('summary'), or from the share screen ('share', which can be during
@@ -89,7 +108,7 @@ export const CLIP_STRINGS = Object.freeze({
 
   // The summary row, in its three forms.
   summaryLabelNone: 'Record a video',
-  summarySubNone: "Up to 15 seconds, with no sound. You can also film a set during a workout, from an exercise's menu.",
+  summarySubNone: 'Up to two minutes, with no sound. You can also film a set from an exercise card during a workout.',
   summaryLabelUse: 'Use your video on the share',
   summaryLabelPR: 'Use your PR video on the share',
   summarySubPRTail: ', a new PR',
@@ -100,7 +119,7 @@ export const CLIP_STRINGS = Object.freeze({
   // sentences about light and the clear band: said once, here, never on the
   // camera itself).
   primerTitle: 'Videos stay on this phone',
-  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself. Each video is up to 15 seconds long, with no sound. Your videos are kept with the workout on this phone and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.',
+  primerBody: 'Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under Your videos, and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.',
   primerOpen: 'Open camera',
   primerNotNow: 'Not now',
 
@@ -121,11 +140,27 @@ export const CLIP_STRINGS = Object.freeze({
   guidesCaption: 'Guides',
   guidesOn: 'On',
   guidesOff: 'Off',
+  // Addendum 13 (A): the countdown cues control, and its four states.
+  cuesCaption: 'Cues',
+  cuesBoth: 'Sound and light',
+  cuesLight: 'Light only',
+  cuesSound: 'Sound only',
+  cuesOff: 'Off',
+  // Addendum 13 (E): the wider lens, where the phone has one.
+  viewCaption: 'View',
+  viewNormal: 'Normal',
+  viewWide: 'Wide',
+  viewNormalA11y: 'View: normal.',
+  viewWideA11y: 'View: wide. Fits more of the room into the video.',
+  // Addendum 14: the logger's door to the videos a workout holds.
+  yourVideos: 'Your videos',
   permissionDenied: 'Volyume needs camera access to record a video.',
   closeA11y: 'Cancel recording',
   stopA11y: 'Stop recording',
   flipA11y: 'Flip camera',
-  saved: 'Your video is saved with this workout',
+  // Addendum 14 (founder: "make it clear when they record a video on set
+  // where it goes and where they can find it after"): the toast says both.
+  saved: 'Saved with this workout. Find it under Your videos, and on your share at the end.',
   undo: 'Undo',
   // Addendum 13 (F): the second action on the saved toast, which opens the
   // videos sheet with that video playing.
@@ -174,16 +209,46 @@ export function leadInA11yLabel(leadInSeconds) {
   return `Countdown before recording, ${n} seconds`;
 }
 
-/** The length control's own text: "5 s", "10 s" or "15 s". */
+/** The length control's own text: "60 s", "90 s" or "2 min". */
 export function lengthLabel(lengthSeconds) {
-  return `${Number(lengthSeconds) || DEFAULT_LENGTH_SECONDS} s`;
+  const n = Number(lengthSeconds) || DEFAULT_LENGTH_SECONDS;
+  return n >= 120 && n % 60 === 0 ? `${n / 60} min` : `${n} s`;
 }
 
 /** The length control's accessibility label. */
 export function lengthA11yLabel(lengthSeconds) {
   const n = Number(lengthSeconds) || DEFAULT_LENGTH_SECONDS;
-  return `Recording length, ${n} seconds`;
+  return n >= 120 && n % 60 === 0
+    ? `Recording length, ${n / 60} minutes`
+    : `Recording length, ${n} seconds`;
 }
+
+/** The cues control's own text and accessibility label. */
+export function cuesLabel(mode) {
+  switch (mode) {
+    case 'light': return CLIP_STRINGS.cuesLight;
+    case 'sound': return CLIP_STRINGS.cuesSound;
+    case 'off': return CLIP_STRINGS.cuesOff;
+    default: return CLIP_STRINGS.cuesBoth;
+  }
+}
+export function cuesA11yLabel(mode) {
+  return `Countdown cues, ${cuesLabel(mode).toLowerCase()}`;
+}
+
+/** The next cues state when its control is tapped: both, light, sound, off. */
+export function nextCues(current) {
+  return nextInCycle(CUE_OPTIONS, current, DEFAULT_CUES);
+}
+
+/** A stored value back to a usable cues state, else the default. */
+export function parseCues(raw) {
+  return CUE_OPTIONS.includes(raw) ? raw : DEFAULT_CUES;
+}
+
+/** Whether a cues state carries sound, and whether it carries light. */
+export function cuesHaveSound(mode) { return mode === 'both' || mode === 'sound'; }
+export function cuesHaveLight(mode) { return mode === 'both' || mode === 'light'; }
 
 /** The guides control's own text ("On" / "Off") and its accessibility label. */
 export function guidesLabel(on) {
@@ -199,7 +264,7 @@ export function parseGuides(raw) {
 }
 
 function nextInCycle(options, current, fallback) {
-  const i = options.indexOf(Number(current));
+  const i = options.indexOf(typeof options[0] === 'number' ? Number(current) : current);
   if (i === -1) return fallback;
   return options[(i + 1) % options.length];
 }
@@ -211,7 +276,7 @@ export function nextLeadIn(current) {
   return nextInCycle(LEAD_IN_OPTIONS, current, DEFAULT_LEAD_IN_SECONDS);
 }
 
-/** The next length when its control is tapped: 5 -> 10 -> 15 -> 5. */
+/** The next length when its control is tapped: 60 -> 90 -> 2 min -> 60. */
 export function nextLength(current) {
   return nextInCycle(LENGTH_OPTIONS, current, DEFAULT_LENGTH_SECONDS);
 }
@@ -222,7 +287,7 @@ export function parseLeadIn(raw) {
   return LEAD_IN_OPTIONS.includes(n) ? n : DEFAULT_LEAD_IN_SECONDS;
 }
 
-/** A stored value back to a usable length (5, 10 or 15), else the default. */
+/** A stored value back to a usable length (60, 90 or 120), else the default. */
 export function parseLength(raw) {
   const n = Number(raw);
   return LENGTH_OPTIONS.includes(n) ? n : DEFAULT_LENGTH_SECONDS;

@@ -7,12 +7,23 @@
  *     "Volyume needs camera access to record a video." and the screen closes, with
  *     no settings link and no second prompt;
  *   - the view is video, muted, 1080p;
- *   - TAP: a countdown (3 / 5 / 10 s, remembered, default 3) with one light tick
- *     per number, then recording for the chosen length (5 / 10 / 15 s,
- *     remembered, default 15) that STOPS BY ITSELF; a tap during recording
- *     stops it early;
- *   - HOLD: records at once with no countdown, stops on release, capped at 15 s,
- *     whatever length is chosen;
+ *   - TAP: a countdown (3 / 5 / 10 / 15 / 20 s, remembered, default 3) with
+ *     one light tick per number, then recording for the chosen length (60 /
+ *     90 s / 2 min, remembered, default 90 s: addendum 13, a real set is
+ *     longer than 15 s) that STOPS BY ITSELF; a tap during recording stops
+ *     it early;
+ *   - HOLD: records at once with no countdown, stops on release, capped at
+ *     two minutes, whatever length is chosen;
+ *   - the cues (addendum 13, A): the rest timer's pips on 3, 2, 1 and the
+ *     start tone at 0, the torch pulsing on the countdown's beats with the
+ *     back camera (a white screen pulse with the front), each switchable on
+ *     the camera and remembered; the end cue after a recording that reached
+ *     its length by itself, never after a stop by hand;
+ *   - the View control (addendum 13, E): Normal or Wide, only on an iPhone
+ *     whose camera reports an ultra wide lens, never on Android; the torch
+ *     is not pulsed while the wide lens is in use;
+ *   - the video is 6 Mbps (addendum 13, G) and the front camera's preview is
+ *     mirrored;
  *   - the two small controls each carry a word ("Countdown", "Length"), and the
  *     line "Tap the button to start after a countdown, or press and hold it to record for as long as you hold." is
  *     always shown;
@@ -20,7 +31,9 @@
  *   - a recording under 1 s is discarded silently; closing mid-recording
  *     discards; flip is disabled while recording;
  *   - a save through the store carries the exercise and the set; from the
- *     workout: the house undo toast "Your video is saved with this workout" then back;
+ *     workout: the house undo toast saying where the video is (addendum
+ *     14: "Saved with this workout. Find it under Your videos, and on your
+ *     share at the end."), with Watch beside Undo, then back;
  *     from the summary or the share screen: no toast (the video is about to
  *     be on screen), back there with clipId; a full workout shows the sheet
  *     instead;
@@ -31,6 +44,7 @@ import path from 'path';
 import { create, act } from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CAMERA_TIPS } from '../../lib/clips/cameraTips';
+import { CLIP_STRINGS } from '../../lib/clips/rules';
 
 let mockPermission = { granted: true, canAskAgain: true };
 const mockRequestPermission = jest.fn(async () => mockPermission);
@@ -45,6 +59,9 @@ const mockStopRecording = jest.fn(() => {
   }
 });
 let mockCameraProps = null;
+// Addendum 13 (E): what the phone says its lenses are (none by default, as
+// Android reports, and as an iPhone with one back lens does).
+const mockLenses = jest.fn(async () => []);
 
 jest.mock('expo-camera', () => {
   const React = require('react');
@@ -56,6 +73,7 @@ jest.mock('expo-camera', () => {
       React.useImperativeHandle(ref, () => ({
         recordAsync: (...a) => mockRecordAsync(...a),
         stopRecording: (...a) => mockStopRecording(...a),
+        getAvailableLensesAsync: (...a) => mockLenses(...a),
       }));
       return React.createElement(View, props);
     }),
@@ -71,6 +89,11 @@ jest.mock('../../store/useAppStore', () => {
 });
 const mockShow = jest.fn();
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockShow }) }));
+// Addendum 13 (A): the sound cue is the rest timer's own pips, played past
+// the rest-sounds switch (restSound.test.js pins that); here only WHEN it is
+// asked for is pinned.
+const mockCueBeep = jest.fn();
+jest.mock('../../lib/restSound', () => ({ playCueBeep: (...a) => mockCueBeep(...a) }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn() }));
 jest.mock('../../lib/haptics', () => ({
   clipCountdown: jest.fn(), commit: jest.fn(), selection: jest.fn(),
@@ -156,6 +179,9 @@ beforeEach(async () => {
   mockResolveRecord = null;
   mockStopResolves = true;
   mockCameraProps = null;
+  mockLenses.mockReset();
+  mockLenses.mockResolvedValue([]);
+  mockCueBeep.mockClear();
   mockShow.mockClear();
   mockSaveClip.mockReset();
   mockSaveClip.mockImplementation(async (input) => ({
@@ -185,6 +211,13 @@ describe('camera access', () => {
     expect(mockRequestPermission).not.toHaveBeenCalled();
     expect(mockCameraProps).toMatchObject({ mode: 'video', mute: true, videoQuality: '1080p', facing: 'back' });
     expect(hostById(tree, 'clip-camera-record')).toBeDefined();
+  });
+
+  test('the video is 6 Mbps (addendum 13, G), the torch is off, and only the front camera is mirrored', async () => {
+    const tree = await mount();
+    expect(mockCameraProps).toMatchObject({ videoBitrate: 6000000, enableTorch: false, mirror: false });
+    await press(tree, 'clip-camera-flip');
+    expect(mockCameraProps).toMatchObject({ facing: 'front', mirror: true });
   });
 
   test('asked on open when not granted; a grant opens the view', async () => {
@@ -228,12 +261,13 @@ describe('what the screen says, in plain words', () => {
     expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap the square when you want to stop.');
   });
 
-  test('each small control carries a word above its value: "Countdown" above 3 s, "Length" above 15 s', async () => {
+  test('each small control carries a word above its value: "Countdown" above 3 s, "Length" above 90 s, "Cues" above its state', async () => {
     const tree = await mount();
     const json = text(tree);
-    for (const word of ['Countdown', '3 s', 'Length', '15 s']) expect(json).toContain(`"${word}"`);
+    for (const word of ['Countdown', '3 s', 'Length', '90 s', 'Cues', 'Sound and light']) expect(json).toContain(`"${word}"`);
     expect(json.indexOf('"Countdown"')).toBeLessThan(json.indexOf('"3 s"'));
-    expect(json.indexOf('"Length"')).toBeLessThan(json.indexOf('"15 s"'));
+    expect(json.indexOf('"Length"')).toBeLessThan(json.indexOf('"90 s"'));
+    expect(json.indexOf('"Cues"')).toBeLessThan(json.indexOf('"Sound and light"'));
   });
 
   test('every control has a plain spoken label', async () => {
@@ -242,7 +276,8 @@ describe('what the screen says, in plain words', () => {
     expect(hostById(tree, 'clip-camera-flip').props.accessibilityLabel).toBe('Flip camera');
     expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 3 seconds');
     expect(hostById(tree, 'clip-camera-leadin').props.accessibilityLabel).toBe('Countdown before recording, 3 seconds');
-    expect(hostById(tree, 'clip-camera-length').props.accessibilityLabel).toBe('Recording length, 15 seconds');
+    expect(hostById(tree, 'clip-camera-length').props.accessibilityLabel).toBe('Recording length, 90 seconds');
+    expect(hostById(tree, 'clip-camera-cues').props.accessibilityLabel).toBe('Countdown cues, sound and light');
   });
 
   test('close and flip are 48 dp targets', async () => {
@@ -253,7 +288,7 @@ describe('what the screen says, in plain words', () => {
 });
 
 describe('TAP: the countdown, then it records for the chosen length and stops by itself', () => {
-  test('3, 2, 1 with one light tick each, then it records for 15 s with the ruled options', async () => {
+  test('3, 2, 1 with one light tick each, then it records for 90 s with the ruled options', async () => {
     const tree = await mount();
     await press(tree, 'clip-camera-record');
     await flush();
@@ -268,7 +303,7 @@ describe('TAP: the countdown, then it records for the chosen length and stops by
     expect(mockRecordAsync).not.toHaveBeenCalled();
     await advance(1000);
     expect(mockRecordAsync).toHaveBeenCalledTimes(1);
-    expect(mockRecordAsync).toHaveBeenCalledWith({ maxDuration: 15, codec: 'avc1' });
+    expect(mockRecordAsync).toHaveBeenCalledWith({ maxDuration: 90, codec: 'avc1' });
     expect(haptics.commit).toHaveBeenCalledTimes(1);
   });
 
@@ -283,19 +318,19 @@ describe('TAP: the countdown, then it records for the chosen length and stops by
     expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Stop recording');
   });
 
-  test('it stops BY ITSELF at the chosen length: 15 s by default', async () => {
+  test('it stops BY ITSELF at the chosen length: 90 s by default (addendum 13)', async () => {
     const tree = await mount();
     await startTapRecording(tree);
-    await advance(14999);
+    await advance(89999);
     expect(mockStopRecording).not.toHaveBeenCalled();
     await advance(1);
     await flush();
     expect(mockStopRecording).toHaveBeenCalledTimes(1);
     expect(mockSaveClip).toHaveBeenCalledTimes(1);
-    expect(mockSaveClip.mock.calls[0][0].durationMs).toBe(15000);
+    expect(mockSaveClip.mock.calls[0][0].durationMs).toBe(90000);
   });
 
-  test.each([[5, 5000], [10, 10000]])('with the length at %i s it records %i ms and stops by itself', async (seconds, ms) => {
+  test.each([[60, 60000], [120, 120000]])('with the length at %i s it records %i ms and stops by itself', async (seconds, ms) => {
     await AsyncStorage.setItem('@volyume_clip_length', String(seconds));
     const tree = await mount();
     await startTapRecording(tree);
@@ -326,7 +361,7 @@ describe('TAP: the countdown, then it records for the chosen length and stops by
   test('the camera ending the video itself at its own limit is saved too, with the stop haptic', async () => {
     const tree = await mount();
     await startTapRecording(tree);
-    await advance(15000);
+    await advance(90000);
     await flush();
     expect(mockSaveClip).toHaveBeenCalledTimes(1);
     expect(haptics.selection).toHaveBeenCalledTimes(1);
@@ -432,40 +467,42 @@ describe('the Countdown and Length controls', () => {
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_leadin', '3');
   });
 
-  test('Length reads 15 s and cycles 15 -> 5 -> 10 -> 15 on tap, remembered under its own key', async () => {
+  test('Length reads 90 s and cycles 90 -> 2 min -> 60 -> 90 on tap, remembered under its own key (addendum 13)', async () => {
     const tree = await mount();
-    expect(text(tree)).toContain('"15 s"');
+    expect(text(tree)).toContain('"90 s"');
     await press(tree, 'clip-camera-length');
-    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_length', '5');
-    expect(hostById(tree, 'clip-camera-length').props.accessibilityLabel).toBe('Recording length, 5 seconds');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_length', '120');
+    expect(text(tree)).toContain('"2 min"');
+    expect(hostById(tree, 'clip-camera-length').props.accessibilityLabel).toBe('Recording length, 2 minutes');
     await press(tree, 'clip-camera-length');
-    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_length', '10');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_length', '60');
+    expect(hostById(tree, 'clip-camera-length').props.accessibilityLabel).toBe('Recording length, 60 seconds');
     await press(tree, 'clip-camera-length');
-    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_length', '15');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_length', '90');
   });
 
   test('both are remembered on the next open, and the countdown counts down from the remembered value', async () => {
     await AsyncStorage.setItem('@volyume_clip_leadin', '10');
-    await AsyncStorage.setItem('@volyume_clip_length', '5');
+    await AsyncStorage.setItem('@volyume_clip_length', '60');
     const tree = await mount();
     expect(text(tree)).toContain('"10 s"');
-    expect(text(tree)).toContain('"5 s"');
+    expect(text(tree)).toContain('"60 s"');
     await press(tree, 'clip-camera-record');
     await flush();
     expect(text(tree)).toContain('"10"');
     await advance(9000);
     expect(mockRecordAsync).not.toHaveBeenCalled();
     await advance(1000);
-    expect(mockRecordAsync).toHaveBeenCalledWith({ maxDuration: 5, codec: 'avc1' });
+    expect(mockRecordAsync).toHaveBeenCalledWith({ maxDuration: 60, codec: 'avc1' });
     expect(haptics.clipCountdown).toHaveBeenCalledTimes(10);
   });
 
-  test('a corrupt remembered value falls back to 3 s and 15 s', async () => {
+  test('a corrupt remembered value falls back to 3 s and 90 s', async () => {
     await AsyncStorage.setItem('@volyume_clip_leadin', 'banana');
     await AsyncStorage.setItem('@volyume_clip_length', '99');
     const tree = await mount();
     expect(text(tree)).toContain('"3 s"');
-    expect(text(tree)).toContain('"15 s"');
+    expect(text(tree)).toContain('"90 s"');
   });
 
   test('neither can be changed once the countdown has begun or while recording', async () => {
@@ -483,12 +520,12 @@ describe('the Countdown and Length controls', () => {
   });
 });
 
-describe('HOLD: records while held, no countdown, stops on release, capped at 15 s', () => {
+describe('HOLD: records while held, no countdown, stops on release, capped at two minutes', () => {
   test('a long press records at once: no countdown numerals, no tick, the ruled options, the start haptic', async () => {
     const tree = await mount();
     await startHold(tree);
     expect(mockRecordAsync).toHaveBeenCalledTimes(1);
-    expect(mockRecordAsync).toHaveBeenCalledWith({ maxDuration: 15, codec: 'avc1' });
+    expect(mockRecordAsync).toHaveBeenCalledWith({ maxDuration: 120, codec: 'avc1' });
     expect(haptics.clipCountdown).not.toHaveBeenCalled();
     expect(haptics.commit).toHaveBeenCalledTimes(1);
     expect(hostById(tree, 'clip-camera-countdown')).toBeUndefined();
@@ -506,23 +543,23 @@ describe('HOLD: records while held, no countdown, stops on release, capped at 15
     expect(mockSaveClip.mock.calls[0][0]).toMatchObject({ durationMs: 6000, setNumber: 3, source: 'workout' });
   });
 
-  test('the chosen Length does not apply to a hold: it keeps going past 5 s, up to the 15 s cap', async () => {
-    await AsyncStorage.setItem('@volyume_clip_length', '5');
+  test('the chosen Length does not apply to a hold: it keeps going past 60 s, up to the two minute cap', async () => {
+    await AsyncStorage.setItem('@volyume_clip_length', '60');
     const tree = await mount();
     const node = await startHold(tree);
-    await advance(9000);
+    await advance(70000);
     expect(mockStopRecording).not.toHaveBeenCalled();
     await release(node);
-    expect(mockSaveClip.mock.calls[0][0].durationMs).toBe(9000);
+    expect(mockSaveClip.mock.calls[0][0].durationMs).toBe(70000);
   });
 
-  test('held past 15 s it stops at the cap by itself', async () => {
+  test('held past two minutes it stops at the cap by itself', async () => {
     const tree = await mount();
     await startHold(tree);
-    await advance(15000);
+    await advance(120000);
     await flush();
     expect(mockStopRecording).toHaveBeenCalledTimes(1);
-    expect(mockSaveClip.mock.calls[0][0].durationMs).toBe(15000);
+    expect(mockSaveClip.mock.calls[0][0].durationMs).toBe(120000);
   });
 
   test('a release before one second is discarded silently', async () => {
@@ -610,6 +647,356 @@ describe('HOLD: records while held, no countdown, stops on release, capped at 15
   });
 });
 
+describe('the cues (addendum 13, A): sound and light for a phone propped away from the lifter', () => {
+  const torch = () => mockCameraProps.enableTorch;
+  const pulse = (tree) => hostById(tree, 'clip-camera-screen-pulse');
+
+  test('Sound and light by default: 3, 2, 1 play the pips and pulse the torch; 0 plays the start tone with no light; the torch never shows in the video', async () => {
+    const tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(mockCueBeep).toHaveBeenLastCalledWith('three');
+    expect(torch()).toBe(true);
+    await advance(200);
+    expect(torch()).toBe(false); // one 200 ms pulse, then dark
+    await advance(800);
+    expect(mockCueBeep).toHaveBeenLastCalledWith('two');
+    expect(torch()).toBe(true);
+    await advance(1000);
+    expect(mockCueBeep).toHaveBeenLastCalledWith('one');
+    expect(torch()).toBe(true);
+    await advance(1000);
+    expect(mockCueBeep).toHaveBeenLastCalledWith('go');
+    expect(mockCueBeep).toHaveBeenCalledTimes(4);
+    expect(torch()).toBe(false); // off before the first frame
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+    await advance(5000);
+    expect(torch()).toBe(false);
+  });
+
+  test('a long countdown pulses the light on its first second and on the fives, with no pip; the pips are the final three', async () => {
+    await AsyncStorage.setItem('@volyume_clip_leadin', '10');
+    const tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(torch()).toBe(true); // 10
+    expect(mockCueBeep).not.toHaveBeenCalled();
+    await advance(1000); // 9
+    expect(torch()).toBe(false);
+    await advance(4000); // 5
+    expect(torch()).toBe(true);
+    expect(mockCueBeep).not.toHaveBeenCalled();
+    await advance(2000); // 3
+    expect(mockCueBeep).toHaveBeenLastCalledWith('three');
+    await advance(3000); // 0
+    expect(mockCueBeep).toHaveBeenLastCalledWith('go');
+    expect(mockCueBeep).toHaveBeenCalledTimes(4);
+  });
+
+  test('with the front camera the light is a brief white screen pulse, not the torch (phones have no front torch)', async () => {
+    const tree = await mount();
+    await press(tree, 'clip-camera-flip');
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(torch()).toBe(false);
+    expect(pulse(tree)).toBeDefined();
+    expect(pulse(tree).props.pointerEvents).toBe('none');
+    await advance(200);
+    expect(pulse(tree)).toBeUndefined();
+  });
+
+  test('"Cues" cycles Sound and light -> Light only -> Sound only -> Off -> Sound and light, remembered under its own key', async () => {
+    const tree = await mount();
+    const control = () => hostById(tree, 'clip-camera-cues');
+    expect(text(tree)).toContain('"Cues"');
+    expect(text(tree)).toContain('"Sound and light"');
+    await press(tree, 'clip-camera-cues');
+    expect(text(tree)).toContain('"Light only"');
+    expect(control().props.accessibilityLabel).toBe('Countdown cues, light only');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_cues', 'light');
+    await press(tree, 'clip-camera-cues');
+    expect(text(tree)).toContain('"Sound only"');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_cues', 'sound');
+    await press(tree, 'clip-camera-cues');
+    expect(text(tree)).toContain('"Off"');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_cues', 'off');
+    await press(tree, 'clip-camera-cues');
+    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith('@volyume_clip_cues', 'both');
+  });
+
+  test('Light only: the torch pulses and nothing plays; Sound only: the pips play and the torch stays off', async () => {
+    await AsyncStorage.setItem('@volyume_clip_cues', 'light');
+    let tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(torch()).toBe(true);
+    await advance(3000);
+    expect(mockCueBeep).not.toHaveBeenCalled();
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+
+    await act(async () => { tree.unmount(); });
+    mockRecordAsync.mockClear();
+    await AsyncStorage.setItem('@volyume_clip_cues', 'sound');
+    tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(torch()).toBe(false);
+    expect(mockCueBeep).toHaveBeenLastCalledWith('three');
+    await advance(3000);
+    expect(mockCueBeep).toHaveBeenCalledTimes(4);
+    expect(torch()).toBe(false);
+  });
+
+  test('Off: no pip, no torch, no screen pulse, and the countdown still runs', async () => {
+    await AsyncStorage.setItem('@volyume_clip_cues', 'off');
+    const tree = await mount();
+    expect(hostById(tree, 'clip-camera-cues').props.accessibilityLabel).toBe('Countdown cues, off');
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(torch()).toBe(false);
+    expect(pulse(tree)).toBeUndefined();
+    await advance(3000);
+    expect(mockCueBeep).not.toHaveBeenCalled();
+    expect(torch()).toBe(false);
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('a corrupt remembered value falls back to Sound and light', async () => {
+    await AsyncStorage.setItem('@volyume_clip_cues', 'loud');
+    const tree = await mount();
+    expect(text(tree)).toContain('"Sound and light"');
+  });
+
+  test('Cues cannot be changed once the countdown has begun or while recording', async () => {
+    const tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    AsyncStorage.setItem.mockClear();
+    expect(hostById(tree, 'clip-camera-cues').props.accessibilityState).toEqual({ disabled: true });
+    await press(tree, 'clip-camera-cues');
+    await advance(3000);
+    await flush();
+    await press(tree, 'clip-camera-cues');
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(text(tree)).not.toContain('"Light only"');
+  });
+
+  test('the end cue (addendum 13, C): a recording that reached its length by itself gets two descending pips and two pulses, 300 ms apart, after the file is finished', async () => {
+    const tree = await mount();
+    await startTapRecording(tree);
+    mockCueBeep.mockClear();
+    await advance(90000);
+    await flush();
+    expect(mockStopRecording).toHaveBeenCalledTimes(1);
+    expect(mockCueBeep).toHaveBeenCalledTimes(1);
+    expect(mockCueBeep).toHaveBeenLastCalledWith('two');
+    expect(torch()).toBe(true);
+    await advance(200);
+    expect(torch()).toBe(false);
+    await advance(100);
+    expect(mockCueBeep).toHaveBeenCalledTimes(2);
+    expect(mockCueBeep).toHaveBeenLastCalledWith('three');
+    expect(torch()).toBe(true);
+    await advance(200);
+    expect(torch()).toBe(false);
+    expect(mockSaveClip).toHaveBeenCalledTimes(1);
+  });
+
+  test('the screen waits for the end cue\'s second beat before it leaves, so the person hears both', async () => {
+    const tree = await mount();
+    await startTapRecording(tree);
+    await advance(90000);
+    await flush();
+    expect(mockSaveClip).toHaveBeenCalledTimes(1);
+    expect(navigation.goBack).not.toHaveBeenCalled();
+    await advance(600);
+    await flush();
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('leaving during that wait (the OS, a parent) cancels it: no navigation from a screen that is gone', async () => {
+    const tree = await mount();
+    await startTapRecording(tree);
+    await advance(90000);
+    await flush();
+    expect(mockSaveClip).toHaveBeenCalledTimes(1);
+    await act(async () => { tree.unmount(); });
+    await advance(1000);
+    expect(navigation.goBack).not.toHaveBeenCalled();
+  });
+
+  test('no end cue after a stop by hand (a tap, a release, or the close): the person is at the phone', async () => {
+    const tree = await mount();
+    await startTapRecording(tree);
+    mockCueBeep.mockClear();
+    await advance(5000);
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(mockCueBeep).not.toHaveBeenCalled();
+    expect(torch()).toBe(false);
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('a hold held to the cap gets no end cue: a finger is on the button, so the person is at the phone', async () => {
+    const tree = await mount();
+    await startHold(tree);
+    mockCueBeep.mockClear();
+    await advance(120000);
+    await flush();
+    expect(mockStopRecording).toHaveBeenCalledTimes(1);
+    expect(mockSaveClip).toHaveBeenCalledTimes(1);
+    expect(mockCueBeep).not.toHaveBeenCalled();
+    expect(torch()).toBe(false);
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('a stop asked for just before the length is a stop by hand: no end cue even though the length timer also fires', async () => {
+    mockStopResolves = false; // the recorder is slow to end, so the length timer fires too
+    const tree = await mount();
+    await startTapRecording(tree);
+    await advance(89900);
+    await press(tree, 'clip-camera-record');
+    mockCueBeep.mockClear();
+    await advance(200);
+    await act(async () => { mockResolveRecord({ uri: 'file:///cache/Camera/take.mp4' }); });
+    await flush();
+    expect(mockSaveClip).toHaveBeenCalledTimes(1);
+    expect(mockCueBeep).not.toHaveBeenCalled();
+  });
+
+  test('no end cue with the cues off; the screen leaves at once', async () => {
+    await AsyncStorage.setItem('@volyume_clip_cues', 'off');
+    const tree = await mount();
+    await startTapRecording(tree);
+    await advance(90000);
+    await flush();
+    expect(mockCueBeep).not.toHaveBeenCalled();
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('closing during the countdown leaves nothing lit', async () => {
+    const tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(torch()).toBe(true);
+    await press(tree, 'clip-camera-close');
+    await advance(5000);
+    expect(mockRecordAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('the View control (addendum 13, E): Normal or Wide, when the phone has an ultra wide lens', () => {
+  const { Platform } = require('react-native');
+  const ORIGINAL_OS = Platform.OS;
+  afterEach(() => { Platform.OS = ORIGINAL_OS; });
+  const IPHONE = ['Back Camera', 'Back Telephoto Camera', 'Back Ultra Wide Camera', 'Back Dual Camera', 'Front Camera'];
+
+  test('an iPhone with an ultra wide lens: the control shows, reads Normal, names the plain back lens, and Wide picks the ultra wide', async () => {
+    Platform.OS = 'ios';
+    mockLenses.mockResolvedValue(IPHONE);
+    const tree = await mount();
+    await advance(300);
+    await flush();
+    const control = () => hostById(tree, 'clip-camera-view');
+    expect(control()).toBeDefined();
+    expect(text(tree)).toContain('"View"');
+    expect(text(tree)).toContain('"Normal"');
+    expect(control().props.accessibilityLabel).toBe('View: normal.');
+    expect(mockCameraProps.selectedLens).toBe('Back Camera');
+    await press(tree, 'clip-camera-view');
+    expect(text(tree)).toContain('"Wide"');
+    expect(control().props.accessibilityLabel).toBe('View: wide. Fits more of the room into the video.');
+    expect(mockCameraProps.selectedLens).toBe('Back Ultra Wide Camera');
+    await press(tree, 'clip-camera-view');
+    expect(mockCameraProps.selectedLens).toBe('Back Camera');
+  });
+
+  test('the view is not remembered: the room decides it each time', async () => {
+    Platform.OS = 'ios';
+    mockLenses.mockResolvedValue(IPHONE);
+    const tree = await mount();
+    await advance(300);
+    AsyncStorage.setItem.mockClear();
+    await press(tree, 'clip-camera-view');
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  test('a phone with no ultra wide lens shows no control and names no lens', async () => {
+    Platform.OS = 'ios';
+    mockLenses.mockResolvedValue(['Back Camera', 'Front Camera']);
+    const tree = await mount();
+    await advance(300);
+    await flush();
+    expect(hostById(tree, 'clip-camera-view')).toBeUndefined();
+    expect(mockCameraProps.selectedLens).toBeUndefined();
+  });
+
+  test('Android: the lenses are never asked for and the control never shows', async () => {
+    Platform.OS = 'android';
+    mockLenses.mockResolvedValue(IPHONE);
+    const tree = await mount();
+    await advance(300);
+    await flush();
+    expect(mockLenses).not.toHaveBeenCalled();
+    expect(hostById(tree, 'clip-camera-view')).toBeUndefined();
+    expect(mockCameraProps.selectedLens).toBeUndefined();
+  });
+
+  test('the front camera has no View control, and flipping back brings it back', async () => {
+    Platform.OS = 'ios';
+    mockLenses.mockResolvedValue(IPHONE);
+    const tree = await mount();
+    await advance(300);
+    await flush();
+    await press(tree, 'clip-camera-flip');
+    expect(hostById(tree, 'clip-camera-view')).toBeUndefined();
+    expect(mockCameraProps.selectedLens).toBeUndefined();
+    await press(tree, 'clip-camera-flip');
+    await advance(300);
+    await flush();
+    expect(hostById(tree, 'clip-camera-view')).toBeDefined();
+  });
+
+  test('with the wide lens in use the torch is not pulsed (the camera can freeze with both), the sound still cues', async () => {
+    Platform.OS = 'ios';
+    mockLenses.mockResolvedValue(IPHONE);
+    const tree = await mount();
+    await advance(300);
+    await flush();
+    await press(tree, 'clip-camera-view');
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(mockCameraProps.enableTorch).toBe(false);
+    expect(mockCueBeep).toHaveBeenLastCalledWith('three');
+    await advance(3000);
+    expect(mockCameraProps.enableTorch).toBe(false);
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('View waits like the other controls: not while counting down or recording', async () => {
+    Platform.OS = 'ios';
+    mockLenses.mockResolvedValue(IPHONE);
+    const tree = await mount();
+    await advance(300);
+    await flush();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(hostById(tree, 'clip-camera-view').props.accessibilityState).toEqual({ disabled: true });
+    await press(tree, 'clip-camera-view');
+    expect(mockCameraProps.selectedLens).toBe('Back Camera');
+  });
+
+  test('a camera that cannot say its lenses is logged, never a crash, and shows no control', async () => {
+    Platform.OS = 'ios';
+    mockLenses.mockRejectedValue(new Error('no lenses'));
+    const tree = await mount();
+    await advance(300);
+    await flush();
+    expect(hostById(tree, 'clip-camera-view')).toBeUndefined();
+    expect(require('../../lib/errorLog').logError).toHaveBeenCalledWith('ClipCamera.lenses', expect.any(Error));
+  });
+});
+
 describe('while recording', () => {
   test('the line and the running time show, and flip is disabled', async () => {
     const tree = await mount();
@@ -621,22 +1008,22 @@ describe('while recording', () => {
     expect(hostById(tree, 'clip-camera-flip').props.disabled).toBe(true);
   });
 
-  test('the line fills over the CHOSEN length: halfway through 10 s it is half full', async () => {
-    await AsyncStorage.setItem('@volyume_clip_length', '10');
+  test('the line fills over the CHOSEN length: halfway through 60 s it is half full', async () => {
+    await AsyncStorage.setItem('@volyume_clip_length', '60');
     const tree = await mount();
     await startTapRecording(tree);
-    await advance(5000);
+    await advance(30000);
     const fill = hostById(tree, 'clip-camera-line-fill');
     const scale = styleOf(fill).transform[0].scaleX;
     expect(scale).toBeGreaterThan(0.45);
     expect(scale).toBeLessThan(0.55);
   });
 
-  test('the line fills over 15 s for a hold', async () => {
-    await AsyncStorage.setItem('@volyume_clip_length', '5');
+  test('the line fills over the two minute cap for a hold, whatever the Length', async () => {
+    await AsyncStorage.setItem('@volyume_clip_length', '60');
     const tree = await mount();
     await startHold(tree);
-    await advance(7500);
+    await advance(60000);
     const scale = styleOf(hostById(tree, 'clip-camera-line-fill')).transform[0].scaleX;
     expect(scale).toBeGreaterThan(0.45);
     expect(scale).toBeLessThan(0.55);
@@ -732,11 +1119,12 @@ describe('after a save', () => {
     return tree;
   }
 
-  test('workout: back, with the toast "Your video is saved with this workout" and an Undo that deletes it', async () => {
+  test('workout: back, with the toast that says where the video is (addendum 14) and an Undo that deletes it', async () => {
     await recordFiveSeconds({ source: 'workout' });
     expect(mockShow).toHaveBeenCalledTimes(1);
     const [message, options] = mockShow.mock.calls[0];
-    expect(message).toBe('Your video is saved with this workout');
+    expect(message).toBe(CLIP_STRINGS.saved);
+    expect(message).toBe('Saved with this workout. Find it under Your videos, and on your share at the end.');
     expect(options.variant).toBe('undo');
     expect(options.action.label).toBe('Undo');
     expect(navigation.goBack).toHaveBeenCalledTimes(1);

@@ -130,6 +130,10 @@ function SessionSheets({
   handleRevertTimeCrunch,
   timeCrunchMsg,
   handleRemoveExercise,
+  // D229 addendum 14: the door to the videos this workout holds, shown only
+  // when there are any.
+  clipCount = 0,
+  onOpenClips = null,
   showReorderSheet,
   reorderSheetScroll,
   keyForWorkoutExercise,
@@ -884,6 +888,23 @@ function SessionSheets({
                 </View>
               </TouchableOpacity>
               )}
+              {/* D229 addendum 14 (founder: "where they can find it after"):
+                  the videos this workout holds, as a door in the exercise's
+                  options, present only once there is one to find. */}
+              {clipCount > 0 && onOpenClips ? (
+                <TouchableOpacity
+                  style={[styles.sheetOption, live.sheetOption]}
+                  onPress={() => { setShowOverflow(false); onOpenClips(); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Your videos, ${clipCount}`}
+                  testID="volyume-row-your-videos"
+                >
+                  <View style={styles.overflowOptionRow}>
+                    <Ionicons name="videocam-outline" size={18} color={t.colors.textSecondary} />
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`Your videos · ${clipCount}`}</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity
                 style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleRemoveExercise(); }}
