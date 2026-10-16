@@ -62,4 +62,21 @@ describe('mealBreakdown (GAP row 27)', () => {
     const { rows } = mealBreakdown([{ meal_slot: 'snack' }]);
     expect(rows[0]).toMatchObject({ kcal: 0, protein: 0, carbs: 0, fat: 0, count: 1 });
   });
+
+  // Planned is not eaten (D230, the lead's ruling on lane 1B's stop): the
+  // sheet must show the SAME eaten figures as the rings card, so a planned,
+  // unconfirmed row never reaches a meal's row or the Total, and a meal that
+  // holds only planned rows is dropped like an empty one.
+  test('a planned (unconfirmed) row is excluded from its meal and the total; a planned-only meal is dropped', () => {
+    const { rows, total } = mealBreakdown([
+      e('breakfast', 300, 20, 30, 10),
+      { ...e('breakfast', 500, 40, 50, 20), is_planned: 1 },
+      { ...e('lunch', 700, 50, 60, 30), is_planned: true },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ key: 'breakfast', kcal: 300, protein: 20, carbs: 30, fat: 10, count: 1 });
+    expect(total).toEqual({ kcal: 300, protein: 20, carbs: 30, fat: 10, count: 1 });
+    // A confirmed row (is_planned 0) counts as eaten.
+    expect(mealBreakdown([{ ...e('lunch', 700, 50, 60, 30), is_planned: 0 }]).total.kcal).toBe(700);
+  });
 });

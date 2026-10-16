@@ -338,17 +338,11 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           </View>
         ) : null}
       </View>
-      {/* O31 (comprehension/trust audit 2026-08-06): the "+Ng planned"
-          fragments (ring centre + macro bars below) previously had no
-          visible explanation, only an accessibility label. One quiet line,
-          shown only when a planned amount is showing anywhere on the card. */}
-      {hasPlanned ? (
-        // Campaign 27 Pillar A (D104): sentence-length explainer never
-        // carries a line clamp - it wraps, and the row grows.
-        <Text style={[styles.plannedHint, live.plannedHint]}>
-          Planned means added ahead, it counts once you mark it eaten.
-        </Text>
-      ) : null}
+      {/* R3 (D230, food level-up): the standing "Planned means added ahead"
+          line (O31) is gone from the card; explanation is on demand. The
+          fact lives in the breakdown sheet this card opens (MacroBreakdownSheet,
+          `hasPlanned`), and the planned amounts keep their spoken label in
+          the summary above. */}
       <View style={styles.macroRow}>
         <MacroBar
           label="Protein"
@@ -366,8 +360,14 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         ) : null}
       </View>
       {macroSplit ? (
-        <Text style={[styles.macroSplit, live.macroSplit]}>
-          {`P ${macroSplit.p}% - C ${macroSplit.c}% - F ${macroSplit.f}%`}
+        // R15 (D230): the split reads in words, not letters ("30% protein ·
+        // 40% carbs · 30% fat of calories"), and its label speaks the same
+        // words. Descriptive only: no colour, no target.
+        <Text
+          style={[styles.macroSplit, live.macroSplit]}
+          accessibilityLabel={`${macroSplit.p}% protein, ${macroSplit.c}% carbs, ${macroSplit.f}% fat of calories`}
+        >
+          {`${macroSplit.p}% protein · ${macroSplit.c}% carbs · ${macroSplit.f}% fat`}
           <Text style={[styles.macroSplitCaption, live.macroSplitCaption]}> of calories</Text>
         </Text>
       ) : null}
@@ -408,8 +408,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     marginTop: spacing.xxs,
   },
+  // R2 (D230, food level-up): "+N planned" is a fact, not an action, so it is
+  // drawn in ink (textSecondary), not the brand amber. The chart marks (the
+  // ring, the bars) keep their tints.
   kcalPlanned: {
-    color: colors.primary,
+    color: colors.textSecondary,
     fontSize: fontSize.xs,
     fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     marginTop: spacing.xxs,
@@ -429,13 +432,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.xs,
     marginTop: spacing.xxs,
-  },
-  // O31: quiet, one-line explanation of "planned", shown only when a planned
-  // amount is showing somewhere on the card. Adherence-neutral (textMuted).
-  plannedHint: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    textAlign: 'center',
   },
   dayTypeChip: {
     alignSelf: 'flex-start',
@@ -547,10 +543,9 @@ function buildLiveStyles(t) {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     kcalValue: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl, lineHeight: Math.round(t.fontSize.xxxl * 1.1) },
     kcalSubLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
-    kcalPlanned: { color: t.colors.primary, fontSize: t.fontSize.xs },
+    kcalPlanned: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
     kcalEatenValue: { color: t.colors.textSecondary, fontSize: t.fontSize.xl },
     kcalEatenLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
-    plannedHint: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     dayTypeChip: { backgroundColor: t.colors.surface2 },
     dayTypeChipText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
     macroBarLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },

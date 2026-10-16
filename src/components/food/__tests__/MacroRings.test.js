@@ -166,3 +166,108 @@ describe('MacroRings accessibility summary', () => {
     expect(node.props.accessibilityLiveRegion).toBe('polite');
   });
 });
+
+// ---------------------------------------------------------------------------
+// D230 food level-up, Wave 1 lane 1B (R2, R3, R15): chrome on the rings card.
+//
+// What this block pins, and why:
+//  - "+N planned" in the ring centre is a FACT, not an action, so it is drawn
+//    in ink (textSecondary) and not the brand amber (R2: one amber per screen,
+//    and it is the scan button). The ring's own tint and the bar tints are
+//    chart marks and are pinned unchanged by the suites above.
+//  - The standing line "Planned means added ahead..." is gone from the card
+//    (R3: explanation is on demand; its on-demand home is the breakdown sheet,
+//    pinned in MacroBreakdownSheet.planned.test.js).
+//  - The macro split reads in words ("30% protein · 40% carbs · 30% fat" plus
+//    the "of calories" caption) and speaks the same words (R15).
+//  - NOTHING safety-adjacent moved: the hero's left/over wording and ink and
+//    the summary's planned sentence are re-asserted here (R24, inventory 3.1
+//    item 8 is a presentation law).
+// ---------------------------------------------------------------------------
+describe('MacroRings chrome (D230 R2, R3, R15)', () => {
+  const rollup = { kcal_total: 1740, protein_g: 120, carbs_g: 180, fat_g: 60 };
+  const targets = { targetKcal: 2100, proteinG: 160, carbsG: 220, fatG: 70 };
+  const planned = { kcal: 400, protein_g: 30, carbs_g: 40, fat_g: 10 };
+  const fs = require('fs');
+  const path = require('path');
+
+  // react-native's StyleSheet.flatten is a shallow stub in this repo's jest
+  // mock, and the house Text passes nested arrays, so merge them here.
+  function flatStyle(style) {
+    if (Array.isArray(style)) return style.reduce((acc, s) => ({ ...acc, ...flatStyle(s) }), {});
+    return style && typeof style === 'object' ? style : {};
+  }
+
+  function hostTexts(tree) {
+    return tree.root.findAll((n) => n.type === 'Text');
+  }
+
+  function textOf(node) {
+    return [].concat(node.props.children ?? []).map((k) => (typeof k === 'string' || typeof k === 'number' ? String(k) : '')).join('');
+  }
+
+  test('"+N planned" in the ring centre is ink (textSecondary), never the brand amber', () => {
+    const tree = create(<MacroRings rollup={rollup} targets={targets} planned={planned} />);
+    // The ring-centre fragment is "+400 planned" (the bars carry "+30 planned" etc).
+    const node = hostTexts(tree).find((n) => textOf(n) === '+400 planned');
+    expect(node).toBeDefined();
+    const colour = flatStyle(node.props.style).color;
+    expect(colour).toBe(colors.textSecondary);
+    expect(colour).not.toBe(colors.primary);
+    expect(colour).not.toBe(colors.primaryFill);
+  });
+
+  test('the frozen and the live style blocks both name the ink token (the live block wins at render)', () => {
+    // buildLiveStyles overrides the frozen colour at render, so a lone edit to
+    // the frozen block would leave the amber on screen. Both must say ink.
+    const src = fs.readFileSync(path.resolve(__dirname, '../MacroRings.js'), 'utf8');
+    expect(src).toMatch(/kcalPlanned: \{\s*color: colors\.textSecondary/);
+    expect(src).toMatch(/kcalPlanned: \{ color: t\.colors\.textSecondary/);
+  });
+
+  test('the standing "Planned means added ahead" line is absent, with or without planned food', () => {
+    for (const p of [planned, null]) {
+      const tree = create(<MacroRings rollup={rollup} targets={targets} planned={p} />);
+      const all = hostTexts(tree).map(textOf).join(' | ');
+      expect(all).not.toMatch(/Planned means/);
+      expect(all).not.toMatch(/mark it eaten/);
+    }
+    const src = fs.readFileSync(path.resolve(__dirname, '../MacroRings.js'), 'utf8');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/Planned means|plannedHint/);
+  });
+
+  test('the macro split reads in words: 28% protein · 41% carbs · 31% fat, with "of calories"', () => {
+    // 120 g P = 480 kcal, 180 g C = 720 kcal, 60 g F = 540 kcal; total 1740.
+    const tree = create(<MacroRings rollup={rollup} targets={targets} />);
+    const split = hostTexts(tree).find((n) => /protein ·/.test(textOf(n)));
+    expect(split).toBeDefined();
+    expect(textOf(split)).toBe('28% protein · 41% carbs · 31% fat');
+    const caption = hostTexts(tree).find((n) => textOf(n) === ' of calories');
+    expect(caption).toBeDefined();
+    // The old letters grammar is gone.
+    expect(hostTexts(tree).map(textOf).join(' | ')).not.toMatch(/P \d+% - C/);
+  });
+
+  test('the split line speaks the same words', () => {
+    const tree = create(<MacroRings rollup={rollup} targets={targets} />);
+    const split = hostTexts(tree).find((n) => /protein ·/.test(textOf(n)));
+    expect(split.props.accessibilityLabel).toBe('28% protein, 41% carbs, 31% fat of calories');
+  });
+
+  test('no split line when nothing is eaten yet', () => {
+    const tree = create(<MacroRings rollup={{ kcal_total: 0 }} targets={targets} />);
+    expect(hostTexts(tree).map(textOf).join(' | ')).not.toMatch(/% protein/);
+  });
+
+  test('R24 still holds: the hero says left / over in the same ink, and the summary keeps its planned sentence', () => {
+    const over = create(<MacroRings rollup={{ ...rollup, kcal_total: 2300 }} targets={targets} planned={planned} />);
+    const overLabel = hostTexts(over).find((n) => textOf(n) === 'over');
+    const left = create(<MacroRings rollup={rollup} targets={targets} planned={planned} />);
+    const leftLabel = hostTexts(left).find((n) => textOf(n) === 'left');
+    expect(flatStyle(overLabel.props.style).color).toBe(flatStyle(leftLabel.props.style).color);
+    const summary = left.root.findByProps({ accessible: true }).props.accessibilityLabel;
+    expect(summary).toContain('400 calories planned but not yet confirmed eaten');
+    expect(left.root.findByProps({ accessible: true }).props.accessibilityLiveRegion).toBe('polite');
+  });
+});

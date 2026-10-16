@@ -1,6 +1,6 @@
 import { View, StyleSheet, Pressable } from 'react-native';
 import Text from '../Text';
-import { colors, fontSize, fontWeight, spacing, radius, fontFamily } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, fontFamily, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -14,11 +14,20 @@ import { mealSlotLabel, slotOrder } from '../../lib/food/mealSlots';
  * order, plus a day total. Empty slots are dropped so the sheet shows what was
  * eaten, not a grid of zeros. Works for any slot key (numbered, legacy or
  * peri-workout), so nothing logged is left out of the breakdown.
+ *
+ * Planned is not eaten (D230 lead ruling on lane 1B's stop, 2026-10-16): a
+ * planned, unconfirmed row (`is_planned`) is skipped, so a meal's row and
+ * the Total here are the SAME eaten figures the rings card shows (the
+ * rollup, the export and the goal readers already exclude planned rows;
+ * this sheet was the one reader that summed them). A meal holding only
+ * planned rows has nothing eaten and is dropped like an empty one; the
+ * sheet's planned line (`hasPlanned`) says why.
  */
 export function mealBreakdown(entries = []) {
   const bySlot = {};
   const total = { kcal: 0, protein: 0, carbs: 0, fat: 0, count: 0 };
   for (const e of entries) {
+    if (e?.is_planned) continue;
     const slot = e?.meal_slot;
     if (!bySlot[slot]) bySlot[slot] = { kcal: 0, protein: 0, carbs: 0, fat: 0, count: 0 };
     const s = bySlot[slot];
@@ -60,13 +69,18 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
   const cKcal = carbs * 4;
   const fKcal = fat * 9;
   const macroKcal = pKcal + cKcal + fKcal;
+  // R15 (D230): the split in words, the macros spaced, a middle dot between
+  // facts; the same grammar as the rings card and the diary rows.
   const split = macroKcal > 0
-    ? `P ${Math.round((pKcal / macroKcal) * 100)}% - C ${Math.round((cKcal / macroKcal) * 100)}% - F ${Math.round((fKcal / macroKcal) * 100)}%`
+    ? `${Math.round((pKcal / macroKcal) * 100)}% protein · ${Math.round((cKcal / macroKcal) * 100)}% carbs · ${Math.round((fKcal / macroKcal) * 100)}% fat`
     : null;
   return (
     <View style={styles.macroCell}>
-      <Text style={[styles.rowMacros, live.rowMacros]}>
-        {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {protein}P {carbs}C {fat}F
+      <Text
+        style={[styles.rowMacros, live.rowMacros]}
+        accessibilityLabel={`${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}, ${protein} grams protein, ${carbs} carbs, ${fat} fat`}
+      >
+        {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {protein} P · {carbs} C · {fat} F
       </Text>
       <Text style={[styles.rowMacroKcal, live.rowMacroKcal]}>
         {/* D88: this figure was hardcoded to kcal while the line above
@@ -83,8 +97,14 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
  * Tapping the macro rings opens this (GAP row 27): a per-meal macro
  * breakdown for the day on view. Read-only; tap a meal slot to do
  * anything with it is handled back on the diary itself.
+ *
+ * `hasPlanned` (R3, D230 food level-up): true when the day holds any planned
+ * (unconfirmed) entries. The sheet then carries ONE quiet line saying what
+ * planned means. This is the on-demand home of the fact the Diary's rings card
+ * used to state as a standing line; the caller (DiaryScreen) derives the flag
+ * from its existing `plannedCount`, the sheet does not infer it.
  */
-export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClose, onSelectMeal }) {
+export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClose, onSelectMeal, hasPlanned = false }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
@@ -96,9 +116,15 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Macro breakdown by meal">
       <View style={styles.header}>
-        <Text style={[styles.title, live.title]}>By meal</Text>
+        <Text accessibilityRole="header" style={[styles.title, live.title]}>By meal</Text>
         {dateLabel ? <Text style={[styles.subtitle, live.subtitle]}>{dateLabel}</Text> : null}
       </View>
+
+      {hasPlanned ? (
+        <Text style={[styles.plannedNote, live.plannedNote]}>
+          Planned food is added ahead. It counts once you mark it as eaten.
+        </Text>
+      ) : null}
 
       {rows.length === 0 ? (
         <Text style={[styles.empty, live.empty]}>Nothing logged yet. Your macro breakdown will appear here.</Text>
@@ -137,6 +163,9 @@ const styles = StyleSheet.create({
   header: { marginBottom: spacing.md },
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   subtitle: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
+  // R3 (D230): the one quiet line about planned food. A sentence, so it wears
+  // a body role and wraps (never clamped), in the muted ink of a fact.
+  plannedNote: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.md },
   row: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: spacing.md,
@@ -167,6 +196,7 @@ function buildLiveStyles(t) {
   return {
     title: { color: t.colors.textPrimary },
     subtitle: { color: t.colors.textMuted },
+    plannedNote: { ...t.type.bodySm, color: t.colors.textMuted },
     row: { borderBottomColor: t.colors.borderSubtle },
     rowLabel: { color: t.colors.textPrimary },
     rowMacros: { color: t.colors.textMuted },

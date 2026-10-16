@@ -247,6 +247,12 @@ describe('the user actually SEES it', () => {
     const SHEET = read('../../../components/food/CalorieBankSheet.js');
     expect(SHEET).toMatch(/BANK_RULES/);
     expect(SHEET).toMatch(/BANK_RULES\.map\(\(line\) =>/);
+    // D230 food level-up (R3, 4.9), re-pointed to the same truth: the rules
+    // are still on the sheet where the choice is made, but explanation is on
+    // demand, so they sit under the collapsed "How this works" row rather than
+    // standing on the sheet. Reachable behaviour (hidden until pressed, then
+    // all four lines) is pinned in components/food/__tests__/CalorieBankSheet.test.js.
+    expect(SHEET).toMatch(/<CollapsibleSection title="How this works"[\s\S]*?BANK_RULES\.map\(\(line\) =>/);
   });
 
   test('the receipt is what the user reads after banking', () => {

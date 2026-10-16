@@ -9,15 +9,28 @@
  * caller is responsible for only opening this when banking is allowed (no carb
  * cycle / refeed / floored target / open ED-pattern flag).
  *
- * Voice: British English, plain, no "cheat day"/"binge"/"save up" language.
+ * Voice: British English, plain, no "cheat day"/"binge"/"save up" language,
+ * and no collaborative "we" (the person is the one planning the day).
+ *
+ * House parts (D230 food level-up, R4 and 4.9): the day chips are the house
+ * `Chip` (single-select, role radio, 48 dp), the amount is the house `Stepper`,
+ * "Plan it" is the house `Button`, and the four rules sit under the house
+ * `CollapsibleSection` ("How this works") instead of standing on the sheet
+ * (R3: explanation is on demand). Only the chrome moved: the floors, the
+ * band cap, `planCalorieBank`'s maths, ERROR_COPY's reasons and the
+ * `onApply` payload are exactly as they were (R24).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Text from '../Text';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from '../BottomSheet';
 import SectionLabel from '../SectionLabel';
-import { colors, fontSize, fontWeight, spacing, radius, circle, type, fontFamily } from '../../styles/theme';
+import Chip from '../Chip';
+import Stepper from '../Stepper';
+import Button from '../Button';
+import CollapsibleSection from '../CollapsibleSection';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
+import { touchTarget } from '../../styles/layout';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -30,7 +43,7 @@ const ERROR_COPY = {
   floor: "That would take one of your days below your safe minimum, so that much can't be moved. Try a smaller amount.",
   no_room: "This day is already at the top of its range, so there's nothing extra to add.",
   too_small: 'Pick a little more to plan a higher-calorie day.',
-  invalid_input: "We couldn't plan that. Try a different day.",
+  invalid_input: 'That day could not be planned. Try a different day.',
 };
 
 export default function CalorieBankSheet({
@@ -51,6 +64,8 @@ export default function CalorieBankSheet({
   const live = buildLiveStyles(t);
   const [bigDay, setBigDay] = useState(defaultBigDay);
   const [requestedBump, setRequestedBump] = useState(DEFAULT_BUMP);
+  // The four rules are collapsed each time the sheet opens (R3: on demand).
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   // Energy DISPLAY unit (kcal | kj). Display-only: every kcal value here (bump,
   // step, floors, band, plan deltas) stays kcal and is fed to the engine in
@@ -64,6 +79,7 @@ export default function CalorieBankSheet({
     if (visible) {
       setBigDay(defaultBigDay);
       setRequestedBump(DEFAULT_BUMP);
+      setRulesOpen(false);
     }
   }, [visible, defaultBigDay]);
 
@@ -96,8 +112,6 @@ export default function CalorieBankSheet({
   const bigNewKcal = (baseTargetKcal || 0) + (plan.ok ? plan.appliedBumpKcal : 0);
   const perOther = plan.ok ? Math.round(plan.appliedBumpKcal / others) : 0;
 
-  const step = (delta) => setRequestedBump((b) => Math.min(stepMax, Math.max(BUMP_STEP, b + delta)));
-
   const apply = () => {
     if (!plan.ok) return;
     onApply?.({
@@ -110,20 +124,19 @@ export default function CalorieBankSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Plan a higher-calorie day">
-      <Text style={[styles.title, live.title]}>Plan a higher-calorie day</Text>
+      <Text accessibilityRole="header" style={[styles.title, live.title]}>Plan a higher-calorie day</Text>
       <Text style={[styles.intro, live.intro]}>
-        Got a meal out or an occasion coming up? Pick that day and we will move some
-        calories onto it from the rest of the week, so you eat a little less on the
-        other days to make room. Your weekly total stays the same, and that's what
-        counts. Your coach looks at the whole week, not any single day, so one
-        bigger day balanced by slightly lighter ones keeps you on plan.
+        Pick a day to eat more on, and the rest of the week makes room for it.
       </Text>
       {/* Campaign 17B job 6: the four things the old copy left the user to
-          assume. Comprehension only - the maths is unchanged. */}
+          assume. Comprehension only - the maths is unchanged. R3 (D230): they
+          now sit under a collapsed row, shown when the person asks. */}
       <View style={styles.rules}>
-        {BANK_RULES.map((line) => (
-          <Text key={line} style={[styles.ruleLine, live.ruleLine]}>{line}</Text>
-        ))}
+        <CollapsibleSection title="How this works" open={rulesOpen} onToggle={() => setRulesOpen((o) => !o)}>
+          {BANK_RULES.map((line) => (
+            <Text key={line} style={[styles.ruleLine, live.ruleLine]}>{line}</Text>
+          ))}
+        </CollapsibleSection>
       </View>
 
       {existingBank ? (
@@ -131,55 +144,43 @@ export default function CalorieBankSheet({
           <Text style={[styles.activeText, live.activeText]} numberOfLines={2}>
             A higher-calorie day is planned for {dayLabel(existingBank.bigDayKey)}.
           </Text>
-          <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned higher-calorie day">
+          {/* R16: a text link about 20 dp tall reaches the 48 dp target by
+              hit slop (14 on every edge). */}
+          <TouchableOpacity onPress={onClear} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }} accessibilityRole="button" accessibilityLabel="Clear the planned higher-calorie day">
             <Text style={[styles.clearText, live.clearText]}>Clear</Text>
           </TouchableOpacity>
         </View>
       ) : null}
 
       <SectionLabel style={styles.sectionLabel}>Higher-calorie day</SectionLabel>
-      <View style={styles.dayChips}>
-        {weekDates.map((d) => {
-          const active = d === bigDay;
-          return (
-            <Pressable
-              key={d}
-              onPress={() => setBigDay(d)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={dayLabel(d)}
-              style={({ pressed }) => [styles.dayChip, live.dayChip, active && [styles.dayChipActive, live.dayChipActive], pressed && { opacity: 0.7 }]}
-            >
-              <Text style={[styles.dayChipText, live.dayChipText, active && [styles.dayChipTextActive, live.dayChipTextActive]]}>{dayLabel(d)}</Text>
-            </Pressable>
-          );
-        })}
+      <View style={styles.dayChips} accessibilityRole="radiogroup" accessibilityLabel="Higher-calorie day">
+        {weekDates.map((d) => (
+          <Chip
+            key={d}
+            label={dayLabel(d)}
+            selected={d === bigDay}
+            onPress={() => setBigDay(d)}
+            accessibilityRole="radio"
+            style={styles.dayChip}
+          />
+        ))}
       </View>
 
       <SectionLabel style={styles.sectionLabel}>How much extra</SectionLabel>
-      <View style={styles.stepper}>
-        <TouchableOpacity
-          onPress={() => step(-BUMP_STEP)}
-          disabled={requestedBump <= BUMP_STEP}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Less"
-          style={[styles.stepBtn, live.stepBtn, requestedBump <= BUMP_STEP && styles.stepBtnDisabled]}
-        >
-          <Ionicons name="remove" size={24} color={requestedBump <= BUMP_STEP ? t.colors.textMuted : t.colors.primary} />
-        </TouchableOpacity>
-        <Text style={[styles.stepValue, live.stepValue]} accessibilityLabel={`${requestedBump} kcal`}>+{requestedBump}</Text>
-        <TouchableOpacity
-          onPress={() => step(BUMP_STEP)}
-          disabled={requestedBump >= stepMax}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="More"
-          style={[styles.stepBtn, live.stepBtn, requestedBump >= stepMax && styles.stepBtnDisabled]}
-        >
-          <Ionicons name="add" size={24} color={requestedBump >= stepMax ? t.colors.textMuted : t.colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <Stepper
+        value={requestedBump}
+        onChange={setRequestedBump}
+        min={BUMP_STEP}
+        max={stepMax}
+        step={BUMP_STEP}
+        unit="kcal"
+        formatValue={(v) => `+${v}`}
+        label="Extra calories"
+        decreaseLabel="Less"
+        increaseLabel="More"
+        valueLabel={`${requestedBump} kcal extra`}
+        style={styles.stepper}
+      />
 
       {plan.ok ? (
         <Text style={[styles.preview, live.preview]}>
@@ -189,15 +190,14 @@ export default function CalorieBankSheet({
         <Text style={[styles.error, live.error]}>{ERROR_COPY[plan.reason] ?? ERROR_COPY.invalid_input}</Text>
       )}
 
-      <TouchableOpacity
-        style={[styles.applyBtn, live.applyBtn, !plan.ok && styles.applyBtnDisabled]}
+      <Button
+        title="Plan it"
+        variant="primary"
         onPress={apply}
         disabled={!plan.ok}
-        accessibilityRole="button"
         accessibilityLabel="Apply the higher-calorie day"
-      >
-        <Text style={[styles.applyText, live.applyText]}>Plan it</Text>
-      </TouchableOpacity>
+        style={styles.applyBtn}
+      />
     </BottomSheet>
   );
 }
@@ -205,8 +205,9 @@ export default function CalorieBankSheet({
 const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   intro: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
-  // Campaign 17B job 6: what the bank is, and what it is not.
-  rules: { marginTop: spacing.sm, gap: spacing.xxs },
+  // Campaign 17B job 6: what the bank is, and what it is not. Held under the
+  // collapsed "How this works" row (R3).
+  rules: { marginTop: spacing.md },
   ruleLine: { ...type.bodySm, color: colors.textMuted },
   activeRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -220,25 +221,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg, marginBottom: spacing.sm,
   },
   dayChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  dayChip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  dayChipActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
-  dayChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  dayChipTextActive: { color: colors.onPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, alignSelf: 'center' },
-  stepBtn: {
-    width: 48, height: 48, borderRadius: circle(48),
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepBtnDisabled: { opacity: 0.5 },
-  stepValue: {
-    color: colors.textPrimary, fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
-    minWidth: 88, textAlign: 'center', fontVariant: ['tabular-nums'],
-  },
+  // The house Chip is 44 dp on iOS by default; the day chips are the one-tap
+  // control of this sheet, so they take the 48 dp platform minimum everywhere.
+  dayChip: { minHeight: touchTarget.minimum },
+  stepper: { alignSelf: 'center' },
   preview: {
     ...type.bodySm,
     color: colors.textSecondary,
@@ -249,18 +235,14 @@ const styles = StyleSheet.create({
     color: colors.warning,
     marginTop: spacing.lg, textAlign: 'center',
   },
-  applyBtn: {
-    marginTop: spacing.lg, minHeight: 48, borderRadius: radius.lg,
-    backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center',
-  },
-  applyBtnDisabled: { opacity: 0.5 },
-  applyText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  applyBtn: { marginTop: spacing.lg },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
 // frozen `styles` block above, same "frozen base + live override" pattern as
-// BillingPeriodSelector.js's buildLiveStyles. sectionLabel/dayChips/stepper/
-// stepBtnDisabled/applyBtnDisabled have no colour tokens.
+// BillingPeriodSelector.js's buildLiveStyles. rules/sectionLabel/dayChips/
+// dayChip/stepper/applyBtn have no colour tokens (the chips, stepper and
+// button are house parts that follow the live theme themselves).
 function buildLiveStyles(t) {
   return {
     title: { color: t.colors.textPrimary },
@@ -269,15 +251,7 @@ function buildLiveStyles(t) {
     activeRow: { backgroundColor: t.colors.surface2 },
     activeText: { color: t.colors.textSecondary },
     clearText: { color: t.colors.primary },
-    dayChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    dayChipActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
-    dayChipText: { color: t.colors.textSecondary },
-    dayChipTextActive: { color: t.colors.onPrimary },
-    stepBtn: { borderColor: t.colors.border },
-    stepValue: { color: t.colors.textPrimary },
     preview: { color: t.colors.textSecondary },
     error: { color: t.colors.warning },
-    applyBtn: { backgroundColor: t.colors.primaryFill },
-    applyText: { color: t.colors.onPrimary },
   };
 }
