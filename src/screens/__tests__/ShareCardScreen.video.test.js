@@ -20,7 +20,7 @@
  *   - Share and Save hand the video, the window, the look's matrix, the
  *     framing rectangle and the card drawn without its photo to the engine,
  *     and share or save the finished mp4;
- *   - "No photo" drops the video; under calm mode or an open flag the Video
+ *   - "None" drops the video; under calm mode or an open flag the Video
  *     source is not offered; a PR set's video opens the PR card.
  */
 const React = require('react');
@@ -133,7 +133,7 @@ jest.mock('../../lib/shareVideo/engine', () => mockEngine);
 jest.mock('../../components/share/VideoTrimBar', () => {
   const mockReact = require('react');
   return { __esModule: true, default: (props) => mockReact.createElement('VideoTrimBar', props) };
-}, { virtual: true });
+});
 // expo-av's player as a host component.
 jest.mock('expo-av', () => ({ Video: 'Video', ResizeMode: { CONTAIN: 'contain' } }));
 
@@ -238,14 +238,16 @@ beforeEach(() => {
   useAppStore.setState({ user: { id: 'u1' } });
 });
 
-const SECTIONS = ['Format', 'Theme', 'Background', 'Photo look', 'Top lift', 'Quote or caption', 'What to include'];
+// The row and the look section read as the pre-video screen named them
+// (D229 addendum 5 items 4 and 7): Gallery | Photo | Video | None, and "Look".
+const SECTIONS = ['Format', 'Theme', 'Background', 'Look', 'Top lift', 'Quote or caption', 'What to include'];
 
 describe('a video is one more background on the one share screen', () => {
-  test('with no video: the screen is the image screen, with Video offered beside My photo, Camera and No photo', async () => {
+  test('with no video: the screen is the image screen, with Video offered beside Gallery, Photo and None', async () => {
     const { tree } = await mount(SESSION);
     const all = texts(tree);
     expect(all).toContain('Share image');
-    for (const label of ['My photo', 'Camera', 'Video', 'No photo']) expect(all).toContain(label);
+    for (const label of ['Gallery', 'Photo', 'Video', 'None']) expect(all).toContain(label);
     for (const s of ['Format', 'Theme', 'Background', 'Quote or caption', 'What to include']) expect(all).toContain(s);
   });
 
@@ -351,10 +353,10 @@ describe('choosing a video', () => {
     expect(trimBar(tree).props).toMatchObject({ durationMs: 12000, startMs: 0, endMs: 12000 });
   });
 
-  test('"No photo" drops the video and the screen is the image screen again', async () => {
+  test('"None" drops the video and the screen is the image screen again', async () => {
     mockGetClip.mockResolvedValue(CLIP_SET);
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
-    await press(hostsByLabel(tree, 'No photo')[0]);
+    await press(hostsByLabel(tree, 'None, no photo')[0]);
     expect(texts(tree)).toContain('Share image');
     expect(texts(tree)).not.toContain('Share video');
   });
