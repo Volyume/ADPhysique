@@ -195,6 +195,7 @@ describe('(a) five blocks at open, the rest on demand', () => {
 
     const amount = blockText(hostByTestID(tree, 'food-sheet-amount'));
     expect(amount).toContain('Amount');
+    // (blockText turns the chip's no-break space into a plain one.)
     expect(amount).toContain('bagel (90 g)');
     expect(amount).toContain('Grams');
     // The lead's ruling on lane 2B's note 1: the typed field IS the

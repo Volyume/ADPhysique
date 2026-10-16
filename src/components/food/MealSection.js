@@ -7,7 +7,7 @@ import useTheme from '../../hooks/useTheme';
 import Card from '../Card';
 import Chip from '../Chip';
 import Button from '../Button';
-import { toEnergy, energyUnitLabel } from '../../lib/format';
+import { formatEnergy, formatNumber, energyUnitLabel } from '../../lib/format';
 import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
@@ -60,6 +60,15 @@ export function usualPortion(food) {
   if (!(grams > 0)) return null;
   const servingG = Number(food?.serving_g) || 0;
   const label = food?.serving_label ? String(food.serving_label).trim() : '';
+  // A recipe logged in servings only (no cooked weight, founder ruling
+  // 2026-10-16) never shows grams: its remembered portion reads in servings.
+  if (food?.servings_only === true && servingG > 0) {
+    const n = Math.round((grams / servingG) * 10) / 10;
+    if (n > 0) {
+      const text = `${n} ${n === 1 ? 'serving' : 'servings'}`;
+      return { text, spoken: text };
+    }
+  }
   if (servingG > 0 && label) {
     const halves = (grams / servingG) * 2;
     const rounded = Math.round(halves);
@@ -92,6 +101,17 @@ export function usualChipAccessibilityLabel(food, slotLabel) {
   return portion ? `Log ${name}, ${portion.spoken}` : `Log ${name} to ${slotLabel}`;
 }
 
+// Item 3 (food Diary audit 2026-10-16): the planned line counts foods and
+// says whether the whole meal is planned. "This meal is planned." only when
+// it is one food and it is all of the meal.
+export function plannedLine(plannedCount, foodCount) {
+  if (plannedCount <= 0) return null;
+  if (plannedCount >= foodCount) {
+    return plannedCount === 1 ? 'This meal is planned.' : `All ${plannedCount} foods in this meal are planned.`;
+  }
+  return `${plannedCount} ${plannedCount === 1 ? 'food' : 'foods'} planned in this meal.`;
+}
+
 export default function MealSection({
   slot, entries, onAdd, onEdit, onDelete,
   usuals = null, onLogUsual, onEditUsual,
@@ -116,8 +136,13 @@ export default function MealSection({
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const hasEntries = entries.length > 0;
-  const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
-  const slotProtein = Math.round(entries.reduce((a, e) => a + (e.protein_g ?? 0), 0));
+  // Food Diary audit 2026-10-16, item 3 (data wrong): planned is not eaten.
+  // The subtotal counts only eaten rows, so it agrees with the ring and the
+  // breakdown sheet (mealBreakdown skips `is_planned` the same way); a meal
+  // holding only planned food shows no subtotal.
+  const eatenEntries = entries.filter((e) => !e.is_planned);
+  const slotKcal = Math.round(eatenEntries.reduce((a, e) => a + (e.kcal ?? 0), 0));
+  const slotProtein = Math.round(eatenEntries.reduce((a, e) => a + (e.protein_g ?? 0), 0));
   // Planned-but-unconfirmed rows in THIS meal (is_planned=1, staged by the
   // meal plan). MacroRings already shows the day-wide planned/eaten split
   // (the faded arc); this is the per-meal signal that drives the one-tap
@@ -174,9 +199,9 @@ export default function MealSection({
         {/* D230 R16: the meal name is a heading, so the screen-reader
             heading rotor walks the Diary meal by meal. */}
         <Text style={[styles.mealName, live.mealName]} accessibilityRole="header">{slot.label}</Text>
-        {hasEntries ? (
+        {eatenEntries.length > 0 ? (
           <Text style={[styles.subtotal, live.subtotal]}>
-            {toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {slotProtein} g protein
+            {formatEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {formatNumber(slotProtein)} g protein
           </Text>
         ) : null}
       </View>
@@ -281,7 +306,7 @@ export default function MealSection({
       {showMarkEaten ? (
         <View style={styles.plannedRow}>
           <Text style={[styles.plannedRowText, live.plannedRowText]}>
-            {plannedCount === 1 ? 'This meal is planned.' : `${plannedCount} foods planned in this meal.`}
+            {plannedLine(plannedCount, entries.length)}
           </Text>
           <TouchableOpacity
             style={[styles.markEatenButton, live.markEatenButton]}
@@ -327,12 +352,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: spacing.lg,
   },
+  // Food Diary audit 2026-10-16, item 13: at the largest text size the name
+  // and the subtotal ran into each other ("Breakfast677 kcal · 31 g pr"). The
+  // row wraps: the subtotal moves under the name, still on the right.
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center',
+    columnGap: spacing.md, rowGap: spacing.xxs,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  mealName: { ...type.bodyStrong, color: colors.textPrimary },
-  subtotal: { color: colors.textMuted, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
+  mealName: { ...type.bodyStrong, color: colors.textPrimary, flexShrink: 1 },
+  subtotal: {
+    color: colors.textMuted, fontSize: fontSize.sm, fontVariant: ['tabular-nums'],
+    flexShrink: 1, marginLeft: 'auto', textAlign: 'right',
+  },
   // One-tap "usuals" chips: a quiet wrap of the foods most logged into this
   // slot, sitting between the header and the Add row on an empty card. Each
   // is the house Chip at the platform touch target (D230 R4, R16).

@@ -29,14 +29,19 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import {
   insertCustomFood, logFoodEntries, getRecentLoggedDays, getAllCustomFoods, isLoggableFoodEntry,
+  getPlannedDaysInRange,
 } from './db';
-import { parseHistoryCsv, planImport, PROBLEM } from './importHistory';
+import { parseHistoryCsvAsync, planImport, PROBLEM } from './importHistory';
 import { todayLocalKey } from '../dayKey';
 
 export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 export const IMPORT_BATCH = 200;
 // CSV and plain text only. Some Android file providers label a .csv as
 // application/vnd.ms-excel, so that is listed too; anything else is hidden.
+// Hand the thread back between batches (and between slices of the file
+// being read) so the screen keeps answering.
+const yieldToUi = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 export const IMPORT_FILE_TYPES = [
   'text/csv', 'text/comma-separated-values', 'application/csv', 'application/vnd.ms-excel', 'text/plain',
 ];
@@ -103,6 +108,16 @@ async function readDaysWithFood(userId) {
   return new Set((days || []).map((d) => d.entry_date));
 }
 
+// Days that hold planned meals (food data-layer audit 2026-10-16, item 13).
+// A day with planned meals and no food is NOT empty: the weekly check-in can
+// later confirm it "as planned", and an import onto it would then count the
+// day twice. Such a day is left whole, like a day with food, and reported as
+// already planned.
+async function readPlannedDays(userId) {
+  const days = await getPlannedDaysInRange(userId, '0000-01-01', '9999-12-31');
+  return new Set(days || []);
+}
+
 async function readOwnFoods(userId) {
   const foods = await getAllCustomFoods(userId);
   const byName = new Map();
@@ -120,12 +135,14 @@ async function readOwnFoods(userId) {
  * sent to the all-or-nothing write.
  */
 export async function planFromText(userId, text, { today = todayLocalKey() } = {}) {
-  const parsed = parseHistoryCsv(text);
+  // Read in slices, handing the thread back between them (item 13), so a
+  // long export never freezes the screen while it is read.
+  const parsed = await parseHistoryCsvAsync(text, { yieldFn: yieldToUi });
   if (!parsed.format) return { error: NOT_A_FOOD_EXPORT };
-  const [mealsPerDay, existingDays, existingFoods] = await Promise.all([
-    readMealsPerDay(), readDaysWithFood(userId), readOwnFoods(userId),
+  const [mealsPerDay, existingDays, plannedDays, existingFoods] = await Promise.all([
+    readMealsPerDay(), readDaysWithFood(userId), readPlannedDays(userId), readOwnFoods(userId),
   ]);
-  const plan = planImport(parsed, { existingDays, existingFoods, mealsPerDay, today });
+  const plan = planImport(parsed, { existingDays, plannedDays, existingFoods, mealsPerDay, today });
   const entries = [];
   for (const e of plan.entries) {
     const probe = e.customName ? { ...e, foodRef: 'custom:probe' } : e;
@@ -161,8 +178,6 @@ export function batchByDay(entries, size = IMPORT_BATCH) {
 // The diary write's options for an import (see the header).
 const IMPORT_WRITE_OPTIONS = Object.freeze({ keepUntimed: true, telemetry: false });
 
-// Hand the thread back between batches so the screen keeps answering.
-const yieldToUi = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const toDiaryEntry = (e, foodRef) => ({
   entryDate: e.entryDate, mealSlot: e.mealSlot, foodRef, quantityG: e.quantityG,
@@ -172,7 +187,9 @@ const toDiaryEntry = (e, foodRef) => ({
 
 /**
  * Write a plan: the new foods, then the entries in whole-day batches.
- * Returns { added, foodsSaved, daysLeft }. On a failure it throws with
+ * Returns { added, foodsSaved, daysLeft, plannedLeft }: daysLeft counts the
+ * days that gained food since the review, plannedLeft those that gained
+ * planned meals (left whole, item 13). On a failure it throws with
  * `.written` (entries already in) and `.stage` ('foods' | 'entries').
  * `onProgress(added, total)` after each batch.
  */
@@ -182,7 +199,9 @@ export async function writePlan(userId, plan, { onProgress } = {}) {
   let foodsSaved = 0;
   try {
     // The diary and the foods as they are now, not as they were at review.
-    const [daysNow, foodsNow] = await Promise.all([readDaysWithFood(userId), readOwnFoods(userId)]);
+    const [daysNow, plannedNow, foodsNow] = await Promise.all([
+      readDaysWithFood(userId), readPlannedDays(userId), readOwnFoods(userId),
+    ]);
     const ids = new Map();
     for (const food of plan.customFoods || []) {
       const key = food.name.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -194,8 +213,10 @@ export async function writePlan(userId, plan, { onProgress } = {}) {
       foodsSaved += 1;
     }
     stage = 'entries';
-    const fresh = (plan.entries || []).filter((e) => !daysNow.has(e.entryDate));
+    const fresh = (plan.entries || []).filter((e) => !daysNow.has(e.entryDate) && !plannedNow.has(e.entryDate));
     const daysLeft = new Set((plan.entries || []).filter((e) => daysNow.has(e.entryDate)).map((e) => e.entryDate)).size;
+    const plannedLeft = new Set((plan.entries || [])
+      .filter((e) => !daysNow.has(e.entryDate) && plannedNow.has(e.entryDate)).map((e) => e.entryDate)).size;
     const entries = fresh.map((e) => toDiaryEntry(e, e.customName ? `custom:${ids.get(e.customName)}` : e.foodRef));
     for (const batch of batchByDay(entries)) {
       // eslint-disable-next-line no-await-in-loop
@@ -205,7 +226,7 @@ export async function writePlan(userId, plan, { onProgress } = {}) {
       // eslint-disable-next-line no-await-in-loop
       await yieldToUi();
     }
-    return { added: written, foodsSaved, daysLeft };
+    return { added: written, foodsSaved, daysLeft, plannedLeft };
   } catch (e) {
     e.written = written;
     e.stage = stage;

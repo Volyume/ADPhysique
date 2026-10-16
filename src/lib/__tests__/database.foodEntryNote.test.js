@@ -63,6 +63,7 @@ function preMigrationDb() {
   const raw = new DatabaseSync(':memory:');
   raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY, user_id TEXT, entry_date TEXT, kcal REAL)');
   raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)');
+  raw.exec('CREATE TABLE recipes (id TEXT PRIMARY KEY)'); // the cooked-weight step ALTERs this table
   raw.prepare('INSERT INTO food_entries (id, user_id, entry_date, kcal) VALUES (?, ?, ?, ?)').run('old-1', 'u', '2026-10-01', 250);
   return raw;
 }

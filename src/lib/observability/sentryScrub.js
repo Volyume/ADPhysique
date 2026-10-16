@@ -67,6 +67,13 @@ export const SENSITIVE_KEY_PATTERNS = Object.freeze([
   /^sugar/i,
   /^quantity[._-]?g/i,        // food_entries.quantity_g, dietary intake
   /^serving[._-]?g/i,         // foods.serving_g
+  // What a person ate, by identity (food data-layer audit 2026-10-16, item
+  // 10): a food ref ("custom:<id>", "global:<id>", "recipe:<id>") or a
+  // scanned barcode names the food itself. Anchored so the content-free
+  // telemetry field food_ref_source ('quick_add' | 'custom' | 'global') is
+  // not caught.
+  /^food[._-]?refs?$/i,       // foodRef, food_ref, foodRefs
+  /^barcode/i,                // barcode, barcode_ean, barcodeEan
 
   // PII identifiers
   /^email$/i,

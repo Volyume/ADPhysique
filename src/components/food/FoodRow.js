@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, iconSize, fontFamily, type } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 import useTheme from '../../hooks/useTheme';
-import { toEnergy, energyUnitLabel } from '../../lib/format';
+import { toEnergy, energyUnitLabel, formatEnergy } from '../../lib/format';
 import { resolveServingG, scaleMacros } from '../../lib/food/macros';
 import useAppStore from '../../store/useAppStore';
 
@@ -64,6 +64,11 @@ const COUNTED_LABEL = /^[\d½¼¾]/;
  * words for the row's accessibility label.
  */
 export function rowPortion(food) {
+  // A recipe logged in servings only has no gram amount of its own: the row
+  // says "1 serving" and the one-tap add is exactly that serving.
+  if (food?.servings_only === true && Number(food?.serving_g) > 0) {
+    return { grams: Number(food.serving_g), text: '1 serving', spoken: '1 serving' };
+  }
   const grams = resolveServingG(food);
   if (isSavedMealRow(food)) {
     const label = food?.serving_label || 'Saved meal';
@@ -126,16 +131,16 @@ export default function FoodRow({
   // Energy DISPLAY unit (kcal | kj) is applied here, at the render sites
   // only; the maths stays in kcal.
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
-  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
+  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'kilocalories';
   const portion = rowPortion(food);
   const macros = scaleMacros(food, portion.grams);
   const kcal = Math.round(macros.kcal ?? 0);
   const p = Math.round(macros.proteinG ?? 0);
   const c = Math.round(macros.carbsG ?? 0);
   const f = Math.round(macros.fatG ?? 0);
-  const energyText = `${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}`;
+  const energyText = `${formatEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}`;
   const metaLine = [food.brand || null, portion.text, energyText, sourceTag].filter(Boolean).join(' · ');
-  const spokenMacros = `${p} grams protein, ${c} carbs, ${f} fat`;
+  const spokenMacros = `${p} ${p === 1 ? 'gram' : 'grams'} of protein, ${c} carbs, ${f} fat`;
   // Back-compat: callers that still pass `isFav` get the legacy
   // star-only behaviour. New callers pass `preference`.
   const pref = preference ?? (isFav ? 'fav' : null);

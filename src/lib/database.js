@@ -3024,6 +3024,29 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE custom_foods ADD COLUMN portions_json TEXT',
   ],
+  // Founder ruling "Add cooked weight" (food data-layer audit lane,
+  // 2026-10-16): the cooked weight of a whole recipe.
+  //   Purpose:  one nullable REAL column on `recipes`, `cooked_weight_g`: the
+  //             weight in grams of the whole cooked recipe, so a portion can
+  //             be logged by weighing it. NULL is a real state (not weighed);
+  //             normaliseCookedWeight (src/lib/food/recipeWeight.js) is the
+  //             only writer's gate.
+  //   Applied locally: yes, on every device that reaches this migration index;
+  //             ADD COLUMN only, no default and no backfill, so every existing
+  //             recipe reads NULL.
+  //   Applied remotely: NO. The cloud counterpart is in
+  //             supabase/migrate_196_food_soft_deletes_and_kind.sql, WRITTEN,
+  //             HELD. Until it is applied the push omits the key
+  //             (RECIPE_COOKED_WEIGHT_PUSH in src/lib/sync/featureFlags.js is
+  //             false) and the pull keeps the local value.
+  //   Safe to re-run: yes. The benign-duplicate-column skip
+  //             (isProvenBenignMigrationError) covers a second run, exactly as
+  //             for custom_foods.portions_json above.
+  //   Rollback: leave the column in place and ignore it; every reader treats
+  //             NULL as not weighed.
+  [
+    'ALTER TABLE recipes ADD COLUMN cooked_weight_g REAL',
+  ],
 ];
 
 // Tests and diagnostics may compare a database's durable marker with the
@@ -12579,6 +12602,23 @@ export async function getAllRecipeIngredientsForUser(userId) {
     [userId],
   );
   return rows.map(rowToCamel);
+}
+
+/**
+ * Ids of the user's recipes that are tombstoned on this device, for the
+ * recipe_ingredients push (food data-layer audit 2026-10-16, item 4): an
+ * ingredient of a deleted recipe needs no cloud write, and pushing it failed
+ * the whole batch for ever once the cloud had hard-deleted the recipe
+ * (migrate_195 and earlier): the table's row-level policy requires the
+ * caller's parent recipe row to exist in the cloud.
+ */
+export async function getTombstonedRecipeIdsForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT id FROM recipes WHERE user_id = ? AND deleted_at IS NOT NULL',
+    [userId],
+  );
+  return (rows || []).map((r) => r.id);
 }
 
 /**

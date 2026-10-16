@@ -13,7 +13,7 @@ import Button from '../Button';
 import Chip from '../Chip';
 import TextField from '../TextField';
 import { useToast } from '../Toast';
-import { pickerMealSlots } from '../../lib/food/mealSlots';
+import useMealSlotChoices from './useMealSlotChoices';
 import { fromEnergy, toEnergy, energyUnitLabel } from '../../lib/format';
 import { parseDecimalInput } from '../../lib/parseDecimalInput';
 import { logError } from '../../lib/errorLog';
@@ -32,8 +32,16 @@ import { FOOD_NOTE_MAX_LENGTH } from '../../lib/food/entryNote';
  *                    (D230 R20: note is the optional "What was it?" line, trimmed,
  *                    '' when blank; it becomes the entry's name in the diary)
  *   onClose          () => void
+ *   mealSlots        optional: the meals the caller shows ({ key, label }[]).
+ *                    Without it the chips follow the person's meals per day
+ *                    (food Diary audit 2026-10-16, item 7); the chosen meal is
+ *                    always kept as a chip.
+ *
+ * The sheet scrolls (BottomSheet `scroll`, as the add sheet does), so with
+ * the keyboard up at the largest text size every field and the actions can
+ * be reached (food Diary audit 2026-10-16, item 13).
  */
-export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSave, onClose }) {
+export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSave, onClose, mealSlots = null }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
@@ -60,6 +68,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   // M4: the save has landed; the sheet closes on the Button's onSettled so
   // the checkmark beat is seen before the sheet goes.
   const [saved, setSaved] = useState(false);
+  const mealChoices = useMealSlotChoices({ visible, current: mealSlot, slots: mealSlots, periWorkoutSlots });
 
   // Reset the form each time the sheet opens.
   useEffect(() => {
@@ -109,7 +118,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   }
 
   return (
-    <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel="Quick add">
+    <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding scroll accessibilityLabel="Quick add">
           <Text style={[styles.title, live.title]} accessibilityRole="header">Quick add</Text>
           <Text style={[styles.subtitle, live.subtitle]}>Log energy now, with macros if you have them.</Text>
 
@@ -159,8 +168,8 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
           />
 
           <SectionLabel style={styles.fieldLabel}>Meal</SectionLabel>
-          <View style={styles.mealRow}>
-            {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
+          <View style={styles.mealRow} accessibilityRole="radiogroup" accessibilityLabel="Meal">
+            {mealChoices.map(s => (
               <Chip
                 key={s.key}
                 label={s.label}
@@ -205,15 +214,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
-  macroRow: { flexDirection: 'row', gap: spacing.sm },
-  macroField: { flex: 1 },
+  // The three macro fields share a row and wrap under each other when the
+  // text is too large for three across (food Diary audit 2026-10-16, item 13).
+  macroRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  macroField: { flexGrow: 1, flexBasis: 96 },
   macroInput: {
     fontSize: fontSize.md,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     textAlign: 'center',
   },
-  mealRow: { flexDirection: 'row', gap: spacing.xs },
-  mealChip: { flex: 1, alignSelf: 'stretch', justifyContent: 'center', minHeight: touchTarget.minimum },
+  // Food Diary audit 2026-10-16, item 7: the meal chips wrap (six meals, a
+  // 24-character name or the largest text size never clip a chip).
+  mealRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  mealChip: { flexGrow: 1, flexShrink: 1, maxWidth: '100%', alignSelf: 'stretch', justifyContent: 'center', minHeight: touchTarget.minimum },
   mealChipLabel: { textAlign: 'center' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   actionButton: { flex: 1 },

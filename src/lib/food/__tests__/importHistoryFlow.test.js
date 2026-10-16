@@ -166,7 +166,7 @@ describe('import', () => {
     const u = freshUser();
     const { plan } = await flow.planFromText(u, MFP, { today: TODAY });
     const out = await flow.writePlan(u, plan);
-    expect(out).toEqual({ added: 6, foodsSaved: 0, daysLeft: 0 });
+    expect(out).toEqual({ added: 6, foodsSaved: 0, daysLeft: 0, plannedLeft: 0 });
     const rows = entries(u);
     expect(rows.map((r) => [r.entry_date, r.meal_slot, r.note])).toEqual([
       ['2026-03-03', 'meal_1', 'Breakfast, from MyFitnessPal'],
@@ -441,5 +441,44 @@ describe('quiet', () => {
       const keys = (c.match(/\{([^}]*)\}/)[1].match(/(\w+):/g) || []).map((k) => k.slice(0, -1));
       keys.forEach((k) => expect(['stage', 'format', 'code']).toContain(k));
     });
+  });
+});
+
+// Food data-layer audit 2026-10-16, item 13: a day holding only planned meals
+// is NOT empty. Importing onto it, then confirming the plan from the weekly
+// check-in ("I ate as planned"), would count the day twice. It is left whole
+// at review AND at write (a plan made on it after the review), and reported
+// as already planned.
+describe('a day with planned meals only is left whole (audit item 13)', () => {
+  const plannedRow = (date) => ({
+    entryDate: date, mealSlot: 'meal_1', foodRef: 'curated:oats', quantityG: 80,
+    kcal: 300, proteinG: 10, carbsG: 50, fatG: 6, isPlanned: true,
+  });
+
+  test('planned at review: the import writes nothing on that day and says it was planned', async () => {
+    const u = freshUser();
+    await food.logFoodEntry(u, plannedRow('2026-03-03'));
+    const { plan } = await flow.planFromText(u, MFP, { today: TODAY });
+    expect(plan.entries.some((e) => e.entryDate === '2026-03-03')).toBe(false);
+    expect(plan.plannedDays).toBe(1);
+    expect(summariseImport(plan).join(' ')).toMatch(/already has meals planned/);
+    const out = await flow.writePlan(u, plan);
+    expect(out.added).toBe(2);
+    const onDay = entries(u).filter((r) => r.entry_date === '2026-03-03');
+    expect(onDay).toHaveLength(1);
+    expect(onDay[0].is_planned).toBe(1);
+    // The backstop still sees one planned day, and it holds no imported actual.
+    expect(await food.getPlannedDaysInRange(u, '2026-03-01', '2026-03-31')).toEqual(['2026-03-03']);
+    expect(rollup(u, '2026-03-03')?.kcal_total ?? 0).toBe(0);
+  });
+
+  test('planned after review: the write leaves the day whole and counts it in plannedLeft', async () => {
+    const u = freshUser();
+    const { plan } = await flow.planFromText(u, MFP, { today: TODAY });
+    expect(plan.entries.some((e) => e.entryDate === '2026-03-03')).toBe(true);
+    await food.logFoodEntry(u, plannedRow('2026-03-03'));
+    const out = await flow.writePlan(u, plan);
+    expect(out).toEqual({ added: 2, foodsSaved: 0, daysLeft: 0, plannedLeft: 1 });
+    expect(entries(u).filter((r) => r.entry_date === '2026-03-03' && r.is_planned === 0)).toEqual([]);
   });
 });

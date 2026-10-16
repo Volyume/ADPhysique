@@ -20,7 +20,8 @@ import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from './foodSwapScope';
-import { FOOD_ENTRY_NOTE_PUSH, CUSTOM_FOOD_PORTIONS_PUSH } from '../sync/featureFlags';
+import { FOOD_ENTRY_NOTE_PUSH, CUSTOM_FOOD_PORTIONS_PUSH, RECIPE_COOKED_WEIGHT_PUSH } from '../sync/featureFlags';
+import { normaliseCookedWeight } from './recipeWeight';
 import {
   isBoundedString,
   isLocalDayKey,
@@ -82,6 +83,81 @@ function _standDownMealReminders(userId, entryDate, slots, { plannedConfirm = fa
       schedulePlannedMealConfirm(userId).catch(() => {});
     }
   } catch (_) { /* notifications unavailable (tests): nothing to stand down */ }
+}
+
+// Item 12 (food data-layer audit 2026-10-16): a single write and its rollup
+// run in the batch writes' runInTransaction. A test double of ../database
+// that offers no runInTransaction runs the task as it is.
+function _inTx(d, task) {
+  return typeof runInTransaction === 'function' ? runInTransaction(d, task) : task();
+}
+
+// Food data-layer audit 2026-10-16, item 6: a planned meal that is cleared or
+// deleted (not eaten) also changes whether anything is still unconfirmed
+// today, so the 20:00 planned-meals nudge is re-checked through the same
+// scheduler call the confirm paths make (D215). The scheduler keeps every gate
+// of its own (the ED flag fails closed, quiet hours, the push budget).
+function _recheckPlannedMealNudge(userId) {
+  _standDownMealReminders(userId, null, [], { plannedConfirm: true });
+}
+
+// ─── "diary changed" signal (food data-layer audit 2026-10-16, item 7) ───
+//
+// Every write that changes diary rows tells its listeners, synchronously
+// after its own commit, which person and which days changed:
+// `{ userId, dates }`. The Diary listens so a write made elsewhere (a copy,
+// an import, a sync pull, a planned day applied) shows without waiting for a
+// focus. A listener can never break a write: each is called in its own
+// try/catch and a throw is logged (scope only, no row, no figure).
+const _diaryListeners = new Set();
+
+/**
+ * Listen for diary changes. `fn({ userId, dates })` is called after every
+ * committed write that changed diary rows. Returns the unsubscribe function.
+ *
+ * @param {(evt: { userId: string, dates: string[] }) => void} fn
+ * @returns {() => void}
+ */
+export function subscribeDiaryChanges(fn) {
+  if (typeof fn !== 'function') return () => {};
+  _diaryListeners.add(fn);
+  return () => { _diaryListeners.delete(fn); };
+}
+
+/**
+ * Tell every diary listener that `dates` changed for `userId`. Called by the
+ * writes in this file and by the sync pull (foodDomain.js) once its rows and
+ * rollups are applied. Never throws.
+ */
+export function notifyDiaryChanges(userId, dates) {
+  if (_diaryListeners.size === 0) return;
+  const list = [];
+  for (const d of Array.isArray(dates) ? dates : [dates]) {
+    if (typeof d === 'string' && d && !list.includes(d)) list.push(d);
+  }
+  if (list.length === 0) return;
+  const evt = { userId, dates: list };
+  for (const fn of [..._diaryListeners]) {
+    try {
+      fn(evt);
+    } catch (e) {
+      try {
+        // eslint-disable-next-line global-require
+        require('../errorLog').logError('food.diaryChanges.listener', e);
+      } catch (_) { /* logging unavailable: the write already stands */ }
+    }
+  }
+}
+
+// Food data-layer audit 2026-10-16, item 5: a pulled row the appliers refuse
+// (an out-of-range legacy row, a broken time) is still skipped, as before,
+// but no longer silently: the table and the reason only, never an id, a day
+// or a figure.
+function _pullRejected(table, reason) {
+  try {
+    // eslint-disable-next-line global-require
+    require('../errorLog').logWarn('food.pull.rejected', null, { table, reason });
+  } catch (_) { /* logging unavailable: the skip stands */ }
 }
 
 // D230 R10: the ONE validator and the ONE insert behind logFoodEntry and
@@ -206,8 +282,14 @@ export async function logFoodEntry(userId, entry) {
   const { isPlanned } = prepared;
   const d = await db();
   const id = uid();
-  await _insertDiaryRow(d, userId, id, entry, prepared, now, now);
-  await recomputeRollup(userId, entry.entryDate);
+  // Food data-layer audit 2026-10-16, item 12: the row and its day's rollup
+  // commit together (the batch writes' runInTransaction), so a failed rollup
+  // leaves no row the day's total does not count.
+  await _inTx(d, async () => {
+    await _insertDiaryRow(d, userId, id, entry, prepared, now, now);
+    await recomputeRollup(userId, entry.entryDate);
+  });
+  notifyDiaryChanges(userId, [entry.entryDate]);
   // Per TELEMETRY_DASHBOARDS_LOCKED.md Panel 3 (food layer health).
   // Fire-and-forget; the track() call writes locally first so a
   // network outage does not block the user's diary entry.
@@ -295,7 +377,7 @@ export async function logFoodEntries(userId, entries, { keepUntimed = false, tel
   for (const entry of entries) if (!dates.includes(entry.entryDate)) dates.push(entry.entryDate);
   const d = await db();
   const ids = [];
-  await runInTransaction(d, async () => {
+  await _inTx(d, async () => {
     for (let i = 0; i < entries.length; i += 1) {
       const id = uid();
       // eslint-disable-next-line no-await-in-loop
@@ -309,6 +391,7 @@ export async function logFoodEntries(userId, entries, { keepUntimed = false, tel
   });
   // Committed. Everything below is best-effort and subtractive, as in
   // logFoodEntry: it can never fail the write.
+  notifyDiaryChanges(userId, dates);
   if (telemetry !== false) {
     try {
       // eslint-disable-next-line global-require
@@ -455,23 +538,30 @@ export async function updateFoodEntry(id, userId, patch) {
   }
   const d = await db();
   const now = Date.now();
-  const existing = await d.getFirstAsync(
-    `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at, note
-     FROM food_entries WHERE id = ? AND user_id = ?`,
-    [id, userId]
-  );
-  if (!existing) return false;
-  const newDate = await _writeEntryPatch(d, userId, id, patch, existing, now);
-  await recomputeRollup(userId, newDate);
-  if (existing.entry_date !== newDate) {
-    await recomputeRollup(userId, existing.entry_date);
-  }
-  if (!existing.is_planned) {
-    await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
-    if (existing.meal_slot !== patch.mealSlot || existing.food_ref !== patch.foodRef) {
-      await _rebuildSlotRecentFromActuals(d, userId, patch.mealSlot, patch.foodRef);
+  // Item 12 (food data-layer audit 2026-10-16): the edit, both days' rollups
+  // and the serving memory commit together or not at all.
+  const days = await _inTx(d, async () => {
+    const existing = await d.getFirstAsync(
+      `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at, note
+       FROM food_entries WHERE id = ? AND user_id = ?`,
+      [id, userId]
+    );
+    if (!existing) return null;
+    const newDate = await _writeEntryPatch(d, userId, id, patch, existing, now);
+    await recomputeRollup(userId, newDate);
+    if (existing.entry_date !== newDate) {
+      await recomputeRollup(userId, existing.entry_date);
     }
-  }
+    if (!existing.is_planned) {
+      await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
+      if (existing.meal_slot !== patch.mealSlot || existing.food_ref !== patch.foodRef) {
+        await _rebuildSlotRecentFromActuals(d, userId, patch.mealSlot, patch.foodRef);
+      }
+    }
+    return [newDate, existing.entry_date];
+  });
+  if (!days) return false;
+  notifyDiaryChanges(userId, days);
   _scheduleSync();
   return true;
 }
@@ -498,8 +588,8 @@ export async function updateFoodEntries(userId, updates) {
   const d = await db();
   const now = Date.now();
   let written = 0;
+  const dates = new Set();
   await runInTransaction(d, async () => {
-    const dates = new Set();
     const memory = new Map();
     const remember = (slot, ref) => memory.set(`${slot}\u0000${ref}`, { slot, ref });
     for (const { id, patch } of updates) {
@@ -531,27 +621,38 @@ export async function updateFoodEntries(userId, updates) {
       await _rebuildSlotRecentFromActuals(d, userId, slot, ref);
     }
   });
-  if (written > 0) _scheduleSync();
+  if (written > 0) {
+    notifyDiaryChanges(userId, [...dates]);
+    _scheduleSync();
+  }
   return written;
 }
 
 export async function deleteFoodEntry(id, userId) {
   const d = await db();
   const now = Date.now();
-  const existing = await d.getFirstAsync(
-    `SELECT entry_date, meal_slot, food_ref, is_planned
-     FROM food_entries WHERE id = ? AND user_id = ?`,
-    [id, userId]
-  );
+  // Item 12 (food data-layer audit 2026-10-16): the tombstone, the rollup and
+  // the serving memory commit together or not at all.
+  const existing = await _inTx(d, async () => {
+    const row = await d.getFirstAsync(
+      `SELECT entry_date, meal_slot, food_ref, is_planned
+       FROM food_entries WHERE id = ? AND user_id = ?`,
+      [id, userId]
+    );
+    if (!row) return null;
+    await d.runAsync(
+      `UPDATE food_entries SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+      [now, now, id, userId]
+    );
+    await recomputeRollup(userId, row.entry_date);
+    if (!row.is_planned) {
+      await _rebuildSlotRecentFromActuals(d, userId, row.meal_slot, row.food_ref);
+    }
+    return row;
+  });
   if (!existing) return false;
-  await d.runAsync(
-    `UPDATE food_entries SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
-    [now, now, id, userId]
-  );
-  await recomputeRollup(userId, existing.entry_date);
-  if (!existing.is_planned) {
-    await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
-  }
+  notifyDiaryChanges(userId, [existing.entry_date]);
+  if (existing.is_planned) _recheckPlannedMealNudge(userId); // audit item 6
   _scheduleSync();
   return true;
 }
@@ -559,24 +660,38 @@ export async function deleteFoodEntry(id, userId) {
 // Reverse a soft-delete (food audit F-1: the Undo affordance). Clears
 // deleted_at so the row is active again, bumps updated_at so the change is the
 // latest write (last-write-wins sync resurrects it on every device), recomputes
-// the day rollup and re-queues sync — the exact mirror of deleteFoodEntry.
+// the day rollup and re-queues sync, the exact mirror of deleteFoodEntry.
+//
+// created_at is the moment of the Undo too (food data-layer audit 2026-10-16,
+// item 1, as confirmPlannedDay and confirmPlannedEntry do): the push sends a
+// row whose created_at equals its updated_at as `created`. With its old
+// created_at it went up as `updated`, an UPDATE of a row the cloud had already
+// deleted, so an Undo made after the delete had synced never reached the
+// cloud. As `created` it is re-inserted (migrate_195 hard-deleted the row) or
+// revives the tombstone (migrate_196, whose revive requires this created_at to
+// be at or after the delete).
 export async function restoreFoodEntry(id, userId) {
   const d = await db();
   const now = Date.now();
-  const existing = await d.getFirstAsync(
-    `SELECT entry_date, meal_slot, food_ref, is_planned
-     FROM food_entries WHERE id = ? AND user_id = ?`,
-    [id, userId]
-  );
+  const existing = await _inTx(d, async () => {
+    const row = await d.getFirstAsync(
+      `SELECT entry_date, meal_slot, food_ref, is_planned
+       FROM food_entries WHERE id = ? AND user_id = ?`,
+      [id, userId]
+    );
+    if (!row) return null;
+    await d.runAsync(
+      `UPDATE food_entries SET deleted_at = NULL, created_at = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+      [now, now, id, userId]
+    );
+    await recomputeRollup(userId, row.entry_date);
+    if (!row.is_planned) {
+      await _rebuildSlotRecentFromActuals(d, userId, row.meal_slot, row.food_ref);
+    }
+    return row;
+  });
   if (!existing) return false;
-  await d.runAsync(
-    `UPDATE food_entries SET deleted_at = NULL, updated_at = ? WHERE id = ? AND user_id = ?`,
-    [now, id, userId]
-  );
-  await recomputeRollup(userId, existing.entry_date);
-  if (!existing.is_planned) {
-    await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
-  }
+  notifyDiaryChanges(userId, [existing.entry_date]);
   _scheduleSync();
   return true;
 }
@@ -594,8 +709,9 @@ async function _setEntriesDeleted(userId, ids, deleted) {
   const d = await db();
   const now = Date.now();
   let changed = 0;
+  let anyPlanned = false;
+  const dates = new Set();
   await runInTransaction(d, async () => {
-    const dates = new Set();
     const memory = new Map();
     for (const id of list) {
       // eslint-disable-next-line no-await-in-loop
@@ -612,14 +728,17 @@ async function _setEntriesDeleted(userId, ids, deleted) {
           [now, now, id, userId]
         );
       } else {
+        // created_at too, as restoreFoodEntry (food data-layer audit
+        // 2026-10-16, item 1): the restored row goes up as `created`.
         // eslint-disable-next-line no-await-in-loop
         await d.runAsync(
-          `UPDATE food_entries SET deleted_at = NULL, updated_at = ? WHERE id = ? AND user_id = ?`,
-          [now, id, userId]
+          `UPDATE food_entries SET deleted_at = NULL, created_at = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+          [now, now, id, userId]
         );
       }
       changed += 1;
       dates.add(existing.entry_date);
+      if (existing.is_planned) anyPlanned = true;
       if (!existing.is_planned) {
         memory.set(`${existing.meal_slot}\u0000${existing.food_ref}`, { slot: existing.meal_slot, ref: existing.food_ref });
       }
@@ -633,7 +752,11 @@ async function _setEntriesDeleted(userId, ids, deleted) {
       await _rebuildSlotRecentFromActuals(d, userId, slot, ref);
     }
   });
-  if (changed > 0) _scheduleSync();
+  if (changed > 0) {
+    notifyDiaryChanges(userId, [...dates]);
+    if (deleted && anyPlanned) _recheckPlannedMealNudge(userId); // audit item 6
+    _scheduleSync();
+  }
   return changed;
 }
 
@@ -756,6 +879,7 @@ export async function confirmPlannedDay(userId, entryDate, mealSlot = null) {
       await _rebuildSlotRecentFromActuals(d, userId, identity.meal_slot, identity.food_ref);
     }
     _standDownMealReminders(userId, entryDate, (confirmedIdentities || []).map((i) => i.meal_slot), { plannedConfirm: true }); // D215
+    notifyDiaryChanges(userId, [entryDate]);
   }
   _scheduleSync();
   return res?.changes ?? 0;
@@ -789,6 +913,7 @@ export async function confirmPlannedEntry(userId, entryId) {
   if ((res?.changes ?? 0) > 0) {
     await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
     _standDownMealReminders(userId, existing.entry_date, [existing.meal_slot], { plannedConfirm: true }); // D215
+    notifyDiaryChanges(userId, [existing.entry_date]);
   }
   _scheduleSync();
   return res?.changes ?? 0;
@@ -815,6 +940,10 @@ export async function getPlannedDaysInRange(userId, startIso, endIso) {
  * Discard a day's planned scaffolding without eating it (the "no" path).
  * Planned rows are local-only and never synced, so a hard delete is safe;
  * actuals on the day are untouched. Returns the number cleared.
+ *
+ * Food data-layer audit 2026-10-16: the clear tells the diary listeners
+ * (item 7) and re-checks the 20:00 planned-meals nudge (item 6), which would
+ * otherwise still fire for meals no longer planned.
  */
 export async function clearPlannedDay(userId, entryDate) {
   const d = await db();
@@ -824,7 +953,65 @@ export async function clearPlannedDay(userId, entryDate) {
     [userId, entryDate]
   );
   await recomputeRollup(userId, entryDate);
-  return res?.changes ?? 0;
+  const cleared = res?.changes ?? 0;
+  if (cleared > 0) {
+    notifyDiaryChanges(userId, [entryDate]);
+    _recheckPlannedMealNudge(userId);
+  }
+  return cleared;
+}
+
+/**
+ * Replace the PLANNED food of several days in ONE transaction (food
+ * data-layer audit 2026-10-16, item 14): every planned row on `dayKeys` is
+ * removed and `entries` (each as logFoodEntry's `entry`, written as planned
+ * scaffolding whatever its own isPlanned says) are written in its place, and
+ * each touched day's rollup is rebuilt, all inside one transaction. Every
+ * entry is validated first (the shared _prepareDiaryEntry), so one bad entry
+ * throws and nothing is changed. Actuals are never touched. This is what lets
+ * the banked-day re-sync say "Nothing has changed" truthfully when it fails:
+ * before it, each day was cleared and re-written as separate writes, so a
+ * failure part-way left days cleared or half-rewritten.
+ *
+ * Returns { cleared, written }.
+ */
+export async function replacePlannedFoodForDays(userId, dayKeys, entries) {
+  const days = [...new Set((Array.isArray(dayKeys) ? dayKeys : []).filter((k) => isLocalDayKey(k)))];
+  const list = Array.isArray(entries) ? entries : [];
+  if (days.length === 0) return { cleared: 0, written: 0 };
+  const now = Date.now();
+  const planned = list.map((entry, i) => {
+    const label = `replacePlannedFoodForDays (row ${i + 1})`;
+    if (!entry || typeof entry !== 'object') throw new TypeError(`${label}: invalid food values`);
+    if (!days.includes(entry.entryDate)) throw new TypeError(`${label}: entry is not on a replaced day`);
+    const row = { ...entry, isPlanned: true };
+    return { row, prepared: _prepareDiaryEntry(label, row, now) };
+  });
+  const d = await db();
+  let cleared = 0;
+  await runInTransaction(d, async () => {
+    for (const day of days) {
+      // eslint-disable-next-line no-await-in-loop
+      const res = await d.runAsync(
+        'DELETE FROM food_entries WHERE user_id = ? AND entry_date = ? AND is_planned = 1',
+        [userId, day]
+      );
+      cleared += res?.changes ?? 0;
+    }
+    for (let i = 0; i < planned.length; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await _insertDiaryRow(d, userId, uid(), planned[i].row, planned[i].prepared, now + i, now);
+    }
+    for (const day of days) {
+      // eslint-disable-next-line no-await-in-loop
+      await recomputeRollup(userId, day);
+    }
+  });
+  if (cleared > 0 || planned.length > 0) {
+    notifyDiaryChanges(userId, days);
+    _recheckPlannedMealNudge(userId);
+  }
+  return { cleared, written: planned.length };
 }
 
 export async function getRecentFoodEntries(userId, limit = 25) {
@@ -1322,6 +1509,7 @@ export async function rekeyFoodEntriesToLocalDay(userId) {
       await recomputeRollup(userId, day);
     }
   });
+  notifyDiaryChanges(userId, [...affectedDays]);
   return updates.length;
 }
 
@@ -1363,9 +1551,9 @@ export async function repairPulledEntryDays(userId, cloudRows) {
   }
   if (candidates.length === 0) return 0;
   const d = await db();
-  return runInTransaction(d, async () => {
-    const affectedDays = new Set();
-    let moved = 0;
+  const affectedDays = new Set();
+  const moved = await runInTransaction(d, async () => {
+    let n = 0;
     for (const c of candidates) {
       const r = await d.runAsync(
         `UPDATE food_entries SET entry_date = ?
@@ -1374,7 +1562,7 @@ export async function repairPulledEntryDays(userId, cloudRows) {
         [c.cloudDay, c.id, userId, c.updatedAt, c.oldPullDay],
       );
       if (Number(r?.changes ?? 0) > 0) {
-        moved += 1;
+        n += 1;
         affectedDays.add(c.oldPullDay);
         affectedDays.add(c.cloudDay);
       }
@@ -1382,8 +1570,10 @@ export async function repairPulledEntryDays(userId, cloudRows) {
     for (const day of affectedDays) {
       await recomputeRollup(userId, day);
     }
-    return moved;
+    return n;
   });
+  if (moved > 0) notifyDiaryChanges(userId, [...affectedDays]);
+  return moved;
 }
 
 export async function getRollupForDay(userId, entryDate) {
@@ -1660,7 +1850,7 @@ export async function getWater(userId, entryDate) {
  * Insert a new recipe. Returns the new id so the caller can navigate
  * straight into the builder for that recipe.
  */
-export async function createRecipe(userId, { name, totalServings, notes = null }) {
+export async function createRecipe(userId, { name, totalServings, notes = null, cookedWeightG = null }) {
   if (!name || !name.trim()) {
     throw new Error('createRecipe: name is required');
   }
@@ -1671,11 +1861,13 @@ export async function createRecipe(userId, { name, totalServings, notes = null }
   const d = await db();
   const id = uid();
   const now = Date.now();
+  // Founder ruling "Add cooked weight": the whole cooked recipe's weight in
+  // grams, or NULL (normaliseCookedWeight is the one gate).
   await d.runAsync(
     `INSERT INTO recipes
-       (id, user_id, name, total_servings, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, userId, name.trim(), servings, notes, now, now]
+       (id, user_id, name, total_servings, notes, cooked_weight_g, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, name.trim(), servings, notes, normaliseCookedWeight(cookedWeightG), now, now]
   );
   _scheduleSync();
   return id;
@@ -1709,15 +1901,57 @@ export async function updateRecipe(userId, recipeId, patch = {}) {
     fields.push('notes = ?');
     params.push(patch.notes ?? null);
   }
+  // undefined leaves the cooked weight as it is; null clears it; anything
+  // else is stored through normaliseCookedWeight (an unusable value clears).
+  if (patch.cookedWeightG !== undefined) {
+    fields.push('cooked_weight_g = ?');
+    params.push(normaliseCookedWeight(patch.cookedWeightG));
+  }
   if (!fields.length) return;
   fields.push('updated_at = ?');
   params.push(now, recipeId, userId);
-  await d.runAsync(
+  const write = () => d.runAsync(
     `UPDATE recipes
      SET ${fields.join(', ')}
      WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
     params
   );
+  if (patch.cookedWeightG === undefined) {
+    await write();
+    _scheduleSync();
+    return;
+  }
+  // A changed cooked weight changes what a gram of the recipe is, so the
+  // remembered portion (food_slot_recents, a one-tap usual) is rescaled to
+  // still mean the same number of servings. Basis: the cooked weight when
+  // set, else the sum of the recipe's live ingredient grams. Skipped when
+  // either basis is not above 0. Same transaction as the recipe write.
+  const basisOf = async (cooked) => {
+    if (Number(cooked) > 0) return Number(cooked);
+    const r = await d.getFirstAsync(
+      `SELECT COALESCE(SUM(quantity_g), 0) AS g FROM recipe_ingredients
+       WHERE recipe_id = ? AND user_id = ? AND deleted_at IS NULL`,
+      [recipeId, userId]
+    );
+    return Number(r?.g) || 0;
+  };
+  await _inTx(d, async () => {
+    const before = await d.getFirstAsync(
+      'SELECT cooked_weight_g FROM recipes WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+      [recipeId, userId]
+    );
+    const nextCooked = normaliseCookedWeight(patch.cookedWeightG);
+    await write();
+    if (!before || (before.cooked_weight_g ?? null) === nextCooked) return;
+    const oldBasis = await basisOf(before.cooked_weight_g);
+    const newBasis = await basisOf(nextCooked);
+    if (!(oldBasis > 0) || !(newBasis > 0) || oldBasis === newBasis) return;
+    await d.runAsync(
+      `UPDATE food_slot_recents SET last_quantity_g = ROUND(last_quantity_g * ?, 1)
+       WHERE user_id = ? AND food_ref = 'recipe:' || ?`,
+      [newBasis / oldBasis, userId, recipeId]
+    );
+  });
   _scheduleSync();
 }
 
@@ -1748,7 +1982,7 @@ export async function deleteRecipe(userId, recipeId) {
 export async function listRecipes(userId) {
   const d = await db();
   return d.getAllAsync(
-    `SELECT id, name, total_servings, notes, created_at, updated_at
+    `SELECT id, name, total_servings, notes, cooked_weight_g, created_at, updated_at
      FROM recipes
      WHERE user_id = ? AND deleted_at IS NULL
      ORDER BY updated_at DESC`,
@@ -1905,7 +2139,7 @@ export async function listRecipesForPlanning(userId) {
 export async function getRecipeWithIngredients(userId, recipeId) {
   const d = await db();
   const recipe = await d.getFirstAsync(
-    `SELECT id, user_id, name, total_servings, notes, created_at, updated_at
+    `SELECT id, user_id, name, total_servings, notes, cooked_weight_g, created_at, updated_at
      FROM recipes
      WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
     [recipeId, userId]
@@ -2376,11 +2610,11 @@ export async function applyCuratedMealToDiary(userId, mealId, { mealSlot, entryD
   }
   const meal = CURATED_MEALS.find(m => m.id === mealId);
   if (!meal) return 0;
-  let logged = 0;
+  const entries = [];
   for (const it of mealItems(meal)) {
     const q = Number(it?.quantityG);
     if (!it?.foodRef || !Number.isFinite(q) || q <= 0) continue;
-    await logFoodEntry(userId, {
+    entries.push({
       entryDate,
       mealSlot,
       foodRef: it.foodRef,
@@ -2391,9 +2625,12 @@ export async function applyCuratedMealToDiary(userId, mealId, { mealSlot, entryD
       fatG: Number(it.fatG) || 0,
       fibreG: null,
     });
-    logged += 1;
   }
-  return logged;
+  // Food data-layer audit 2026-10-16, item 14: the whole meal is ONE write
+  // (logFoodEntries, D230 R10), so a failure leaves none of it written
+  // rather than the first few foods.
+  const ids = await logFoodEntries(userId, entries);
+  return ids.length;
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -2580,6 +2817,9 @@ export async function applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate
   if (!Number.isFinite(n) || n <= 0) return null;
   const food = await resolveFoodRef(userId, `recipe:${recipeId}`);
   if (!food || !(Number(food.serving_g) > 0)) return null;
+  // Founder ruling "Add cooked weight": a recipe with no cooked weight has no
+  // honest grams-to-portion figure, so it is logged by servings only.
+  if (byGrams && food.servings_only === true) return null;
   const quantityG = byGrams ? Math.round(n * 10) / 10 : Math.round(food.serving_g * n * 10) / 10;
   const factor = quantityG / 100;
   const foodRef = `recipe:${recipeId}`;
@@ -2731,9 +2971,20 @@ export async function applyFoodEntryFromCloud(userId, row, affectedDays = null) 
   const quick = typeof row?.food_ref === 'string' && row.food_ref.startsWith('quick:');
   const times = _cloudTimes(row ?? {});
   if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
-    || !isBoundedString(row?.meal_slot, 80) || !isBoundedString(row?.food_ref, 500)
-    || !validDiaryNumbers(row, { allowQuickZero: quick }) || !times
-    || (row.eaten_at != null && parseCloudEpochMs(row.eaten_at, { nullable: true }) === undefined)) return null;
+    || !isBoundedString(row?.meal_slot, 80) || !isBoundedString(row?.food_ref, 500)) {
+    _pullRejected('food_entries', 'identity');
+    return null;
+  }
+  // An out-of-range legacy row (grams outside 1 to 5000, a figure out of
+  // bounds) is still skipped, but logged (audit item 5).
+  if (!validDiaryNumbers(row, { allowQuickZero: quick })) {
+    _pullRejected('food_entries', 'figures');
+    return null;
+  }
+  if (!times || (row.eaten_at != null && parseCloudEpochMs(row.eaten_at, { nullable: true }) === undefined)) {
+    _pullRejected('food_entries', 'time');
+    return null;
+  }
   const { loggedAt, createdAt, updatedAt, deletedAt } = times;
   const d = await db();
   // F1: keep a newer/equal local edit rather than overwriting it with an
@@ -2813,7 +3064,10 @@ export async function applyCustomFoodFromCloud(userId, row) {
     || ![row?.fibre_100g, row?.sodium_100g, row?.sugar_100g, ...microValues]
       .every((value) => validFoodMetric(value, { nullable: true }))
     || optionalText.some((value) => value != null && !isBoundedString(value, 5000))
-    || !times) return false;
+    || !times) {
+    _pullRejected('custom_foods', 'values');
+    return false;
+  }
   const { createdAt, updatedAt, deletedAt } = times;
   // D230 R20: portions_json is read ONLY while this build pushes it
   // (CUSTOM_FOOD_PORTIONS_PUSH). Once migrate_195 is applied, food_sync_pull's
@@ -2884,12 +3138,18 @@ export async function applyCustomFoodFromCloud(userId, row) {
 export async function applySavedMealFromCloud(userId, row) {
   const times = _cloudTimes({ ...row, logged_at: row?.created_at });
   if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
-    || !isBoundedString(row?.name, 500) || !times) return false;
+    || !isBoundedString(row?.name, 500) || !times) {
+    _pullRejected('saved_meals', 'values');
+    return false;
+  }
   const { createdAt, updatedAt, deletedAt } = times;
   const itemsJson = typeof row.items_json === 'string'
     ? row.items_json
     : JSON.stringify(row.items_json ?? []);
-  if (!isBoundedString(itemsJson, 2_000_000)) return false;
+  if (!isBoundedString(itemsJson, 2_000_000)) {
+    _pullRejected('saved_meals', 'items');
+    return false;
+  }
   const d = await db();
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'saved_meals', row.id, userId);
@@ -2909,22 +3169,43 @@ export async function applyRecipeFromCloud(userId, row) {
   if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
     || !isBoundedString(row?.name, 500)
     || !isStrictNumberInRange(servings, 0.01, 1000)
-    || (row?.notes != null && !isBoundedString(row.notes, 5000)) || !times) return false;
+    || (row?.notes != null && !isBoundedString(row.notes, 5000)) || !times) {
+    _pullRejected('recipes', 'values');
+    return false;
+  }
   const { createdAt, updatedAt, deletedAt } = times;
   const d = await db();
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'recipes', row.id, userId);
   if (localMs != null && localMs >= updatedAt) return;
+  // cooked_weight_g is read ONLY while this build pushes it
+  // (RECIPE_COOKED_WEIGHT_PUSH, ships false until migrate_196 is applied) and
+  // the cloud row carries the key; otherwise the local value stands (the
+  // custom_foods portions_json pattern). ON CONFLICT DO UPDATE rather than
+  // INSERT OR REPLACE, so a column this applier does not write is kept.
+  const hasCookedKey = RECIPE_COOKED_WEIGHT_PUSH
+    && Object.prototype.hasOwnProperty.call(row, 'cooked_weight_g');
   await d.runAsync(
-    `INSERT OR REPLACE INTO recipes (
-      id, user_id, name, total_servings, notes,
+    `INSERT INTO recipes (
+      id, user_id, name, total_servings, notes, cooked_weight_g,
       deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      user_id = excluded.user_id,
+      name = excluded.name,
+      total_servings = excluded.total_servings,
+      notes = excluded.notes,
+      cooked_weight_g = CASE WHEN ? = 1 THEN excluded.cooked_weight_g ELSE recipes.cooked_weight_g END,
+      deleted_at = excluded.deleted_at,
+      created_at = excluded.created_at,
+      updated_at = excluded.updated_at`,
     [
       // Cloud sends `servings` (migrate_021/023); tolerate the legacy
       // `total_servings` key, default 1 so a recipe never lands with NULL servings.
       row.id, userId, row.name, servings, row.notes ?? null,
+      hasCookedKey ? normaliseCookedWeight(row.cooked_weight_g) : null,
       deletedAt, createdAt, updatedAt,
+      hasCookedKey ? 1 : 0,
     ]
   );
   return true;
@@ -2937,7 +3218,10 @@ export async function applyFavouriteFromCloud(userId, row) {
   // tombstones the local row (and a newer cloud un-delete revives it).
   const deletedAt = parseCloudEpochMs(row?.deleted_at, { nullable: true });
   if (!isBoundedString(userId, 300) || !isBoundedString(row?.food_ref, 500)
-    || lastUsedAt === undefined || deletedAt === undefined) return false;
+    || lastUsedAt === undefined || deletedAt === undefined) {
+    _pullRejected('food_favourites', 'values');
+    return false;
+  }
   const d = await db();
   // Cloud rows that pre-date mig 048 don't have `kind`; default to
   // 'fav' so they keep behaving exactly as before. Reject anything
@@ -2947,8 +3231,11 @@ export async function applyFavouriteFromCloud(userId, row) {
   // LWW on BOTH columns (food review D-M2): the previous applier took MAX on
   // last_used_at but overwrote `kind` unconditionally, so a stale cloud row
   // could re-assert an old like/dislike over a newer local change. Gate the
-  // whole update on the cloud row being newer-or-equal, mirroring the water
-  // applier, so a newer local kind is never clobbered by an older cloud row.
+  // whole update on the cloud row being STRICTLY newer (food data-layer audit
+  // 2026-10-16, item 3): a tie is this device's own push coming back, and
+  // until migrate_196 the cloud never stored `kind` (every row read 'fav'),
+  // so with `>=` a "Not suggested" turned back into a favourite on the next
+  // pull. Ties keep the local row, the convention of the other food appliers.
   await d.runAsync(
     `INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind, deleted_at)
      VALUES (?, ?, ?, ?, ?)
@@ -2956,7 +3243,7 @@ export async function applyFavouriteFromCloud(userId, row) {
        last_used_at = excluded.last_used_at,
        kind = excluded.kind,
        deleted_at = excluded.deleted_at
-     WHERE excluded.last_used_at >= food_favourites.last_used_at`,
+     WHERE excluded.last_used_at > food_favourites.last_used_at`,
     [userId, row.food_ref, lastUsedAt, kind, deletedAt]
   );
 }
@@ -2968,7 +3255,10 @@ export async function applyWaterFromCloud(userId, row) {
   const deletedAt = parseCloudEpochMs(row?.deleted_at, { nullable: true });
   if (!isBoundedString(userId, 300) || !isLocalDayKey(row?.entry_date)
     || !isStrictNumberInRange(row?.ml, 0, 20000, { integer: true })
-    || updatedAt === undefined || deletedAt === undefined) return false;
+    || updatedAt === undefined || deletedAt === undefined) {
+    _pullRejected('daily_water', 'values');
+    return false;
+  }
   const d = await db();
   await d.runAsync(
     `INSERT INTO daily_water (user_id, entry_date, ml, updated_at, deleted_at)

@@ -105,6 +105,14 @@ function weekLabel(iso) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
+// Calories and protein cannot be negative, so their axes start at zero; the
+// top leaves a little room above the highest point or the target line.
+function axisTop(...series) {
+  let m = 0;
+  for (const rows of series) for (const r of rows || []) if (Number.isFinite(r?.value)) m = Math.max(m, r.value);
+  return m > 0 ? Math.ceil(m * 1.15) : 1;
+}
+
 export default function FoodInsightsScreen({ navigation }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
@@ -481,6 +489,8 @@ export default function FoodInsightsScreen({ navigation }) {
               <VolyumeChart
                 data={calorieLine}
                 data2={calorieTargetRule}
+                min={0}
+                max={axisTop(calorieLine, calorieTargetRule)}
                 width={CHART_WIDTH}
                 height={140}
                 color={t.colors.primary}
@@ -600,6 +610,8 @@ export default function FoodInsightsScreen({ navigation }) {
                   <VolyumeChart
                     data={proteinLine}
                     data2={proteinTargetRule}
+                    min={0}
+                    max={axisTop(proteinLine, proteinTargetRule)}
                     width={CHART_WIDTH}
                     height={120}
                     color={t.colors.primary}

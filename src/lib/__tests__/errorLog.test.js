@@ -240,6 +240,25 @@ describe('SC-7: ring-buffer redaction reuses the sentryScrub patterns', () => {
     expect(entry.context).not.toContain('91');
     expect(entry.context).toContain('abc');
   });
+
+  // Food data-layer audit 2026-10-16, item 10: a food ref or a scanned barcode
+  // names what a person ate, so neither lands in the exportable buffer.
+  test('food refs and barcodes are redacted in every spelling', async () => {
+    logWarn('Food', 'lookup failed', {
+      foodRef: 'custom:ref-secret-1',
+      food_ref: 'recipe:ref-secret-2',
+      barcode: '5000169005064',
+      barcode_ean: '5012345678900',
+      barcodeEan: '0012345678905',
+      stage: 'search',
+    });
+    await flushWrites();
+    const [entry] = await getRecentErrors();
+    for (const secret of ['ref-secret-1', 'ref-secret-2', '5000169005064', '5012345678900', '0012345678905']) {
+      expect(entry.context).not.toContain(secret);
+    }
+    expect(entry.context).toContain('"stage":"search"');
+  });
 });
 
 describe('crash log helpers', () => {

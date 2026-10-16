@@ -37,7 +37,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logSyncError } from '../telemetry';
 import { logError } from '../../errorLog';
-import { FOOD_ENTRY_NOTE_PUSH, CUSTOM_FOOD_PORTIONS_PUSH } from '../featureFlags';
+import { FOOD_ENTRY_NOTE_PUSH, CUSTOM_FOOD_PORTIONS_PUSH, RECIPE_COOKED_WEIGHT_PUSH } from '../featureFlags';
 import { parsePortions } from '../../food/portions';
 
 const FOOD_LAST_PUSHED_KEY = (userId) => `@volyume_food_last_pushed_${userId}`;
@@ -45,6 +45,11 @@ const FOOD_LAST_PULLED_KEY = (userId) => `@volyume_food_last_pulled_${userId}`;
 // Per user, per device (AsyncStorage is this device's): set once the one-time
 // repair of rows the old pull moved has completed (repairPulledEntryDaysOnce).
 export const FOOD_DAY_REPAIR_KEY = (userId) => `@volyume_food_entry_day_repair_${userId}`;
+// Beside the marker: the moment (epoch ms) of the last repair attempt, so a
+// repair that keeps failing is tried at most once a day rather than after
+// every successful pull (food data-layer audit 2026-10-16, item 11).
+export const FOOD_DAY_REPAIR_ATTEMPT_KEY = (userId) => `@volyume_food_entry_day_repair_attempt_${userId}`;
+export const FOOD_DAY_REPAIR_RETRY_MS = 24 * 60 * 60 * 1000;
 
 // The most rows one food_sync_push call carries for one table. A large import
 // (thousands of diary rows) used to go up as ONE call: one oversized request
@@ -254,6 +259,9 @@ export function _recipeToCloud(row, userId) {
     // `total_servings`. Read the local key, emit the cloud key.
     servings: row.total_servings ?? 1,
     notes: row.notes ?? null,
+    // Founder ruling "Add cooked weight": sent only once migrate_196 is
+    // applied (RECIPE_COOKED_WEIGHT_PUSH); absent, not null, until then.
+    ...(RECIPE_COOKED_WEIGHT_PUSH ? { cooked_weight_g: row.cooked_weight_g ?? null } : {}),
     created_at: _msToISOorNull(row.created_at),
     updated_at: _msToISOorNull(row.updated_at),
     deleted_at: _msToISOorNull(row.deleted_at),
@@ -491,6 +499,13 @@ async function _doPullAll(sb, { userId }) {
       }
     }
   }
+  // The "diary changed" signal (food data-layer audit 2026-10-16, item 7):
+  // the days whose rows this pull changed, once, after their rows and
+  // rollups are written. Never throws (notifyDiaryChanges catches each
+  // listener). Skipped where the food module has none (a test double).
+  if (datesToRecompute.size > 0 && typeof food.notifyDiaryChanges === 'function') {
+    food.notifyDiaryChanges(userId, [...datesToRecompute]);
+  }
 
   // daily_intake_rollups is server-computed; the count of rolled
   // dates we recomputed locally is the best proxy.
@@ -541,8 +556,11 @@ let _dayRepairPromise = null;
  * itself makes: the RPC is not paged), hands them to repairPulledEntryDays,
  * and marks FOOD_DAY_REPAIR_KEY only after that completes. Best effort: any
  * failure goes to logError with the error alone (no context: no row, no day,
- * no figure; logError's Sentry path scrubs) and the repair runs again after
- * the next successful pull. It logs through logError, not logSyncError, so a
+ * no figure; logError's Sentry path scrubs) and the repair runs again after a
+ * later successful pull, at most once a day: each attempt stamps
+ * FOOD_DAY_REPAIR_ATTEMPT_KEY first (food data-layer audit 2026-10-16, item
+ * 11; before it, a repair that kept failing re-fetched the whole food history
+ * after every pull). It logs through logError, not logSyncError, so a
  * repair finishing during a later sync run never counts in that run's
  * per-table error marks. Never throws; one run at a time. Resolves to the number of rows moved, or null when it did not run
  * to completion (already done, failed, or nothing to call).
@@ -558,6 +576,13 @@ export function repairPulledEntryDaysOnce(sb, userId) {
     if (!sb || typeof sb.rpc !== 'function' || !userId) return null;
     const key = FOOD_DAY_REPAIR_KEY(userId);
     if ((await AsyncStorage.getItem(key)) === 'true') return null;
+    const attemptKey = FOOD_DAY_REPAIR_ATTEMPT_KEY(userId);
+    const lastAttempt = Number(await AsyncStorage.getItem(attemptKey));
+    const now = Date.now();
+    // A stamp in the future (a clock moved back) does not hold the repair off.
+    if (Number.isFinite(lastAttempt) && lastAttempt > 0 && lastAttempt <= now
+      && now - lastAttempt < FOOD_DAY_REPAIR_RETRY_MS) return null;
+    await AsyncStorage.setItem(attemptKey, String(now));
     const { data, error } = await sb.rpc('food_sync_pull', { last_pulled_at: new Date(0).toISOString() });
     if (error) {
       logError('sync.tables.foodDomain.dayRepair.fetch', error);

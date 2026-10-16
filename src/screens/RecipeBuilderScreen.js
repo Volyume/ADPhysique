@@ -25,6 +25,7 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import { parseCookedWeight, MAX_COOKED_WEIGHT_G } from '../lib/food/recipeWeight';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, StyleSheet, TouchableOpacity,
@@ -39,7 +40,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, type, iconSize, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { toEnergy, energyUnitLabel } from '../lib/format';
+import { formatEnergy, energyUnitLabel } from '../lib/format';
 import {
   createRecipe, updateRecipe, getRecipeWithIngredients,
   setRecipeIngredients, computeRecipeMacros,
@@ -87,6 +88,10 @@ export default function RecipeBuilderScreen({ navigation, route }) {
   const [name, setName] = useState('');
   const [totalServings, setTotalServings] = useState('4');
   const [notes, setNotes] = useState('');
+  // Founder ruling 2026-10-16 ("Add cooked weight"): the whole dish's weight
+  // once cooked, optional. With it a recipe can be logged in grams of the
+  // cooked dish; without it, in servings only. Held as typed text.
+  const [cookedWeight, setCookedWeight] = useState('');
   // Ingredients held locally until save. Each entry:
   // { id?, food_ref, quantity_g, food }
   const [ingredients, setIngredients] = useState([]);
@@ -119,6 +124,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         if (!recipe) throw new Error('Recipe not found');
         setName(recipe.name ?? '');
         setTotalServings(String(recipe.total_servings ?? 4));
+        setCookedWeight(Number(recipe.cooked_weight_g) > 0 ? String(recipe.cooked_weight_g) : '');
         setNotes(recipe.notes ?? '');
         // Resolve each ingredient's food so the preview can show
         // names + per-100g macros.
@@ -304,7 +310,10 @@ export default function RecipeBuilderScreen({ navigation, route }) {
     });
   }
 
-  const canSave = name.trim().length > 0 && Number(totalServings) > 0 && !saving;
+  // Comma decimals ("2,5") read as the person means them (food audit
+  // 2026-10-16), through the app's one number parser.
+  const servingsValue = parseDecimalInput(totalServings);
+  const canSave = name.trim().length > 0 && servingsValue > 0 && !saving;
 
   async function onSave() {
     if (!canSave) return;
@@ -327,9 +336,14 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       toast.show('Every ingredient needs an amount above 0 g. Fix or remove the empty ones.', { variant: 'warning' });
       return;
     }
-    const servingsNum = Number(totalServings);
+    const servingsNum = servingsValue;
     if (!Number.isFinite(servingsNum) || servingsNum <= 0) {
       toast.show('Set how many servings this recipe makes.', { variant: 'warning' });
+      return;
+    }
+    const cookedWeightG = parseCookedWeight(cookedWeight);
+    if (cookedWeightG === undefined) {
+      toast.show(`Enter the cooked weight in grams, from 1 to ${MAX_COOKED_WEIGHT_G.toLocaleString('en-GB')}, or leave it blank.`, { variant: 'warning' });
       return;
     }
     setSaving(true);
@@ -338,14 +352,16 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       if (!id) {
         id = await createRecipe(userId, {
           name: name.trim(),
-          totalServings: Number(totalServings),
+          totalServings: servingsNum,
           notes: notes.trim() || null,
+          cookedWeightG,
         });
       } else {
         await updateRecipe(userId, id, {
           name: name.trim(),
-          totalServings: Number(totalServings),
+          totalServings: servingsNum,
           notes: notes.trim() || null,
+          cookedWeightG,
         });
       }
       await setRecipeIngredients(userId, id, ingredients.map((ing) => ({
@@ -468,6 +484,23 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 
         <View style={[styles.section, live.section]}>
           <TextField
+            label="Cooked weight in grams"
+            value={cookedWeight}
+            onChangeText={setCookedWeight}
+            placeholder="Optional"
+            placeholderTextColor={t.colors.textMuted}
+            surface="surface"
+            keyboardType="decimal-pad"
+            maxLength={7}
+            accessibilityLabel="Cooked weight in grams, optional"
+          />
+          <Text style={[styles.importHint, live.importHint]}>
+            Weigh the whole dish once it is cooked to log it in grams. Without it, the recipe is logged in servings.
+          </Text>
+        </View>
+
+        <View style={[styles.section, live.section]}>
+          <TextField
             label="Notes"
             value={notes}
             onChangeText={setNotes}
@@ -532,13 +565,15 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         <View style={[styles.macros, live.macros]}>
           <SectionLabel style={styles.macrosTitle}>Per serving</SectionLabel>
           <View style={styles.macrosRow}>
-            <MacroPill label={energyUnitLabel(energyUnit)} value={toEnergy(macros.perServing.kcal, energyUnit)} />
-            <MacroPill label="P" value={`${macros.perServing.protein}g`} />
-            <MacroPill label="C" value={`${macros.perServing.carbs}g`} />
-            <MacroPill label="F" value={`${macros.perServing.fat}g`} />
+            <MacroPill label={energyUnitLabel(energyUnit)} value={formatEnergy(macros.perServing.kcal, energyUnit)} />
+            <MacroPill label="P" value={`${macros.perServing.protein} g`} />
+            <MacroPill label="C" value={`${macros.perServing.carbs} g`} />
+            <MacroPill label="F" value={`${macros.perServing.fat} g`} />
           </View>
           <Text style={[styles.macrosSub, live.macrosSub]}>
-            Whole recipe: {toEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - P {macros.total.protein}g - C {macros.total.carbs}g - F {macros.total.fat}g
+            {/* R15 number grammar (food audit 2026-10-16): grouped figures,
+                a space before the unit, and the house middle dot. */}
+            Whole recipe: {formatEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · P {macros.total.protein} g · C {macros.total.carbs} g · F {macros.total.fat} g
           </Text>
         </View>
       </KeyboardAwareScrollView>

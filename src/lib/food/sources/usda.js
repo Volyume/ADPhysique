@@ -83,20 +83,43 @@ export async function lookupUsdaById(fdcId) {
 }
 
 /**
+ * The digits of a barcode with leading zeros dropped, so a UPC-A
+ * ("012345678905"), its EAN-13 form ("0012345678905") and a GTIN-14 padding
+ * compare equal. '' when there are no digits.
+ */
+export function normaliseGtin(code) {
+  return String(code ?? '').replace(/\D/g, '').replace(/^0+/, '');
+}
+
+// How many search hits a barcode lookup reads to find the one whose GTIN is
+// the scanned code (the search is a full-text match, not a GTIN lookup).
+const BARCODE_SEARCH_PAGE = 5;
+
+/**
  * Look up a USDA item by GTIN/UPC. USDA's Branded dataset carries
  * GTINs for many North American supermarket items, providing a
  * fallback for the OFF gap on US-only products.
+ *
+ * Food data-layer audit 2026-10-16, item 9: the endpoint is a full-text
+ * SEARCH, so its first hit is not necessarily the scanned product (a code
+ * that merely appears in another item's text matched, and that item's
+ * figures were offered for the scanned food). A hit is accepted ONLY when its
+ * `gtinUpc` is the scanned code (leading zeros ignored); otherwise null, and
+ * the waterfall moves on.
  */
 export async function lookupBarcodeUsda(ean) {
   const key = _apiKey();
   if (!key || !ean) return null;
-  const url = `${USDA_BASE}/foods/search?query=${encodeURIComponent(ean)}&pageSize=1&dataType=Branded`;
+  const wanted = normaliseGtin(ean);
+  if (!wanted) return null;
+  const url = `${USDA_BASE}/foods/search?query=${encodeURIComponent(ean)}&pageSize=${BARCODE_SEARCH_PAGE}&dataType=Branded`;
   try {
     const res = await _fetchWithTimeout(url, USDA_TIMEOUT_MS, { 'X-Api-Key': key });
     if (!res.ok) return null;
     const json = await res.json();
-    const first = Array.isArray(json?.foods) ? json.foods[0] : null;
-    return first ? normaliseUsdaFood(first) : null;
+    const foods = Array.isArray(json?.foods) ? json.foods : [];
+    const match = foods.find((f) => f && normaliseGtin(f.gtinUpc) === wanted);
+    return match ? normaliseUsdaFood(match) : null;
   } catch {
     return null;
   }

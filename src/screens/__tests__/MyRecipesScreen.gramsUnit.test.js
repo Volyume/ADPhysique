@@ -211,11 +211,21 @@ describe('the recipe sheet\'s second unit', () => {
     expect(headings.map((n) => n.props.children)).toContain('Chilli');
   });
 
-  test('a serving weight that cannot be read still leaves Grams usable from a typed amount', async () => {
+  // Re-pinned 2026-10-16 (founder ruling "Add cooked weight"): grams are
+  // offered only when the recipe's cooked serving is known. A serving that
+  // cannot be read logs its cause and leaves servings, never a gram guess.
+  test('a serving weight that cannot be read offers servings only, with its cause logged', async () => {
     resolveFoodRef.mockRejectedValue(new Error('locked'));
     const { tree } = await openSheet();
     expect(logError).toHaveBeenCalledWith('MyRecipes.resolveServing', expect.any(Error), { hasId: true });
-    await act(async () => { tree.root.findAll((n) => n.props?.label === 'Grams')[0].props.onPress(); });
-    expect(gramsField(tree).props.value).toBe('100');
+    expect(tree.root.findAll((n) => n.props?.label === 'Grams')).toHaveLength(0);
+  });
+
+  test('a recipe with no cooked weight (servings only) offers servings, and says how to log grams', async () => {
+    resolveFoodRef.mockResolvedValue({ food_ref: 'recipe:r1', serving_g: 375, servings_only: true });
+    const { tree } = await openSheet();
+    expect(tree.root.findAll((n) => n.props?.label === 'Grams')).toHaveLength(0);
+    const text = tree.root.findAll((n) => typeof n.props?.children === 'string').map((n) => n.props.children).join(' ');
+    expect(text).toContain('To log this recipe in grams, add its cooked weight when you edit it.');
   });
 });

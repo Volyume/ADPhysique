@@ -23,6 +23,21 @@
  * ship as rows with deleted_at set; the cloud side either accepts
  * them (creates / updates the tombstone) or its LWW gate rejects
  * (cloud row is newer than this client's delete).
+ * Food data-layer audit 2026-10-16, item 4:
+ *  - an ingredient whose recipe is tombstoned on this device is not sent.
+ *    It needs no cloud write (after migrate_196 the cloud rows stay under
+ *    their soft-deleted recipe), and sending it failed its whole batch every
+ *    cycle once the cloud had hard-deleted the recipe (migrate_195 and
+ *    earlier), because the table's row-level policy requires the parent
+ *    recipe row to exist.
+ *  - only rows changed since the last clean push are sent, by the per-table
+ *    push watermark (sync/watermark.js), as the workouts push does: inclusive
+ *    (`>=`) so a row stamped in the boundary millisecond goes again (an
+ *    idempotent upsert), advanced to the newest updated_at pushed only when
+ *    every batch succeeded. Every write to a recipe_ingredients row bumps its
+ *    updated_at (setRecipeIngredients, the soft delete, the pull's apply), so
+ *    no change can hide below the watermark. Sign-out clears it, so the next
+ *    sign-in pushes everything once.
  *
  * Pull: read every row for the user from the cloud, including
  * tombstones. For each row, compare local updated_at against
@@ -31,6 +46,9 @@
  */
 
 import { logSyncError } from '../telemetry';
+import { getPushWatermark, setPushWatermark, toMs } from '../watermark';
+
+const WATERMARK_TABLE = 'recipe_ingredients';
 
 const PUSH_BATCH_SIZE = 200;
 
@@ -51,11 +69,17 @@ export async function pushRecipeIngredients(sb, { userId, localUserId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
   try {
     // eslint-disable-next-line global-require
-    const { getAllRecipeIngredientsForUser } = require('../../database');
+    const { getAllRecipeIngredientsForUser, getTombstonedRecipeIdsForUser } = require('../../database');
     const ingredients = await getAllRecipeIngredientsForUser(localUserId);
     if (!ingredients?.length) return { count: 0, errors: 0 };
+    const deadRecipes = new Set(await getTombstonedRecipeIdsForUser(localUserId));
+    const wm = await getPushWatermark(userId, WATERMARK_TABLE);
+    const changedMs = (r) => toMs(r.updatedAt ?? r.createdAt);
+    const due = ingredients.filter((r) => !deadRecipes.has(r.recipeId)
+      && (wm <= 0 || changedMs(r) >= wm));
+    if (due.length === 0) return { count: 0, errors: 0 };
 
-    const rows = ingredients.map((r) => ({
+    const rows = due.map((r) => ({
       id: r.id,
       recipe_id: r.recipeId,
       food_ref: r.foodRef,
@@ -80,6 +104,12 @@ export async function pushRecipeIngredients(sb, { userId, localUserId } = {}) {
       } else {
         pushed += batch.length;
       }
+    }
+    // Advance only after a clean push, so a failed batch is sent again.
+    if (errors === 0) {
+      let maxMs = wm;
+      for (const r of due) maxMs = Math.max(maxMs, changedMs(r));
+      if (maxMs > wm) await setPushWatermark(userId, WATERMARK_TABLE, maxMs);
     }
     return { count: pushed, errors };
   } catch (e) {

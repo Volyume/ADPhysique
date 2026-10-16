@@ -180,7 +180,8 @@ describe('the amount is the house Stepper, clamped to BUMP_STEP and stepMax', ()
   test('the preview follows the stepper (the plan is recomputed from the clamped value)', () => {
     const { tree } = mount();
     press(tree, 'More'); // 200: Friday 2600
-    expect(joined(tree)).toMatch(/Fri: 2600 kcal/);
+    // R15 number grammar (food Diary audit 2026-10-16, item 12): grouped.
+    expect(joined(tree)).toMatch(/Fri: 2,600 kcal/);
   });
 });
 
@@ -227,7 +228,8 @@ describe('explanation is on demand: the four rules sit under "How this works"', 
 
   test('pressing "How this works" shows all four unchanged lines, pressing again hides them', () => {
     const { tree } = mount();
-    expect(BANK_RULES).toHaveLength(4);
+    // Re-pinned 2026-10-16: a fifth line says only today onwards change.
+    expect(BANK_RULES).toHaveLength(5);
     press(tree, 'How this works');
     for (const line of BANK_RULES) expect(allText(tree)).toContain(line);
     const toggle = deepest(pressables(tree, 'How this works'));
@@ -287,7 +289,9 @@ describe('title and voice', () => {
   });
 
   test('no collaborative "we" anywhere the person can read, including the refusal copy', () => {
-    const { tree } = mount({ weekDates: [] }); // plan.reason === 'invalid_input'
+    // A bigger day outside the week: plan.reason === 'invalid_input'. (An empty
+    // week now shows the passed-week line instead, food audit 2026-10-16.)
+    const { tree } = mount({ defaultBigDay: '2026-10-30' });
     expect(joined(tree)).toContain('That day could not be planned. Try a different day.');
     press(tree, 'How this works');
     expect(joined(tree)).not.toMatch(/\bwe\b/i);
@@ -303,5 +307,32 @@ describe('title and voice', () => {
     expect(src).toMatch(/maxApplicableBumpKcal\(\{/);
     expect(src).toMatch(/floorKcal, bandMaxKcal/);
     expect(src).toMatch(/const BUMP_STEP = 50/);
+  });
+});
+
+// Food audit 2026-10-16, founder ruling "Today onwards only": the Diary hands
+// the sheet today and the days after it, so the sheet must speak plainly when
+// one day or none is left, and keep the real week start on the stored bank.
+describe('today onwards only (food audit 2026-10-16)', () => {
+  test('one day left: the last-day line, and Plan it stays disabled', () => {
+    const { tree, onApply } = mount({ weekDates: ['2026-10-18'], defaultBigDay: '2026-10-18' });
+    expect(joined(tree)).toContain('Today is the last day of this week, so there is no other day to make room. You can plan one from Monday.');
+    const plan = deepest(pressables(tree, 'Apply the higher-calorie day'));
+    expect(plan.props.accessibilityState?.disabled ?? plan.props.disabled).toBe(true);
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  test('no days left (a past week): the passed-week line', () => {
+    const { tree } = mount({ weekDates: [], defaultBigDay: '2026-10-07' });
+    expect(joined(tree)).toContain('This week has already passed. You can plan one for this week or a later one.');
+  });
+
+  test('the payload keeps the real Monday as weekStartKey when the chips start later', () => {
+    const { tree, onApply } = mount({ weekDates: WEEK.slice(4), weekStartKey: WEEK[0] });
+    press(tree, 'Apply the higher-calorie day');
+    expect(onApply).toHaveBeenCalledTimes(1);
+    const bank = onApply.mock.calls[0][0];
+    expect(bank.weekStartKey).toBe('2026-10-12');
+    expect(Object.keys(bank.perDayDeltaKcal).sort()).toEqual(WEEK.slice(4));
   });
 });

@@ -122,12 +122,13 @@ describe('the local migration', () => {
     // workout_sets table that later ALTER needs (a mechanical +1 re-anchor).
     raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
     raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
+    raw.exec('CREATE TABLE recipes (id TEXT PRIMARY KEY)'); // the cooked-weight step ALTERs this table
     raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
     raw.prepare('INSERT INTO programmes (id, name, updated_at) VALUES (?, ?, ?)').run('p-old', 'Old plan', 111);
     // 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
     // inert against these fixtures), so every last-N window and user_version reset below moves by one
     // (a mechanical +1 re-anchor, as LR2 did before it).
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 7}`);
     await runMigrations(adaptRaw(raw));
 
     const row = raw.prepare('SELECT id, name, updated_at, plan_facts FROM programmes WHERE id = ?').get('p-old');
@@ -140,14 +141,15 @@ describe('the local migration', () => {
     raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT, updated_at INTEGER)');
     raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
     raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
+    raw.exec('CREATE TABLE recipes (id TEXT PRIMARY KEY)'); // the cooked-weight step ALTERs this table
     raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
     raw.prepare('INSERT INTO programmes (id, name, updated_at) VALUES (?, ?, ?)').run('p-old', 'Old plan', 111);
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 7}`);
     await runMigrations(adaptRaw(raw));
     raw.prepare('UPDATE programmes SET plan_facts = ? WHERE id = ?').run('{"version":2}', 'p-old');
     const before = raw.prepare('SELECT * FROM programmes WHERE id = ?').get('p-old');
 
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 7}`);
     await expect(runMigrations(adaptRaw(raw))).resolves.not.toThrow();
 
     expect(raw.prepare('SELECT * FROM programmes WHERE id = ?').get('p-old')).toEqual(before);

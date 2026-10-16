@@ -45,7 +45,8 @@ import {
 import { rankAroundThisTime } from '../lib/food/aroundThisTime';
 import { entryDateLine, shiftDate } from '../lib/food/diaryDates';
 import { getNutritionTargets } from '../lib/database';
-import { getCuratedCandidates } from '../lib/food/curatedMeals';
+import { getCuratedCandidates, CURATED_MEALS, mealItems } from '../lib/food/curatedMeals';
+import { withCuratedServing } from '../lib/food/curatedFoods';
 import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 // Campaign 17B job 8: one "don't suggest" instruction, obeyed everywhere the
 // app chooses food for the user.
@@ -63,7 +64,7 @@ import { audit } from '../lib/observability';
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { toEnergy, energyUnitLabel } from '../lib/format';
+import { energyUnitLabel, formatEnergy, formatNumber, formatWithUnit } from '../lib/format';
 import { useToast } from '../components/Toast';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
@@ -516,18 +517,21 @@ export default function FoodSearchScreen({ navigation, route }) {
   // toast with its Undo, the same failure copy. `items` carry
   // { food, quantityG, kcal, proteinG, carbsG, fatG, fibreG }; `onWritten`
   // clears whatever the rows came from, after a successful write only.
-  async function writeItems(items, onWritten) {
-    if (!items.length) return;
+  async function writeItems(items, onWritten, { rethrow = false } = {}) {
+    if (!items.length) return false;
     // CALC-3: in-flight guard so a double-tap can't log the whole plate twice
     // (each write mints fresh ids, so duplicates can't be deduped).
-    if (loggingPlateRef.current) return;
+    if (loggingPlateRef.current) return false;
     loggingPlateRef.current = true;
     const total = items.length;
-    const mealName = mealSlotLabel(mealSlot);
+    // An item may carry its own meal, day, basis and note (a food added from
+    // the sheet chose them there); the plate's own items use this screen's.
+    const slotOf = (it) => it.mealSlot ?? mealSlot;
+    const slots = [...new Set(items.map(slotOf))];
     try {
       const writtenIds = await logFoodEntries(userId, items.map((it) => ({
-        entryDate,
-        mealSlot,
+        entryDate: it.entryDate ?? entryDate,
+        mealSlot: slotOf(it),
         foodRef: it.food.food_ref,
         quantityG: it.quantityG,
         kcal: it.kcal,
@@ -535,18 +539,22 @@ export default function FoodSearchScreen({ navigation, route }) {
         carbsG: it.carbsG,
         fatG: it.fatG,
         fibreG: it.fibreG,
+        ...(it.weightState !== undefined ? { weightState: it.weightState } : null),
+        ...(it.note ? { note: it.note } : null),
       })));
       for (const it of items) {
+        if (it.skipSlotRecent) continue; // quick adds and curated meals keep no per-food memory
         // eslint-disable-next-line no-await-in-loop
         await upsertSlotRecent(userId, {
-          mealSlot,
+          mealSlot: slotOf(it),
           foodRef: it.food.food_ref,
           quantityG: it.quantityG,
         }).catch((e) => { logError('FoodSearchScreen.logPlate.slotRecent', e, { mealSlot }); }); // derived memory only; never fail the log
       }
+      const where = slots.length === 1 ? ` to ${mealSlotLabel(slots[0])}` : '';
       const message = total === 1
-        ? `${items[0].food?.name ?? 'Food'} added to ${mealName}.`
-        : `${total} foods added to ${mealName}.`;
+        ? `${items[0].food?.name ?? 'Food'} added${where}.`
+        : `${total} foods added${where}.`;
       // The toast provider is app-level, so it survives the goBack below.
       toast.show(message, {
         variant: 'undo',
@@ -554,21 +562,39 @@ export default function FoodSearchScreen({ navigation, route }) {
       });
       onWritten?.();
       navigation.goBack();
+      return true;
     } catch (e) {
       // FF-007: a failed plate write must be reported, never silent. Nothing
       // was written (one transaction), so the plate stays up for a retry
       // that cannot double-log.
       logError('FoodSearchScreen.logPlate', e, { mealSlot, total });
+      // A caller whose own sheet reports the failure (and stays open to retry)
+      // asks for the cause back instead of a second toast.
+      if (rethrow) throw e;
       toast.show(
         total === 1
           ? 'That food was not added. Try again in a moment.'
           : 'Those foods were not added. Try again in a moment.',
         { variant: 'error', duration: 5000 },
       );
+      return false;
     } finally {
       loggingPlateRef.current = false;
     }
   }
+
+  // Everything already waiting to be logged: the plate and the rows parked
+  // from a typed line. Any single-food add below writes these WITH the new
+  // food, in one write with one Undo, because the screen closes afterwards
+  // and nothing on the plate may be lost on the way out (food audit
+  // 2026-10-16, item 5).
+  function pendingItems() {
+    const parked = (lineParked || []).filter((r) => r.food).map((r) => ({
+      food: r.food, quantityG: r.grams, ...scaleMacros(r.food, r.grams),
+    }));
+    return [...plate, ...parked];
+  }
+  function clearPending() { setPlate([]); setShowPlate(false); setLineParked(null); }
 
   // The plate toast's Undo: every row the log wrote, removed in one
   // transaction (D230 R10), under the one toast.
@@ -603,7 +629,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     return rankByPersonalHistory(
       mergePersonalMatches(rows, { personal: personalPool, query: name }),
       { favouriteRefs, recentRefs, frequentRefs },
-    );
+    ).map(withCuratedServing);
   }
 
   async function openLineReview() {
@@ -613,7 +639,10 @@ export default function FoodSearchScreen({ navigation, route }) {
     try {
       const matches = await matchFoodLineParts(lineParts, searchForLinePart);
       setLineReview(matches.map(({ part, food }, i) => {
-        const portion = food ? portionFor(part, food) : null;
+        // The person's own amount for this food at this meal comes first, then
+        // the food's serving, then the generic guess (portionFor).
+        const personalG = food ? (food.last_quantity_g > 0 ? food.last_quantity_g : slotPortions.get(food.food_ref)) : undefined;
+        const portion = food ? portionFor(part, food, { personalG }) : null;
         return {
           key: `line-${i}-${part.name}`,
           part,
@@ -690,6 +719,17 @@ export default function FoodSearchScreen({ navigation, route }) {
   // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
   // as "Quick add" with no gram weight. Logs, then returns to the diary.
   async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot: slot, note }) {
+    const pending = pendingItems();
+    if (pending.length > 0) {
+      // The write closes the screen itself, so quickSavedRef stays false and
+      // the sheet's close does not go back a second time.
+      await writeItems([...pending, {
+        food: { food_ref: 'quick:adhoc', name: (note && String(note).trim()) || 'Quick add' },
+        quantityG: 0, kcal, proteinG: protein, carbsG: carbs, fatG: fat, fibreG: null,
+        mealSlot: slot, note, skipSlotRecent: true,
+      }], clearPending, { rethrow: true });
+      return;
+    }
     const entryId = await logFoodEntry(userId, {
       entryDate,
       mealSlot: slot,
@@ -719,6 +759,27 @@ export default function FoodSearchScreen({ navigation, route }) {
   const preselectedFood = route?.params?.preselectedFood;
   useEffect(() => {
     const routedFood = scannedFood ?? preselectedFood;
+    // A scan started from this screen's More tab comes back by replacing the
+    // scanner with a NEW add screen, leaving two on the stack. When an earlier
+    // add screen exists, hand the food to it and drop this one, so the plate
+    // and the search are still there.
+    if (routedFood && !picker) {
+      try {
+        const routes = navigation.getState?.()?.routes ?? [];
+        const idx = routes.findIndex((r) => r.key === route?.key);
+        const earlier = idx > 0 ? routes.slice(0, idx).reverse().find((r) => r.name === 'FoodSearch') : null;
+        if (earlier) {
+          navigation.navigate({
+            key: earlier.key,
+            params: { scannedFood, preselectedFood },
+            merge: true,
+          });
+          return;
+        }
+      } catch (e) {
+        logError('FoodSearchScreen.dedupeScan', e); // fall through: open the food here
+      }
+    }
     if (routedFood && !picker) {
       setPicker({ food: routedFood, fromScan: !!scannedFood });
       navigation.setParams({ scannedFood: undefined, preselectedFood: undefined });
@@ -748,6 +809,14 @@ export default function FoodSearchScreen({ navigation, route }) {
       fromScan: !!picker?.fromScan,
       surface: 'sheet',
     });
+    const pending = pendingItems();
+    if (pending.length > 0) {
+      await writeItems([...pending, {
+        food, quantityG, ...scaleMacros(food, quantityG),
+        entryDate: chosenDate, mealSlot: chosenSlot, weightState, note, // D230 R20
+      }], clearPending, { rethrow: true });
+      return;
+    }
     const entryId = await logFoodEntry(userId, buildFoodEntryPayload({
       entryDate: chosenDate,
       mealSlot: chosenSlot,
@@ -767,7 +836,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     // this path (the sheet's "Add to diary") showed nothing at all. Exact
     // pattern from DiaryScreen.onLogUsual; the toast survives the goBack
     // below because the Toast provider is mounted at the app root.
-    toast.show(`${food.name ?? 'Food'} added.`, {
+    toast.show(`${food.name ?? 'Food'} added to ${mealSlotLabel(chosenSlot)}.`, {
       variant: 'undo',
       action: { label: 'Undo', onPress: async () => { await deleteFoodEntry(entryId, userId); } },
     });
@@ -782,6 +851,30 @@ export default function FoodSearchScreen({ navigation, route }) {
     setLoggingMealId(s.id);
     try {
       audit('food.suggestMeal', { mealId: s.id, mealSlot, itemCount: s.itemCount });
+      const pending = pendingItems();
+      if (pending.length > 0) {
+        const meal = CURATED_MEALS.find((m) => m.id === s.id);
+        const mealRows = (meal ? mealItems(meal) : [])
+          .filter((it) => it?.foodRef && Number(it.quantityG) > 0)
+          .map((it) => ({
+            food: { food_ref: it.foodRef, name: it.name },
+            quantityG: Number(it.quantityG),
+            kcal: Number(it.kcal) || 0,
+            proteinG: Number(it.proteinG) || 0,
+            carbsG: Number(it.carbsG) || 0,
+            fatG: Number(it.fatG) || 0,
+            fibreG: null,
+            skipSlotRecent: true,
+          }));
+        const ok = mealRows.length > 0
+          && await writeItems([...pending, ...mealRows], clearPending);
+        if (ok) setMealSheet(null);
+        else {
+          if (!mealRows.length) toast.show('That meal was not added. Try again in a moment.', { variant: 'error', duration: 4000 });
+          setLoggingMealId(null);
+        }
+        return;
+      }
       await applyCuratedMealToDiary(userId, s.id, { mealSlot, entryDate });
       setMealSheet(null);
       navigation.goBack();
@@ -811,6 +904,15 @@ export default function FoodSearchScreen({ navigation, route }) {
         fibre_100g: cand.fibre100,
       };
       audit('food.suggestFood', { source: cand.source ?? 'unknown', mealSlot, quantityG: s.quantityG });
+      const pending = pendingItems();
+      if (pending.length > 0) {
+        await writeItems([...pending, {
+          food: { food_ref: s.foodRef, name: cand.name },
+          quantityG: s.quantityG, ...scaleMacros(per100, s.quantityG),
+        }], clearPending);
+        setLoggingMealId(null);
+        return;
+      }
       await logFoodEntry(userId, buildFoodEntryPayload({
         entryDate,
         mealSlot,
@@ -864,11 +966,23 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Database "no match" fallback replaces the screen so Back lands on
   // the Diary, not an empty search. The Custom tab CTA pushes instead,
   // so the user can return to the picker.
+  // With foods waiting (the plate, parked typed-line rows) the screen is
+  // pushed instead and the waiting foods travel with it, so "Save and add"
+  // writes them with the new food in one write and a close keeps them here.
+  function customFoodParams() {
+    const carry = pendingItems().map((it) => ({
+      foodRef: it.food.food_ref, name: it.food.name ?? null, quantityG: it.quantityG,
+      kcal: it.kcal, proteinG: it.proteinG, carbsG: it.carbsG, fatG: it.fatG, fibreG: it.fibreG ?? null,
+    }));
+    return { mealSlot, entryDate, ...(carry.length ? { carryItems: carry } : null) };
+  }
   function gotoCustomReplace() {
-    navigation.replace('AddCustomFood', { mealSlot, entryDate });
+    const params = customFoodParams();
+    if (params.carryItems) navigation.navigate('AddCustomFood', params);
+    else navigation.replace('AddCustomFood', params);
   }
   function newCustomFood() {
-    navigation.navigate('AddCustomFood', { mealSlot, entryDate });
+    navigation.navigate('AddCustomFood', customFoodParams());
   }
 
   // Lift the user's own foods (favourited / logged here recently / logged often)
@@ -949,7 +1063,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={item.label}
         >
-          <Ionicons name={item.icon} size={20} color={t.colors.primary} />
+          <Ionicons name={item.icon} size={20} color={t.colors.textSecondary} />
           <Text style={[styles.ctaText, live.ctaText]}>{item.label}</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -961,7 +1075,20 @@ export default function FoodSearchScreen({ navigation, route }) {
   // One food row, the same grammar wherever it appears (a tab's list, the
   // search results, "Around this time"): a tap opens the sheet, the "+" adds
   // the shown portion to the foods to log, a hold cycles the preference.
-  function renderFoodRow(food, key) {
+  function renderFoodRow(rawFood, key) {
+    // The row, its "+" and the sheet it opens start from ONE amount: the
+    // person's usual amount at this meal when there is one (the same source
+    // the sheet reads), else the food's own serving (food audit 2026-10-16,
+    // item 15). FoodRow and addToPlate read last_quantity_g first.
+    const usualG = rawFood?.last_quantity_g > 0 ? 0 : slotPortions.get(rawFood?.food_ref);
+    let food = usualG > 0
+      ? { ...withCuratedServing(rawFood), last_quantity_g: usualG }
+      : withCuratedServing(rawFood);
+    // A servings-only recipe never carries a gram amount: its row, "+" and
+    // sheet all start from its one serving.
+    if (food?.servings_only === true && Number(food.serving_g) > 0) {
+      food = { ...food, last_quantity_g: Number(food.serving_g) };
+    }
     // A saved meal has no single-food gram editor. Open its confirmation
     // surface with the exact meal preselected; never fan it out from a row tap.
     if (typeof food.food_ref === 'string' && food.food_ref.startsWith('meal:')) {
@@ -1003,11 +1130,27 @@ export default function FoodSearchScreen({ navigation, route }) {
     // A live search with no hits: offer the custom-food fallback.
     if (query.trim().length >= 2) {
       if (searching) return null;
+      // A line of several foods has its own offer above; the whole line is
+      // also searched, so "No matches" for it would only contradict the offer.
+      // "Add custom food" stays reachable here.
+      if (!isRecipePick && lineParts.length >= 2) {
+        return (
+          <Button
+            title="Add custom food"
+            icon="add"
+            onPress={gotoCustomReplace}
+            variant="secondary"
+            style={[styles.footerBtn, live.footerBtn]}
+            textStyle={[styles.footerBtnText, live.footerBtnText]}
+            accessibilityLabel="Add custom food"
+          />
+        );
+      }
       return (
         <EmptyState
           icon={searchOffline ? 'cloud-offline-outline' : 'search-outline'}
           text={searchOffline
-            ? "You're offline, so live search can't check the food library. Saved foods still work, or add a custom food."
+            ? "You are offline, so live search cannot check the food library. Saved foods still work, or add a custom food."
             : `No matches for "${query.trim()}".`}
           actionLabel="Add custom food"
           onAction={gotoCustomReplace}
@@ -1070,7 +1213,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         ListHeaderComponent={suggestMeta?.perMeal ? (
           <View>
             <Text style={[styles.suggestHint, live.suggestHint]}>
-              Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {toEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
+              Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)} g protein, {formatEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
             </Text>
           </View>
         ) : undefined}
@@ -1083,19 +1226,19 @@ export default function FoodSearchScreen({ navigation, route }) {
               onPress={() => (isFood ? logSuggestedFood(item) : setMealSheet(item))}
               disabled={!!loggingMealId}
               accessibilityRole="button"
-              accessibilityLabel={isFood ? `Add ${item.quantityG}g ${item.name}` : `Open ${item.name}`}
+              accessibilityLabel={isFood ? `Add ${item.quantityG} grams ${item.name}` : `Open ${item.name}`}
             >
               <View style={{ flex: 1 }}>
                 <Text style={[styles.suggestName, live.suggestName]}>
-                  {isFood ? `${item.name} - ${item.quantityG}g` : item.name}
+                  {isFood ? `${item.name} · ${formatWithUnit(formatNumber(item.quantityG), 'g')}` : item.name}
                 </Text>
                 <Text style={[styles.suggestMacros, live.suggestMacros]}>
-                  {toEnergy(item.macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {item.macros.protein}g protein - {item.macros.carbs}g carbs - {item.macros.fat}g fat
+                  {formatEnergy(item.macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {item.macros.protein} g protein · {item.macros.carbs} g carbs · {item.macros.fat} g fat
                 </Text>
               </View>
               {loggingMealId === busyKey
                 ? <ActivityIndicator size="small" color={t.colors.primary} />
-                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={t.colors.primary} />}
+                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={t.colors.textSecondary} />}
             </TouchableOpacity>
           );
         }}
@@ -1214,6 +1357,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       <>
       <FlashList
         data={listData}
+        extraData={slotPortions}
         keyExtractor={(i) => i.key}
         renderItem={renderItem}
         keyboardShouldPersistTaps="handled"
@@ -1246,7 +1390,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityLabel="Review selected foods"
           >
             <Text style={[styles.plateCount, live.plateCount]}>{plate.length} to log</Text>
-            <Text style={[styles.plateKcalLine, live.plateKcalLine]}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} - tap to review</Text>
+            <Text style={[styles.plateKcalLine, live.plateKcalLine]}>About {formatEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} · tap to review</Text>
           </TouchableOpacity>
           <Button
             title={`Log ${plate.length}`}
@@ -1277,7 +1421,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             <View key={it.key} style={[styles.plateItem, live.plateItem]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.plateItemName, live.plateItemName]} numberOfLines={1}>{it.food.name}</Text>
-                <Text style={[styles.plateItemMeta, live.plateItemMeta]}>{Math.round(it.quantityG)}g - {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                <Text style={[styles.plateItemMeta, live.plateItemMeta]}>{formatNumber(Math.round(it.quantityG))} g · {formatEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
               </View>
               <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
                 <Ionicons name="close-circle" size={22} color={t.colors.textMuted} />

@@ -80,6 +80,9 @@ export default function DiaryDatePicker({
               value={value}
               mode="date"
               display="spinner"
+              // Food Diary audit 2026-10-16, item 13: the spinner follows the
+              // app's theme, not the phone's, so it reads on the sheet.
+              themeVariant={t.resolvedTheme === 'light' ? 'light' : 'dark'}
               onChange={onNativeChange}
             />
             <View style={styles.actions}>

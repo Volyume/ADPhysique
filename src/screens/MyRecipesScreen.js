@@ -177,7 +177,12 @@ export default function MyRecipesScreen({ navigation, route }) {
     (async () => {
       try {
         const food = await resolveFoodRef(userId, `recipe:${servePrompt.id}`);
-        if (!cancelled) setServingG(Number(food?.serving_g) > 0 ? Number(food.serving_g) : null);
+        if (cancelled) return;
+        // Founder ruling 2026-10-16 ("Add cooked weight"): grams are offered
+        // only for a recipe with a cooked weight; without one its serving is
+        // a share of the RAW ingredients, so it is logged in servings only.
+        const known = Number(food?.serving_g) > 0 && food?.servings_only !== true;
+        setServingG(known ? Number(food.serving_g) : null);
       } catch (e) {
         logError('MyRecipes.resolveServing', e, { hasId: !!servePrompt?.id });
       }
@@ -431,23 +436,30 @@ export default function MyRecipesScreen({ navigation, route }) {
         sheetStyle={styles.servingsSheet}
       >
         <Text style={[styles.sheetTitle, live.sheetTitle]} numberOfLines={1} accessibilityRole="header">{servePrompt?.name}</Text>
-        <View style={styles.unitRow} accessibilityRole="radiogroup" accessibilityLabel="Amount unit">
-          <Chip
-            label="Servings"
-            selected={unit === 'servings'}
-            onPress={() => pickUnit('servings')}
-            accessibilityRole="radio"
-          />
-          <Chip
-            label="Grams"
-            selected={unit === 'grams'}
-            onPress={() => pickUnit('grams')}
-            accessibilityRole="radio"
-          />
-        </View>
+        {servingG ? (
+          <View style={styles.unitRow} accessibilityRole="radiogroup" accessibilityLabel="Amount unit">
+            <Chip
+              label="Servings"
+              selected={unit === 'servings'}
+              onPress={() => pickUnit('servings')}
+              accessibilityRole="radio"
+            />
+            <Chip
+              label="Grams"
+              selected={unit === 'grams'}
+              onPress={() => pickUnit('grams')}
+              accessibilityRole="radio"
+            />
+          </View>
+        ) : null}
         {unit === 'servings' ? (
           <>
             <Text style={[styles.sheetSub, live.sheetSub]}>How many servings did you eat?</Text>
+            {servingG ? null : (
+              <Text style={[styles.sheetSub, live.sheetSub]}>
+                To log this recipe in grams, add its cooked weight when you edit it.
+              </Text>
+            )}
             <Stepper
               value={servings}
               onChange={setServings}

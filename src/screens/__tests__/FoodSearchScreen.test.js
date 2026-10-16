@@ -278,7 +278,8 @@ describe('FoodSearchScreen confirmLog (A2)', () => {
       foodRef: 'off:chicken',
       quantityG: 150,
     }));
-    expect(mockToastShow).toHaveBeenCalledWith('Chicken breast added.', expect.objectContaining({
+    // Re-pinned 2026-10-16: the sheet add names the meal, as the plate does.
+    expect(mockToastShow).toHaveBeenCalledWith('Chicken breast added to Snacks.', expect.objectContaining({
       variant: 'undo',
       action: expect.objectContaining({ label: 'Undo', onPress: expect.any(Function) }),
     }));

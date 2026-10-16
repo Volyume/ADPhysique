@@ -47,7 +47,8 @@ import ModalHeader from '../components/ModalHeader';
 import SectionLabel from '../components/SectionLabel';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
-import { insertCustomFood, updateCustomFood, getCustomFoodById, logFoodEntry } from '../lib/food/db';
+import { insertCustomFood, updateCustomFood, getCustomFoodById, logFoodEntries, deleteFoodEntries } from '../lib/food/db';
+import { mealSlotLabel } from '../lib/food/mealSlots';
 import { queueContribution, getConsent, markScanChainCompleted } from '../lib/food/writeback';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
 import { fieldNeedsCheck } from '../lib/food/ocrParser';
@@ -156,6 +157,18 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   const [carbs, setCarbs] = useState(_num(prefillMacros?.carbs100g));
   const [fat, setFat] = useState(_num(prefillMacros?.fat100g));
   const [fibre, setFibre] = useState(_num(prefillMacros?.fibre100g));
+  // Optional, per 100 g, in grams. Salt is what a UK pack prints; it is stored
+  // as sodium (salt / 2.5, grams), the unit sodium_100g holds everywhere else.
+  const [sugars, setSugars] = useState('');
+  const [salt, setSalt] = useState('');
+  // The values the edit form opened with, so a field left alone keeps the
+  // stored figure exactly (salt is shown rounded; sodium is not re-derived).
+  const [opened, setOpened] = useState({ sugars: '', salt: '' });
+  // Foods already waiting on the add screen (its plate), carried here so
+  // "Save and add" writes them with this food in one write.
+  const carryItems = Array.isArray(route?.params?.carryItems) ? route.params.carryItems : [];
+  // Set once the food row is saved: a retry of the add then never saves it twice.
+  const [savedFood, setSavedFood] = useState(null);
   const [quantityG, setQuantityG] = useState('100');
   const [saving, setSaving] = useState(false);
   // Which button is busy, so only the pressed one shows its spinner.
@@ -177,9 +190,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       const raw = microInputs[n.key];
       // Blank/whitespace stays unset (never coerced to Number('') === 0);
       // only a genuinely finite entered value is collected.
-      if (raw != null && raw.trim() !== '' && Number.isFinite(Number(raw))) {
-        out[n.key] = Number(raw);
-      }
+      const fig = readFigure(raw);
+      if (fig.state === 'ok') out[n.key] = fig.value;
     }
     return out;
   }, [microInputs]);
@@ -207,6 +219,12 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         setCarbs(_num(row.carbs_100g));
         setFat(_num(row.fat_100g));
         setFibre(_num(row.fibre_100g));
+        const openedSugars = _num(row.sugar_100g);
+        const openedSalt = row.sodium_100g == null || !Number.isFinite(Number(row.sodium_100g))
+          ? '' : String(Math.round(Number(row.sodium_100g) * 2.5 * 100) / 100);
+        setSugars(openedSugars);
+        setSalt(openedSalt);
+        setOpened({ sugars: openedSugars, salt: openedSalt });
         const microState = {};
         for (const n of MICRONUTRIENTS) {
           const v = row[n.column];
@@ -223,6 +241,14 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, editFoodId, userId]);
 
+  const sugarsFig = readFigure(sugars, { max: 100 });
+  const saltFig = readFigure(salt, { max: 100 });
+  const sugarsValue = isEditMode && sugars === opened.sugars
+    ? (existingFood?.sugar_100g ?? null)
+    : (sugarsFig.state === 'ok' ? sugarsFig.value : null);
+  const sodiumValue = isEditMode && salt === opened.salt
+    ? (existingFood?.sodium_100g ?? null)
+    : (saltFig.state === 'ok' ? Math.round((saltFig.value / 2.5) * 10000) / 10000 : null);
   const food = useMemo(() => ({
     name: name.trim(),
     brand: brand.trim() || null,
@@ -230,35 +256,52 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     servingLabel: servingLabel.trim() || null,
     portions: extraPortions.filter((p) => portionRowState(p) === 'ok')
       .map((p) => ({ label: p.label.trim(), grams: parseDecimalInput(p.grams) })),
-    kcal100g: Number(kcal) || 0,
-    protein100g: Number(protein) || 0,
-    carbs100g: Number(carbs) || 0,
-    fat100g: Number(fat) || 0,
-    fibre100g: fibre.trim() ? Number(fibre) : null,
+    kcal100g: figureOrZero(kcal),
+    protein100g: figureOrZero(protein),
+    carbs100g: figureOrZero(carbs),
+    fat100g: figureOrZero(fat),
+    fibre100g: readFigure(fibre).state === 'ok' ? readFigure(fibre).value : null,
+    // Sugars and salt: blank stays null. An edit that leaves a field as it
+    // opened keeps the stored figure (a rename never wipes them).
+    sugar100g: sugarsValue,
+    sodium100g: sodiumValue,
     barcodeEan: isEditMode ? (existingFood?.barcode_ean ?? null) : (prefillBarcode || null),
     photoUrl: isEditMode ? (existingFood?.photo_url ?? null) : null,
     notes: isEditMode ? (existingFood?.notes ?? null) : null,
     micros,
-  }), [name, brand, servingG, servingLabel, extraPortions, kcal, protein, carbs, fat, fibre, prefillBarcode, micros, isEditMode, existingFood]);
+  }), [name, brand, servingG, servingLabel, extraPortions, kcal, protein, carbs, fat, fibre, sugarsValue, sodiumValue, prefillBarcode, micros, isEditMode, existingFood]);
 
   // Hard-block non-finite / negative numbers here (audit F-006): an entry like
   // 1e400 parses to Infinity, which is >= 0, and would scale to Infinity then be
   // coerced to a silent 0-calorie diary entry downstream. "Save anyway" is only
   // for finite-but-unusual values (handled by checkFoodSanity in onSave).
-  const fin = (s) => Number.isFinite(Number(s));
   // Wave 4 review, item 10: the serving weight is read as the amount sheet
   // reads it ("12,5" from a comma-decimal keyboard is 12.5), and a weight the
   // save refuses says why under the field rather than only greying the button.
   const servingGrams = parseDecimalInput(servingG);
   const servingError = servingState(servingG);
+  // Food audit 2026-10-16, item 9: every typed figure is read with
+  // parseDecimalInput ("9,5" is 9.5) and one that cannot be read says so under
+  // its own field, never a silent drop or a grey button with no reason.
+  const errKcal = figureError(kcal);
+  const errProtein = figureError(protein);
+  const errCarbs = figureError(carbs);
+  const errFat = figureError(fat);
+  const errFibre = figureError(fibre);
+  const errSugars = figureError(sugars, 100);
+  const errSalt = figureError(salt, 100);
+  const errEaten = figureError(quantityG);
+  const microErrors = {};
+  for (const n of MICRONUTRIENTS) {
+    const e = figureError(microInputs[n.key]);
+    if (e) microErrors[n.key] = e;
+  }
   const canSave = name.trim().length > 0
-    && fin(kcal) && Number(kcal) >= 0
+    && !errKcal && !errProtein && !errCarbs && !errFat && !errFibre
+    && !errSugars && !errSalt && !errEaten
+    && Object.keys(microErrors).length === 0
     && servingError === undefined
-    && extraPortions.every((p) => portionRowState(p) !== 'bad')
-    && fin(protein) && Number(protein) >= 0
-    && fin(carbs) && Number(carbs) >= 0
-    && fin(fat) && Number(fat) >= 0
-    && (!fibre.trim() || (fin(fibre) && Number(fibre) >= 0));
+    && extraPortions.every((p) => portionRowState(p) !== 'bad');
 
   // L05-ACF2 (2026-07-09 design audit): a live preview of what "Eaten (g)"
   // actually works out to, scaled from the per-100g figures above, so the
@@ -266,8 +309,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   // finding out the logged kcal at save time. Display-only; never feeds
   // into what gets saved.
   const portionPreview = useMemo(() => {
-    const qty = Number(quantityG);
-    if (!fin(quantityG) || qty <= 0 || !fin(kcal)) return null;
+    const qty = parseDecimalInput(quantityG);
+    if (!Number.isFinite(qty) || qty <= 0 || errKcal) return null;
     const factor = qty / 100;
     const round1 = (n) => Math.round(n * 10) / 10;
     // L05-ACF1: when a named serving is set (e.g. "slice" at 30 g), fold it
@@ -279,13 +322,13 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       ? ` (${round1(qty / sG)} x ${label})`
       : '';
     return {
-      kcal: Math.round((Number(kcal) || 0) * factor),
-      protein: round1((Number(protein) || 0) * factor),
-      carbs: round1((Number(carbs) || 0) * factor),
-      fat: round1((Number(fat) || 0) * factor),
+      kcal: Math.round(figureOrZero(kcal) * factor),
+      protein: round1(figureOrZero(protein) * factor),
+      carbs: round1(figureOrZero(carbs) * factor),
+      fat: round1(figureOrZero(fat) * factor),
       unitPrefix,
     };
-  }, [quantityG, kcal, protein, carbs, fat, servingGrams, servingLabel]);
+  }, [quantityG, kcal, protein, carbs, fat, servingGrams, servingLabel, errKcal]);
 
   // D138: editing an existing custom food only ever updates the food row --
   // it never logs a new diary entry, so this skips the eaten-amount gate and
@@ -322,18 +365,74 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     }
   }
 
+  // Writes the new food's entry together with any foods carried from the add
+  // screen's plate, in one write. Returns the toast text and the new ids.
+  async function logWithCarried({ id, food: f, qty }) {
+    const rows = [
+      ...carryItems.map((it) => ({
+        entryDate, mealSlot, foodRef: it.foodRef, quantityG: it.quantityG,
+        kcal: it.kcal, proteinG: it.proteinG, carbsG: it.carbsG, fatG: it.fatG, fibreG: it.fibreG ?? null,
+      })),
+      { entryDate, mealSlot, foodRef: `custom:${id}`, quantityG: qty, ...scaleMacros(f, qty) },
+    ];
+    const ids = await logFoodEntries(userId, rows);
+    const where = mealSlotLabel(mealSlot);
+    const text = rows.length === 1 ? `${f.name} added to ${where}.` : `${rows.length} foods added to ${where}.`;
+    return { text, ids };
+  }
+
+  // The success toast with its Undo: it removes what was logged; the saved
+  // food stays.
+  function showAddedToast(text, ids) {
+    toast.show(text, {
+      variant: 'undo',
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          try {
+            await deleteFoodEntries(userId, ids);
+          } catch (e) {
+            logError('AddCustomFood.undoAdd', e, { count: ids.length });
+            toast.show('That was not removed. You can remove it from the diary.', { variant: 'error', duration: 5000 });
+          }
+        },
+      },
+    });
+  }
+
+  // Retry after the food saved but the add failed: log only, never save again.
+  async function addSavedFood() {
+    if (saving) return;
+    setSavingOnly(false);
+    setSaving(true);
+    try {
+      const added = await logWithCarried(savedFood);
+      showAddedToast(added.text, added.ids);
+      navigation.navigate('Diary');
+    } catch (e) {
+      logError('AddCustomFood.retryAdd', e);
+      toast.show(
+        `${savedFood.food.name} is saved, but it was not added to ${mealSlotLabel(mealSlot)}. Try again in a moment.`,
+        { variant: 'error', duration: 6000 },
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // `log: true` is "Save and add to diary"; `log: false` is "Save the food"
   // (D230 4.11): the same food row, the same confirms, no diary entry.
   async function saveFood({ log }) {
     if (!canSave || saving) return;
     if (isEditMode) return onSaveEdit();
+    if (savedFood) return addSavedFood();
     // FOOD-001: the amount eaten must fall inside the shared 1 to 5000 g safety
     // bound (isValidEntryGrams), the same gate FoodDetailSheet enforces, so a
     // negative, zero, blank or extreme quantity can never be logged as a diary
     // row whose weight and macros disagree. logFoodEntry re-checks this as
     // defence in depth. Blank/0 no longer silently falls back to the serving
     // size; the user is asked for a real amount.
-    const qty = Number(quantityG);
+    const qty = parseDecimalInput(quantityG);
     // Saving the food alone logs nothing, so the amount eaten is not asked for.
     if (log && !isValidEntryGrams(qty)) {
       toast.show('Enter an amount between 1 and 5000 g.', { variant: 'warning' });
@@ -439,14 +538,21 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       // quantity logged (qty, validated above). This denormalises at log time so
       // future edits to the custom food don't rewrite history. Shared helper
       // (food review U-M2).
+      let addedMessage = null;
       if (log) {
-        await logFoodEntry(userId, {
-          entryDate,
-          mealSlot,
-          foodRef: `custom:${customId}`,
-          quantityG: qty,
-          ...scaleMacros(food, qty), // { kcal, proteinG, carbsG, fatG, fibreG }
-        });
+        try {
+          addedMessage = await logWithCarried({ id: customId, food, qty });
+        } catch (e) {
+          // The food is saved; only the add failed. Say exactly that, and turn
+          // the screen into an "Add to diary" retry so no second food is made.
+          logError('AddCustomFood.logAfterSave', e, { scanned: !!prefillBarcode });
+          setSavedFood({ id: customId, food, qty });
+          toast.show(
+            `${food.name} was saved, but it was not added to ${mealSlotLabel(mealSlot)}. You can add it from search.`,
+            { variant: 'error', duration: 6000 },
+          );
+          return;
+        }
       }
 
       // OFF contribution (COMP-022): relocated here from ScanLabel capture so
@@ -474,13 +580,20 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         markScanChainCompleted().catch((e) => {
           logError('AddCustomFood.markScanChainCompleted', e);
         });
-        // Confirm the healing: the loop-closing reward (COMP-022).
-        toast.show('Saved. Next time this barcode scans instantly.');
+        // Confirm the healing: the loop-closing reward (COMP-022). When the
+        // food was also added, one toast says both and keeps the Undo.
+        if (addedMessage) showAddedToast(`${addedMessage.text} Next time this barcode scans instantly.`, addedMessage.ids);
+        else toast.show('Saved. Next time this barcode scans instantly.');
       } else if (!log) {
         // Saving the food alone writes no diary row, so say it is kept.
         toast.show('Food saved. You can add it to your diary any time.');
+      } else if (addedMessage) {
+        showAddedToast(addedMessage.text, addedMessage.ids);
       }
-      navigation.goBack();
+      // An add returns to the Diary (past the add screen, which is no longer
+      // needed once its waiting foods are written); a save alone goes back.
+      if (log) navigation.navigate('Diary');
+      else navigation.goBack();
     } catch (e) {
       logError('AddCustomFood.save', e, { logged: log, scanned: !!prefillBarcode });
       toast.show('That food was not saved. Try again in a moment.', { variant: 'error' });
@@ -541,14 +654,18 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           <Text style={[styles.unsureNote, live.unsureNote]}>The figures marked with a dot were hard to read. Check them before you save.</Text>
         ) : null}
         <View style={styles.row}>
-          <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" unsure={_unsure('kcal100g', kcal)} />
-          <NumField label="Protein" value={protein} onChange={setProtein} suffix="g" unsure={_unsure('protein100g', protein)} />
+          <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" unsure={_unsure('kcal100g', kcal)} error={errKcal} />
+          <NumField label="Protein" value={protein} onChange={setProtein} suffix="g" unsure={_unsure('protein100g', protein)} error={errProtein} />
         </View>
         <View style={styles.row}>
-          <NumField label="Carbs" value={carbs} onChange={setCarbs} suffix="g" unsure={_unsure('carbs100g', carbs)} />
-          <NumField label="Fat" value={fat} onChange={setFat} suffix="g" unsure={_unsure('fat100g', fat)} />
+          <NumField label="Carbs" value={carbs} onChange={setCarbs} suffix="g" unsure={_unsure('carbs100g', carbs)} error={errCarbs} />
+          <NumField label="Fat" value={fat} onChange={setFat} suffix="g" unsure={_unsure('fat100g', fat)} error={errFat} />
         </View>
-        <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" unsure={_unsure('fibre100g', fibre)} />
+        <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" unsure={_unsure('fibre100g', fibre)} error={errFibre} />
+        <View style={styles.row}>
+          <NumField label="Sugars (optional)" value={sugars} onChange={setSugars} suffix="g" error={errSugars} />
+          <NumField label="Salt (optional)" value={salt} onChange={setSalt} suffix="g" error={errSalt} />
+        </View>
 
         <SectionLabel style={styles.sectionLabelSpacing}>Portions</SectionLabel>
         {/* L05-ACF1 (2026-07-09 design audit): name the Serving (g) amount as
@@ -587,7 +704,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         {isEditMode ? null : (
           <>
             <SectionLabel style={styles.sectionLabelSpacing}>Quantity eaten</SectionLabel>
-            <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
+            <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" error={errEaten} />
             {/* L05-ACF3 (2026-07-09 design audit): the two gram fields need
                 an explanation of which drives what. */}
             <Text style={[styles.unsureNote, live.unsureNote]}>
@@ -595,7 +712,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
             </Text>
             {portionPreview ? (
               <Text style={[styles.portionPreview, live.portionPreview]}>
-                {`${quantityG} g${portionPreview.unitPrefix} works out to ${portionPreview.kcal} kcal - P ${portionPreview.protein}g - C ${portionPreview.carbs}g - F ${portionPreview.fat}g.`}
+                {`${quantityG} g${portionPreview.unitPrefix} works out to ${portionPreview.kcal} kcal · ${portionPreview.protein} g protein · ${portionPreview.carbs} g carbs · ${portionPreview.fat} g fat.`}
               </Text>
             ) : null}
           </>
@@ -618,23 +735,24 @@ export default function AddCustomFoodScreen({ navigation, route }) {
                 value={microInputs[n.key] ?? ''}
                 onChange={(v) => setMicroValue(n.key, v)}
                 suffix={n.unit}
+                error={microErrors[n.key]}
               />
             ))}
           </CollapsibleSection>
         </View>
 
         <Button
-          title={isEditMode ? 'Save changes' : 'Save and add to diary'}
-          accessibilityLabel={isEditMode ? 'Save changes to food' : 'Save food and add to diary'}
+          title={isEditMode ? 'Save changes' : (savedFood ? 'Add to diary' : 'Save and add to diary')}
+          accessibilityLabel={isEditMode ? 'Save changes to food' : (savedFood ? 'Add the saved food to the diary' : 'Save food and add to diary')}
           size="lg"
           loading={busyLog}
-          disabled={!canSave || busyOnly}
+          disabled={(!savedFood && !canSave) || busyOnly}
           onPress={onSaveAndLog}
           style={styles.saveBtn}
         />
         {/* D230 4.11: the way to keep a new food without logging it (before
             this, every new food was logged the moment it was saved). */}
-        {isEditMode ? null : (
+        {isEditMode || savedFood ? null : (
           <Button
             title="Save the food"
             accessibilityLabel="Save the food without adding it to the diary"
@@ -650,6 +768,30 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       </KeyboardGestureArea>
     </SafeAreaView>
   );
+}
+
+// Reads one typed figure: 'blank' (nothing typed), 'ok' with its value, or
+// 'bad'. A comma decimal is read as the amount sheet reads it ("9,5" is 9.5).
+// Letters, a minus sign, an exponent or a value too large to be real are bad.
+function readFigure(text, { max } = {}) {
+  const raw = String(text ?? '').trim();
+  if (!raw) return { state: 'blank', value: null };
+  const value = /^[\d\s.,]+$/.test(raw) ? parseDecimalInput(raw) : NaN;
+  if (!Number.isFinite(value) || value < 0 || (max != null && value > max)) {
+    return { state: 'bad', value: null };
+  }
+  return { state: 'ok', value };
+}
+const figureOrZero = (text) => {
+  const f = readFigure(text);
+  return f.state === 'ok' ? f.value : 0;
+};
+// The plain reason a typed figure cannot be used, or undefined when it can.
+function figureError(text, max) {
+  if (readFigure(text, { max }).state !== 'bad') return undefined;
+  return max != null
+    ? `Enter a number from 0 to ${max}, such as 9.5.`
+    : 'Enter a number, such as 9.5. A comma is fine.';
 }
 
 // Wave 4 review, item 10: the reason the first portion's weight blocks the

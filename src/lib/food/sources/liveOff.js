@@ -105,6 +105,24 @@ function _fetchWithTimeout(url, timeoutMs) {
   }).finally(() => clearTimeout(t));
 }
 
+// Sodium in the app's unit (food data-layer audit 2026-10-16, item 9):
+// GRAMS per 100 g, exactly as the curated data stores it (the bundled OFF
+// snapshot copies OFF's `sodium_100g`, itself grams, unchanged:
+// scripts/seed/buildOffSnapshot.js; FoodDetailSheet scales the stored grams
+// to mg). OFF's sodium reading is used when it is a positive number; else a
+// positive `salt_100g` (also grams) gives salt / 2.5, the UK label
+// convention; else whatever sodium reading there is (a literal 0 stays 0, as
+// the snapshot keeps it), or null. The file header records a real product
+// with `sodium_100g: 0` beside `salt_100g: 0.4`: the salt figure wins there.
+// Rounded to 4 dp to clear float noise (0.4 / 2.5 = 0.16000000000000003).
+function _sodiumGrams(n, num) {
+  const sodium = num(n.sodium_100g);
+  if (sodium != null && sodium > 0) return sodium;
+  const salt = num(n.salt_100g);
+  if (salt != null && salt > 0) return Math.round((salt / 2.5) * 10000) / 10000;
+  return sodium != null && sodium >= 0 ? sodium : null;
+}
+
 function _toRow(product, sourceLabel = 'off_live') {
   if (!product) return null;
   const n = product.nutriments || {};
@@ -125,6 +143,10 @@ function _toRow(product, sourceLabel = 'off_live') {
     carbs_100g: num(n.carbohydrates_100g),
     fat_100g: num(n.fat_100g),
     fibre_100g: num(n.fiber_100g),
+    // Item 9: sodium and sugars were never mapped for a live hit, so a food
+    // found live showed no salt or sugar line though OFF carried both.
+    sodium_100g: _sodiumGrams(n, num),
+    sugar_100g: num(n.sugars_100g),
     barcode_ean: product.code || null,
     ..._microValuesFromNutriments(n),
   };

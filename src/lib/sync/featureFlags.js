@@ -152,3 +152,12 @@ export const CUSTOM_FOOD_PORTIONS_PUSH = true;
 // founder's "run against production 194 195", verified read-only
 // (food_entries.note text; food_sync_push writes it only when the key is sent).
 export const FOOD_ENTRY_NOTE_PUSH = true;
+
+// Founder ruling "Add cooked weight" (2026-10-16): recipes.cooked_weight_g in
+// the food push and pull. The cloud column arrives with
+// supabase/migrate_196_food_soft_deletes_and_kind.sql, WRITTEN and HELD. While
+// false the push omits the key (a key the cloud lacks would be ignored by
+// today's food_sync_push, but the flag keeps the record exactly as before) and
+// the pull keeps this device's value. Flip to true only after 196 is applied
+// and verified read-only.
+export const RECIPE_COOKED_WEIGHT_PUSH = false;

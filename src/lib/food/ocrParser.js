@@ -28,6 +28,12 @@ function _normalise(raw) {
     // (and no more) is a thousands group -> join; 1-2 is a decimal -> dot.
     .replace(/(\d)\s*,\s*(\d{3})(?!\d)/g, '$1$2')
     .replace(/(\d)\s*,\s*(\d{1,2})(?!\d)/g, '$1.$2')
+    // A thousands group split by a space ("1 046 kJ", the SI style many EU
+    // labels print, food data-layer audit 2026-10-16 item 8): read as 46 kJ
+    // it became 11 kcal. Joined ONLY before an energy unit, and only when the
+    // first group is a whole 1 or 2 digit number (not the tail of a decimal),
+    // so two figures in two columns ("Fat 9.0g 15g") are never merged.
+    .replace(/(^|[^\d.])(\d{1,2}) (\d{3})(?=\s*(?:kj|kcal)\b)/gi, '$1$2$3')
     .replace(/[–—]/g, '-')
     .replace(/ /g, ' ')
     .replace(/\s+/g, ' ')
@@ -48,11 +54,41 @@ function _hasPer100Anchor(text) {
   return PER_100_PATTERNS.some(p => p.test(text));
 }
 
+// Food data-layer audit 2026-10-16, item 8.
+//
+// Where the table starts: an ingredients list printed before the table
+// ("milk protein 12%") fed the protein figure. When the text names the table
+// ("Typical values", "Nutrition"), matching starts there.
+const TABLE_START_RE = /\btypical\s+values\b|\bnutrition(?:al)?\b/i;
+function _tableText(text) {
+  const m = TABLE_START_RE.exec(text);
+  return m ? text.slice(m.index) : text;
+}
+
+// The column headers. A per-serving column ("per serving", "per bar", "per
+// portion") printed BEFORE "per 100 g" means each nutrient's SECOND figure is
+// the per-100 g one. Both headers present settles the order; anything else
+// leaves it uncertain.
+const PER_SERVING_HEADER_RE = /\bper\s+(?:serving|bar|portion)\b/i;
+const PER_100_HEADER_RE = /\bper\s*100\s*(?:g|ml)\b/i;
+function _columnOrder(table) {
+  const serving = PER_SERVING_HEADER_RE.exec(table);
+  const per100 = PER_100_HEADER_RE.exec(table);
+  if (serving && per100) return { certain: true, servingFirst: serving.index < per100.index };
+  return { certain: false, servingFirst: false };
+}
+
 // Match "<keyword> ... <number> [unit]". Number captured raw; unit
 // is informational. The keyword can have an internal space (e.g.
 // "saturated fat" vs "fat") -- exact match avoided by leading word
 // boundary + non-greedy gap of at most 30 non-digit chars.
-function _matchValue(text, keyword) {
+//
+// `column` (0 or 1): which of two side-by-side figures to take when the
+// nutrient prints two ("Fat 9.0g 15g"). The second figure counts only when it
+// follows the first directly with the same unit (or both have none, and it is
+// not a percentage), so a nutrient printed once never borrows the next
+// nutrient's figure. `pair` reports whether two figures were seen.
+function _matchValue(text, keyword, column = 0) {
   const re = new RegExp(
     `\\b${keyword}\\b([^0-9\\n\\r]{0,30})(\\d{1,4}(?:\\.\\d{1,2})?)\\s*(kcal|kj|g|mg)?`,
     'i'
@@ -61,6 +97,15 @@ function _matchValue(text, keyword) {
   if (!m) return null;
   let value = parseFloat(m[2]);
   let unit = (m[3] || '').toLowerCase() || null;
+  const after = text.slice(m.index + m[0].length);
+  // A second figure straight after the first, in the same unit (or both with
+  // none, and not a percentage): the nutrient's other column.
+  const second = after.match(/^\s+(\d{1,4}(?:\.\d{1,2})?)\s*(kcal|kj|g|mg)?(?![\d.]|\s*%)/i);
+  const pair = !!second && ((second[2] || '').toLowerCase() || null) === unit;
+  if (pair && column === 1) {
+    const v2 = parseFloat(second[1]);
+    if (Number.isFinite(v2)) value = v2;
+  }
   // D-M4: if the gap between the keyword and its first number explicitly names
   // a per-serving/per-portion column (e.g. "Protein per serving 3g ... 10g"),
   // that first number is the per-serving figure. Volyume stores per-100g, so
@@ -68,7 +113,6 @@ function _matchValue(text, keyword) {
   // per-100g column first, in which case the gap has no such qualifier and the
   // first number is taken as-is.
   if (/per\s*serving|per\s*portion|\bserving\b|\bportion\b/i.test(m[1] || '')) {
-    const after = text.slice(m.index + m[0].length);
     const nm = after.match(/(\d{1,4}(?:\.\d{1,2})?)\s*(kcal|kj|g|mg)?/i);
     if (nm) {
       const v2 = parseFloat(nm[1]);
@@ -76,29 +120,33 @@ function _matchValue(text, keyword) {
     }
   }
   if (!Number.isFinite(value)) return null;
-  return { value, unit };
+  return { value, unit, pair };
 }
 
 // kcal is special: many labels write it as "<NUM> kcal" rather than
 // "kcal <NUM>". Match the unit-trailing form first, then fall back
 // to keyword-leading via _matchValue.
-function _matchKcal(text) {
+// With two columns, the energy figures run "1050kJ 250kcal 1750kJ 417kcal",
+// so `column` 1 takes the second kcal (or kJ) figure in the table.
+function _matchKcal(text, column = 0) {
   // "350 kcal" with optional decimal. Anchored on the unit so "10g"
   // (a protein figure) doesn't get picked up.
-  const m = text.match(/(\d{1,4}(?:\.\d{1,2})?)\s*kcal\b/i);
-  if (m) {
-    const v = parseFloat(m[1]);
-    if (Number.isFinite(v)) return { value: v, unit: 'kcal' };
+  const all = [...text.matchAll(/(\d{1,4}(?:\.\d{1,2})?)\s*kcal\b/gi)];
+  if (all.length > 0) {
+    const pick = column === 1 && all.length > 1 ? all[1] : all[0];
+    const v = parseFloat(pick[1]);
+    if (Number.isFinite(v)) return { value: v, unit: 'kcal', pair: all.length > 1 };
   }
-  return _matchValue(text, 'calories');
+  return _matchValue(text, 'calories', column);
 }
 
-function _matchKj(text) {
+function _matchKj(text, column = 0) {
   // "1465 kJ" or "energy 1465 kJ". Returns kJ raw; caller converts.
-  const m = text.match(/(\d{2,5}(?:\.\d{1,2})?)\s*kj\b/i);
-  if (m) {
-    const v = parseFloat(m[1]);
-    if (Number.isFinite(v)) return { value: v, unit: 'kj' };
+  const all = [...text.matchAll(/(\d{2,5}(?:\.\d{1,2})?)\s*kj\b/gi)];
+  if (all.length > 0) {
+    const pick = column === 1 && all.length > 1 ? all[1] : all[0];
+    const v = parseFloat(pick[1]);
+    if (Number.isFinite(v)) return { value: v, unit: 'kj', pair: all.length > 1 };
   }
   return null;
 }
@@ -147,20 +195,31 @@ export function fieldNeedsCheck(level, prefillValue, current) {
 export function parseNutritionLabel(rawText) {
   const text = _normalise(rawText);
   const hasAnchor = _hasPer100Anchor(text);
+  // The nutrients are read from the table (after "Typical values" or
+  // "Nutrition" when the text names it), in the column the headers say is
+  // per 100 g. The serving size is still read from the whole text: it is
+  // often printed above the table.
+  const table = _tableText(text);
+  const order = _columnOrder(table);
+  const column = order.certain && order.servingFirst ? 1 : 0;
 
-  const protein = _matchValue(text, 'protein');
-  const carbs = _matchValue(text, 'carbohydrate') || _matchValue(text, 'carbs');
-  const fat = _matchValue(text, 'fat');
-  const fibre = _matchValue(text, 'fibre') || _matchValue(text, 'fiber');
+  const protein = _matchValue(table, 'protein', column);
+  const carbs = _matchValue(table, 'carbohydrate', column) || _matchValue(table, 'carbs', column);
+  const fat = _matchValue(table, 'fat', column);
+  const fibre = _matchValue(table, 'fibre', column) || _matchValue(table, 'fiber', column);
 
   // Energy: prefer kcal, fall back to kJ -> kcal conversion. kcal
   // gets its own unit-trailing matcher because "<num> kcal" is the
   // dominant form on UK + EU labels.
-  let kcal = _matchKcal(text);
+  let kcal = _matchKcal(table, column);
   if (!kcal) {
-    const kj = _matchKj(text);
-    if (kj) kcal = { value: _kcalFromKj(kj.value), unit: 'kcal' };
+    const kj = _matchKj(table, column);
+    if (kj) kcal = { value: _kcalFromKj(kj.value), unit: 'kcal', pair: kj.pair };
   }
+  // Two columns side by side whose order the headers do not settle: every
+  // figure is low confidence, so the person checks it before saving.
+  const twoColumns = [protein, carbs, fat, fibre, kcal].some((v) => v?.pair);
+  const orderUncertain = twoColumns && !order.certain;
 
   // Serving size: "Serving size 30g" / "Serving 250 ml" / "Portion 40g".
   // Deliberately does NOT match "per 100g" -- that's the per-100g
@@ -171,7 +230,10 @@ export function parseNutritionLabel(rawText) {
     || text.match(/per\s+(?:portion|serving)[:\s]*(\d{1,4})\s*(g|ml)\b/i);
   if (sm) serving = { value: parseFloat(sm[1]), unit: sm[2].toLowerCase() };
 
-  const conf = (v) => (v && hasAnchor ? 'high' : v ? 'low' : 'missing');
+  const conf = (v) => {
+    if (!v) return 'missing';
+    return hasAnchor && !orderUncertain ? 'high' : 'low';
+  };
 
   return {
     fields: {

@@ -495,7 +495,7 @@ export default function MealPlanScreen({ navigation, route }) {
       if (clearPlannedFirst) await clearPlannedDay(user.id, planStartDate);
       const n = await applyPlanDayToDiary(user.id, day, { entryDate: planStartDate });
       const verb = clearPlannedFirst ? `replaced the plan for ${planStartLabel}` : `added to ${planStartLabel}`;
-      toast.show(n > 0 ? `${n} foods ${verb}.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
+      toast.show(n > 0 ? `${n} ${n === 1 ? 'food' : 'foods'} ${verb}.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
       // A successful add lands the user on the result (founder 2026-07-03:
       // staying here read as nothing happening). Diary is this stack's
       // root, so navigate pops back to it; the toast rides the transition
@@ -543,7 +543,7 @@ export default function MealPlanScreen({ navigation, route }) {
     if (eatenCount > 0) {
       appAlert(
         'Food already logged',
-        `You've already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten on ${planStartLabel}. This will not remove it; the planned meals are added alongside.`,
+        `You have already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten on ${planStartLabel}. This will not remove it; the planned meals are added alongside.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Add plan', onPress: () => writeLogDay(plannedCount > 0) },

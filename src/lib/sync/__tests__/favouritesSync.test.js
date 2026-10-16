@@ -25,14 +25,14 @@ beforeEach(() => {
 });
 
 describe('applyFavouriteFromCloud — last-write-wins on kind', () => {
-  test('the upsert is gated on the cloud row being newer-or-equal', async () => {
+  test('the upsert is gated on the cloud row being strictly newer (data-layer audit 2026-10-16 item 3: a tie is the device own push coming back)', async () => {
     await food.applyFavouriteFromCloud('u1', {
       food_ref: 'global:f1', kind: 'dislike', last_used_at: new Date(2000).toISOString(),
     });
     const ins = runCalls.find((c) => /INSERT INTO food_favourites/.test(c.sql));
     expect(ins).toBeTruthy();
     // The LWW gate must be present so a stale cloud row is a no-op.
-    expect(ins.sql).toMatch(/excluded\.last_used_at\s*>=\s*food_favourites\.last_used_at/);
+    expect(ins.sql).toMatch(/excluded\.last_used_at\s*>\s*food_favourites\.last_used_at/);
     // And it updates BOTH columns together (not kind unconditionally).
     expect(ins.sql).toMatch(/kind\s*=\s*excluded\.kind/);
     // D1-#8: deleted_at now rides along (5th param, null when the cloud row is live).
@@ -62,7 +62,7 @@ describe('applyFavouriteFromCloud — last-write-wins on kind', () => {
     });
     const ins = runCalls.find((c) => /INSERT INTO food_favourites/.test(c.sql));
     expect(ins.sql).toMatch(/deleted_at\s*=\s*excluded\.deleted_at/);
-    expect(ins.sql).toMatch(/excluded\.last_used_at\s*>=\s*food_favourites\.last_used_at/);
+    expect(ins.sql).toMatch(/excluded\.last_used_at\s*>\s*food_favourites\.last_used_at/);
     expect(ins.params).toEqual(['u1', 'global:f1', 1900, 'fav', 1900]); // 5th = deleted_at
   });
 });

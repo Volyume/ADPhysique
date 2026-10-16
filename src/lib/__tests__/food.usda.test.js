@@ -159,3 +159,50 @@ describe('searchUsda / lookupBarcodeUsda', () => {
     expect(await searchUsda('apple')).toEqual([]);
   });
 });
+
+// Food data-layer audit 2026-10-16, item 9: the barcode lookup is a full-text
+// SEARCH, so a hit is accepted only when its gtinUpc IS the scanned code
+// (leading zeros ignored). Before, the first hit was taken whatever it was.
+describe('lookupBarcodeUsda: only a hit whose GTIN is the scanned code (audit item 9)', () => {
+  const realKey = process.env.EXPO_PUBLIC_USDA_API_KEY;
+  afterEach(() => {
+    global.fetch = undefined;
+    if (realKey !== undefined) process.env.EXPO_PUBLIC_USDA_API_KEY = realKey;
+    else delete process.env.EXPO_PUBLIC_USDA_API_KEY;
+  });
+  const food = (gtinUpc, description) => ({
+    fdcId: 7, description, gtinUpc,
+    foodNutrients: [
+      { nutrientId: 1008, value: 52 }, { nutrientId: 1003, value: 0.3 },
+      { nutrientId: 1005, value: 14 }, { nutrientId: 1004, value: 0.2 },
+    ],
+  });
+  const respond = (foods) => {
+    process.env.EXPO_PUBLIC_USDA_API_KEY = 'test';
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ foods }) });
+  };
+
+  test('a first hit with another GTIN is refused', async () => {
+    respond([food('099999999999', 'Something else')]);
+    expect(await lookupBarcodeUsda('012345678905')).toBeNull();
+  });
+
+  test('a hit with no GTIN is refused', async () => {
+    respond([food(undefined, 'No code')]);
+    expect(await lookupBarcodeUsda('012345678905')).toBeNull();
+  });
+
+  test('the matching hit is taken even when it is not first, leading zeros ignored (UPC-A vs EAN-13)', async () => {
+    respond([food('099999999999', 'Something else'), food('12345678905', 'The scanned one')]);
+    const r = await lookupBarcodeUsda('0012345678905');
+    expect(r.name).toBe('The scanned one');
+  });
+
+  test('normaliseGtin drops non-digits and leading zeros', () => {
+    const { normaliseGtin } = require('../food/sources/usda');
+    expect(normaliseGtin('0012345678905')).toBe('12345678905');
+    expect(normaliseGtin(' 012345678905 ')).toBe('12345678905');
+    expect(normaliseGtin('')).toBe('');
+    expect(normaliseGtin(null)).toBe('');
+  });
+});

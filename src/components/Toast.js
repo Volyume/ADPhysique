@@ -245,6 +245,12 @@ export function ToastProvider({ children }) {
           <View
             style={[
               styles.toast,
+              // Founder report 2026-10-16 (the "Saved for..." toast after a
+              // set video, read down the screen a few letters a line): the
+              // toast shrank to fit its content while the message took only
+              // what two action buttons left over. Two actions now sit on
+              // their own row under a full-width message.
+              current.secondaryAction ? styles.toastStacked : null,
               {
                 backgroundColor: t.colors.surface2,
                 borderColor: t.colors.border,
@@ -260,7 +266,7 @@ export function ToastProvider({ children }) {
               onPress={dismiss}
               accessibilityLabel={dismissLabel}
               accessibilityHint={dismissHint}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}
+              style={current.secondaryAction ? styles.messageRowStacked : styles.messageRow}
             >
               <Ionicons name={current.icon} size={18} color={current.tint} />
               <Text
@@ -270,6 +276,7 @@ export function ToastProvider({ children }) {
                 {current.message}
               </Text>
             </TouchableOpacity>
+            <View style={current.secondaryAction ? styles.actionsRowStacked : styles.actionsRow}>
             {current.secondaryAction && (
               <TouchableOpacity
                 onPress={() => {
@@ -308,6 +315,7 @@ export function ToastProvider({ children }) {
                 </Text>
               </TouchableOpacity>
             )}
+            </View>
           </View>
         </Animated.View>
       )}
@@ -340,9 +348,19 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    minWidth: 220,
+    // Full width up to 480, so the message never wraps a few letters a
+    // line beside its actions.
+    width: '100%',
     maxWidth: 480,
   },
+  toastStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  messageRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  messageRowStacked: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  actionsRow: { flexDirection: 'row', alignItems: 'center' },
+  actionsRowStacked: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' },
   text: {
     flex: 1,
   },

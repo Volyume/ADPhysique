@@ -80,6 +80,27 @@ describe('initialServingState', () => {
     test('edit mode gets the same snap (this is a display choice, not an add/edit distinction)', () => {
       expect(initialServingState(oneSlice, 'edit', 62)).toEqual({ unitKey: 'serving', amount: '2' });
     });
+
+    // Food Diary audit 2026-10-16, item 2 (data wrong): within 2% a 61 g
+    // entry opened as "2 x 30 g", so an untouched save wrote 60 g over it.
+    // Edit snaps only when the portion reproduces the stored grams (under
+    // half a gram); add keeps the 2% snap the one-tap usual chip quotes.
+    describe('edit mode snaps only on an exact match', () => {
+      const thirty = { serving_g: 30, serving_label: 'scoop' };
+      test('61 g opens as 61 g, not 2 x 30 g', () => {
+        expect(initialServingState(thirty, 'edit', 61)).toEqual({ unitKey: 'g', amount: '61' });
+      });
+      test('60 g still opens as 2 scoops', () => {
+        expect(initialServingState(thirty, 'edit', 60)).toEqual({ unitKey: 'serving', amount: '2' });
+      });
+      test('a portion within half a gram still snaps (100 g on a 33.3 g serving is 3)', () => {
+        expect(initialServingState({ serving_g: 33.3, serving_label: 'bar' }, 'edit', 100)).toEqual({ unitKey: 'serving', amount: '3' });
+      });
+      test('63 g on a 31 g slice opens in grams in edit (it snaps in add)', () => {
+        expect(initialServingState(oneSlice, 'edit', 63)).toEqual({ unitKey: 'g', amount: '63' });
+        expect(initialServingState(oneSlice, 'add', 63)).toEqual({ unitKey: 'serving', amount: '2' });
+      });
+    });
   });
 });
 

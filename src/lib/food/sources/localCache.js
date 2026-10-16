@@ -11,6 +11,7 @@
 import { db } from '../../database';
 import { CURATED_FOODS } from '../curatedFoods';
 import { microSqlColumns } from '../micronutrients';
+import { normaliseCookedWeight } from '../recipeWeight';
 
 // The columns every search/lookup row carries. sodium_100g / sugar_100g ride
 // along for the food-detail display rows (gap #16 sugars, E4 sodium):
@@ -210,8 +211,10 @@ export async function resolveFoodRef(userId, foodRef) {
       source: 'curated',
       name: f.name,
       brand: null,
-      serving_g: null,
-      serving_label: null,
+      // A curated food's one natural unit (the egg, 60 g), when it has one,
+      // so every screen opens it the same way (food audit 2026-10-16).
+      serving_g: f.servingG ?? null,
+      serving_label: f.servingG ? (f.servingLabel ?? null) : null,
       kcal_100g: f.kcal,
       protein_100g: f.protein,
       carbs_100g: f.carbs,
@@ -244,7 +247,7 @@ export async function resolveFoodRef(userId, foodRef) {
   }
   if (scope === 'recipe') {
     const recipe = await d.getFirstAsync(
-      `SELECT name, total_servings FROM recipes
+      `SELECT name, total_servings, cooked_weight_g FROM recipes
        WHERE id = ? AND user_id = ? AND deleted_at IS NULL LIMIT 1`,
       [id, userId]
     );
@@ -271,23 +274,39 @@ export async function resolveFoodRef(userId, foodRef) {
       grams += q;
     }
     if (grams <= 0) return null;
-    const servings = Math.max(Number(recipe.total_servings) || 1, 0.01);
-    const per100 = (v) => Math.round((v / grams) * 100 * 10) / 10;
-    return {
-      food_ref: `recipe:${id}`,
-      source: 'recipe',
-      name: recipe.name,
-      brand: null,
-      serving_g: Math.round((grams / servings) * 10) / 10,
-      serving_label: 'serving',
-      kcal_100g: Math.round((kcal / grams) * 100),
-      protein_100g: per100(protein),
-      carbs_100g: per100(carbs),
-      fat_100g: per100(fat),
-      fibre_100g: per100(fibre),
-    };
+    return recipeFoodShape(`recipe:${id}`, recipe, { kcal, protein, carbs, fat, fibre, grams });
   }
   return null;
+}
+
+/**
+ * A recipe as a food-shaped row, from its summed ingredient totals (the raw
+ * weights the builder holds). Founder ruling 2026-10-16 (food audit, "Add
+ * cooked weight"): with a cooked weight, the per-100 g figures and the
+ * serving are measured against the cooked dish, so grams eaten mean grams of
+ * the cooked food. Without one, they stay on the raw weight (unchanged from
+ * before, so every entry already logged reads the same) and the row is
+ * `servings_only`: the add sheets offer servings and never grams.
+ */
+export function recipeFoodShape(ref, recipe, { kcal, protein, carbs, fat, fibre, grams }) {
+  const servings = Math.max(Number(recipe.total_servings) || 1, 0.01);
+  const cooked = normaliseCookedWeight(recipe.cooked_weight_g);
+  const basis = cooked ?? grams;
+  const per100 = (v) => Math.round((v / basis) * 100 * 10) / 10;
+  return {
+    food_ref: ref,
+    source: 'recipe',
+    name: recipe.name,
+    brand: null,
+    serving_g: Math.round((basis / servings) * 10) / 10,
+    serving_label: 'serving',
+    servings_only: cooked == null,
+    kcal_100g: Math.round((kcal / basis) * 100),
+    protein_100g: per100(protein),
+    carbs_100g: per100(carbs),
+    fat_100g: per100(fat),
+    fibre_100g: per100(fibre),
+  };
 }
 
 // IN (...) queries are chunked at 200 ids per statement, matching seed.js's
@@ -343,8 +362,8 @@ export async function resolveFoodRefs(userId, refs) {
         source: 'curated',
         name: f.name,
         brand: null,
-        serving_g: null,
-        serving_label: null,
+        serving_g: f.servingG ?? null,
+        serving_label: f.servingG ? (f.servingLabel ?? null) : null,
         kcal_100g: f.kcal,
         protein_100g: f.protein,
         carbs_100g: f.carbs,
@@ -418,7 +437,7 @@ async function _resolveRecipesBatch(userId, recipeIds, result) {
   for (const chunk of _chunk(recipeIds, REF_CHUNK_SIZE)) {
     const placeholders = chunk.map(() => '?').join(', ');
     const rows = await d.getAllAsync(
-      `SELECT id, name, total_servings FROM recipes
+      `SELECT id, name, total_servings, cooked_weight_g FROM recipes
        WHERE id IN (${placeholders}) AND user_id = ? AND deleted_at IS NULL`,
       [...chunk, userId]
     );
@@ -475,20 +494,6 @@ async function _resolveRecipesBatch(userId, recipeIds, result) {
       grams += q;
     }
     if (grams <= 0) { result.set(ref, null); continue; }
-    const servings = Math.max(Number(recipe.total_servings) || 1, 0.01);
-    const per100 = (v) => Math.round((v / grams) * 100 * 10) / 10;
-    result.set(ref, {
-      food_ref: ref,
-      source: 'recipe',
-      name: recipe.name,
-      brand: null,
-      serving_g: Math.round((grams / servings) * 10) / 10,
-      serving_label: 'serving',
-      kcal_100g: Math.round((kcal / grams) * 100),
-      protein_100g: per100(protein),
-      carbs_100g: per100(carbs),
-      fat_100g: per100(fat),
-      fibre_100g: per100(fibre),
-    });
+    result.set(ref, recipeFoodShape(ref, recipe, { kcal, protein, carbs, fat, fibre, grams }));
   }
 }

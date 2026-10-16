@@ -25,9 +25,10 @@ import {
   updateMealPlan,
   listSavedMeals,
   listRecipesForPlanning,
-  logFoodEntry,
+  logFoodEntries,
   getFoodEntriesForDay,
   clearPlannedDay,
+  replacePlannedFoodForDays,
   getDislikes,
 } from './db';
 import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
@@ -867,19 +868,33 @@ export function diarySlotFor(planSlotKey) {
 /**
  * Log every food of one assembled plan day into the diary (the "Log this
  * day" action). Items already carry computed macros + curated foodRefs,
- * so this fans them through logFoodEntry exactly like a manual log.
- * Returns the number of entries logged. Skips junk (no ref / no grams).
+ * so this writes them through the diary's own validated write exactly like
+ * a manual log. Returns the number of entries logged. Skips junk (no ref /
+ * no grams).
+ *
+ * Food data-layer audit 2026-10-16, item 14: the whole day is ONE write
+ * (logFoodEntries, D230 R10), so a failure leaves none of it written rather
+ * than the first few meals.
  */
 export async function applyPlanDayToDiary(userId, day, { entryDate } = {}) {
   if (!userId || !day || !entryDate) return 0;
-  let logged = 0;
-  for (const slot of day.slots || []) {
+  const entries = plannedEntriesForDay(day, entryDate);
+  if (entries.length === 0) return 0;
+  const ids = await logFoodEntries(userId, entries);
+  return ids.length;
+}
+
+// The diary entries one plan day writes on `entryDate`, as planned
+// scaffolding. Pure. Shared by applyPlanDayToDiary and the banked-day
+// re-sync, so both write exactly the same rows.
+function plannedEntriesForDay(day, entryDate) {
+  const entries = [];
+  for (const slot of day?.slots || []) {
     const mealSlot = diarySlotFor(slot.slot);
     for (const it of slot.items || []) {
       const q = Number(it?.quantityG);
       if (!it?.foodRef || !Number.isFinite(q) || q <= 0) continue;
-      // eslint-disable-next-line no-await-in-loop
-      await logFoodEntry(userId, {
+      entries.push({
         entryDate,
         mealSlot,
         foodRef: it.foodRef,
@@ -896,10 +911,9 @@ export async function applyPlanDayToDiary(userId, day, { entryDate } = {}) {
         // diary (adherence model). Until then it doesn't count towards adherence.
         isPlanned: true,
       });
-      logged += 1;
     }
   }
-  return logged;
+  return entries;
 }
 
 /**
@@ -947,6 +961,13 @@ export async function applyPlanWeekToDiary(userId, plan, { startDate } = {}) {
  * The stored meal plan is the UN-banked source of truth and is never mutated
  * here, so clearing the bank can restore the original food (see restore below).
  * Returns the per-day changes for the notice: { perDayChanges: [{ dayKey, change }] }.
+ *
+ * ALL OR NOTHING (food data-layer audit 2026-10-16, item 14): every adjusted
+ * day's planned food is replaced in ONE transaction
+ * (replacePlannedFoodForDays). Its caller (DiaryScreen's applyBank) says
+ * "Nothing has changed" when this throws; until now each day was cleared and
+ * rewritten as separate writes, so a failure part-way left days cleared or
+ * half rewritten and that sentence was untrue.
  */
 export async function resyncBankedPlannedFood(userId, { perDayDeltaKcal, floorKcal, startDate } = {}) {
   if (!userId || !perDayDeltaKcal) return { perDayChanges: [] };
@@ -961,6 +982,8 @@ export async function resyncBankedPlannedFood(userId, { perDayDeltaKcal, floorKc
   });
   const edits = bankedPlanDayEdits({ planDays: days, dayKeys, perDayDeltaKcal, floorKcal });
   const perDayChanges = [];
+  const replacedDays = [];
+  const entries = [];
   for (const e of edits) {
     // Only adjust a day that already has planned food in the diary (decision
     // D-cb1b-3): otherwise banking stays target-only for that day.
@@ -968,14 +991,13 @@ export async function resyncBankedPlannedFood(userId, { perDayDeltaKcal, floorKc
     const existing = await getFoodEntriesForDay(userId, e.dayKey);
     const hasPlanned = Array.isArray(existing) && existing.some((row) => row.is_planned);
     if (!hasPlanned) continue;
-    // eslint-disable-next-line no-await-in-loop
-    await clearPlannedDay(userId, e.dayKey);
-    // eslint-disable-next-line no-await-in-loop
-    await applyPlanDayToDiary(userId, e.editedDay, { entryDate: e.dayKey });
+    replacedDays.push(e.dayKey);
+    entries.push(...plannedEntriesForDay(e.editedDay, e.dayKey));
     if (e.change && ((e.change.edits && e.change.edits.length > 0) || e.change.floorHeld)) {
       perDayChanges.push({ dayKey: e.dayKey, change: e.change });
     }
   }
+  if (replacedDays.length > 0) await replacePlannedFoodForDays(userId, replacedDays, entries);
   return { perDayChanges };
 }
 

@@ -59,6 +59,7 @@ function freshDb() {
   )`);
   raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)'); // D230 R20: the note step ALTERs this table
   raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY)'); // D230 R20: the portions step ALTERs this table
+  raw.exec('CREATE TABLE recipes (id TEXT PRIMARY KEY)'); // the cooked-weight step ALTERs this table
   raw.exec(`CREATE TABLE workout_sets (
     id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT,
     set_type TEXT DEFAULT 'straight', updated_at INTEGER
@@ -86,7 +87,7 @@ async function runLast(raw, count) {
 
 test('a pre-migration database upgrades: existing rows read NULL on every new column', async () => {
   const raw = freshDb();
-  await runLast(raw, 8);
+  await runLast(raw, 9);
 
   const re = raw.prepare('SELECT group_kind, round_rest_seconds, updated_at FROM routine_exercises WHERE id = ?').get('re-1');
   expect(re.group_kind).toBeNull();
@@ -100,7 +101,7 @@ test('a pre-migration database upgrades: existing rows read NULL on every new co
 
 test('is idempotent: a second run changes nothing and errors on neither run', async () => {
   const raw = freshDb();
-  const total = await runLast(raw, 8);
+  const total = await runLast(raw, 9);
   const before = {
     re: raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1'),
     set: raw.prepare('SELECT * FROM workout_sets WHERE id = ?').get('set-1'),
@@ -115,7 +116,7 @@ test('is idempotent: a second run changes nothing and errors on neither run', as
 
 test('the new columns round-trip a written value (group_kind/round_rest_seconds/evidence_class)', async () => {
   const raw = freshDb();
-  await runLast(raw, 8);
+  await runLast(raw, 9);
 
   raw.prepare('UPDATE routine_exercises SET group_kind = ?, round_rest_seconds = ? WHERE id = ?')
     .run('circuit', 90, 're-1');

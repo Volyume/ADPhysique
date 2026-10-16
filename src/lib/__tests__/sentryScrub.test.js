@@ -488,3 +488,26 @@ describe('schema audit: every locked-sensitive column must match a scrub pattern
     expect(Object.isFrozen(SENSITIVE_VALUE_SUBSTRINGS)).toBe(true);
   });
 });
+
+// Food data-layer audit 2026-10-16, item 10: what a person ate, by identity.
+// A food ref ("custom:<id>", "recipe:<id>") or a scanned barcode names the
+// food itself, so neither leaves the device in a Sentry payload. The
+// content-free telemetry field food_ref_source stays readable.
+describe('food identity keys are sensitive (audit item 10)', () => {
+  test.each(['foodRef', 'food_ref', 'FOOD_REF', 'foodRefs', 'food-ref', 'barcode', 'barcode_ean', 'barcodeEan', 'BARCODE'])(
+    '%s is sensitive', (k) => {
+      expect(isSensitiveKey(k)).toBe(true);
+    },
+  );
+
+  test('food_ref_source (quick_add | custom | global) is not', () => {
+    expect(isSensitiveKey('food_ref_source')).toBe(false);
+  });
+
+  test('a scrubbed object loses the ref and the barcode, keeps the rest', () => {
+    const out = scrubObject({ foodRef: 'custom:9f1c', barcode_ean: '5000169005064', mealSlot: 'meal_1' });
+    expect(out.foodRef).toBe('[redacted]');
+    expect(out.barcode_ean).toBe('[redacted]');
+    expect(out.mealSlot).toBe('meal_1');
+  });
+});

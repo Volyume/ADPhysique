@@ -5,7 +5,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
-import { toEnergy, energyUnitLabel } from '../../lib/format';
+import { formatEnergy, energyUnitLabel, toEnergy } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
 import { displayFoodNote } from '../../lib/food/entryNote';
@@ -61,12 +61,26 @@ export function EntryRow({
     : null;
   // D230 4.3: "60 g · 08:15", one spaced middle dot, the separator every
   // food row uses.
-  const metaLine = [isQuick ? null : `${Math.round(entry.quantity_g)} g`, eatenTime]
+  // A recipe whose grams are not grams of the cooked dish reads in servings
+  // (founder ruling 2026-10-16, cooked weight; the Diary sets `_portion`).
+  const amountText = isQuick ? null : (entry?._portion ?? `${Math.round(entry.quantity_g)} g`);
+  const metaLine = [amountText, eatenTime]
     .filter(Boolean).join(' · ');
   // D230 R15/R16 (4.3): the caption reads "8 P · 36 C · 5 F"; the row's
-  // spoken label says the same thing in words, never the letters.
-  const spokenMacros = `${p} grams protein, ${c} carbs, ${f} fat`;
-  const energy = `${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}`;
+  // spoken label says the same thing in words, never the letters. Food Diary
+  // audit 2026-10-16, item 12: "1 gram of protein" (never "1 grams
+  // protein") and the energy as a word ("265 calories", never "265 kcal").
+  const spokenMacros = `${p} ${p === 1 ? 'gram' : 'grams'} of protein, ${c} carbs, ${f} fat`;
+  const energyValue = toEnergy(kcal, energyUnit);
+  const energyWord = energyUnit === 'kj'
+    ? (energyValue === 1 ? 'kilojoule' : 'kilojoules')
+    : (energyValue === 1 ? 'calorie' : 'calories');
+  const energy = `${formatEnergy(kcal, energyUnit)} ${energyWord}`;
+  // Item 11 (food Diary audit 2026-10-16): a planned row (added ahead from a
+  // plan, not eaten yet) reads differently from an eaten one: a quiet
+  // "Planned" label in secondary ink, and said in the row's label.
+  const isPlanned = !!entry?.is_planned;
+  const spokenPlanned = isPlanned ? ' Planned, not eaten yet.' : '';
   const spokenNote = noteLine ? ` Note: ${noteLine}${/[.!?]$/.test(noteLine) ? '' : '.'}` : '';
   // Item 9 (campaign 2026-07-10): weight_state (raw/cooked/as_weighed) only
   // showed in FoodDetailSheet's edit sheet before. A quiet inline chip on
@@ -106,10 +120,10 @@ export function EntryRow({
       // A quick add's note is already its name, so it is not said twice.
       accessibilityLabel={
         readOnly
-          ? `${name}, ${energy}, ${spokenMacros}.${spokenNote}`
+          ? `${name}, ${energy}, ${spokenMacros}.${spokenPlanned}${spokenNote}`
           : selectionMode
-            ? `${name}, ${energy}, ${spokenMacros}.${spokenNote} ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
-            : `${name}, ${energy}, ${spokenMacros}.${spokenNote} Tap to edit.`
+            ? `${name}, ${energy}, ${spokenMacros}.${spokenPlanned}${spokenNote} ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
+            : `${name}, ${energy}, ${spokenMacros}.${spokenPlanned}${spokenNote} Tap to edit.`
       }
       // D94 (Campaign 3, Phase 10): the long press is now an accelerator
       // (the edit sheet carries the visible route), but screen-reader users
@@ -123,7 +137,14 @@ export function EntryRow({
       ) : null}
       <View style={styles.entryMain}>
         <View style={styles.entryNameRow}>
-          <Text style={[styles.entryName, live.entryName]} numberOfLines={1}>{name}</Text>
+          {/* Item 13 (food Diary audit 2026-10-16): two lines, so a name is
+              read at the largest text size rather than cut to "Porridge...". */}
+          <Text style={[styles.entryName, live.entryName]} numberOfLines={2}>{name}</Text>
+          {isPlanned ? (
+            <View style={[styles.plannedTag, live.plannedTag]} testID="entry-planned-tag">
+              <Text style={[styles.plannedTagText, live.plannedTagText]} numberOfLines={1}>Planned</Text>
+            </View>
+          ) : null}
           {/* Item 9: quiet weighing-basis chip, shown only for an explicit
               raw/cooked weight_state. Decorative only, same as mealTag below
               (no accessibility change to the row's own label). */}
@@ -147,7 +168,7 @@ export function EntryRow({
         {noteLine ? <Text style={[styles.entryNote, live.entryNote]} numberOfLines={1} ellipsizeMode="tail">{noteLine}</Text> : null}
       </View>
       <View style={styles.entryMacros}>
-        <Text style={[styles.entryKcal, live.entryKcal]}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+        <Text style={[styles.entryKcal, live.entryKcal]}>{formatEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
         <Text style={[styles.entryMacroLine, live.entryMacroLine]}>{p} P · {c} C · {f} F</Text>
       </View>
     </TouchableOpacity>
@@ -227,7 +248,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
     borderColor: colors.primary,
   },
-  entryMain: { flex: 1 },
+  // Item 13 (food Diary audit 2026-10-16): the name column takes what the
+  // figures leave; the figures never shrink or wrap mid-number.
+  entryMain: { flex: 1, minWidth: 0 },
   // Ultimate-Audit item 15 (D22 15a): name + meal tag share a row so the tag
   // reads as a quiet label on the food, not a second heading.
   entryNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -253,7 +276,16 @@ const styles = StyleSheet.create({
   entryBrand: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
   entryQuantity: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   entryNote: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  entryMacros: { alignItems: 'flex-end' },
+  entryMacros: { alignItems: 'flex-end', flexShrink: 0, marginLeft: spacing.sm },
+  // Item 11: the planned label, the mealTag idiom in secondary ink.
+  plannedTag: {
+    paddingHorizontal: spacing.xs, paddingVertical: 1,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+    flexShrink: 0,
+  },
+  plannedTagText: { ...type.caption, color: colors.textSecondary, fontSize: fontSize.xs },
   // D230 4.3: tabular bodyStrong, so a column of kcal figures lines up.
   entryKcal: { ...type.num('bodyStrong'), color: colors.textPrimary },
   entryMacroLine: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
@@ -286,6 +318,8 @@ function buildLiveStyles(t) {
     mealTag: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mealTagText: { color: t.colors.textMuted },
     weightStateTag: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    plannedTag: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    plannedTagText: { color: t.colors.textSecondary },
     weightStateTagText: { color: t.colors.textMuted },
     entryBrand: { color: t.colors.textMuted },
     entryQuantity: { color: t.colors.textMuted },

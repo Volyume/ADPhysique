@@ -164,7 +164,7 @@ describe('EntryRow spoken label carries the note (item 11)', () => {
 
   test('a food entry with a note says it, after the figures and before the action', () => {
     expect(rowLabel({ ...base, note: 'with the good butter' }))
-      .toBe('Porridge oats, 227 kcal, 8 grams protein, 36 carbs, 5 fat. Note: with the good butter. Tap to edit.');
+      .toBe('Porridge oats, 227 calories, 8 grams of protein, 36 carbs, 5 fat. Note: with the good butter. Tap to edit.');
   });
 
   test('a note that ends a sentence itself gets no second full stop', () => {
@@ -172,7 +172,7 @@ describe('EntryRow spoken label carries the note (item 11)', () => {
   });
 
   test('no note, no note words', () => {
-    expect(rowLabel(base)).toBe('Porridge oats, 227 kcal, 8 grams protein, 36 carbs, 5 fat. Tap to edit.');
+    expect(rowLabel(base)).toBe('Porridge oats, 227 calories, 8 grams of protein, 36 carbs, 5 fat. Tap to edit.');
   });
 
   test('a quick add says its note once, as its name', () => {

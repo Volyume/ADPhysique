@@ -642,8 +642,13 @@ describe('D230 R17: a single write updates in place and reconciles once in the b
     expect(text).not.toContain('Porridge oats · 60 g'); // the meal is no longer empty
     expect(text).toContain('Porridge oats'); // the new row
     expect(text).toContain('227'); // the row's kcal, and the ring's eaten total
-    // The write filled meal_1, so the per-meal usuals ran once for the new empty set.
-    expect(mockGetSlotRecents.mock.calls.length - slotReadsBefore).toBeLessThanOrEqual(3);
+    // The write filled meal_1, so the per-meal usuals ran once for the new
+    // empty set: one read per empty meal (Meal 2 to 4), plus, since the food
+    // Diary audit 2026-10-16 (item 10), the old meal name each one maps to
+    // (Lunch, Dinner, Snacks), never a second pass.
+    const newReads = mockGetSlotRecents.mock.calls.slice(slotReadsBefore).map(([, slot]) => slot);
+    expect(newReads.filter((k) => /^meal_\d+$/.test(k)).sort()).toEqual(['meal_2', 'meal_3', 'meal_4']);
+    expect(newReads.length).toBeLessThanOrEqual(6);
 
     // The reconcile lands later and replaces the in-place rows with the stored ones.
     await act(async () => { releaseLoad([entry({ id: 'entry-new', entry_date: TODAY, meal_slot: 'meal_1' })]); });

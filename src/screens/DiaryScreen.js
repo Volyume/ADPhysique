@@ -62,7 +62,11 @@ import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   applyCuratedMealToDiary,
   adjustWaterMl, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
-  getSlotRecents, logFoodEntry, upsertSlotRecent, deleteFoodEntries,
+  getSlotRecents, logFoodEntry, upsertSlotRecent, deleteFoodEntries, updateFoodEntries,
+  // The food lane's change feed (food Diary audit 2026-10-16, item 4): every
+  // diary write emits { userId, dates }. Guarded at the call site, so a
+  // build or a test without it simply does not subscribe.
+  subscribeDiaryChanges,
 } from '../lib/food/db';
 // D138 one-tap usual: the SAME payload builders FoodSearchScreen's confirmLog
 // uses, so a chip-logged entry and a sheet-logged entry are byte-identical.
@@ -82,7 +86,8 @@ import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
 import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
-import { safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
+import { safeDayFloorKcal, displayBankedDelta, bankBreachesFloor, bankableDays } from '../lib/food/calorieBank';
+import { recipeEntryPortion, recipeServingGOnEntryBasis } from '../lib/food/recipeWeight';
 import { resolveEffectiveTargets, dayTypeLabel } from '../lib/food/effectiveTargets';
 import {
   resyncBankedPlannedFood, restoreUnbankedPlannedFood,
@@ -100,8 +105,6 @@ import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
 import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
-import QuickAddSheet from '../components/food/QuickAddSheet';
-import BottomSheet from '../components/BottomSheet';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import MealSection, { usualPortionText } from '../components/food/MealSection';
@@ -118,9 +121,9 @@ import CopyFromDaySheet from '../components/food/CopyFromDaySheet';
 import MealsSheet from '../components/food/MealsSheet';
 import HeaderAction from '../components/HeaderAction';
 import { useToast } from '../components/Toast';
-import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
+import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate, entryToPatch } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
-import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
+import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, mealSlotLabel, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 import { scaleMacros } from '../lib/food/macros';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { parseLocalDay } from '../lib/dayKey';
@@ -150,6 +153,61 @@ function isValidDayKey(value) {
   return typeof value === 'string'
     && /^\d{4}-\d{2}-\d{2}$/.test(value)
     && !Number.isNaN(parseLocalDay(value).getTime());
+}
+
+// Food Diary audit 2026-10-16, item 10: a person whose history is in the old
+// meal names (Breakfast, Lunch, Dinner, Snacks) sees the numbered day (Meal 1
+// to N), so the empty day's one-tap chips found nothing under 'meal_1'. The
+// old names map to the person's numbered meals the way the history import
+// does (importHistory.js mealPlace/slotFor: Breakfast is the first meal,
+// Lunch the second, Dinner the third, Snacks the fourth, never past the
+// person's last meal). A key that is not an old meal name is returned as is.
+const LEGACY_SLOT_PLACE = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };
+export function currentSlotForLegacy(slotKey, mealsPerDay = DEFAULT_MEALS_PER_DAY) {
+  const idx = LEGACY_SLOT_PLACE[slotKey];
+  if (idx == null) return slotKey;
+  const n = Math.max(1, Math.trunc(Number(mealsPerDay)) || DEFAULT_MEALS_PER_DAY);
+  return `meal_${Math.min(idx + 1, n)}`;
+}
+
+// The slot a row from another day is offered under on THIS day: its own slot
+// when that meal card is on screen, else (an old meal name) the numbered meal
+// it maps to.
+function shownSlotFor(slotKey, shownKeys, mealsPerDay) {
+  if (shownKeys.has(slotKey)) return slotKey;
+  return currentSlotForLegacy(slotKey, mealsPerDay);
+}
+
+// Food Diary audit 2026-10-16, item 1 (data wrong): the edit sheet works from
+// the ENTRY's own figures, never the food's current ones. Editing a custom
+// food's energy (or a refreshed library food) used to re-price every old
+// entry the moment it was opened and saved, even for a meal or note change.
+// The per-100 g figures come from the entry (each figure over its grams);
+// the current food supplies only what is not a figure: its name, brand,
+// source, named serving and portions (and the per-food extras the "More"
+// row shows). Both field spellings are set so no current figure leaks
+// through scaleMacros' fallback key.
+export function editFoodFromEntry(entry, currentFood) {
+  const q = Number(entry?.quantity_g);
+  const per100 = (v) => (q > 0 && v != null && Number.isFinite(Number(v)) ? (Number(v) / q) * 100 : null);
+  const kcal = per100(entry?.kcal) ?? 0;
+  const protein = per100(entry?.protein_g) ?? 0;
+  const carbs = per100(entry?.carbs_g) ?? 0;
+  const fat = per100(entry?.fat_g) ?? 0;
+  const fibre = per100(entry?.fibre_g);
+  // A recipe's serving is restated on the entry's own basis, so "1 serving"
+  // in the sheet is one serving's energy whether the entry was priced on the
+  // raw or the cooked weight (founder ruling 2026-10-16, cooked weight).
+  const recipeServingG = recipeServingGOnEntryBasis(entry, currentFood);
+  return {
+    ...(currentFood ?? { name: friendlyFoodName(entry), brand: null, source: null }),
+    ...(recipeServingG ? { serving_g: recipeServingG } : {}),
+    kcal_100g: kcal, kcal100g: kcal,
+    protein_100g: protein, protein100g: protein,
+    carbs_100g: carbs, carbs100g: carbs,
+    fat_100g: fat, fat100g: fat,
+    fibre_100g: fibre, fibre100g: fibre,
+  };
 }
 
 export default function DiaryScreen({ navigation, route }) {
@@ -325,6 +383,9 @@ export default function DiaryScreen({ navigation, route }) {
           ...entry,
           _name: food?.name ?? null,
           _brand: food?.brand ?? null,
+          // A recipe's amount in servings when its grams are not grams of
+          // the cooked dish (founder ruling 2026-10-16, cooked weight).
+          _portion: recipeEntryPortion(entry, food),
         };
       });
       // Check again: the enrichment await above is itself a second point where
@@ -380,6 +441,41 @@ export default function DiaryScreen({ navigation, route }) {
   const reconcileInBackground = useCallback(() => {
     load().catch(() => {}); // best-effort reconcile; load() reports its own failure
   }, [load]);
+
+  // Food Diary audit 2026-10-16, item 4: a write made elsewhere (the add
+  // screen's Undo pressed after it closed, an import, a sync pull) changes a
+  // day this screen shows without this screen knowing, so a deleted row stayed
+  // on the Diary. The food lane's change feed (food/db.js
+  // subscribeDiaryChanges, { userId, dates }) is answered for the day in view
+  // and the day before it (whose rows feed "Yesterday's <meal>") with the
+  // existing background reconcile, debounced so a burst of writes reloads
+  // once. Unsubscribed on unmount. The latest day and reconcile are read
+  // through a ref, so the subscription is made once per person.
+  const changeFeedRef = useRef({ date: selectedDate, reconcile: reconcileInBackground });
+  changeFeedRef.current.date = selectedDate;
+  changeFeedRef.current.reconcile = reconcileInBackground;
+  useEffect(() => {
+    if (!userId || typeof subscribeDiaryChanges !== 'function') return undefined;
+    let timer = null;
+    let unsubscribe = null;
+    try {
+      unsubscribe = subscribeDiaryChanges((event) => {
+        if (event?.userId && event.userId !== userId) return;
+        const day = changeFeedRef.current.date;
+        const dates = Array.isArray(event?.dates) ? event.dates : null;
+        // No dates named: the write could touch any day, so answer it.
+        if (dates && !dates.includes(day) && !dates.includes(shiftDate(day, -1))) return;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => { timer = null; changeFeedRef.current.reconcile(); }, DIARY_CHANGE_DEBOUNCE_MS);
+      });
+    } catch (e) {
+      logError('DiaryScreen.subscribeDiaryChanges', e, {});
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [userId]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
   // confirm banner so it counts towards adherence only once the user says they
@@ -461,8 +557,11 @@ export default function DiaryScreen({ navigation, route }) {
   // The banked delta to show for the day in view. Zero unless banking is
   // currently allowed, even if a bank is still persisted.
   const bankedDelta = useMemo(
-    () => displayBankedDelta({ bankingAvailable, calorieBank, dayKey: selectedDate }),
-    [bankingAvailable, calorieBank, selectedDate],
+    () => displayBankedDelta({
+      bankingAvailable, calorieBank, dayKey: selectedDate,
+      baseTargetKcal: targets?.targetKcal ?? null, floorKcal,
+    }),
+    [bankingAvailable, calorieBank, selectedDate, targets?.targetKcal, floorKcal],
   );
 
   // The effective macro target for the day: the stored nutrition target,
@@ -499,6 +598,11 @@ export default function DiaryScreen({ navigation, route }) {
     return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   }, [selectedDate]);
   const bankActiveThisWeek = !!calorieBank && weekDates.includes(calorieBank.bigDayKey);
+  // Founder ruling 2026-10-16 (food audit): a new bank uses today and the rest
+  // of the week only. Days already gone keep the target they had.
+  const todayKey = isoDate(new Date());
+  const bankDays = useMemo(() => bankableDays(weekDates, todayKey), [weekDates, todayKey]);
+  const bankDefaultDay = bankDays.includes(selectedDate) ? selectedDate : (bankDays[0] ?? selectedDate);
 
   // Founder order 2026-09-22/23: the "Higher-calorie day" FeatureRow's sub
   // line is state-aware, so it names the real planned day rather than
@@ -579,6 +683,41 @@ export default function DiaryScreen({ navigation, route }) {
     await load();
     toast.show('Higher-calorie day cleared.', { variant: 'info' });
   }, [setCalorieBank, toast, userId, calorieBank, load]);
+
+  // Founder ruling 2026-10-16 (food audit): when the daily target changes so
+  // that a planned bank would put any of its days below the safe floor, the
+  // bank is cancelled, every day goes back to the same target, and a calm line
+  // says why. displayBankedDelta already refuses to SHOW the breaching bank,
+  // so the floor holds on screen even if this cancel fails; the ref keeps it
+  // to one attempt per stored bank.
+  const bankCancelRef = useRef(null);
+  useEffect(() => {
+    if (!calorieBank || !userId) return;
+    // A bank whose days have all gone changes nothing still to come (and is
+    // already not shown while it breaches), so only a live bank is cancelled.
+    const today = isoDate(new Date());
+    if (!Object.keys(calorieBank.perDayDeltaKcal || {}).some((d) => d >= today)) return;
+    if (!bankBreachesFloor({ calorieBank, baseTargetKcal: targets?.targetKcal, floorKcal })) return;
+    const key = `${calorieBank.bigDayKey}:${calorieBank.appliedAt}`;
+    if (bankCancelRef.current === key) return;
+    bankCancelRef.current = key;
+    (async () => {
+      try {
+        await restoreUnbankedPlannedFood(userId, {
+          perDayDeltaKcal: calorieBank.perDayDeltaKcal, startDate: isoDate(new Date()),
+        });
+        await setCalorieBank(null);
+        await load();
+        // Under an open ED flag the bank was already hidden: it is cleared
+        // quietly, with no calorie message (review finding 4).
+        if (!edFlagOpen) {
+          toast.show('Your higher-calorie day has been cancelled because your daily target changed. Every day is back to the same target.', { variant: 'info' });
+        }
+      } catch (e) {
+        logError('DiaryScreen.cancelBankBelowFloor', e, { userId });
+      }
+    })();
+  }, [calorieBank, userId, targets?.targetKcal, floorKcal, setCalorieBank, load, toast, edFlagOpen]);
 
   // BUG-1: this used to also fire from a plain `useEffect(() => { load(); },
   // [load])` alongside the useFocusEffect below. useFocusEffect already
@@ -838,6 +977,7 @@ export default function DiaryScreen({ navigation, route }) {
   // conditional yesterday read always tests the ladder that is actually on
   // screen, without making load() depend on it.
   mealSlotKeysRef.current = mealSlots.map((m) => m.key);
+  const shownSlotKeys = mealSlotKeysRef.current.join(',');
 
   // GAP #5: usual-food shortcuts for empty meal slots. Each slot offers up to three
   // of the foods most logged into THAT slot (the same `food_slot_recents`
@@ -853,9 +993,27 @@ export default function DiaryScreen({ navigation, route }) {
     (async () => {
       // Usuals only ever show on an EMPTY meal, so only those are read.
       const emptyKeys = emptySlotKeysFromKey(emptyKey);
-      const rowsPerSlot = await Promise.all(
-        emptyKeys.map((key) => getSlotRecents(userId, key, 3).catch(() => [])),
-      );
+      // Item 10 (food Diary audit 2026-10-16): an empty numbered meal also
+      // reads the recents kept under the old meal name that maps to it
+      // (Breakfast for Meal 1, and so on), unless that old meal has its own
+      // card today. The two lists merge by how often each food was logged.
+      const shownKeys = new Set(shownSlotKeys.split(','));
+      const sourcesFor = (key) => [key, ...Object.keys(LEGACY_SLOT_PLACE).filter(
+        (legacy) => !shownKeys.has(legacy) && currentSlotForLegacy(legacy, mealsPerDay) === key,
+      )];
+      const rowsPerSlot = await Promise.all(emptyKeys.map(async (key) => {
+        const lists = await Promise.all(sourcesFor(key).map((src) => getSlotRecents(userId, src, 3).catch(() => [])));
+        if (lists.length === 1) return lists[0] ?? [];
+        const byRef = new Map();
+        lists.flat().forEach((row) => {
+          if (!row?.food_ref) return;
+          const prev = byRef.get(row.food_ref);
+          if (!prev || (Number(row.log_count) || 0) > (Number(prev.log_count) || 0)) byRef.set(row.food_ref, row);
+        });
+        return [...byRef.values()]
+          .sort((a, b) => (Number(b.log_count) || 0) - (Number(a.log_count) || 0))
+          .slice(0, 3);
+      }));
       // D138 item 6: one batched resolve for every slot's recents together,
       // instead of a resolve per row per slot (up to 3 x slots round trips).
       const refs = rowsPerSlot.flat().map((row) => row?.food_ref).filter(Boolean);
@@ -875,7 +1033,9 @@ export default function DiaryScreen({ navigation, route }) {
       if (active) setSlotUsuals(next);
     })();
     return () => { active = false; };
-  }, [userId, selectedDate, emptyKey]);
+    // shownSlotKeys: an old meal that gets its own card (its food loads after
+    // the first paint) stops lending its recents to a numbered meal.
+  }, [userId, selectedDate, emptyKey, mealsPerDay, shownSlotKeys]);
 
   // Hold a usual chip (or tap one with no remembered portion): the food is
   // only a preselection, and the shared detail sheet still confirms grams,
@@ -956,14 +1116,19 @@ export default function DiaryScreen({ navigation, route }) {
   // D138 item 2: yesterday's rows for THIS day's view, bucketed by meal and
   // limited to real intake. A planned-but-unconfirmed row was never eaten, so
   // it is not part of "yesterday's breakfast" and is never copied forward.
+  // Item 10 (food Diary audit 2026-10-16): a row kept under an old meal name
+  // (Breakfast) is offered under the numbered meal it maps to (Meal 1) when
+  // the old meal has no card today, so "Yesterday's Meal 1" appears for a
+  // person whose yesterday is in the old names.
   const yesterdaySlotEntries = useMemo(() => {
     const out = {};
+    const shownKeys = new Set(mealSlots.map((m) => m.key));
     for (const e of (yesterdayEntries ?? [])) {
       if (e.is_planned) continue;
-      (out[e.meal_slot] ??= []).push(e);
+      (out[shownSlotFor(e.meal_slot, shownKeys, mealsPerDay)] ??= []).push(e);
     }
     return out;
-  }, [yesterdayEntries]);
+  }, [yesterdayEntries, mealSlots, mealsPerDay]);
 
   // Copy ONE of yesterday's meals into the same meal today. Same batched
   // primitive as every other copy path (copyEntriesToDate -> logFoodEntries,
@@ -977,7 +1142,11 @@ export default function DiaryScreen({ navigation, route }) {
       // A row that could never be logged is left out and counted (`skipped`);
       // the rest land together. Nothing here is retried: if every row was left
       // out, trying again will not help, so the sentence says so.
-      const { ids, skipped } = await copyEntriesToDate(userId, rows, selectedDate, { mealSlot: slotKey });
+      // Each row lands in the meal it is offered under (an old meal name's
+      // row in the numbered meal it maps to, item 10).
+      const { ids, skipped } = await copyEntriesToDate(
+        userId, rows.map((e) => ({ ...e, meal_slot: slotKey })), selectedDate, { mealSlot: slotKey },
+      );
       await load();
       if (ids.length === 0) {
         if (skipped > 0) toast.show('Those entries could not be copied.', { variant: 'error' });
@@ -1151,47 +1320,12 @@ export default function DiaryScreen({ navigation, route }) {
     navigation.navigate('FoodSearch', { mealSlot: slot, entryDate: selectedDate });
   }
 
-  function addSavedMeal(slot) {
-    setSavedPickerSlot(slot);
-  }
-
-  function scanForMeal(slot) {
-    navigation.navigate('ScanBarcode', { mealSlot: slot, entryDate: selectedDate });
-  }
-
+  // Food Diary audit 2026-10-16, item 14: the meal card's saved-meals picker,
+  // its barcode shortcut and its quick-add sheet were unreachable (MealSection
+  // never rendered the three buttons that set them, L05-D1/D6), so they and
+  // their state are gone. Scan is the screen's own button; saved meals and
+  // quick add are on the add screen (FoodSearchScreen's "More" tab).
   const [editSheet, setEditSheet] = useState(null); // { entry, food } | null
-
-  // Quick add straight from a meal card (COMP-003): the escape hatch for
-  // meals not worth a lookup. Same sheet and write path as the tertiary
-  // flash-icon route in FoodSearchScreen, reached with zero navigation.
-  const [quickAddSlot, setQuickAddSlot] = useState(null); // meal slot key | null
-  const [savedPickerSlot, setSavedPickerSlot] = useState(null); // meal slot key | null
-
-  function openSavedFoodRoute(routeName) {
-    const mealSlot = savedPickerSlot || likelyMealSlot || 'snack';
-    setSavedPickerSlot(null);
-    navigation.navigate(routeName, { mealSlot, entryDate: selectedDate });
-  }
-
-  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot, note }) {
-        // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
-    // as "Quick add" with no gram weight.
-    // eslint-disable-next-line global-require
-    const { logFoodEntry } = require('../lib/food/db');
-    await logFoodEntry(userId, {
-      entryDate: selectedDate,
-      mealSlot,
-      foodRef: 'quick:adhoc',
-      quantityG: 0,
-      kcal,
-      proteinG: protein,
-      carbsG: carbs,
-      fatG: fat,
-      fibreG: null,
-      note, // D230 R20: the name a quick add never had
-    });
-    await load();
-  }
 
   // Multi-select (GAP row 26) + per-meal breakdown sheet (GAP row 27).
   const [selectionMode, setSelectionMode] = useState(false);
@@ -1258,12 +1392,22 @@ export default function DiaryScreen({ navigation, route }) {
   // toast's Undo restores them; no confirm dialog (Toast reserves Alert for
   // account-level destructive actions). If the toast times out the rows simply
   // stay deleted, the commit already happened.
+  // Food Diary audit 2026-10-16, item 6: a failed delete (or a failed Undo)
+  // used to reject in silence. Each now logs its cause (a count, never a food
+  // or an amount) and says so in a calm full sentence; the selection stays
+  // so the person can try again.
   const doDeleteSelected = useCallback(async () => {
     const sel = selectedEntries();
     if (sel.length === 0) return;
     const n = sel.length;
     audit('food.delete', { mealSlot: 'multi', count: n });
-    await deleteEntries(userId, sel);
+    try {
+      await deleteEntries(userId, sel);
+    } catch (e) {
+      logError('DiaryScreen.deleteSelected', e, { count: n });
+      toast.show(n === 1 ? 'That entry was not deleted. Try again in a moment.' : 'Those entries were not deleted. Try again in a moment.', { variant: 'error' });
+      return;
+    }
     // Haptics completion pass (2026-07-10): data-first, mirrors the
     // single-row requestDelete's commit beat -- fires only after the
     // bulk delete has actually landed.
@@ -1272,7 +1416,19 @@ export default function DiaryScreen({ navigation, route }) {
     await load();
     toast.show(`${n} ${n === 1 ? 'entry' : 'entries'} deleted.`, {
       variant: 'undo',
-      action: { label: 'Undo', onPress: async () => { await restoreEntries(userId, sel); await load(); } },
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          try {
+            await restoreEntries(userId, sel);
+          } catch (e) {
+            logError('DiaryScreen.undoDeleteSelected', e, { count: n });
+            toast.show(n === 1 ? 'That entry was not brought back. Try again in a moment.' : 'Those entries were not brought back. Try again in a moment.', { variant: 'error' });
+            return;
+          }
+          await load();
+        },
+      },
     });
   }, [selectedEntries, userId, exitSelection, load, toast]);
 
@@ -1313,14 +1469,48 @@ export default function DiaryScreen({ navigation, route }) {
     }
   }, [selectedEntries, userId, selectedDate, exitSelection, load, toast]);
 
+  // Food Diary audit 2026-10-16, item 6: a move says what it did, with an
+  // Undo that puts each row back in the meal it came from (one batched
+  // write of each row's own patch), and a failure is logged and said.
   const doMoveSelected = useCallback(async (slot) => {
     const sel = selectedEntries();
     setMovePickerVisible(false);
     if (sel.length === 0) return;
-    await moveEntriesToSlot(userId, sel, slot);
+    const moved = sel.filter((e) => e.meal_slot !== slot);
+    try {
+      await moveEntriesToSlot(userId, sel, slot);
+    } catch (e) {
+      logError('DiaryScreen.moveSelected', e, { count: sel.length, mealSlot: slot });
+      toast.show(sel.length === 1 ? 'That entry was not moved. Try again in a moment.' : 'Those entries were not moved. Try again in a moment.', { variant: 'error' });
+      return;
+    }
     exitSelection();
     await load();
-  }, [selectedEntries, userId, exitSelection, load]);
+    if (moved.length === 0) return;
+    const n = moved.length;
+    toast.show(`Moved ${n} ${n === 1 ? 'food' : 'foods'} to ${mealSlotLabel(slot)}.`, {
+      variant: 'undo',
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          try {
+            // Only the meal goes back: an edit made after the move stays
+            // (review finding 6). The rest of the patch is the row as it is
+            // now, read fresh.
+            const now = new Map((await getFoodEntriesForDay(userId, selectedDate).catch(() => [])).map((r) => [r.id, r]));
+            await updateFoodEntries(userId, moved.map((e) => ({
+              id: e.id, patch: entryToPatch(now.get(e.id) ?? e, { mealSlot: e.meal_slot }),
+            })));
+          } catch (e) {
+            logError('DiaryScreen.undoMoveSelected', e, { count: n });
+            toast.show(n === 1 ? 'That entry was not moved back. Try again in a moment.' : 'Those entries were not moved back. Try again in a moment.', { variant: 'error' });
+            return;
+          }
+          await load();
+        },
+      },
+    });
+  }, [selectedEntries, userId, selectedDate, exitSelection, load, toast]);
 
   // "Save as meal": snapshot the selected entries into a reusable saved
   // meal. Capture the items now (before the name prompt) so exiting
@@ -1367,31 +1557,30 @@ export default function DiaryScreen({ navigation, route }) {
   // quantity, energy and macros; only the meal, the time and the note change.
   // (QuickAddSheet, which creates quick adds from typed figures, has no meal
   // time, day or delete, so the edit sheet stays the one place to change them.)
-  const isFixedEntry = (entry) => typeof entry?.food_ref === 'string' && entry.food_ref.startsWith('quick:');
+  // An entry with no grams to scale from (0 g, an older row) is edited the
+  // same way: its figures are kept (item 1 of the 2026-10-16 audit).
+  const isFixedEntry = (entry) => (typeof entry?.food_ref === 'string' && entry.food_ref.startsWith('quick:'))
+    || !(Number(entry?.quantity_g) > 0);
 
   async function openEditSheet(entry) {
     const fixed = isFixedEntry(entry);
-    const food = fixed ? null : await resolveFoodRef(userId, entry.food_ref).catch(() => null);
-    setEditSheet({
-      entry,
-      fixed,
-      food: food ?? {
-        name: friendlyFoodName(entry), brand: null, source: null,
-        kcal_100g: entry.kcal && entry.quantity_g ? (entry.kcal / entry.quantity_g) * 100 : 0,
-        protein_100g: entry.protein_g && entry.quantity_g ? (entry.protein_g / entry.quantity_g) * 100 : 0,
-        carbs_100g: entry.carbs_g && entry.quantity_g ? (entry.carbs_g / entry.quantity_g) * 100 : 0,
-        fat_100g: entry.fat_g && entry.quantity_g ? (entry.fat_g / entry.quantity_g) * 100 : 0,
-        fibre_100g: entry.fibre_g && entry.quantity_g ? (entry.fibre_g / entry.quantity_g) * 100 : null,
-      },
-    });
+    const current = fixed ? null : await resolveFoodRef(userId, entry.food_ref).catch(() => null);
+    // Item 1 (food Diary audit 2026-10-16): the sheet's figures are the
+    // entry's own; the current food lends only its name, units and portions.
+    setEditSheet({ entry, fixed, food: editFoodFromEntry(entry, current) });
   }
 
   async function saveEditSheet({ quantityG: sheetQuantityG, mealSlot, entryDate, weightState, eatenAt, note }) {
     const { entry, food } = editSheet;
-    // A fixed entry keeps its own grams and figures whatever the sheet sends.
+    // A fixed entry keeps its own grams and figures whatever the sheet sends,
+    // and (item 1) so does an entry whose grams are unchanged: a meal, time
+    // or note edit writes the stored figures back exactly. Only a changed
+    // amount is scaled, from the entry's own per-100 g figures.
     const fixed = isFixedEntry(entry);
-    const quantityG = fixed ? entry.quantity_g : sheetQuantityG;
-    const scaled = fixed
+    const sameGrams = !fixed && Math.round(Number(sheetQuantityG)) === Math.round(Number(entry.quantity_g));
+    const keep = fixed || sameGrams;
+    const quantityG = keep ? entry.quantity_g : sheetQuantityG;
+    const scaled = keep
       ? {
         kcal: entry.kcal, proteinG: entry.protein_g, carbsG: entry.carbs_g,
         fatG: entry.fat_g, fibreG: entry.fibre_g ?? null,
@@ -1436,10 +1625,18 @@ export default function DiaryScreen({ navigation, route }) {
     reconcileInBackground();
   }
 
+  // Item 6 (food Diary audit 2026-10-16): a failed Remove is logged here and
+  // re-thrown, so the sheet says so and stays open (it used to swallow the
+  // failure and close as if the entry had gone). A failed Undo is said too.
   async function deleteFromEditSheet() {
     if (!editSheet?.entry) return;
     const removed = editSheet.entry;
-    await deleteFoodEntry(removed.id, userId);
+    try {
+      await deleteFoodEntry(removed.id, userId);
+    } catch (e) {
+      logError('DiaryScreen.deleteFromEditSheet', e, { mealSlot: removed.meal_slot ?? 'unknown' });
+      throw e;
+    }
     applyInPlace(selectedDate, (rows) => removeEntry(rows, removed.id));
     reconcileInBackground();
     toast.show(`${friendlyFoodName(removed)} deleted.`, {
@@ -1447,7 +1644,13 @@ export default function DiaryScreen({ navigation, route }) {
       action: {
         label: 'Undo',
         onPress: async () => {
-          await restoreFoodEntry(removed.id, userId);
+          try {
+            await restoreFoodEntry(removed.id, userId);
+          } catch (e) {
+            logError('DiaryScreen.undoDeleteFromEditSheet', e, { mealSlot: removed.meal_slot ?? 'unknown' });
+            toast.show('That entry was not brought back. Try again in a moment.', { variant: 'error' });
+            return;
+          }
           applyInPlace(selectedDate, (rows) => insertEntry(rows, removed));
           reconcileInBackground();
         },
@@ -1613,7 +1816,10 @@ export default function DiaryScreen({ navigation, route }) {
   // yesterday has food (the condition EmptyDiary's action had).
   const showCopyYesterdayDoor = viewEntries.length === 0 && yesterdayHasFood;
   const dateHeading = isViewingToday ? 'Today' : friendlyDate(selectedDate);
-  const dateSubCopy = selectedDateDetail;
+  // Item 12 (food Diary audit 2026-10-16): a day further back than yesterday
+  // is already named by its date ("Tue 15 Sept"), so the line under it is not
+  // repeated; Today, Yesterday and Tomorrow keep the date beneath them.
+  const dateSubCopy = selectedDateDetail === dateHeading ? null : selectedDateDetail;
   const bottomInset = Math.max(0, Number(insets?.bottom) || 0);
   // CP-10 batch E (2026-07-10): `t` joins the dep list on both memos below so
   // a theme change (which changes live.scanFab/live.selectionBar's colours)
@@ -1693,12 +1899,12 @@ export default function DiaryScreen({ navigation, route }) {
               hitSlop={12}
               style={styles.dateButton}
               accessibilityRole="button"
-              accessibilityLabel={`${dateHeading}, ${dateSubCopy}. Jump to a date`}
+              accessibilityLabel={`${dateSubCopy ? `${dateHeading}, ${dateSubCopy}` : dateHeading}. Jump to a date`}
             >
               <Ionicons name="calendar-outline" size={15} color={t.colors.textSecondary} />
               <View style={styles.dateCopy}>
                 <Text style={[styles.dateLabel, live.dateLabel]}>{dateHeading}</Text>
-                <Text style={[styles.dateSubLabel, live.dateSubLabel]}>{dateSubCopy}</Text>
+                {dateSubCopy ? <Text style={[styles.dateSubLabel, live.dateSubLabel]}>{dateSubCopy}</Text> : null}
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1925,7 +2131,10 @@ export default function DiaryScreen({ navigation, route }) {
                 fresh plan-add always dismisses both discovery signals
                 together, see dismissMarkEatenHint/dismissPlanAddedHint in
                 handleConfirmPlanned/handleConfirmPlannedSlot). */}
-            {plannedCount > 0 && !selectionMode && !showPlanAddedHint && showMarkEatenHint ? (
+            {/* Item 11 (food Diary audit 2026-10-16): nothing on a future day
+                can be ticked off yet (its Mark as eaten is not offered), so
+                the hint that says to is not shown there. */}
+            {plannedCount > 0 && !selectionMode && !isFutureDay && !showPlanAddedHint && showMarkEatenHint ? (
               <HintCaption
                 text="Tick meals off one by one as you eat, or mark them all as eaten at once from the bottom of the page."
                 onDismiss={dismissMarkEatenHint}
@@ -1961,23 +2170,6 @@ export default function DiaryScreen({ navigation, route }) {
                     mealSuggestion={(entriesBySlot[slot.key]?.length) ? null : (slotMealSuggestion[slot.key] ?? null)}
                     onLogMealSuggestion={(suggestion) => onLogMealSuggestion(suggestion, slot.key)}
                     onAdd={() => addFood(slot.key)}
-                    /* L05-D1/D6 (design-usability audit 2026-07-09): kept
-                       wired but intentionally unused by MealSection - a
-                       prior polish pass deliberately simplified the
-                       per-meal-card hub to the single "Add food" action
-                       (MealSection.polish.guard.test.js /
-                       foodComponents.test.js pin exactly that), so a
-                       4-button hub is not being restored here. Scan and
-                       quick-add/saved-meals stay reachable via
-                       Add food -> FoodSearchScreen's "More" tab; these
-                       three callbacks are left connected (not deleted) so
-                       addSavedMeal/scanForMeal/setQuickAddSlot and their
-                       sheets below stay live code, in case a future
-                       session is asked to wire a genuine second entry
-                       point rather than remove them outright. */
-                    onSavedMeals={() => addSavedMeal(slot.key)}
-                    onScan={() => scanForMeal(slot.key)}
-                    onQuickAdd={() => setQuickAddSlot(slot.key)}
                     onEdit={openEditSheet}
                     onDelete={requestDelete}
                     selectionMode={selectionMode}
@@ -2126,6 +2318,11 @@ export default function DiaryScreen({ navigation, route }) {
         initialWeightState={editSheet?.entry?.weight_state}
         initialEatenAt={editSheet?.entry?.eaten_at ?? null}
         initialNote={editSheet?.entry?.note ?? null}
+        // Item 7 (food Diary audit 2026-10-16): the sheet's meal chips are the
+        // meals this Diary shows (the person's meals per day, any meal added
+        // today, an old meal name that has food); the sheet adds the entry's
+        // own meal if it is not among them.
+        mealSlots={mealSlots}
         fixedMacros={editSheet?.fixed ? {
           kcal: editSheet.entry.kcal, protein: editSheet.entry.protein_g, carbs: editSheet.entry.carbs_g,
           fat: editSheet.entry.fat_g, fibre: editSheet.entry.fibre_g ?? null,
@@ -2145,52 +2342,6 @@ export default function DiaryScreen({ navigation, route }) {
         }}
         onClose={() => setEditSheet(null)}
       />
-
-      <QuickAddSheet
-        visible={!!quickAddSlot}
-        initialMealSlot={quickAddSlot ?? 'snack'}
-        onSave={confirmQuickAdd}
-        onClose={() => setQuickAddSlot(null)}
-      />
-
-      <BottomSheet
-        visible={!!savedPickerSlot}
-        onClose={() => setSavedPickerSlot(null)}
-        accessibilityLabel="Saved meals and recipes"
-      >
-        <Text style={[styles.savedFoodTitle, live.savedFoodTitle]} accessibilityRole="header">Saved meals and recipes</Text>
-        <Text style={[styles.savedFoodIntro, live.savedFoodIntro]}>Use a saved meal from your diary, or a recipe you built.</Text>
-        <TouchableOpacity
-          style={styles.savedFoodOption}
-          onPress={() => { haptics.selection(); openSavedFoodRoute('MyMeals'); }}
-          accessibilityRole="button"
-          accessibilityLabel="Open saved meals"
-        >
-          <View style={[styles.savedFoodIcon, live.savedFoodIcon]}>
-            <Ionicons name="bookmark-outline" size={20} color={t.colors.textSecondary} />
-          </View>
-          <View style={styles.savedFoodText}>
-            <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Saved meals</Text>
-            <Text style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Foods you saved together from the diary.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.savedFoodOption}
-          onPress={() => { haptics.selection(); openSavedFoodRoute('MyRecipes'); }}
-          accessibilityRole="button"
-          accessibilityLabel="Open recipes"
-        >
-          <View style={[styles.savedFoodIcon, live.savedFoodIcon]}>
-            <Ionicons name="restaurant-outline" size={20} color={t.colors.textSecondary} />
-          </View>
-          <View style={styles.savedFoodText}>
-            <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Recipes</Text>
-            <Text style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Recipes with ingredients and servings.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
-      </BottomSheet>
 
       <MacroBreakdownSheet
         visible={breakdownVisible}
@@ -2307,8 +2458,9 @@ export default function DiaryScreen({ navigation, route }) {
       <CalorieBankSheet
         visible={bankSheetVisible}
         onClose={() => setBankSheetVisible(false)}
-        weekDates={weekDates}
-        defaultBigDay={selectedDate}
+        weekDates={bankDays}
+        weekStartKey={weekDates[0]}
+        defaultBigDay={bankDefaultDay}
         baseTargetKcal={targets?.targetKcal ?? 0}
         floorKcal={floorKcal}
         bandMaxKcal={Math.round((targets?.targetKcal ?? 0) * 1.1)}
@@ -2333,6 +2485,9 @@ export default function DiaryScreen({ navigation, route }) {
 // value to change it; the key is in sync.js's synced pref list) instead of a
 // hardcoded 3.0 L. WaterRow itself lives in src/components/food/ (D230 R4).
 const WATER_TARGET_ML = 3000;
+// Food Diary audit 2026-10-16, item 4: a burst of diary writes elsewhere
+// reloads the day once.
+export const DIARY_CHANGE_DEBOUNCE_MS = 250;
 const WATER_TARGET_KEY = '@volyume_water_target_ml';
 
 // Wave A C7 (2026-07-03): one-time hint flags, same convention as
@@ -2377,27 +2532,6 @@ const styles = StyleSheet.create({
   selActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   selAction: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  savedFoodTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  savedFoodIntro: { ...type.bodySm, color: colors.textMuted },
-  savedFoodOption: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  savedFoodIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // D230 R2: ink, NavRow's tile (surface2 behind a textSecondary glyph).
-    backgroundColor: colors.surface2,
-  },
-  savedFoodText: { flex: 1 },
-  savedFoodOptionTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  savedFoodOptionSub: { ...type.bodySm, color: colors.textMuted, marginTop: 2 },
   dayPagerCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2597,11 +2731,6 @@ function buildLiveStyles(t) {
     selectionBar: { backgroundColor: t.colors.surface, borderTopColor: t.colors.border },
     selCount: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     selActionLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.xs },
-    savedFoodTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    savedFoodIntro: { ...t.type.bodySm, color: t.colors.textMuted },
-    savedFoodIcon: { backgroundColor: t.colors.surface2 },
-    savedFoodOptionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    savedFoodOptionSub: { ...t.type.bodySm, color: t.colors.textMuted },
     dateCluster: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     dateLabel: { ...t.type.label, color: t.colors.textPrimary },
     dateSubLabel: { ...t.type.caption, color: t.colors.textMuted },
