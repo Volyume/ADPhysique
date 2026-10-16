@@ -57,10 +57,10 @@ beforeEach(() => {
 });
 
 describe('HistoryClipsRow', () => {
-  test('shows "Videos" with the count when the workout has any', async () => {
+  test('shows "Your videos" with the count when the workout has any', async () => {
     mockCount.mockResolvedValue(2);
     const json = JSON.stringify((await mount()).toJSON());
-    expect(json).toContain('Videos');
+    expect(json).toContain('Your videos');
     expect(json).toContain('2 videos');
     expect(mockCount).toHaveBeenCalledWith('u1', 'w1');
   });
@@ -90,7 +90,7 @@ describe('HistoryClipsRow', () => {
     mockCount.mockResolvedValue(1);
     const tree = await mount();
     const row = tree.root.findAll((n) => typeof n.props.accessibilityLabel === 'string'
-      && n.props.accessibilityLabel.startsWith('Videos') && typeof n.props.onPress === 'function')[0];
+      && n.props.accessibilityLabel.startsWith('Your videos') && typeof n.props.onPress === 'function')[0];
     expect(row).toBeDefined();
     await act(async () => { row.props.onPress(); });
     await act(async () => {});

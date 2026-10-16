@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Switch } from 'react-native';
+import { View, Switch, StyleSheet } from 'react-native';
 import Text from '../components/Text';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
@@ -18,15 +18,17 @@ import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getStatus as getSyncStatus, syncAll, deleteUserPref, setUserPref } from '../lib/sync';
 import { getQueueStats, retryFailedOps } from '../lib/syncQueue';
 import { formatLastSynced } from '../lib/syncStatusLabel';
-import { withAlpha, alpha } from '../styles/theme';
+import { withAlpha, alpha, colors, radius, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import Chip from '../components/Chip';
-import { spacing } from '../styles/theme';
 import {
-  getClipsStorage, getKeepDays, setKeepDays, sweepExpiredClips, deleteAllClipsForUser,
+  getClipsStorage, getKeepDays, setKeepDays, sweepExpiredClips, deleteAllClipsForUser, countExpiredClips,
 } from '../lib/clips/store';
-import { CLIP_STRINGS, KEEP_OPTIONS, keepLabel, storageLine } from '../lib/clips/rules';
+import {
+  CLIP_STRINGS, KEEP_OPTIONS, DEFAULT_KEEP_DAYS, keepLabel, storageLine, settingsKeepSub,
+  removeNowTitle, removeNowBody,
+} from '../lib/clips/rules';
 
 // L05-SL1 (design audit 2026-07-09): the global "skip the name step" flag
 // ScanLabelScreen.js sets when a label scan's "Skip name" is tapped
@@ -46,6 +48,11 @@ export default function SettingsDataScreen({ navigation }) {
   // thumb colours and the shared chrome follow a theme change.
   const t = useTheme();
   const live = useSettingsStyles();
+  const liveText = {
+    title: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    sub: { ...t.type.bodySm, color: t.colors.textMuted },
+    segment: { backgroundColor: t.colors.surface2 },
+  };
 
   // Cloud sync status line (A2-006). Quiet, read from the runner snapshot;
   // syncingNow tracks the manual "tap to sync" so the row shows progress.
@@ -77,18 +84,38 @@ export default function SettingsDataScreen({ navigation }) {
     }
   }, [user?.id]);
 
-  async function chooseKeepDays(days) {
-    if (days === keepDays) return;
-    haptics.selection();
-    setKeepDaysState(days);
+  // Saves the window, then sweeps at once so it takes effect now. The chips
+  // show the new choice only once it is saved.
+  async function saveKeepDays(days) {
     try {
       await setKeepDays(days);
+      setKeepDaysState(days);
       await sweepExpiredClips(user?.id, { force: true });
       await refreshVideos();
     } catch (e) {
       logError('SettingsData.keepDays', e);
       toast.show(CLIP_STRINGS.keepFailed, { variant: 'error' });
     }
+  }
+
+  // A shorter window removes older videos the moment it is saved, so the
+  // person is told how many first and can say no. A longer window, or never,
+  // removes nothing and needs no question.
+  async function chooseKeepDays(days) {
+    if (days === keepDays) return;
+    haptics.selection();
+    const shorter = days !== 0 && (keepDays == null || keepDays === 0 || days < keepDays);
+    if (shorter) {
+      const count = await countExpiredClips(user?.id, { keepDays: days });
+      if (count > 0) {
+        appAlert(removeNowTitle(count), removeNowBody(count, days), [
+          { text: CLIP_STRINGS.removeNowCancel, style: 'cancel' },
+          { text: CLIP_STRINGS.removeNowConfirm, style: 'destructive', onPress: () => { saveKeepDays(days); } },
+        ]);
+        return;
+      }
+    }
+    await saveKeepDays(days);
   }
 
   function handleDeleteAllVideos() {
@@ -476,36 +503,41 @@ export default function SettingsDataScreen({ navigation }) {
         <SettingRow
           icon="videocam-outline"
           label={CLIP_STRINGS.settingsVideosLabel}
-          sub={videos ? storageLine(videos.count, videos.bytes) : 'Working it out...'}
+          sub={videos ? storageLine(videos.count, videos.bytes) : CLIP_STRINGS.settingsWorkingOut}
           showArrow={false}
           accessibilityLabel={`${CLIP_STRINGS.settingsVideosLabel}, ${videos ? storageLine(videos.count, videos.bytes) : 'working it out'}`}
         />
-        <SettingRow
-          icon="time-outline"
-          label={CLIP_STRINGS.settingsKeepLabel}
-          sub={CLIP_STRINGS.settingsKeepSub}
-          showArrow={false}
-          accessibilityLabel={`${CLIP_STRINGS.settingsKeepLabel}, ${keepDays == null ? '' : keepLabel(keepDays)}`}
-        />
-        <View style={localStyles.keepRow} accessibilityRole="radiogroup" accessibilityLabel={CLIP_STRINGS.settingsKeepLabel}>
-          {KEEP_OPTIONS.map((days) => (
-            <Chip
-              key={days}
-              label={keepLabel(days)}
-              selected={keepDays === days}
-              onPress={() => chooseKeepDays(days)}
-              accessibilityRole="radio"
-              accessibilityLabel={keepLabel(days)}
-              testID={`settings-keep-${days}`}
-            />
-          ))}
+        {/* The keep choices, in SettingsDisplayScreen's segment pattern: the
+            words above, then one segment of chips. */}
+        <View style={localStyles.block}>
+          <Text style={[localStyles.title, liveText.title]}>{CLIP_STRINGS.settingsKeepLabel}</Text>
+          <Text style={[localStyles.sub, liveText.sub]}>{settingsKeepSub(keepDays ?? DEFAULT_KEEP_DAYS)}</Text>
+          <View
+            style={[localStyles.segment, liveText.segment]}
+            accessibilityRole="radiogroup"
+            accessibilityLabel={CLIP_STRINGS.settingsKeepLabel}
+          >
+            {KEEP_OPTIONS.map((days) => (
+              <Chip
+                key={days}
+                label={keepLabel(days)}
+                selected={keepDays === days}
+                onPress={() => chooseKeepDays(days)}
+                accessibilityRole="radio"
+                accessibilityLabel={keepLabel(days)}
+                style={localStyles.segChip}
+                labelStyle={localStyles.segLabel}
+                testID={`settings-keep-${days}`}
+              />
+            ))}
+          </View>
         </View>
         <SettingRow
           icon="trash-outline"
-          label={deletingVideos ? 'Removing...' : CLIP_STRINGS.settingsDeleteAllLabel}
-          sub={CLIP_STRINGS.settingsDeleteAllSub}
+          label={deletingVideos ? CLIP_STRINGS.settingsDeletingLabel : CLIP_STRINGS.settingsDeleteAllLabel}
+          sub={videos?.count === 0 ? CLIP_STRINGS.settingsDeleteAllNone : CLIP_STRINGS.settingsDeleteAllSub}
           destructive
-          showArrow={!deletingVideos}
+          showArrow={!deletingVideos && !!videos?.count}
           onPress={deletingVideos || !videos?.count ? null : handleDeleteAllVideos}
         />
       </View>
@@ -531,11 +563,25 @@ export default function SettingsDataScreen({ navigation }) {
   );
 }
 
-// D229 addendum 15: the keep choices sit as a row of chips under their label
-// (the pattern SettingsDisplayScreen uses for the theme and energy units).
-const localStyles = {
-  keepRow: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
+// D229 addendum 15: the keep choices use SettingsDisplayScreen's segment
+// pattern (a title and a sub above one segment of chips). Frozen styles here,
+// live colour and type mirrors built in the component from the live theme.
+const localStyles = StyleSheet.create({
+  block: { padding: spacing.lg },
+  title: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
+  sub: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.md },
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.xxs,
+    gap: spacing.xxs,
   },
-};
+  segChip: {
+    flex: 1,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+  },
+  segLabel: { textAlign: 'center' },
+});

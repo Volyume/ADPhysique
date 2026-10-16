@@ -1,8 +1,10 @@
 /**
- * store.js - the local clip store (D229 addendum 5, "Record a clip").
+ * store.js - the local video store (D229 addendum 5; the person sees "Your
+ * videos", the code says clip).
  *
- * A clip is up to 15 seconds of silent video kept WITH its workout. It is
- * private device data, like a progress photo:
+ * A clip is a silent video of up to two minutes kept WITH its workout (the
+ * share uses up to 15 seconds of it). It is private device data, like a
+ * progress photo:
  *   - the file is MOVED from the camera's cache into
  *     `documentDirectory + 'clips/'` and the row in `workout_clips` points at
  *     it (the table is created by the local migration in database.js);
@@ -20,9 +22,9 @@
  * path is not guaranteed to survive an app update. Only the file name is
  * trusted.
  *
- * Thumbnails: none. No frame-extraction package is installed, so the clips
- * sheet lists text rows (exercise name or "Workout", length, recorded time)
- * and the share screen cuts its own frames from the clip.
+ * Thumbnails: none. No frame-extraction package is installed, so the Your
+ * videos sheet lists text rows (exercise name or "Workout", length, recorded
+ * time) and the share screen cuts its own frames from the video.
  *
  * Legacy expo-file-system API, matching progressPhotos.js and
  * profileAvatar.js.
@@ -376,6 +378,47 @@ export async function setKeepDays(days) {
 // and once a day is plenty for a rule counted in days.
 const SWEEP_EVERY_MS = 6 * 60 * 60 * 1000;
 let lastSweepAt = 0;
+
+/**
+ * Whether one video is already past the person's keep window as if it were
+ * not kept: the same rule as the sweep, read from the stored setting and the
+ * stored "since". The Your videos sheet asks before a person releases Keep on
+ * such a video, because it would go the next time the app opens. A failed
+ * read says no (the release then goes ahead, as it always did).
+ */
+export async function isClipPastWindow(clip, { now = Date.now() } = {}) {
+  try {
+    const keepDays = await getKeepDays();
+    const since = Number(await AsyncStorage.getItem(KEEP_SINCE_KEY)) || now;
+    return clipExpired({ createdAt: clip?.createdAt, keptAt: null }, { keepDays, since, now });
+  } catch (e) {
+    logError('clips.store.pastWindow', e);
+    return false;
+  }
+}
+
+/**
+ * How many videos a keep window of `keepDays` would remove right now: the same
+ * rows and the same rule as the sweep (clipExpired over the unkept rows, with
+ * the stored "since"), counted and never deleted. The Settings confirm uses it
+ * before a shorter window is saved. Never throws: a failed read counts 0.
+ */
+export async function countExpiredClips(userId, { keepDays, now = Date.now() } = {}) {
+  if (!userId) return 0;
+  try {
+    if (parseKeepDays(keepDays) === 0) return 0;
+    const since = Number(await AsyncStorage.getItem(KEEP_SINCE_KEY)) || now;
+    const d = await db();
+    const rows = await d.getAllAsync('SELECT * FROM workout_clips WHERE user_id = ? AND kept_at IS NULL', [userId]);
+    return (Array.isArray(rows) ? rows : []).filter((row) => clipExpired(
+      { createdAt: row.created_at, keptAt: row.kept_at },
+      { keepDays, since, now },
+    )).length;
+  } catch (e) {
+    logError('clips.store.countExpired', e);
+    return 0;
+  }
+}
 
 /**
  * Clear the videos that are past the person's keep window: not kept, and

@@ -29,7 +29,7 @@ import Text from '../components/Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily, fontScaleCaps, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily, fontScaleCaps, letterSpacing, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -76,6 +76,7 @@ import { extractClipThumbnails } from '../lib/shareVideo/clipThumbnails';
 import { sampleClipTone } from '../lib/shareVideo/clipTone';
 import * as shareVideoEngine from '../lib/shareVideo/engine';
 import { getClip, listClipsForWorkout, clipDisplayName, clipMatchesPR, subscribeClips } from '../lib/clips';
+import { CLIP_STRINGS } from '../lib/clips/rules';
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
@@ -916,6 +917,9 @@ export default function ShareCardScreen({ navigation, route }) {
   // every save or delete anywhere (an Undo on the saved toast, a delete in
   // the videos sheet), and a chosen video that no longer exists goes.
   const [clipsVersion, setClipsVersion] = useState(0);
+  const clipIdRef = useRef(null);
+  clipIdRef.current = clip?.id ?? null;
+  const goneToldRef = useRef(new Set());
   useEffect(() => subscribeClips(() => setClipsVersion((n) => n + 1)), []);
   useEffect(() => {
     let cancelled = false;
@@ -925,10 +929,21 @@ export default function ShareCardScreen({ navigation, route }) {
         if (cancelled) return;
         const list = Array.isArray(rows) ? rows : [];
         setWorkoutClips(list);
-        setClip((current) => (current?.id && !list.some((row) => row.id === current.id) ? null : current));
+        // A chosen video deleted while this screen holds it: the share goes
+        // back to an image, and a calm line says so once.
+        const heldId = clipIdRef.current;
+        if (heldId && !list.some((row) => row.id === heldId)) {
+          setClip((current) => (current?.id === heldId ? null : current));
+          if (!goneToldRef.current.has(heldId)) {
+            goneToldRef.current.add(heldId);
+            toast.show(CLIP_STRINGS.shareVideoGone, { variant: 'info' });
+          }
+        }
       })
       .catch(() => { if (!cancelled) setWorkoutClips([]); });
     return () => { cancelled = true; };
+    // The toast handle is not a trigger: the list is re-read on a video change only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workoutId, userId, suppress, route?.params?.clipId, clipsVersion]);
 
   // Arriving with a video chosen (the summary's row, or the camera opened
@@ -968,7 +983,7 @@ export default function ShareCardScreen({ navigation, route }) {
     const cannotOpen = () => {
       if (cancelled) return;
       setBarThumbs(null);
-      toast.show("That video couldn't be opened. You could try another one.", { variant: 'error' });
+      toast.show(CLIP_STRINGS.shareVideoCannotOpen, { variant: 'error' });
       clearPhoto();
     };
     extractClipThumbnails(clip.uri, { count: BAR_FRAME_COUNT, thumbWidth: VIDEO_FRAME_W })
@@ -1074,16 +1089,16 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) { toast.show('Camera access is needed to add a background', { variant: 'warning' }); return; }
+      if (!perm.granted) { toast.show('Camera access is needed to add a background.', { variant: 'warning' }); return; }
       const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 });
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
       if (img) setBackgroundSource(BACKGROUND_SOURCES.PHOTO);
       if (img) acceptPhoto(img);
-      else toast.show("Couldn't load that photo, try again", { variant: 'error' });
+      else toast.show('That photo could not be loaded. Try again.', { variant: 'error' });
     } catch (_) {
-      toast.show("Couldn't take that photo, try again", { variant: 'error' });
+      toast.show('That photo could not be taken. Try again.', { variant: 'error' });
     }
   }, [toast, acceptPhoto]);
 
@@ -1099,7 +1114,7 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) { toast.show('Photo access is needed to choose a background', { variant: 'warning' }); return; }
+      if (!perm.granted) { toast.show('Photo access is needed to choose a background.', { variant: 'warning' }); return; }
       // Photos and, when a video background may be offered, videos too (D229
       // addendum 3: a video filmed with the phone's own camera comes in here;
       // its 15 second window is chosen on the trim bar). The picker never
@@ -1120,7 +1135,7 @@ export default function ShareCardScreen({ navigation, route }) {
         let probe = null;
         try { probe = await shareVideoEngine.probeVideo(asset.uri); } catch (_e) { probe = null; }
         const durationMs = Number(probe?.durationMs ?? asset.duration) || 0;
-        if (!durationMs) { toast.show("That video couldn't be opened. You could try another one.", { variant: 'error' }); return; }
+        if (!durationMs) { toast.show(CLIP_STRINGS.shareVideoCannotOpen, { variant: 'error' }); return; }
         acceptClip({
           id: null, uri: asset.uri, durationMs,
           width: probe?.width ?? asset.width ?? null, height: probe?.height ?? asset.height ?? null,
@@ -1133,9 +1148,9 @@ export default function ShareCardScreen({ navigation, route }) {
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
       if (img) setBackgroundSource(BACKGROUND_SOURCES.GALLERY);
       if (img) acceptPhoto(img);
-      else toast.show("Couldn't load that photo, try again", { variant: 'error' });
+      else toast.show('That photo could not be loaded. Try again.', { variant: 'error' });
     } catch (_) {
-      toast.show("Couldn't open your photos, try again", { variant: 'error' });
+      toast.show('Your photos could not be opened. Try again.', { variant: 'error' });
     }
   }, [toast, acceptPhoto, acceptClip, suppress]);
 
@@ -1267,7 +1282,7 @@ export default function ShareCardScreen({ navigation, route }) {
       uri: clip.uri, window: clipWindow, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H, tone: clipTone,
     });
     if (videoCacheRef.current[signature]) return videoCacheRef.current[signature];
-    if (!layoutFrame) { toast.show("That video couldn't be opened. You could try another one.", { variant: 'error' }); return null; }
+    if (!layoutFrame) { toast.show(CLIP_STRINGS.shareNotPrepared, { variant: 'error' }); return null; }
     setMakingVideo(true);
     makingVideoRef.current = true;
     keepAwake(true);
@@ -1304,7 +1319,7 @@ export default function ShareCardScreen({ navigation, route }) {
       const code = e?.code;
       if (code !== shareVideoEngine.EXPORT_ERROR.CANCELLED) {
         logError('ShareCardScreen.renderVideo', e, { code });
-        const line = shareVideoEngine.lineForExportError(code);
+        const line = shareVideoEngine.lineForExportError(code, { fromGallery: clip?.source === 'gallery' });
         if (line) toast.show(line, { variant: 'error', duration: 7000 });
       }
       return null;
@@ -1365,29 +1380,29 @@ export default function ShareCardScreen({ navigation, route }) {
       return;
     }
     if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      toast.show('Not ready yet, wait a moment and try again.', { variant: 'info' });
       return;
     }
     setSavingToGallery(true);
     try {
       const perm = await MediaLibrary.requestPermissionsAsync();
       if (!perm.granted) {
-        toast.show('Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
+        toast.show(liveClip ? 'Gallery access is needed to save the video. You can still use Share.' : 'Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
         return;
       }
       if (liveClip) {
         const videoUri = await renderVideoToFile();
         if (!videoUri) return; // the engine's own line, or a cancel, has already spoken
         await MediaLibrary.saveToLibraryAsync(videoUri);
-        toast.show('Saved to your gallery', { variant: 'success' });
+        toast.show('Saved to your gallery.', { variant: 'success' });
         return;
       }
       const uri = await renderCardToFile();
-      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show('The image could not be made. Try again.', { variant: 'error' }); return; }
       await MediaLibrary.saveToLibraryAsync(uri);
-      toast.show('Saved to your gallery', { variant: 'success' });
+      toast.show('Saved to your gallery.', { variant: 'success' });
     } catch (_e) {
-      toast.show(clip ? "Couldn't save the video, try again" : "Couldn't save the image, try again", { variant: 'error' });
+      toast.show(liveClip ? 'The video could not be saved. Try again.' : 'The image could not be saved. Try again.', { variant: 'error' });
     } finally {
       setSavingToGallery(false);
     }
@@ -1416,7 +1431,7 @@ export default function ShareCardScreen({ navigation, route }) {
       return;
     }
     if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      toast.show('Not ready yet, wait a moment and try again.', { variant: 'info' });
       return;
     }
     setSharingToStories(true);
@@ -1431,25 +1446,25 @@ export default function ShareCardScreen({ navigation, route }) {
           return;
         }
         const canShareVideo = await Sharing.isAvailableAsync();
-        if (!canShareVideo) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
+        if (!canShareVideo) { toast.show('Sharing is not available on this device.', { variant: 'warning', duration: 5000 }); return; }
         await Sharing.shareAsync(videoUri, {
           mimeType: 'video/mp4', UTI: 'public.mpeg-4', dialogTitle: 'Share video',
         });
         return;
       }
       const uri = await renderCardToFile();
-      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show('The image could not be made. Try again.', { variant: 'error' }); return; }
       if (isIos) {
         await Share.share({ url: uri, message: 'volyume.app' });
         return;
       }
       const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
+      if (!canShare) { toast.show('Sharing is not available on this device.', { variant: 'warning', duration: 5000 }); return; }
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share to Stories',
       });
     } catch (_e) {
-      toast.show("Couldn't open the share sheet, try again", { variant: 'error' });
+      toast.show('The share sheet could not be opened. Try again.', { variant: 'error' });
     } finally {
       setSharingToStories(false);
     }
@@ -1479,18 +1494,18 @@ export default function ShareCardScreen({ navigation, route }) {
       return;
     }
     if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      toast.show('Not ready yet, wait a moment and try again.', { variant: 'info' });
       return;
     }
     setSettingWallpaper(true);
     try {
       const uri = await renderCardToFile();
-      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show('The image could not be made. Try again.', { variant: 'error' }); return; }
       await engine.setLockScreenWallpaper(uri);
-      toast.show('Set as your lock screen wallpaper', { variant: 'success' });
+      toast.show('Set as your lock screen wallpaper.', { variant: 'success' });
     } catch (e) {
       logError('ShareCardScreen.setWallpaper', e);
-      toast.show("Couldn't set the wallpaper, try again", { variant: 'error' });
+      toast.show('The wallpaper could not be set. Try again.', { variant: 'error' });
     } finally {
       setSettingWallpaper(false);
     }
@@ -1587,7 +1602,7 @@ export default function ShareCardScreen({ navigation, route }) {
             ) : previewStatus === 'error' ? (
               <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
                 <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
-                <Text style={[styles.previewErrorText, live.previewErrorText]}>Couldn't build the preview.</Text>
+                <Text style={[styles.previewErrorText, live.previewErrorText]}>The preview could not be built.</Text>
                 <Button
                   title="Retry"
                   onPress={renderPreview}
@@ -1652,6 +1667,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 onChange={(next) => { setClipWindow(next); setClipPaused(reduceMotion); }}
               />
               <Text style={[styles.photoHint, live.photoHint]}>
+                {`A share is ${MAX_VIDEO_MS / 1000} seconds at the longest. `}
                 {(Number(clip.durationMs) || 0) > MAX_VIDEO_MS
                   ? `${Math.round((clipWindow.endMs - clipWindow.startMs) / 1000)} seconds of ${Math.round((Number(clip.durationMs) || 0) / 1000)}. Slide the strip to choose where it starts, or drag its ends to use less of the video.`
                   : 'You can drag the ends of the strip to use less of the video.'}
@@ -1707,7 +1723,7 @@ export default function ShareCardScreen({ navigation, route }) {
                     />
                   ) : (
                     <View style={[styles.templateThumb, styles.templateThumbEmpty, live.templateThumbEmpty]}>
-                      <Ionicons name="image-outline" size={18} color={t.colors.textMuted} />
+                      <Ionicons name="image-outline" size={iconSize.md} color={t.colors.textMuted} />
                     </View>
                   )}
                   <Text style={[styles.templateLabel, live.templateLabel, active && [styles.templateLabelActive, live.templateLabelActive]]}>{label}</Text>
@@ -1730,35 +1746,35 @@ export default function ShareCardScreen({ navigation, route }) {
               stacked
               active={format === 'story'}
               onPress={() => setFormat('story')}
-              icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="phone-portrait-outline" size={iconSize.sm} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Full screen"
               stacked
               active={format === 'full'}
               onPress={() => setFormat('full')}
-              icon={<Ionicons name="expand-outline" size={15} color={format === 'full' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="expand-outline" size={iconSize.sm} color={format === 'full' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Feed"
               stacked
               active={format === 'portrait'}
               onPress={() => setFormat('portrait')}
-              icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="tablet-portrait-outline" size={iconSize.sm} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Square"
               stacked
               active={format === 'square'}
               onPress={() => setFormat('square')}
-              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="square-outline" size={iconSize.sm} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Sticker"
               stacked
               active={isSticker}
               onPress={() => setFormat('sticker')}
-              icon={<Ionicons name="pricetag-outline" size={15} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="pricetag-outline" size={iconSize.sm} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
           {isSticker ? (
@@ -1779,13 +1795,13 @@ export default function ShareCardScreen({ navigation, route }) {
               label="Dark"
               active={shareTheme === 'dark'}
               onPress={() => setShareTheme('dark')}
-              icon={<Ionicons name="moon-outline" size={15} color={shareTheme === 'dark' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="moon-outline" size={iconSize.sm} color={shareTheme === 'dark' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Light"
               active={shareTheme === 'light'}
               onPress={() => setShareTheme('light')}
-              icon={<Ionicons name="sunny-outline" size={15} color={shareTheme === 'light' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="sunny-outline" size={iconSize.sm} color={shareTheme === 'light' ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
         </View>
@@ -1810,14 +1826,14 @@ export default function ShareCardScreen({ navigation, route }) {
               accessibilityLabel={videoOffered ? 'Gallery, choose a photo or video' : 'Gallery, choose a photo'}
               active={galleryChosen}
               onPress={pickGymPhoto}
-              icon={<Ionicons name="images-outline" size={15} color={galleryChosen ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="images-outline" size={iconSize.sm} color={galleryChosen ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Photo"
               accessibilityLabel="Photo, take one with the camera"
               active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO}
               onPress={takeGymPhoto}
-              icon={<Ionicons name="camera-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="camera-outline" size={iconSize.sm} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO ? t.colors.primary : t.colors.textMuted} />}
             />
             {videoOffered && workoutId ? (
               <SegmentBtn
@@ -1825,7 +1841,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 accessibilityLabel="Video, record one now"
                 active={!!clip && clip.source !== 'gallery'}
                 onPress={recordVideo}
-                icon={<Ionicons name="videocam-outline" size={15} color={clip && clip.source !== 'gallery' ? t.colors.primary : t.colors.textMuted} />}
+                icon={<Ionicons name="videocam-outline" size={iconSize.sm} color={clip && clip.source !== 'gallery' ? t.colors.primary : t.colors.textMuted} />}
               />
             ) : null}
             <SegmentBtn
@@ -1833,7 +1849,7 @@ export default function ShareCardScreen({ navigation, route }) {
               accessibilityLabel={videoOffered ? 'None, no photo or video' : 'None, no photo'}
               active={!bgPhoto && !clip}
               onPress={clearPhoto}
-              icon={<Ionicons name="close-circle-outline" size={15} color={!bgPhoto && !clip ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="close-circle-outline" size={iconSize.sm} color={!bgPhoto && !clip ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
           {/* From this workout (D229 addendum 5 item 4): the videos recorded
@@ -1858,7 +1874,7 @@ export default function ShareCardScreen({ navigation, route }) {
                       accessibilityLabel={`${isPrSet ? 'Your PR set, ' : ''}${name}, ${Math.round((row.durationMs || 0) / 1000)} seconds`}
                     >
                       <View style={[styles.lookThumb, styles.clipThumb, live.lookThumbEmpty]}>
-                        <Ionicons name="videocam-outline" size={18} color={active ? t.colors.primary : t.colors.textMuted} />
+                        <Ionicons name="videocam-outline" size={iconSize.md} color={active ? t.colors.primary : t.colors.textMuted} />
                         <Text style={[styles.clipDuration, live.clipDuration]}>{mmss(row.durationMs)}</Text>
                       </View>
                       <Text

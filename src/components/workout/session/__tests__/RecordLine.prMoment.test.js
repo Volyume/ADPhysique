@@ -77,7 +77,7 @@ describe('the offer: "This set would be a new PR", then Record it', () => {
     expect(hasText(tree, '·')).toBe(true);
     expect(tree.root.findByType('Ionicons').props.name).toBe('flag-outline');
     const [action] = buttons(tree);
-    expect(action.props.accessibilityLabel).toBe('Record a video of this set');
+    expect(action.props.accessibilityLabel).toBe('Film this set');
     act(() => action.props.onPress());
     expect(onAction).toHaveBeenCalledTimes(1);
     act(() => { tree.unmount(); });

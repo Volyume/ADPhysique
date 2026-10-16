@@ -1,28 +1,32 @@
 /**
- * ClipsSheet - a workout's clips, listed so one can be deleted (D229 addendum
- * 5, rulings 3 and 6).
+ * ClipsSheet - "Your videos": a workout's videos, listed so one can be played,
+ * kept or deleted (D229 addendum 5, rulings 3 and 6; addendum 15).
  *
  * Used in two places:
- *   - the exercise More sheet's "Record a clip" row and the summary row, when
- *     the workout already holds three clips: the row opens THIS instead of the
- *     camera, so nothing is ever replaced silently and the person chooses
- *     which clip to delete;
- *   - the workout history's "Clips" row, in every state (calm mode and an open
- *     ED flag included): viewing and deleting your own clips is never withheld.
+ *   - the exercise's three dots menu (Your videos) in the logger, and the
+ *     Film action when the workout already holds three videos: Film opens
+ *     THIS instead of the camera, so nothing is ever replaced silently and
+ *     the person chooses which video to delete;
+ *   - the workout history's "Your videos" row, in every state (calm mode and
+ *     an open ED flag included): viewing and deleting your own videos is
+ *     never withheld.
  *
  * Each row reads "Bench press, set 3, 0:12" (the exercise, the set it was
- * recorded for, the length) with the time it was recorded under it; a clip made
- * from the summary reads "After the workout, 0:12". Each has a "Play" button
- * that plays the video, silently, under its row (ClipPlayer: the same frames
- * the share screen draws; fresh-eyes review 2026-10-15), and a "Delete"
- * button that asks once ("Delete this video?") before the store removes the
- * file and the row at once. The sheet explains nothing beyond that: the
- * privacy line is said once, in the primer, and nowhere else. NO thumbnails:
- * a row of text names what is on the phone, and the video is decoded only
- * when its Play is tapped.
+ * recorded for, the length) with the time it was recorded under it; a video
+ * made from the summary reads "After the workout, 0:12". Under that, on a
+ * line of their own so a long name is never crushed, sit Play (plays the
+ * video, silently, under its row: ClipPlayer, the same frames the share
+ * screen draws), Keep (the house Chip; "Kept" when it stays until the person
+ * deletes it) and Delete, which asks once ("Delete this video?") before the
+ * store removes the file and the row at once. Releasing Keep on a video that
+ * is already past the keep window asks first too, because it would go the next
+ * time the app opens. The sheet explains nothing beyond that: the privacy line
+ * is said once, in the primer, and nowhere else. NO thumbnails: a row of text
+ * names what is on the phone, and the video is decoded only when its Play is
+ * tapped.
  *
- * Built from named house parts only: BottomSheet, Card, Text, Button, Toast,
- * the house alert.
+ * Built from named house parts only: BottomSheet, Card, Text, Button, Chip,
+ * Toast, the house alert.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
@@ -31,17 +35,19 @@ import Text from '../Text';
 import BottomSheet from '../BottomSheet';
 import Card from '../Card';
 import Button from '../Button';
+import Chip from '../Chip';
 import { useToast } from '../Toast';
 import { appAlert } from '../AppAlert';
 import useTheme from '../../hooks/useTheme';
 import { colors, spacing, type } from '../../styles/theme';
 import { logError } from '../../lib/errorLog';
-import { listClipsForWorkout, deleteClip, setClipKept, getClipsStorage, getKeepDays } from '../../lib/clips/store';
+import { listClipsForWorkout, deleteClip, setClipKept, getClipsStorage, getKeepDays, isClipPastWindow } from '../../lib/clips/store';
 import {
   CLIP_STRINGS,
   clipDisplayName,
   clipRowTitle,
   keepRuleLine,
+  stopKeepBody,
   storageLine,
 } from '../../lib/clips/rules';
 
@@ -108,6 +114,24 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
   // reads "Kept" too; the person can still release it.
   async function toggleKeep(clip) {
     if (busyId) return;
+    // Letting go of Keep on a video that is already past the window means it
+    // goes the next time the app opens: one plain question first.
+    if (clip.keptAt) {
+      const past = await isClipPastWindow(clip);
+      if (past && aliveRef.current) {
+        const days = keepDays ?? (await getKeepDays());
+        appAlert(CLIP_STRINGS.stopKeepTitle, stopKeepBody(days), [
+          { text: CLIP_STRINGS.stopKeepCancel, style: 'cancel' },
+          { text: CLIP_STRINGS.stopKeepConfirm, style: 'destructive', onPress: () => { applyKeep(clip); } },
+        ]);
+        return;
+      }
+    }
+    applyKeep(clip);
+  }
+
+  async function applyKeep(clip) {
+    if (busyId) return;
     setBusyId(clip.id);
     try {
       await setClipKept(clip.id, !clip.keptAt);
@@ -137,7 +161,7 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
   function askDelete(clip) {
     if (busyId) return;
     appAlert(CLIP_STRINGS.deleteConfirmTitle, CLIP_STRINGS.deleteConfirmBody, [
-      { text: CLIP_STRINGS.deleteConfirmKeep, style: 'cancel' },
+      { text: CLIP_STRINGS.deleteConfirmCancel, style: 'cancel' },
       { text: CLIP_STRINGS.deleteLabel, style: 'destructive', onPress: () => { handleDelete(clip); } },
     ]);
   }
@@ -187,6 +211,8 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
                     <Text style={[styles.name, live.name]} numberOfLines={2}>{title}</Text>
                     <Text style={[styles.when, live.when]}>{when}</Text>
                   </View>
+                </View>
+                <View style={styles.actions}>
                   <Button
                     icon={playing ? 'stop-outline' : 'play-outline'}
                     title=""
@@ -197,13 +223,14 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
                     onPress={() => setPlayingId(playing ? null : clip.id)}
                     accessibilityLabel={`${playing ? CLIP_STRINGS.playStopA11y : CLIP_STRINGS.playA11y}, ${name}`}
                   />
-                  <Button
-                    title={clip.keptAt ? CLIP_STRINGS.keptLabel : CLIP_STRINGS.keepLabel}
-                    variant={clip.keptAt ? 'primary' : 'secondary'}
-                    size="sm"
-                    fullWidth={false}
+                  <Chip
+                    label={clip.keptAt
+                      ? (clip.keptReason === 'pr' ? CLIP_STRINGS.keptPRLabel : CLIP_STRINGS.keptLabel)
+                      : CLIP_STRINGS.keepLabel}
+                    selected={!!clip.keptAt}
                     disabled={!!busyId}
                     onPress={() => toggleKeep(clip)}
+                    accessibilityRole="checkbox"
                     accessibilityLabel={`${clip.keptAt
                       ? (clip.keptReason === 'pr' ? CLIP_STRINGS.keptPRA11y : CLIP_STRINGS.keptA11y)
                       : CLIP_STRINGS.keepA11y}, ${name}`}
@@ -239,8 +266,12 @@ const styles = StyleSheet.create({
   title: { ...type.title, color: colors.textPrimary },
   notice: { ...type.bodySm, color: colors.textPrimary },
   empty: { ...type.bodySm, color: colors.textMuted },
-  row: {
+  row: { paddingTop: spacing.sm },
+  // Play, Keep and Delete on their own line under the name and time, so a
+  // long exercise name is never crushed and large text wraps instead of clips.
+  actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.sm,

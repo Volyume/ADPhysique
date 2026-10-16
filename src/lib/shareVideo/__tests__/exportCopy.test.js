@@ -68,6 +68,16 @@ describe('the founder\'s lines', () => {
     expect(lineForExportError(undefined)).toBe(FOUNDER_LINES.E_ENCODE);
   });
 
+  test('a video filmed in Volyume gets the in-app forms of the two quality-advice lines; the gallery forms are unchanged', () => {
+    expect(lineForExportError('E_DECODE', { fromGallery: false })).toBe('That video could not be read. Try filming it again.');
+    expect(lineForExportError('E_FRAME', { fromGallery: false })).toBe('That video could not be drawn. Try filming it again.');
+    expect(lineForExportError('E_DECODE', { fromGallery: true })).toBe(FOUNDER_LINES.E_DECODE);
+    expect(lineForExportError('E_FRAME')).toBe(FOUNDER_LINES.E_FRAME);
+    // Every other code reads the same either way.
+    expect(lineForExportError('E_SPACE', { fromGallery: false })).toBe(FOUNDER_LINES.E_SPACE);
+    expect(lineForExportError(EXPORT_ERROR.CANCELLED, { fromGallery: false })).toBeNull();
+  });
+
   test('every line a person can see is plain: no technical word, no em dash, no "we"', () => {
     const lines = Object.values(EXPORT_ERROR).map(lineForExportError).filter(Boolean);
     expect(lines.length).toBeGreaterThanOrEqual(8);

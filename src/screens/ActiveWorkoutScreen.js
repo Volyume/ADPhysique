@@ -339,10 +339,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     barWeight,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  // D229: the More sheet's video row. usePhotoSuppression starts suppressed and
-  // is true under calm mode, an open ED flag or any failed read, so the row is
-  // hidden until BOTH reads confirm it may show (fail closed). clipFlow owns
-  // the count, the primer and the clips sheet; this screen only renders them.
+  // D229: the Film action and the PR offer. usePhotoSuppression starts
+  // suppressed and is true under calm mode, an open ED flag or any failed
+  // read, so Film is hidden until BOTH reads confirm it may show (fail
+  // closed). The Your videos door in the exercise's three dots is NOT gated by
+  // it: a person's own videos are never withheld. clipFlow owns the count, the
+  // primer and the Your videos sheet; this screen only renders them.
   const clipsSuppressed = usePhotoSuppression(user?.id);
   const clipFlow = useClipRecorder({ navigation, userId: user?.id, workoutId: activeWorkout?.id });
   // Addendum 13 (F): "Watch" on the saved-video toast brings the logger back
@@ -6397,8 +6399,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         />
 
         <SessionSheets
-          clipCount={clipsSuppressed === false ? clipFlow.count : 0}
-          onOpenClips={clipsSuppressed === false ? () => clipFlow.openClips() : null}
+          clipCount={clipFlow.count}
+          onOpenClips={() => clipFlow.openClips()}
           supersetHeadsUp={supersetHeadsUp}
           reduceMotion={reduceMotion}
           setSupersetHeadsUp={setSupersetHeadsUp}

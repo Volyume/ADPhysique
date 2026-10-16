@@ -37,7 +37,7 @@ describe('the Film footer action', () => {
     const onFilm = jest.fn();
     const tree = await render({ onFilm });
     const film = byId(tree, 'volyume-btn-film-set')[0];
-    expect(film.props.accessibilityLabel).toBe('Record a video of this set');
+    expect(film.props.accessibilityLabel).toBe('Film this set');
     expect(JSON.stringify(tree.toJSON())).toContain('"Film"');
     expect(film.findAll((n) => n.props.name === 'videocam-outline').length).toBeGreaterThan(0);
     await act(async () => { film.props.onPress(); });
@@ -46,8 +46,8 @@ describe('the Film footer action', () => {
 
   test('its place: after Add set and Swap, before the overflow, and only on the active card', async () => {
     const tree = await render({ onFilm: () => {} });
-    const order = labels(tree).filter((l) => ['Add set', 'Swap exercise', 'Record a video of this set', 'More options for this exercise'].includes(l));
-    expect(order).toEqual(['Add set', 'Swap exercise', 'Record a video of this set', 'More options for this exercise']);
+    const order = labels(tree).filter((l) => ['Add set', 'Swap exercise', 'Film this set', 'More options for this exercise'].includes(l));
+    expect(order).toEqual(['Add set', 'Swap exercise', 'Film this set', 'More options for this exercise']);
     const upcoming = await render({ onFilm: () => {}, state: 'upcoming' });
     expect(byId(upcoming, 'volyume-btn-film-set')).toHaveLength(0);
   });

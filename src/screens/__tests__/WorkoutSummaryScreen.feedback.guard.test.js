@@ -50,7 +50,9 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*flex: 1/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*minHeight: touchTarget\.minimum/);
-    expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*flexShrink: 0,[\s\S]*minWidth: 108,[\s\S]*minHeight: touchTarget\.minimum/);
+    expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*flexShrink: 0,[\s\S]*minWidth: SHARE_FOOTER_MIN_WIDTH,[\s\S]*minHeight: touchTarget\.minimum/);
+    // The width floor is a named token multiple (2 x spacing.xxxl), not a raw 108.
+    expect(SOURCE).toContain('const SHARE_FOOTER_MIN_WIDTH = spacing.xxxl * 2;');
     expect(SOURCE).not.toMatch(/shareFooterBtn: \{\s*flex: 1,/);
     // Done's label typography now comes from Button variant="primary"; the
     // screen no longer carries a doneBtnText override of its own.

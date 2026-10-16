@@ -5,37 +5,43 @@
  * walks to the bar).
  *
  * Full screen, portrait, SILENT. A close glyph top-left, a flip glyph
- * top-right, one record control centred low, a small "Countdown" control on
- * one side of it and a small "Length" control on the other, and one short line
- * under the button, always shown: "Tap to start with a countdown. Hold to
- * record while you hold."
+ * top-right, the setup controls (Guides, Cues, View) under the top bar, one
+ * record control centred low, a small "Countdown" control on one side of it
+ * and a small "Length" control on the other, and one short line under the
+ * button, always shown: "Tap the button to start after a countdown, or press
+ * and hold it to record for as long as you hold."
  *
  * TWO WAYS TO RECORD (both visible, neither hidden behind a gesture):
- *   TAP the record control: a countdown (3, 5 or 10 seconds, the "Countdown"
- *     control, remembered in `@volyume_clip_leadin`, default 3) with the
- *     numerals large in the centre and one light tick each, then it records for
- *     the chosen length (5, 10 or 15 seconds, the "Length" control, remembered
- *     in `@volyume_clip_length`, default 15) and STOPS BY ITSELF. A tap during
- *     the recording stops it early.
+ *   TAP the record control: a countdown (3, 5, 10, 15 or 20 seconds, the
+ *     "Countdown" control, remembered in `@volyume_clip_leadin`, default 3)
+ *     with the numerals large in the centre and one cue each (sound and
+ *     light, as the Cues control says), then it records for the chosen length
+ *     (60 seconds, 90 seconds or 2 minutes, the "Length" control, remembered
+ *     in `@volyume_clip_length`, default 90 seconds) and STOPS BY ITSELF. A
+ *     tap during the recording stops it early. A tap during the countdown
+ *     cancels it and returns to ready (no recording starts, the light goes
+ *     off), and the line under the button says so.
  *   PRESS AND HOLD the record control: it records while held, with no
- *     countdown, and stops on release, capped at 15 seconds.
+ *     countdown, and stops on release, capped at two minutes.
  * While recording, a 2 dp amber line along the very top edge fills over the
- * chosen length (always 15 for a hold), the rest timer's drain line (same
+ * chosen length (two minutes for a hold), the rest timer's drain line (same
  * `primaryFill`, same 2 dp), with the running time under it
  * (RecordingProgress). A recording under 1 s is discarded silently; closing
- * during a recording discards it with no confirmation (it is 15 seconds of
- * footage). No review screen: a rest timer may be running, so the camera
- * closes and a toast says "Video saved to this workout" with Undo.
+ * during a recording discards it with no confirmation. No review screen: a
+ * rest timer may be running, so the camera closes and a toast says where the
+ * video is saved and how to keep it (savedLine in rules.js), with Undo and
+ * Watch.
  *
  * Route params: { workoutId, exerciseId?, exerciseName?, setNumber?, source }
- *   source 'workout'  from the exercise More sheet; `setNumber` is the set the
- *                     video is recorded for (the exercise's next pending set)
+ *   source 'workout'  from the exercise card's Film action; `setNumber` is the
+ *                     set the video is recorded for (the exercise's next
+ *                     pending set)
  *   source 'summary'  from the workout summary row
  *   source 'share'    from the share screen's video source (the lead's work)
  *
  * WHAT HAPPENS AFTER A SAVE (all through the clip store; a fourth is refused,
  * never replaced):
- *   'workout'  go back, toast "Video saved to this workout" with Undo.
+ *   'workout'  go back, with the saved toast (savedLine) and Undo and Watch.
  *   'summary'  no toast here: go back to WorkoutSummary with the new clip's id
  *              merged into ITS route params as `clipId`. The summary opens the
  *              share screen with `{ ...its usual share params, clipId }`: it
@@ -52,9 +58,10 @@
  *   delete the clip after the share screen has opened with it, so the share
  *   screen must treat a clipId that no longer resolves as "no clip".
  *
- * Camera access: asked for on open. A refusal is one calm warning toast
- * ("Camera access is needed to record a video") and the screen closes; there
- * is never a link to settings and never a second prompt. No microphone is asked
+ * Camera access: asked for on open. A refusal is one calm warning toast of two
+ * sentences (what is needed, then where to turn it on) and the screen closes;
+ * a build without the camera module says to update the app instead. There is
+ * never a link to settings and never a second prompt. No microphone is asked
  * for (the view is `mute`, and expo-camera does not request audio when muted).
  *
  * The chrome is white on the black viewfinder in EVERY theme (cameraInk.js).
@@ -364,7 +371,7 @@ export default function ClipCameraScreen({ navigation, route }) {
   useEffect(() => {
     // Nothing to record against: close without a word.
     if (!workoutId || !userId) { closeOnce(null); return; }
-    if (!CameraView) { closeOnce(CLIP_STRINGS.permissionDenied); return; }
+    if (!CameraView) { closeOnce(CLIP_STRINGS.cameraMissing); return; }
     if (!permission) return; // still reading the current answer
     if (permission.granted) { setReady(true); return; }
     if (askedRef.current) return;
@@ -649,8 +656,21 @@ export default function ClipCameraScreen({ navigation, route }) {
     return true;
   }, [toast]);
 
-  // A TAP: while idle, the countdown; while recording, stop early.
+  // A tap during the countdown cancels it: the timers and the light are
+  // cleared, nothing records, and the camera is ready again.
+  const cancelCountdown = useCallback(() => {
+    if (phaseRef.current !== 'countdown') return;
+    clearTimers();
+    setTorchOn(false);
+    setScreenPulse(false);
+    setCountdownN(0);
+    setPhase('ready');
+  }, [clearTimers, setPhase]);
+
+  // A TAP: while idle, the countdown; during the countdown, cancel it; while
+  // recording, stop early.
   const handleRecordTap = useCallback(async () => {
+    if (phaseRef.current === 'countdown') { cancelCountdown(); return; }
     if (phaseRef.current === 'recording') { stopRecording(); return; }
     if (phaseRef.current !== 'ready' || !ready) return;
     // Held back at once so a double tap cannot start two countdowns.
@@ -661,12 +681,13 @@ export default function ClipCameraScreen({ navigation, route }) {
     if (!(await hasSpace())) { setPhase('ready'); return; }
     if (!aliveRef.current || phaseRef.current !== 'starting') return;
     beginCountdown();
-  }, [ready, setPhase, stopRecording, hasRoom, hasSpace, showFull, beginCountdown]);
+  }, [ready, setPhase, stopRecording, cancelCountdown, hasRoom, hasSpace, showFull, beginCountdown]);
 
   // A HOLD: records at once, no countdown, for as long as the press lasts.
   // A long press DURING a tap recording stops it (the tap's release is not
   // reported once the press has become a long press).
   const handleHoldStart = useCallback(async () => {
+    if (phaseRef.current === 'countdown') { cancelCountdown(); return; }
     if (phaseRef.current === 'recording') { stopRecording(); return; }
     if (phaseRef.current !== 'ready' || !ready) return;
     holdActiveRef.current = true;
@@ -679,7 +700,7 @@ export default function ClipCameraScreen({ navigation, route }) {
     if (!aliveRef.current || phaseRef.current !== 'starting') return;
     if (!holdActiveRef.current) { setPhase('ready'); return; }
     startRecording('hold');
-  }, [ready, setPhase, hasRoom, hasSpace, showFull, startRecording, stopRecording]);
+  }, [ready, setPhase, hasRoom, hasSpace, showFull, startRecording, stopRecording, cancelCountdown]);
 
   // Letting go ends a hold. (A tap's release does nothing here.)
   const handleRelease = useCallback(() => {
@@ -769,9 +790,10 @@ export default function ClipCameraScreen({ navigation, route }) {
   const selectedLens = showView ? (wideView ? lenses.wide : lenses.normal) : undefined;
   const counting = phase === 'countdown';
   // The record control stays pressable while a hold is being checked, so the
-  // release of a hold is never lost; only the countdown and the save grey it.
-  const recordDisabled = !ready || counting || phase === 'saving';
-  const greyed = !ready || counting || phase === 'saving';
+  // release of a hold is never lost, and during the countdown, where a tap
+  // cancels it; only the save greys it.
+  const recordDisabled = !ready || phase === 'saving';
+  const greyed = !ready || phase === 'saving';
   const ink = greyed ? CAM.textSecondary : CAM.textPrimary;
   const innerColour = greyed ? CAM.textSecondary : CAM.primaryFill;
   const topOffset = insets.top + spacing.xs;
@@ -819,7 +841,7 @@ export default function ClipCameraScreen({ navigation, route }) {
           onPress={handleClose}
           style={styles.glyph}
           accessibilityRole="button"
-          accessibilityLabel={CLIP_STRINGS.closeA11y}
+          accessibilityLabel={isRecording || counting ? CLIP_STRINGS.closeBusyA11y : CLIP_STRINGS.closeIdleA11y}
           testID="clip-camera-close"
         >
           <Ionicons name="close" size={iconSize.lg} color={CAM.textPrimary} style={styles.shadow} />
@@ -924,7 +946,7 @@ export default function ClipCameraScreen({ navigation, route }) {
             disabled={recordDisabled}
             style={[styles.recordRing, { borderColor: ink }]}
             accessibilityRole="button"
-            accessibilityLabel={isRecording ? CLIP_STRINGS.stopA11y : startA11yLabel(leadIn)}
+            accessibilityLabel={isRecording ? CLIP_STRINGS.stopA11y : (counting ? CLIP_STRINGS.cancelCountdownA11y : startA11yLabel(leadIn))}
             accessibilityState={{ disabled: recordDisabled }}
             testID="clip-camera-record"
           >
@@ -950,7 +972,7 @@ export default function ClipCameraScreen({ navigation, route }) {
         >
           {isRecording
             ? (recordMode === 'hold' ? CLIP_STRINGS.recordingHintHold : CLIP_STRINGS.recordingHintTap)
-            : CLIP_STRINGS.recordHint}
+            : (counting ? CLIP_STRINGS.countdownHint : CLIP_STRINGS.recordHint)}
         </Text>
       </View>
 
@@ -968,11 +990,24 @@ export default function ClipCameraScreen({ navigation, route }) {
 }
 
 const GLYPH = touchTarget.minimum;
-const RECORD = 72;
+// The record control: a 72 dp ring (comfortably above the 48 dp target, easy
+// to find by feel at a propped phone), a 3 dp rim that reads on any picture,
+// and a dot 20 dp smaller than the ring so the rim shows around it.
+const RECORD_SIZE = 72;
+const RECORD_BORDER = 3;
+const RECORD_DOT_INSET = 20;
+// The soft shadow behind white chrome keeps it readable over a bright picture:
+// 1 dp down and a 3 dp blur for the small text and glyphs.
+const SHADOW_OFFSET_Y = 1;
+const SHADOW_RADIUS = 3;
+// The big countdown numerals carry a larger shadow in proportion: 2 dp down,
+// a 6 dp blur.
+const COUNTDOWN_SHADOW_OFFSET_Y = 2;
+const COUNTDOWN_SHADOW_RADIUS = 6;
 const SHADOW = {
   textShadowColor: withAlpha(CAM.camera, alpha.half),
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 3,
+  textShadowOffset: { width: 0, height: SHADOW_OFFSET_Y },
+  textShadowRadius: SHADOW_RADIUS,
 };
 
 const styles = StyleSheet.create({
@@ -1000,8 +1035,8 @@ const styles = StyleSheet.create({
     color: CAM.textPrimary,
     textAlign: 'center',
     textShadowColor: withAlpha(CAM.camera, alpha.half),
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: COUNTDOWN_SHADOW_OFFSET_Y },
+    textShadowRadius: COUNTDOWN_SHADOW_RADIUS,
   },
   bottomBar: {
     position: 'absolute',
@@ -1020,14 +1055,14 @@ const styles = StyleSheet.create({
   slotStart: { alignItems: 'flex-end', paddingRight: spacing.lg },
   slotEnd: { alignItems: 'flex-start', paddingLeft: spacing.lg },
   recordRing: {
-    width: RECORD,
-    height: RECORD,
-    borderRadius: circle(RECORD),
-    borderWidth: 3,
+    width: RECORD_SIZE,
+    height: RECORD_SIZE,
+    borderRadius: circle(RECORD_SIZE),
+    borderWidth: RECORD_BORDER,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recordDot: { width: RECORD - 20, height: RECORD - 20, borderRadius: circle(RECORD - 20) },
+  recordDot: { width: RECORD_SIZE - RECORD_DOT_INSET, height: RECORD_SIZE - RECORD_DOT_INSET, borderRadius: circle(RECORD_SIZE - RECORD_DOT_INSET) },
   stopSquare: { width: iconSize.lg, height: iconSize.lg, borderRadius: radius.sm },
   valueControl: { minWidth: GLYPH, minHeight: GLYPH, alignItems: 'center', justifyContent: 'center' },
   hint: { ...SHADOW, color: CAM.textPrimary, textAlign: 'center', paddingHorizontal: spacing.lg },

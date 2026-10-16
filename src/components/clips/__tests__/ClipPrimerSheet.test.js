@@ -4,6 +4,7 @@
  * any other way (swipe, tap outside, back) is "Not now".
  */
 import { create, act } from 'react-test-renderer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('../../../store/useAppStore', () => {
   const fn = (selector) => selector({ accessibility: { reduceMotion: true } });
@@ -37,8 +38,27 @@ describe('ClipPrimerSheet', () => {
   test('says what a clip is, in the ruled words', () => {
     const json = JSON.stringify(render().toJSON());
     expect(json).toContain('Videos stay on this phone');
-    // Addendum 13 (two minutes) and addendum 14 (where the videos are kept).
-    expect(json).toContain('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. Each video is removed after 7 days unless you tap Keep on it in Your videos. You can change the 7 days in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
+    // Addendum 13 (two minutes) and addendum 14 (where the videos are kept);
+    // the default setting reads 7 days.
+    expect(json).toContain('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself at the length you choose, up to two minutes, with no sound. Your share uses up to 15 seconds of it; you choose which. Your videos are kept with the workout on this phone and are never uploaded. During a workout, find them under the three dots on the exercise, in Your videos; after it, under the workout in History. Each video is removed after 7 days unless you tap Keep on it there. You can change the 7 days in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
+  });
+
+  test('the keep sentences follow the person\'s own setting, read when the sheet opens', async () => {
+    const { KEEP_DAYS_KEY } = require('../../../lib/clips/rules');
+    await AsyncStorage.setItem(KEEP_DAYS_KEY, '30');
+    let tree;
+    await act(async () => { tree = create(<ClipPrimerSheet visible onOpenCamera={() => {}} onNotNow={() => {}} />); });
+    await act(async () => {});
+    let json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('Each video is removed after 30 days unless you tap Keep on it there. You can change the 30 days in Settings, under Your data.');
+    expect(json).not.toContain('after 7 days');
+    await AsyncStorage.setItem(KEEP_DAYS_KEY, '0');
+    await act(async () => { tree = create(<ClipPrimerSheet visible onOpenCamera={() => {}} onNotNow={() => {}} />); });
+    await act(async () => {});
+    json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('Your videos stay until you delete them. You can change this in Settings, under Your data.');
+    expect(json).not.toMatch(/removed after/);
+    await AsyncStorage.removeItem(KEEP_DAYS_KEY);
   });
 
   test('"Open camera" and "Not now" each fire their own handler once', () => {

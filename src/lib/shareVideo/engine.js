@@ -67,14 +67,25 @@ const EXPORT_LINES = Object.freeze({
   E_UNAVAILABLE: 'Videos cannot be made in this version of Volyume. Choose None under Background to share the card as an image.',
 });
 
+// The same two failures for a video filmed in Volyume: the advice about
+// recording at a lower quality is for a gallery video, so here the way
+// forward is to film it again.
+const IN_APP_LINES = Object.freeze({
+  E_DECODE: 'That video could not be read. Try filming it again.',
+  E_FRAME: 'That video could not be drawn. Try filming it again.',
+});
+
 /**
  * The calm line for a failure code, or null when nothing should be said: a
  * cancel the person chose, and a second tap while a video is already being
  * made (its progress is already on screen). An unknown code, or options that
- * failed validation, read as "could not be made this time".
+ * failed validation, read as "could not be made this time". `fromGallery`
+ * false (a video filmed in Volyume) swaps the two quality-advice lines for
+ * the in-app forms.
  */
-export function lineForExportError(code) {
+export function lineForExportError(code, { fromGallery = true } = {}) {
   if (code === EXPORT_ERROR.CANCELLED || code === EXPORT_ERROR.BUSY) return null;
+  if (!fromGallery && IN_APP_LINES[code]) return IN_APP_LINES[code];
   return EXPORT_LINES[code] || EXPORT_LINES.E_ENCODE;
 }
 

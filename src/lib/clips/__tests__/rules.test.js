@@ -170,7 +170,7 @@ describe('the summary row changes with the workout', () => {
   test('one video: "Use your video on the share", naming the exercise and set', () => {
     const clip = { id: 'c1', exerciseName: 'Bench press', setNumber: 3, createdAt: 5 };
     expect(summaryClipRowCopy([clip])).toEqual({
-      label: 'Use your video on the share', sub: 'You recorded Bench press, set 3', newest: clip,
+      label: 'Use your video on the share', sub: 'Your video of Bench press, set 3', newest: clip,
     });
   });
 
@@ -202,7 +202,7 @@ describe('the summary row names a PR set\'s video (addendum 9)', () => {
     const summary = { id: 'after', exerciseName: null, source: 'summary', createdAt: 90 };
     expect(summaryClipRowCopy([prVideo, newer, summary], [squat, bench])).toEqual({
       label: 'Use your PR video on the share',
-      sub: 'You recorded Bench press, set 3, a new PR',
+      sub: 'Your video of Bench press, set 3, a new PR',
       newest: prVideo,
     });
   });
@@ -213,13 +213,13 @@ describe('the summary row names a PR set\'s video (addendum 9)', () => {
     for (const list of [[a, b], [b, a]]) {
       const copy = summaryClipRowCopy(list, [bench, squat]);
       expect(copy.newest.id).toBe('b');
-      expect(copy.sub).toBe('You recorded Squat, set 1, a new PR');
+      expect(copy.sub).toBe('Your video of Squat, set 1, a new PR');
     }
   });
 
   test('no video of a PR set, or no PRs handed over: the usual form, unchanged', () => {
     const clip = { id: 'c1', exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 2, createdAt: 5 };
-    const usual = { label: 'Use your video on the share', sub: 'You recorded Bench press, set 2', newest: clip };
+    const usual = { label: 'Use your video on the share', sub: 'Your video of Bench press, set 2', newest: clip };
     expect(summaryClipRowCopy([clip], [bench])).toEqual(usual);
     for (const prs of [undefined, null, []]) {
       expect(summaryClipRowCopy([{ ...clip, setNumber: 3 }], prs).label).toBe('Use your video on the share');
@@ -229,10 +229,10 @@ describe('the summary row names a PR set\'s video (addendum 9)', () => {
 
   test('a PR video without a name of its own takes the PR\'s, and with neither says so plainly', () => {
     const unnamed = { id: 'u', exerciseId: 'e1', exerciseName: null, setNumber: 3, createdAt: 5 };
-    expect(summaryClipRowCopy([unnamed], [bench]).sub).toBe('You recorded Bench press, set 3, a new PR');
+    expect(summaryClipRowCopy([unnamed], [bench]).sub).toBe('Your video of Bench press, set 3, a new PR');
     const bare = { id: 'x', exerciseId: 'e1', setNumber: 2, createdAt: 5 };
     expect(summaryClipRowCopy([bare], [{ exerciseId: 'e1', setNumber: 2 }])).toEqual({
-      label: 'Use your PR video on the share', sub: 'You recorded a video of a new PR', newest: bare,
+      label: 'Use your PR video on the share', sub: 'Your video of a new PR', newest: bare,
     });
     // A record with no set number (a history reopen) never claims a video.
     expect(summaryClipRowCopy([bare], [{ exerciseId: 'e1', setNumber: null }]).label).toBe('Use your video on the share');
@@ -329,23 +329,29 @@ describe('the ruled words', () => {
     // Addendum 12: the light line and the clear band are said once, here.
     // Addenda 13 and 14: the length, the light, the clear band, and where
     // the videos are kept, said once.
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. Each video is removed after 7 days unless you tap Keep on it in Your videos. You can change the 7 days in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself at the length you choose, up to two minutes, with no sound. Your share uses up to 15 seconds of it; you choose which. Your videos are kept with the workout on this phone and are never uploaded. During a workout, find them under the three dots on the exercise, in Your videos; after it, under the workout in History. Each video is removed after 7 days unless you tap Keep on it there. You can change the 7 days in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
     expect(CLIP_STRINGS.primerOpen).toBe('Open camera');
     expect(CLIP_STRINGS.primerNotNow).toBe('Not now');
   });
 
   test('the camera words', () => {
-    expect(CLIP_STRINGS.permissionDenied).toBe('Volyume needs camera access to record a video.');
+    expect(CLIP_STRINGS.permissionDenied).toBe("Volyume needs camera access to film a set. You can turn it on for Volyume in your phone's settings.");
+    expect(CLIP_STRINGS.cameraMissing).toBe('Filming a set needs a newer version of Volyume. Update the app and try again.');
     // Addendum 14: where it went and where to find it, in the toast itself.
-    expect(CLIP_STRINGS.saved).toBe('Saved for 7 days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it longer.');
+    expect(CLIP_STRINGS.saved).toBe('Saved for 7 days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it until you delete it. You can change the 7 days in Settings, under Your data.');
     expect(CLIP_STRINGS.undo).toBe('Undo');
-    expect(CLIP_STRINGS.closeA11y).toBe('Cancel recording');
+    expect(CLIP_STRINGS.closeIdleA11y).toBe('Close camera');
+    expect(CLIP_STRINGS.closeBusyA11y).toBe('Cancel recording');
+    expect(CLIP_STRINGS.cancelCountdownA11y).toBe('Cancel the countdown');
+    expect(CLIP_STRINGS.countdownHint).toBe('Tap the button again to cancel.');
     expect(CLIP_STRINGS.stopA11y).toBe('Stop recording');
   });
 
   test('the sheet and the history row', () => {
     expect(CLIP_STRINGS.sheetTitle).toBe('Your videos');
-    expect(CLIP_STRINGS.historyLabel).toBe('Videos');
+    // One key for the history row too (it reads "Your videos" there).
+    expect(CLIP_STRINGS.yourVideos).toBe('Your videos');
+    expect(CLIP_STRINGS.historyLabel).toBeUndefined();
     expect(CLIP_STRINGS.afterWorkout).toBe('After the workout');
   });
 
@@ -355,8 +361,8 @@ describe('the ruled words', () => {
     expect(CLIP_STRINGS.prShareAction).toBe('Share');
     expect(CLIP_STRINGS.prShareA11y).toBe('Share this PR with its video');
     expect(CLIP_STRINGS.summaryLabelPR).toBe('Use your PR video on the share');
-    // The offer's action records a video of this set: the More row's words.
-    expect(CLIP_STRINGS.rowA11y).toBe('Record a video of this set');
+    // The offer's action films this set: the Film action's spoken label.
+    expect(CLIP_STRINGS.rowA11y).toBe('Film this set');
   });
 
   test('nothing is replaced silently: no string says a video was replaced', () => {
@@ -393,7 +399,7 @@ describe('the keep window (addendum 15: "A, default 7 days but they can have an 
   });
 
   test('the sheet says the rule in the person\'s own setting, and where to change it', () => {
-    expect(keepRuleLine(7)).toBe('Each video is removed after 7 days unless you tap Keep on it. You can change the 7 days in Settings, under Your data.');
+    expect(keepRuleLine(7)).toBe('Each video is removed after 7 days unless you tap Keep on it here. You can change the 7 days in Settings, under Your data.');
     expect(keepRuleLine(0)).toBe('Videos stay until you delete them. You can change this in Settings, under Your data.');
     expect(keepRuleLine(null)).toBe(keepRuleLine(7));
   });
@@ -434,6 +440,43 @@ describe('the saved toast says the window (addendum 15, the founder: "display in
     expect(savedLine(0)).toBe('Saved with this workout until you delete it. Find it under the three dots on this exercise, in Your videos.');
   });
   test('the primer says the rule and where to change it', () => {
-    expect(STR.primerBody).toContain('Each video is removed after 7 days unless you tap Keep on it in Your videos. You can change the 7 days in Settings, under Your data.');
+    expect(STR.primerBody).toContain('Each video is removed after 7 days unless you tap Keep on it there. You can change the 7 days in Settings, under Your data.');
+  });
+  test('the primer follows the setting; 7 is the constant, 0 swaps the two keep sentences', () => {
+    const { primerBody } = require('../rules');
+    expect(primerBody(7)).toBe(STR.primerBody);
+    expect(primerBody(null)).toBe(STR.primerBody);
+    expect(primerBody(30)).toContain('Each video is removed after 30 days unless you tap Keep on it there. You can change the 30 days in Settings, under Your data.');
+    expect(primerBody(90)).toContain('after 90 days');
+    const zero = primerBody(0);
+    expect(zero).toContain('Your videos stay until you delete them. You can change this in Settings, under Your data.');
+    expect(zero).not.toMatch(/removed after|\d days/);
+    expect(zero.startsWith('Prop your phone up')).toBe(true);
+    expect(zero.endsWith('shows your lift best.')).toBe(true);
+  });
+  test('the summary variant of the saved toast finds it under the workout in History', () => {
+    expect(savedLine(7, { place: 'summary' })).toBe('Saved for 7 days with this workout. Find it under this workout in History, in Your videos, where tapping Keep keeps it until you delete it. You can change the 7 days in Settings, under Your data.');
+    expect(savedLine(0, { place: 'summary' })).toBe('Saved with this workout until you delete it. Find it under this workout in History, in Your videos.');
+    expect(savedLine(30)).toContain('You can change the 30 days in Settings');
+  });
+  test('the Settings line, the removal confirm and the stop-keeping confirm', () => {
+    const { settingsKeepSub, removeNowTitle, removeNowBody, stopKeepBody } = require('../rules');
+    expect(settingsKeepSub(7)).toBe("Older videos are removed from this phone. Tap Keep on a video, in Your videos under the exercise's three dots during a workout or under the workout in History, and it stays until you delete it. A video of a PR set is kept for you.");
+    expect(settingsKeepSub(0)).toBe('Videos stay on this phone until you delete them. A video of a PR set is kept for you.');
+    expect(removeNowTitle(3)).toBe('Remove 3 videos now?');
+    expect(removeNowTitle(1)).toBe('Remove 1 video now?');
+    expect(removeNowBody(3, 7)).toBe('3 videos older than 7 days will be removed from this phone. Videos you have kept, and videos of PR sets, stay.');
+    expect(stopKeepBody(7)).toBe('It is older than 7 days, so it will be removed the next time the app opens.');
+    expect(CLIP_STRINGS.stopKeepTitle).toBe('Stop keeping this video?');
+    expect(CLIP_STRINGS.stopKeepCancel).toBe('Keep it');
+    expect(CLIP_STRINGS.stopKeepConfirm).toBe('Stop keeping it');
+    expect(CLIP_STRINGS.removeNowConfirm).toBe('Remove them');
+    expect(CLIP_STRINGS.deleteConfirmCancel).toBe('Cancel');
+  });
+  test('every toast sentence ends with a full stop, and none says "couldn\'t"', () => {
+    for (const key of ['deleted', 'deleteFailed', 'saveFailed', 'undoFailed', 'keepFailed', 'deleteAllDone', 'deleteAllFailed', 'permissionDenied', 'cameraMissing', 'shareVideoGone', 'shareVideoCannotOpen', 'shareNotPrepared', 'noSpace']) {
+      expect({ key, stop: /\.$/.test(STR[key]) }).toEqual({ key, stop: true });
+    }
+    for (const line of Object.values(STR)) expect(line).not.toMatch(/n't\b/);
   });
 });

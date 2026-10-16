@@ -1,6 +1,6 @@
 /**
  * HistoryClipsRowBody - the drawn half of HistoryClipsRow: a NavRow inside a
- * NavGroup ("Clips", with the count) and the ClipsSheet it opens. Named house
+ * NavGroup ("Your videos", with the count) and the sheet it opens. Named house
  * parts only. No suppression read, on purpose: see HistoryClipsRow.js.
  */
 import { NavRow, NavGroup } from '../NavRow';
@@ -16,7 +16,7 @@ export default function HistoryClipsRowBody({
         <NavGroup>
           <NavRow
             icon="videocam-outline"
-            label={CLIP_STRINGS.historyLabel}
+            label={CLIP_STRINGS.yourVideos}
             sub={clipCountLabel(count)}
             onPress={onOpen}
           />

@@ -123,7 +123,7 @@ describe('ShareCardScreen preview error state (EP-17/UI-05)', () => {
 
     const retry = findByAccessibilityLabel(tree, 'Retry building the preview');
     expect(retry.length).toBeGreaterThan(0);
-    expect(findAllText(tree)).toContain("Couldn't build the preview.");
+    expect(findAllText(tree)).toContain("The preview could not be built.");
   });
 
   test('pressing Retry re-attempts the render and recovers once it can succeed', async () => {
@@ -142,6 +142,6 @@ describe('ShareCardScreen preview error state (EP-17/UI-05)', () => {
     await flush();
 
     expect(findByAccessibilityLabel(tree, 'Retry building the preview').length).toBe(0);
-    expect(findAllText(tree)).not.toContain("Couldn't build the preview.");
+    expect(findAllText(tree)).not.toContain("The preview could not be built.");
   });
 });

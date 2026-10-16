@@ -26,6 +26,7 @@ jest.mock('../ClipPlayer', () => {
 const mockList = jest.fn();
 const mockDelete = jest.fn();
 const mockSetKept = jest.fn(async () => true);
+const mockPast = jest.fn(async () => false);
 jest.mock('../../../lib/clips/store', () => ({
   listClipsForWorkout: (...a) => mockList(...a),
   deleteClip: (...a) => mockDelete(...a),
@@ -34,6 +35,8 @@ jest.mock('../../../lib/clips/store', () => ({
   setClipKept: (...a) => mockSetKept(...a),
   getClipsStorage: jest.fn(async () => ({ count: 2, bytes: 150 * 1024 * 1024 })),
   getKeepDays: jest.fn(async () => 7),
+  // Whether a video is already past the keep window (the stop-keeping question).
+  isClipPastWindow: (...a) => mockPast(...a),
 }));
 
 import ClipsSheet from '../ClipsSheet';
@@ -62,6 +65,9 @@ beforeEach(() => {
   mockDelete.mockReset();
   mockList.mockReset();
   mockList.mockResolvedValue(CLIPS);
+  mockSetKept.mockClear();
+  mockPast.mockReset();
+  mockPast.mockResolvedValue(false);
 });
 
 describe('ClipsSheet', () => {
@@ -98,12 +104,12 @@ describe('ClipsSheet', () => {
     expect(mockDelete).not.toHaveBeenCalled();
     expect(mockAlerts).toHaveLength(1);
     expect(mockAlerts[0].title).toBe('Delete this video?');
-    expect(mockAlerts[0].message).toBe('It will be removed from your phone.');
-    expect(mockAlerts[0].buttons.map((b) => [b.text, b.style])).toEqual([['Keep', 'cancel'], ['Delete', 'destructive']]);
+    expect(mockAlerts[0].message).toBe('It will be deleted from your phone.');
+    expect(mockAlerts[0].buttons.map((b) => [b.text, b.style])).toEqual([['Cancel', 'cancel'], ['Delete', 'destructive']]);
     await act(async () => { mockAlerts[0].buttons[1].onPress(); });
     expect(mockDelete).toHaveBeenCalledWith('c3');
     expect(onChanged).toHaveBeenCalledTimes(1);
-    expect(mockShow).toHaveBeenCalledWith('That video has been deleted');
+    expect(mockShow).toHaveBeenCalledWith('That video has been deleted.');
     const json = JSON.stringify(tree.toJSON());
     expect(json).not.toContain('Back squat, set 2');
   });
@@ -117,7 +123,7 @@ describe('ClipsSheet', () => {
     expect(players(other)).toHaveLength(0);
   });
 
-  test('"Keep" deletes nothing', async () => {
+  test('"Cancel" on the delete question deletes nothing', async () => {
     const onChanged = jest.fn();
     const tree = await render({ onChanged });
     const button = tree.root.findAll((n) => typeof n.props.accessibilityLabel === 'string'
@@ -136,7 +142,7 @@ describe('ClipsSheet', () => {
       && n.props.accessibilityLabel.startsWith('Delete video') && typeof n.props.onPress === 'function')[0];
     await act(async () => { button.props.onPress(); });
     await act(async () => { mockAlerts[0].buttons[1].onPress(); });
-    expect(mockShow).toHaveBeenCalledWith("That video couldn't be deleted. You can try again.", { variant: 'error' });
+    expect(mockShow).toHaveBeenCalledWith("That video could not be deleted. You can try again.", { variant: 'error' });
     expect(onChanged).not.toHaveBeenCalled();
   });
 
@@ -207,6 +213,75 @@ describe('keeping (addendum 15)', () => {
   test('under the list: the size and the rule in the person\'s own setting', async () => {
     const tree = await render();
     const foot = tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'clips-sheet-foot')[0];
-    expect(foot.props.children).toBe('2 videos, 150 MB. Each video is removed after 7 days unless you tap Keep on it. You can change the 7 days in Settings, under Your data.');
+    expect(foot.props.children).toBe('2 videos, 150 MB. Each video is removed after 7 days unless you tap Keep on it here. You can change the 7 days in Settings, under Your data.');
+  });
+
+  test('the actions sit on a second line under the name and time, and Keep is the house Chip: a checkbox that says whether it is ticked', async () => {
+    mockList.mockResolvedValue(CLIPS.map((c) => (c.id === 'c3' ? { ...c, keptAt: 1, keptReason: 'person' } : c)));
+    const tree = await render();
+    const keep = (id) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === `clip-keep-${id}`)[0];
+    expect(keep('c3').props.accessibilityRole).toBe('checkbox');
+    expect(keep('c3').props.accessibilityState).toMatchObject({ checked: true });
+    expect(keep('c2').props.accessibilityState).toMatchObject({ checked: false });
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('"Kept"');
+    expect(SOURCE).toMatch(/styles\.actions/);
+    expect(SOURCE).toMatch(/import Chip from/);
+  });
+
+  test('a PR set\'s video reads "Kept, a PR set" on the chip itself', async () => {
+    mockList.mockResolvedValue(CLIPS.map((c) => (c.id === 'c1' ? { ...c, keptAt: 1, keptReason: 'pr' } : c)));
+    const json = JSON.stringify((await render()).toJSON());
+    expect(json).toContain('"Kept, a PR set"');
+  });
+});
+
+// Releasing Keep on a video already past the window (addendum 15, lead ruling).
+describe('releasing Keep past the window', () => {
+  const keptRows = () => CLIPS.map((c) => (c.id === 'c3' ? { ...c, keptAt: 1, keptReason: 'person' } : c));
+  const tapKept = async (tree) => {
+    const kept = tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'clip-keep-c3')[0];
+    await act(async () => { kept.props.onPress(); });
+  };
+
+  test('past the window it asks first, in the person\'s own number of days, and changes nothing until "Stop keeping it"', async () => {
+    mockList.mockResolvedValue(keptRows());
+    mockPast.mockResolvedValue(true);
+    const tree = await render();
+    await tapKept(tree);
+    expect(mockSetKept).not.toHaveBeenCalled();
+    expect(mockAlerts).toHaveLength(1);
+    expect(mockAlerts[0].title).toBe('Stop keeping this video?');
+    expect(mockAlerts[0].message).toBe('It is older than 7 days, so it will be removed the next time the app opens.');
+    expect(mockAlerts[0].buttons.map((b) => [b.text, b.style])).toEqual([['Keep it', 'cancel'], ['Stop keeping it', 'destructive']]);
+    await act(async () => { mockAlerts[0].buttons[1].onPress(); });
+    expect(mockSetKept).toHaveBeenCalledWith('c3', false);
+  });
+
+  test('"Keep it" leaves it kept', async () => {
+    mockList.mockResolvedValue(keptRows());
+    mockPast.mockResolvedValue(true);
+    const tree = await render();
+    await tapKept(tree);
+    expect(mockAlerts[0].buttons[0].onPress).toBeUndefined();
+    expect(mockSetKept).not.toHaveBeenCalled();
+  });
+
+  test('inside the window it releases without asking', async () => {
+    mockList.mockResolvedValue(keptRows());
+    mockPast.mockResolvedValue(false);
+    const tree = await render();
+    await tapKept(tree);
+    expect(mockAlerts).toHaveLength(0);
+    expect(mockSetKept).toHaveBeenCalledWith('c3', false);
+  });
+
+  test('keeping a video (not yet kept) never asks', async () => {
+    mockPast.mockResolvedValue(true);
+    const tree = await render();
+    const keep = tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'clip-keep-c3')[0];
+    await act(async () => { keep.props.onPress(); });
+    expect(mockAlerts).toHaveLength(0);
+    expect(mockSetKept).toHaveBeenCalledWith('c3', true);
   });
 });

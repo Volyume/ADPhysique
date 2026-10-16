@@ -131,7 +131,9 @@ function SessionSheets({
   timeCrunchMsg,
   handleRemoveExercise,
   // D229 addendum 14: the door to the videos this workout holds, shown only
-  // when there are any.
+  // when there are any. It is NEVER withheld by calm mode or an open ED flag
+  // (the logger hands it the count and the opener always): viewing, keeping
+  // and deleting your own videos is never withheld; only Film is gated.
   clipCount = 0,
   onOpenClips = null,
   showReorderSheet,

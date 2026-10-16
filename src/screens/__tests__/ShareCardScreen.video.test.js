@@ -371,7 +371,7 @@ describe('From this workout', () => {
     await press(hostsByLabel(tree, 'After the workout, 22 seconds')[0]);
     await waitFor(() => trimBars(tree).length === 1);
     expect(trimBars(tree)[0].props).toMatchObject({ startMs: 0, endMs: 15000, durationMs: 22000 });
-    expect(texts(tree)).toContain('15 seconds of 22. Slide the strip to choose where it starts, or drag its ends to use less of the video.');
+    expect(texts(tree)).toContain('A share is 15 seconds at the longest. 15 seconds of 22. Slide the strip to choose where it starts, or drag its ends to use less of the video.');
     // The frames: the trim bar's across the whole video, the scrim's inside the window.
     await waitFor(() => mockThumbs.mock.calls.length >= 2);
     const windows = mockThumbs.mock.calls.map((c) => c[1]);
@@ -511,6 +511,37 @@ describe('sharing the video', () => {
     expect(mockSharing.shareAsync).not.toHaveBeenCalled();
   });
 
+  test('a failed export of a video filmed in Volyume asks the engine for the in-app lines; a gallery video for the gallery lines', async () => {
+    const { tree } = await mountWithClip();
+    mockEngine.exportShareVideo.mockImplementationOnce(() => Promise.reject(Object.assign(new Error('decode'), { code: 'decode_failed' })));
+    await press(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story')[0]);
+    await waitFor(() => mockToastShow.mock.calls.length === 1);
+    expect(mockEngine.lineForExportError).toHaveBeenLastCalledWith('decode_failed', { fromGallery: false });
+  });
+
+  test('a refused gallery permission names the video, not the image', async () => {
+    const { tree } = await mountWithClip();
+    mockMediaLibrary.requestPermissionsAsync.mockResolvedValueOnce({ granted: false });
+    await press(hostsByLabel(tree, 'Save to gallery')[0]);
+    await waitFor(() => mockToastShow.mock.calls.length === 1);
+    expect(mockToastShow).toHaveBeenCalledWith('Gallery access is needed to save the video. You can still use Share.', { variant: 'warning', duration: 5000 });
+    expect(mockMediaLibrary.saveToLibraryAsync).not.toHaveBeenCalled();
+  });
+
+  test('a chosen video deleted while the screen holds it: the share goes back to an image, with one calm line, once', async () => {
+    const { tree } = await mountWithClip();
+    mockToastShow.mockClear();
+    mockListClips.mockResolvedValue([CLIP_LONG]);
+    await TestRenderer.act(async () => { mockClipListeners.forEach((fn) => fn()); });
+    await flush();
+    await waitFor(() => framers(tree).length === 0);
+    expect(mockToastShow).toHaveBeenCalledWith('That video has been deleted, so this share is an image.', { variant: 'info' });
+    await TestRenderer.act(async () => { mockClipListeners.forEach((fn) => fn()); });
+    await flush();
+    expect(mockToastShow.mock.calls.filter((c) => c[0] === 'That video has been deleted, so this share is an image.')).toHaveLength(1);
+    expect(buttonTitled(tree, 'Share image').length).toBe(1);
+  });
+
   test('the files made here are deleted when the screen closes', async () => {
     const { tree } = await mountWithClip();
     await press(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story')[0]);
@@ -582,7 +613,7 @@ describe('a video from the phone', () => {
     const { tree } = await mount(SESSION);
     await press(hostsByLabel(tree, 'Gallery, choose a photo or video')[0]);
     await waitFor(() => mockToastShow.mock.calls.length === 1);
-    expect(mockToastShow).toHaveBeenCalledWith("That video couldn't be opened. You could try another one.", { variant: 'error' });
+    expect(mockToastShow).toHaveBeenCalledWith("That video could not be opened. Try another.", { variant: 'error' });
     expect(framers(tree).length).toBe(0);
   });
 });

@@ -28,7 +28,7 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  CLIP_STRINGS, clipRowTitle, clipDisplayName, clipCountLabel,
+  CLIP_STRINGS, settingsKeepSub, savedLine, keepRuleLine, primerBody, removeNowTitle, removeNowBody, stopKeepBody, clipRowTitle, clipDisplayName, clipCountLabel,
   summaryClipRowCopy, startA11yLabel, leadInLabel, leadInA11yLabel, lengthLabel,
   lengthA11yLabel, formatClipDuration,
 } = require('../rules');
@@ -89,7 +89,9 @@ const PR_MOMENT_KEYS = Object.freeze([
   // D229 addendum 15: a video of a PR set is kept by the app; these two say
   // so in the same terms (the set's record, never a claim about the video).
   'keptPRA11y',
-  'settingsKeepSub',
+  'keptPRLabel',
+  'settingsKeepPR',
+  'removeNowStay',
 ]);
 const PR_MOMENT_WORDS = PR_MOMENT_KEYS.map((k) => CLIP_STRINGS[k]);
 
@@ -104,6 +106,8 @@ const PR_MOMENT_LINES = [
     const copy = summaryClipRowCopy(list, prs);
     return [copy.label, copy.sub];
   }),
+  // The Settings line and the removal confirm are built from PR-moment words.
+  settingsKeepSub(7), settingsKeepSub(0), removeNowBody(2, 7),
 ];
 
 const SHOWN = [
@@ -117,6 +121,9 @@ const SHOWN = [
     return [copy.label, copy.sub];
   }),
   ...PR_MOMENT_LINES,
+  // The helper-built lines, in every form (the person's setting: 7, 30, 0).
+  ...[7, 30, 0].flatMap((d) => [savedLine(d), savedLine(d, { place: 'summary' }), keepRuleLine(d)]),
+  removeNowTitle(2), stopKeepBody(7), primerBody(30), primerBody(0),
 ];
 
 // The PR ban reads every shown string except the PR-moment words and the
@@ -247,7 +254,7 @@ describe('a video belongs to the set, not to a record', () => {
 
   test('the scan still sees the usual forms (a broken filter must not pass as clean)', () => {
     expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.rowLabel);
-    expect(NOT_PR_MOMENT).toContain('You recorded Bench press, set 3');
+    expect(NOT_PR_MOMENT).toContain('Your video of Bench press, set 3');
     expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.prOfferAction);
     expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.prShareAction);
   });
@@ -256,7 +263,7 @@ describe('a video belongs to the set, not to a record', () => {
 describe('the plain-words pins', () => {
   test('the exercise menu row', () => {
     expect(CLIP_STRINGS.rowLabel).toBe('Record a video of this set');
-    expect(CLIP_STRINGS.rowA11y).toBe('Record a video of this set');
+    expect(CLIP_STRINGS.rowA11y).toBe('Film this set');
   });
 
   test('the primer says it all, once', () => {
@@ -264,7 +271,7 @@ describe('the plain-words pins', () => {
     // Addendum 12: the light line and the clear band, said once, here.
     // Addenda 13 and 14: the length, the light, the clear band, and where
     // the videos are kept, said once.
-    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. Each video is removed after 7 days unless you tap Keep on it in Your videos. You can change the 7 days in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
+    expect(CLIP_STRINGS.primerBody).toBe('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself at the length you choose, up to two minutes, with no sound. Your share uses up to 15 seconds of it; you choose which. Your videos are kept with the workout on this phone and are never uploaded. During a workout, find them under the three dots on the exercise, in Your videos; after it, under the workout in History. Each video is removed after 7 days unless you tap Keep on it there. You can change the 7 days in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
   });
 
   test('the summary row, in its two forms', () => {
@@ -273,7 +280,7 @@ describe('the plain-words pins', () => {
       sub: 'Up to two minutes, with no sound. You can also film a set from an exercise card during a workout.',
     });
     expect(summaryClipRowCopy([ONE_VIDEO])).toMatchObject({
-      label: 'Use your video on the share', sub: 'You recorded Bench press, set 3',
+      label: 'Use your video on the share', sub: 'Your video of Bench press, set 3',
     });
     expect(summaryClipRowCopy([ONE_VIDEO, OTHER_VIDEO])).toMatchObject({
       label: 'Use your video on the share', sub: 'You recorded 2 videos',

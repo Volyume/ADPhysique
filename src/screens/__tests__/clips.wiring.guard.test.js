@@ -93,10 +93,15 @@ describe('ActiveWorkoutScreen: "Film" is a footer action on the exercise card, f
     expect(SHEETS).toMatch(/\{clipCount > 0 && onOpenClips \? \(\s*<TouchableOpacity[\s\S]*?onPress=\{\(\) => \{ setShowOverflow\(false\); onOpenClips\(\); \}\}[\s\S]*?accessibilityLabel=\{`Your videos, \$\{clipCount\}`\}[\s\S]*?testID="volyume-row-your-videos"[\s\S]*?name="videocam-outline"[\s\S]*?\{`Your videos · \$\{clipCount\}`\}/);
     // The door sits above Remove exercise, the sheet's last and destructive row.
     expect(SHEETS.indexOf('testID="volyume-row-your-videos"')).toBeLessThan(SHEETS.indexOf('accessibilityLabel="Remove exercise from workout"'));
-    // The logger hands it the count and the opener only when videos are not
-    // suppressed (the same explicit-false gate as Film; fail closed).
-    expect(ACTIVE).toContain('clipCount={clipsSuppressed === false ? clipFlow.count : 0}');
-    expect(ACTIVE).toContain('onOpenClips={clipsSuppressed === false ? () => clipFlow.openClips() : null}');
+    // The logger hands it the count and the opener ALWAYS: viewing, keeping
+    // and deleting your own videos is never withheld (calm mode and an open
+    // ED flag included). Only Film keeps the explicit-false gate.
+    expect(ACTIVE).toContain('clipCount={clipFlow.count}');
+    expect(ACTIVE).toContain('onOpenClips={() => clipFlow.openClips()}');
+    expect(ACTIVE).not.toContain('clipCount={clipsSuppressed');
+    expect(ACTIVE).not.toContain('onOpenClips={clipsSuppressed');
+    expect(ACTIVE).toContain('onFilm={clipsSuppressed === false ? handleRecordClip : null}');
+    expect(SHEETS).toMatch(/NEVER withheld by calm mode or an open ED flag/);
   });
 
   test('the handler films the next pending set, the number the Now card shows', () => {
@@ -129,7 +134,7 @@ describe('WorkoutSummaryScreen: the video row, in its two forms', () => {
 
   test("its words come from the one rule, and change with the workout's videos and its PRs", () => {
     expect(SUMMARY).toContain('const clipRowCopy = summaryClipRowCopy(clipFlow.clips, sharePRs);');
-    expect(SUMMARY).toContain("import { CLIP_STRINGS, summaryClipRowCopy, summaryClipRowVisible } from '../lib/clips/rules';");
+    expect(SUMMARY).toMatch(/import \{\s*CLIP_STRINGS, KEEP_DAYS_KEY, savedLine, summaryClipRowCopy, summaryClipRowVisible,\s*\} from '\.\.\/lib\/clips\/rules';/);
   });
 
   test('the PR list it reads is the one the share hand-off sends, worked out once', () => {
@@ -180,7 +185,19 @@ describe('WorkoutSummaryScreen: the video row, in its two forms', () => {
     // with no Share to open, the summary says "saved" itself (the camera
     // shows no toast for this source: the video is about to be on screen).
     expect(SUMMARY).toContain('if (!readOnly && displayWorkingSets > 0) { handleUseClip(returnedClipId); return; }');
-    expect(SUMMARY).toMatch(/toast\.show\(CLIP_STRINGS\.saved, \{\s*variant: 'undo',/);
+    // The summary's own saved toast reads the person's keep setting first and
+    // says where the video is from HERE (under the workout in History).
+    expect(SUMMARY).toMatch(/AsyncStorage\.getItem\(KEEP_DAYS_KEY\)[\s\S]*?toast\.show\(savedLine\(raw, \{ place: 'summary' \}\), \{\s*variant: 'undo',/);
+    expect(SUMMARY).not.toContain('toast.show(CLIP_STRINGS.saved,');
+  });
+
+  test('the footer Share: the video form takes the secondary variant\'s own look (no amber overrides), at a named width floor', () => {
+    expect(SUMMARY).toMatch(/style=\{videoReadyForShare \? styles\.shareFooterBtnVideo : \[styles\.shareFooterBtn, live\.shareFooterBtn\]\}/);
+    expect(SUMMARY).toMatch(/textStyle=\{videoReadyForShare \? undefined : \[styles\.shareFooterBtnText, live\.shareFooterBtnText\]\}/);
+    const video = SUMMARY.slice(SUMMARY.indexOf('shareFooterBtnVideo: {'), SUMMARY.indexOf('exerciseList: {'));
+    expect(video).not.toMatch(/borderColor|backgroundColor|primary/);
+    expect(SUMMARY).toContain('const SHARE_FOOTER_MIN_WIDTH = spacing.xxxl * 2;');
+    expect(SUMMARY).not.toMatch(/minWidth: 108/);
   });
 
   test('the sheets render once', () => {
@@ -221,9 +238,24 @@ describe('addendum 15: the keep window is wired in', () => {
   test('Settings > Your data has the Workout videos section: the size, the keep choices as a radio group, Delete all videos with one confirm', () => {
     expect(SETTINGS).toContain('<SectionHeader title="Workout videos" />');
     expect(SETTINGS).toContain('label={CLIP_STRINGS.settingsVideosLabel}');
-    expect(SETTINGS).toMatch(/accessibilityRole="radiogroup" accessibilityLabel=\{CLIP_STRINGS\.settingsKeepLabel\}/);
+    // The keep choices use SettingsDisplayScreen's segment pattern: a title
+    // and a sub above one segment container of chips, in StyleSheet.create
+    // with live mirrors; no loose chips under an inert row.
+    expect(SETTINGS).toMatch(/accessibilityRole="radiogroup"\s*accessibilityLabel=\{CLIP_STRINGS\.settingsKeepLabel\}/);
+    expect(SETTINGS).toMatch(/\{CLIP_STRINGS\.settingsKeepLabel\}<\/Text>\s*<Text style=\{\[localStyles\.sub, liveText\.sub\]\}>\{settingsKeepSub\(keepDays \?\? DEFAULT_KEEP_DAYS\)\}/);
+    expect(SETTINGS).toMatch(/const localStyles = StyleSheet\.create\(\{[\s\S]*segment: \{[\s\S]*segChip: \{[\s\S]*segLabel:/);
+    expect(SETTINGS).not.toMatch(/label=\{CLIP_STRINGS\.settingsKeepLabel\}/);
     expect(SETTINGS).toMatch(/KEEP_OPTIONS\.map\(\(days\) => \([\s\S]*?onPress=\{\(\) => chooseKeepDays\(days\)\}[\s\S]*?accessibilityRole="radio"/);
-    expect(SETTINGS).toMatch(/await setKeepDays\(days\);\s*await sweepExpiredClips\(user\?\.id, \{ force: true \}\);/);
+    expect(SETTINGS).toMatch(/await setKeepDays\(days\);\s*setKeepDaysState\(days\);\s*await sweepExpiredClips\(user\?\.id, \{ force: true \}\);/);
+    // A shorter window counts what it would remove NOW and asks first; the
+    // chips show the new choice only once it is saved (no optimistic write).
+    expect(SETTINGS).toMatch(/const shorter = days !== 0 && \(keepDays == null \|\| keepDays === 0 \|\| days < keepDays\);/);
+    expect(SETTINGS).toMatch(/countExpiredClips\(user\?\.id, \{ keepDays: days \}\)[\s\S]*?appAlert\(removeNowTitle\(count\), removeNowBody\(count, days\)[\s\S]*?CLIP_STRINGS\.removeNowCancel[\s\S]*?CLIP_STRINGS\.removeNowConfirm, style: 'destructive'[\s\S]*?saveKeepDays\(days\)/);
+    expect(SETTINGS).not.toMatch(/haptics\.selection\(\);\s*setKeepDaysState/);
+    // Delete all at zero is inert: no arrow, no press, and it says why.
+    expect(SETTINGS).toMatch(/showArrow=\{!deletingVideos && !!videos\?\.count\}/);
+    expect(SETTINGS).toContain('onPress={deletingVideos || !videos?.count ? null : handleDeleteAllVideos}');
+    expect(SETTINGS).toContain('videos?.count === 0 ? CLIP_STRINGS.settingsDeleteAllNone : CLIP_STRINGS.settingsDeleteAllSub');
     expect(SETTINGS).toMatch(/appAlert\(CLIP_STRINGS\.deleteAllConfirmTitle, CLIP_STRINGS\.deleteAllConfirmBody/);
     expect(SETTINGS).toContain('await deleteAllClipsForUser(user.id);');
   });

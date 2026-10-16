@@ -235,11 +235,17 @@ describe('camera access', () => {
     mockRequestPermission.mockResolvedValue({ granted: false });
     await mount();
     expect(mockShow).toHaveBeenCalledTimes(1);
-    expect(mockShow).toHaveBeenCalledWith('Volyume needs camera access to record a video.', { variant: 'warning' });
+    expect(mockShow).toHaveBeenCalledWith("Volyume needs camera access to film a set. You can turn it on for Volyume in your phone's settings.", { variant: 'warning' });
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
     expect(mockRequestPermission).toHaveBeenCalledTimes(1);
     expect(Linking.openURL).not.toHaveBeenCalled();
     expect(mockCameraProps).toBeNull();
+  });
+
+  test('a build without the camera module says to update the app, in its own line (still no settings link)', () => {
+    expect(SOURCE).toMatch(/if \(!CameraView\) \{ closeOnce\(CLIP_STRINGS\.cameraMissing\); return; \}/);
+    expect(CLIP_STRINGS.cameraMissing).toBe('Filming a set needs a newer version of Volyume. Update the app and try again.');
+    expect(CLIP_STRINGS.cameraMissing).not.toBe(CLIP_STRINGS.permissionDenied);
   });
 
   test('no microphone permission is ever asked for, and no settings link exists', () => {
@@ -249,13 +255,14 @@ describe('camera access', () => {
 });
 
 describe('what the screen says, in plain words', () => {
-  test('one line under the button, always shown: before and during the countdown it says how to start; while recording it says what stops it', async () => {
+  test('one line under the button, always shown: before it says how to start; during the countdown how to cancel; while recording what stops it', async () => {
     const tree = await mount();
     const line = 'Tap the button to start after a countdown, or press and hold it to record for as long as you hold.';
     expect(text(tree)).toContain(line);
     await press(tree, 'clip-camera-record');
     await flush();
-    expect(text(tree)).toContain(line);
+    expect(text(tree)).not.toContain(line);
+    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap the button again to cancel.');
     await advance(3000);
     await flush();
     expect(text(tree)).not.toContain(line);
@@ -273,7 +280,7 @@ describe('what the screen says, in plain words', () => {
 
   test('every control has a plain spoken label', async () => {
     const tree = await mount();
-    expect(hostById(tree, 'clip-camera-close').props.accessibilityLabel).toBe('Cancel recording');
+    expect(hostById(tree, 'clip-camera-close').props.accessibilityLabel).toBe('Close camera');
     expect(hostById(tree, 'clip-camera-flip').props.accessibilityLabel).toBe('Flip camera');
     expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 3 seconds');
     expect(hostById(tree, 'clip-camera-leadin').props.accessibilityLabel).toBe('Countdown before recording, 3 seconds');
@@ -308,15 +315,45 @@ describe('TAP: the countdown, then it records for the chosen length and stops by
     expect(haptics.commit).toHaveBeenCalledTimes(1);
   });
 
-  test('the record control cannot start a second countdown, and reads "Stop recording" once recording', async () => {
+  test('the record control reads "Cancel the countdown" while it runs, and "Stop recording" once recording; the close glyph reads "Cancel recording" in both', async () => {
     const tree = await mount();
+    expect(hostById(tree, 'clip-camera-close').props.accessibilityLabel).toBe('Close camera');
     await press(tree, 'clip-camera-record');
     await flush();
-    await press(tree, 'clip-camera-record');
+    expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Cancel the countdown');
+    expect(hostById(tree, 'clip-camera-close').props.accessibilityLabel).toBe('Cancel recording');
     await advance(3000);
     await flush();
     expect(mockRecordAsync).toHaveBeenCalledTimes(1);
     expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Stop recording');
+    expect(hostById(tree, 'clip-camera-close').props.accessibilityLabel).toBe('Cancel recording');
+  });
+
+  test('a tap during the countdown CANCELS it: no recording, timers cleared, the light off, ready again; a new tap starts a fresh countdown', async () => {
+    const tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    await advance(1000);
+    expect(text(tree)).toContain('"2"');
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(text(tree)).not.toContain('clip-camera-countdown');
+    expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 3 seconds');
+    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap the button to start after a countdown, or press and hold it to record for as long as you hold.');
+    expect(mockCameraProps.enableTorch).toBe(false);
+    // The old countdown is gone: nothing records, however long we wait.
+    await advance(10000);
+    await flush();
+    expect(mockRecordAsync).not.toHaveBeenCalled();
+    expect(mockSaveClip).not.toHaveBeenCalled();
+    expect(navigation.goBack).not.toHaveBeenCalled();
+    // A fresh tap counts down again from the start, and records once.
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(text(tree)).toContain('"3"');
+    await advance(3000);
+    await flush();
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
   });
 
   test('it stops BY ITSELF at the chosen length: 90 s by default (addendum 13)', async () => {
@@ -1126,7 +1163,7 @@ describe('after a save', () => {
     expect(mockShow).toHaveBeenCalledTimes(1);
     const [message, options] = mockShow.mock.calls[0];
     expect(message).toBe(CLIP_STRINGS.saved);
-    expect(message).toBe('Saved for 7 days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it longer.');
+    expect(message).toBe('Saved for 7 days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it until you delete it. You can change the 7 days in Settings, under Your data.');
     expect(options.variant).toBe('undo');
     expect(options.action.label).toBe('Undo');
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
@@ -1139,7 +1176,7 @@ describe('after a save', () => {
   test('the saved toast says the keep window in the person\'s own setting (addendum 15)', async () => {
     await AsyncStorage.setItem('@volyume_clip_keep_days', '30');
     await recordFiveSeconds({ source: 'workout' });
-    expect(mockShow.mock.calls[0][0]).toBe('Saved for 30 days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it longer.');
+    expect(mockShow.mock.calls[0][0]).toBe('Saved for 30 days with this workout. Find it under the three dots on this exercise, in Your videos, where tapping Keep keeps it until you delete it. You can change the 30 days in Settings, under Your data.');
     await AsyncStorage.setItem('@volyume_clip_keep_days', '0');
     await recordFiveSeconds({ source: 'workout' });
     expect(mockShow.mock.calls[1][0]).toBe('Saved with this workout until you delete it. Find it under the three dots on this exercise, in Your videos.');
@@ -1180,13 +1217,13 @@ describe('after a save', () => {
     mockDeleteClip.mockRejectedValueOnce(new Error('EBUSY'));
     await act(async () => { mockShow.mock.calls[0][1].action.onPress(); });
     await flush();
-    expect(mockShow).toHaveBeenLastCalledWith("That video couldn't be removed. You can try again.", { variant: 'error' });
+    expect(mockShow).toHaveBeenLastCalledWith("That video could not be deleted. You can try again.", { variant: 'error' });
   });
 
   test('a save that fails drops the file, says so calmly and stays on the camera', async () => {
     mockSaveClip.mockResolvedValueOnce({ ok: false, reason: 'move_failed' });
     const tree = await recordFiveSeconds({ source: 'workout' });
-    expect(mockShow).toHaveBeenCalledWith("That video couldn't be saved. You can try again.", { variant: 'error' });
+    expect(mockShow).toHaveBeenCalledWith("That video could not be saved. You can try again.", { variant: 'error' });
     expect(navigation.goBack).not.toHaveBeenCalled();
     expect(FileSystem.deleteAsync).toHaveBeenCalledWith('file:///cache/Camera/take.mp4', { idempotent: true });
     expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 3 seconds');
@@ -1254,8 +1291,9 @@ describe('source rules', () => {
   test('the top line is the rest timer\'s drain line: 2 dp, primaryFill', () => {
     const rest = fs.readFileSync(path.join(DIR, 'components', 'RestTimer.js'), 'utf8');
     expect(rest).toMatch(/drainFill: \{[^}]*height: 2,[^}]*backgroundColor: colors\.primaryFill/s);
-    expect(PROGRESS).toMatch(/lineFill: \{[^}]*height: 2,[^}]*backgroundColor: CAM\.primaryFill/s);
-    expect(PROGRESS).toMatch(/lineTrack: \{[^}]*height: 2,/s);
+    expect(PROGRESS).toMatch(/const LINE_HEIGHT = 2;/);
+    expect(PROGRESS).toMatch(/lineFill: \{[^}]*height: LINE_HEIGHT,[^}]*backgroundColor: CAM\.primaryFill/s);
+    expect(PROGRESS).toMatch(/lineTrack: \{[^}]*height: LINE_HEIGHT,/s);
   });
 
   test('no JS-thread Animated and no linear easing: the frozen motion allowlists are not touched', () => {

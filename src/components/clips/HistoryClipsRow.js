@@ -1,12 +1,13 @@
 /**
- * HistoryClipsRow - the "Clips" row in a workout's expanded history detail
- * (D229 addendum 5, ruling 3).
+ * HistoryClipsRow - the "Your videos" row in a workout's expanded history
+ * detail (D229 addendum 5, ruling 3).
  *
- * Shown only when the workout holds clips, with their count, and it opens the
- * ClipsSheet so any can be deleted. It is deliberately visible in EVERY state:
- * calm mode and an open ED flag hide the places clips are RECORDED and the
- * places they are SHARED from, but a person's own clips on their own phone
- * are never withheld from them, and neither is the way to delete them. So
+ * Shown only when the workout holds videos, with their count, and it opens the
+ * Your videos sheet so any can be played, kept or deleted. It is deliberately
+ * visible in EVERY state: calm mode and an open ED flag hide the places videos
+ * are RECORDED and the places they are SHARED from, but a person's own videos
+ * on their own phone are never withheld from them, and neither is the way to
+ * delete them. So
  * there is no suppression read in this file or its body, on purpose
  * (clips.history.test.js pins that).
  *

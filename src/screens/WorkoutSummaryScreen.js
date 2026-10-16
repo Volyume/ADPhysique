@@ -82,7 +82,9 @@ import { saveShareSessions } from '../lib/community/shareSessions';
 // "Use your video on the share").
 import { NavRow, NavGroup } from '../components/NavRow';
 import useClipRecorder from '../components/clips/useClipRecorder';
-import { CLIP_STRINGS, summaryClipRowCopy, summaryClipRowVisible } from '../lib/clips/rules';
+import {
+  CLIP_STRINGS, KEEP_DAYS_KEY, savedLine, summaryClipRowCopy, summaryClipRowVisible,
+} from '../lib/clips/rules';
 import { deleteClip } from '../lib/clips/store';
 
 // COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
@@ -1348,7 +1350,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (!returnedClipId) return;
     navigation.setParams({ clipId: undefined });
     if (!readOnly && displayWorkingSets > 0) { handleUseClip(returnedClipId); return; }
-    toast.show(CLIP_STRINGS.saved, {
+    // The line follows the person's own keep setting, read before it shows.
+    AsyncStorage.getItem(KEEP_DAYS_KEY).catch(() => null).then((raw) => toast.show(savedLine(raw, { place: 'summary' }), {
       variant: 'undo',
       // Addendum 13 (F): "Watch" opens the videos sheet with this one playing.
       secondaryAction: {
@@ -1366,7 +1369,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             });
         },
       },
-    });
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [returnedClipId]);
 
@@ -2514,8 +2517,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               onPress={videoReadyForShare && clipRowCopy.newest
                 ? () => handleUseClip(clipRowCopy.newest.id)
                 : handleShareCard}
-              style={[styles.shareFooterBtn, live.shareFooterBtn]}
-              textStyle={[styles.shareFooterBtnText, live.shareFooterBtnText]}
+              style={videoReadyForShare ? styles.shareFooterBtnVideo : [styles.shareFooterBtn, live.shareFooterBtn]}
+              textStyle={videoReadyForShare ? undefined : [styles.shareFooterBtnText, live.shareFooterBtnText]}
               accessibilityLabel={videoReadyForShare ? 'Share this session with your video' : 'Share session'}
               testID="summary-share-footer"
             />
@@ -2700,6 +2703,12 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = 
     </Animated.View>
   );
 }
+
+// The footer Share button keeps this width floor so "Share" and "Share with
+// your video" sit as the same-sized secondary beside Done: two of the
+// largest spacing step (spacing.xxxl, 48 dp), the nearest token multiple to
+// the 108 dp it replaces.
+const SHARE_FOOTER_MIN_WIDTH = spacing.xxxl * 2;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
@@ -2968,7 +2977,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     flexShrink: 0,
-    minWidth: 108,
+    minWidth: SHARE_FOOTER_MIN_WIDTH,
     minHeight: touchTarget.minimum,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -2980,6 +2989,13 @@ const styles = StyleSheet.create({
   shareFooterBtnText: {
     ...type.label,
     color: colors.primary,
+  },
+  // The video form takes the secondary variant's own look (its surface,
+  // border and ink); only the width floor and the 48 dp target are set here.
+  shareFooterBtnVideo: {
+    flexShrink: 0,
+    minWidth: SHARE_FOOTER_MIN_WIDTH,
+    minHeight: touchTarget.minimum,
   },
   exerciseList: {
     overflow: 'hidden',

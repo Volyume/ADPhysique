@@ -500,6 +500,7 @@ describe('the workout-delete paths and the account wipe call the store', () => {
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 const {
   setClipKept, keepClipsForPRs, sweepExpiredClips, getClipsStorage, getKeepDays, setKeepDays,
+  countExpiredClips, isClipPastWindow,
 } = require('../store');
 const { DAY_MS, KEEP_DAYS_KEY, KEEP_SINCE_KEY } = require('../rules');
 
@@ -567,6 +568,45 @@ describe('keeping and clearing (addendum 15)', () => {
     expect(await getKeepDays()).toBe(7);
     expect(await sweepExpiredClips(U, { force: true, now: NOW })).toBe(2);
     expect(twenty.id).toBeDefined();
+  });
+
+  test('countExpiredClips counts what a window would remove NOW, without deleting: kept and PR videos are not counted', async () => {
+    await AsyncStorage.setItem(KEEP_SINCE_KEY, String(NOW - 100 * DAY_MS));
+    // Three videos to a workout at most, so the older ones sit in a second workout.
+    await addWorkout('w-keep-2');
+    const savedIn = async (workoutId, createdAt, extra = {}) => {
+      const res = await save(workoutId, extra);
+      await conn.runAsync('UPDATE workout_clips SET created_at = ? WHERE id = ?', [createdAt, res.clip.id]);
+      return res.clip;
+    };
+    await savedAt(NOW - 8 * DAY_MS);
+    await savedAt(NOW - 20 * DAY_MS);
+    await savedAt(NOW - 40 * DAY_MS);
+    const kept = await savedIn('w-keep-2', NOW - 50 * DAY_MS);
+    await setClipKept(kept.id, true);
+    const pr = await savedIn('w-keep-2', NOW - 60 * DAY_MS, { exerciseId: 'ex-1', setNumber: 3 });
+    await keepClipsForPRs(U, 'w-keep-2', [{ exerciseId: 'ex-1', setNumber: 3, type: '1rm_estimate' }]);
+    expect(pr.id).toBeDefined();
+    expect(await countExpiredClips(U, { keepDays: 7, now: NOW })).toBe(3);
+    expect(await countExpiredClips(U, { keepDays: 30, now: NOW })).toBe(1);
+    expect(await countExpiredClips(U, { keepDays: 90, now: NOW })).toBe(0);
+    expect(await countExpiredClips(U, { keepDays: 0, now: NOW })).toBe(0);
+    expect(await countExpiredClips(null, { keepDays: 7, now: NOW })).toBe(0);
+    // Counting never deletes.
+    expect((await conn.getAllAsync('SELECT id FROM workout_clips')).length).toBe(5);
+    // The rule's arrival counts, as in the sweep: nothing recorded before it is due yet.
+    await AsyncStorage.setItem(KEEP_SINCE_KEY, String(NOW - 2 * DAY_MS));
+    expect(await countExpiredClips(U, { keepDays: 7, now: NOW })).toBe(0);
+  });
+
+  test('isClipPastWindow answers by the stored setting and the rule\'s arrival, as if the video were not kept', async () => {
+    await AsyncStorage.setItem(KEEP_SINCE_KEY, String(NOW - 100 * DAY_MS));
+    expect(await isClipPastWindow({ createdAt: NOW - 8 * DAY_MS, keptAt: NOW }, { now: NOW })).toBe(true);
+    expect(await isClipPastWindow({ createdAt: NOW - 6 * DAY_MS, keptAt: NOW }, { now: NOW })).toBe(false);
+    await setKeepDays(30);
+    expect(await isClipPastWindow({ createdAt: NOW - 8 * DAY_MS }, { now: NOW })).toBe(false);
+    await setKeepDays(0);
+    expect(await isClipPastWindow({ createdAt: NOW - 800 * DAY_MS }, { now: NOW })).toBe(false);
   });
 
   test('the sweep is throttled within a session unless forced, and never throws', async () => {

@@ -3,7 +3,8 @@
  * (D229 addendum 5; the design page's recording frame).
  *
  * A 2 dp amber line along the very top edge fills left to right over the CHOSEN
- * length of the recording (5, 10 or 15 seconds; always 15 for press and hold),
+ * length of the recording (60 seconds, 90 seconds or 2 minutes; always 2
+ * minutes for press and hold),
  * with the running time under it in tabular numerals. It is the rest timer's
  * drain line: the same 2 dp, the same `primaryFill`.
  *
@@ -21,8 +22,15 @@ import { touchTarget } from '../../styles/layout';
 import { formatClipDuration } from '../../lib/clips/rules';
 import { CAM } from './cameraInk';
 
+// The line is redrawn 20 times a second: smooth to the eye, cheap to draw.
 const TICK_MS = 50;
+// Reduce Motion steps the line once a second instead of sweeping.
 const REDUCED_TICK_MS = 1000;
+// The progress line is as thick as the rest timer's drain line.
+const LINE_HEIGHT = 2;
+// The clock's soft shadow keeps it readable over any picture.
+const CLOCK_SHADOW_OFFSET_Y = 1;
+const CLOCK_SHADOW_RADIUS = 3;
 
 export default function RecordingProgress({
   startedAtMs, limitMs, reduceMotion, topOffset, clockStyle,
@@ -72,12 +80,12 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 2,
+    height: LINE_HEIGHT,
     backgroundColor: withAlpha(CAM.textPrimary, alpha.soft),
     overflow: 'hidden',
   },
   lineFill: {
-    height: 2,
+    height: LINE_HEIGHT,
     width: '100%',
     backgroundColor: CAM.primaryFill,
     transformOrigin: '0% 50%',
@@ -93,7 +101,7 @@ const styles = StyleSheet.create({
   clock: {
     color: CAM.primary,
     textShadowColor: withAlpha(CAM.camera, alpha.half),
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowOffset: { width: 0, height: CLOCK_SHADOW_OFFSET_Y },
+    textShadowRadius: CLOCK_SHADOW_RADIUS,
   },
 });

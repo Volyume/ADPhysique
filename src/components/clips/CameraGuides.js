@@ -30,8 +30,18 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { withAlpha, alpha } from '../../styles/theme';
 import { CAM } from './cameraInk';
 
+// Level within this many degrees reads as level (the same band the progress
+// photo capture has used on device).
 const LEVEL_WITHIN_DEG = 1.5;
+// The sensor is read about eight times a second: smooth enough, kind to the battery.
 const SAMPLE_EVERY_MS = 120;
+// The rule-of-thirds lines sit at a third and two thirds of the width.
+const ONE_THIRD_AT = '33.33%';
+const TWO_THIRDS_AT = '66.67%';
+// The level line: three fifths of the width, centred (20% in from each side),
+// as thick as the rest timer's drain line and centred on its row by half that.
+const LEVEL_INSET = '20%';
+const LEVEL_LINE_HEIGHT = 2;
 // Where the share card's words sit over the video, as fractions of the
 // picture's height (drawShareCard.js `bands` defaults: the heading band ends
 // at 0.3, the body band starts at 0.5). The level sits in the middle of the
@@ -99,8 +109,8 @@ const BAND = withAlpha(CAM.camera, alpha.soft);
 
 const styles = StyleSheet.create({
   vertical: { position: 'absolute', top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: LINE },
-  oneThird: { left: '33.33%' },
-  twoThirds: { left: '66.67%' },
+  oneThird: { left: ONE_THIRD_AT },
+  twoThirds: { left: TWO_THIRDS_AT },
   band: { position: 'absolute', left: 0, right: 0, backgroundColor: BAND },
   bandTop: { top: 0, height: `${WORD_BAND_TOP * 100}%` },
   bandBottom: { top: `${WORD_BAND_BOTTOM * 100}%`, bottom: 0 },
@@ -109,10 +119,10 @@ const styles = StyleSheet.create({
   level: {
     position: 'absolute',
     top: `${LEVEL_AT * 100}%`,
-    left: '20%',
-    right: '20%',
-    height: 2,
-    marginTop: -1,
+    left: LEVEL_INSET,
+    right: LEVEL_INSET,
+    height: LEVEL_LINE_HEIGHT,
+    marginTop: -(LEVEL_LINE_HEIGHT / 2),
     backgroundColor: withAlpha(CAM.textPrimary, alpha.half),
   },
   levelAligned: { backgroundColor: CAM.primaryFill },
