@@ -62,8 +62,10 @@ class VolyumeVideoExportModule : Module() {
 
     // Still frames as JPEG files (lead ruling 2026-10-16: Skia's video object
     // is never used). Resolves one slot per time, null where that time failed;
-    // rejects only for bad options or a source that cannot be opened.
-    AsyncFunction("extractFrames") { uri: String, timesMs: List<Double>, maxEdge: Double, promise: Promise ->
+    // rejects only for bad options or a source that cannot be opened. `exact`
+    // is true for the preview's still only; a thumbnail, the trim strip and
+    // the tone take the nearest sync frame first (FrameExtractor.grab).
+    AsyncFunction("extractFrames") { uri: String, timesMs: List<Double>, maxEdge: Double, exact: Boolean, promise: Promise ->
       val context = appContext.reactContext
       if (context == null) {
         promise.reject(ExportCodes.UNAVAILABLE, "No React context.", null)
@@ -73,7 +75,7 @@ class VolyumeVideoExportModule : Module() {
         promise.reject(ExportCodes.SOURCE, "Not a file or content URI.", null)
         return@AsyncFunction
       }
-      val request = FrameExtractor.parse(uri, timesMs, maxEdge)
+      val request = FrameExtractor.parse(uri, timesMs, maxEdge, exact)
       if (request == null) {
         promise.reject(ExportCodes.INVALID, "Frame options failed validation.", null)
         return@AsyncFunction

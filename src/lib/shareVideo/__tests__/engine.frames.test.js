@@ -67,13 +67,28 @@ describe('without the native function', () => {
 });
 
 describe('what crosses', () => {
+  // Re-pinned 2026-10-16 (audit item 4b): the native function now takes a
+  // fourth argument, `exact`, always a boolean, so each call carries it.
   test('uri, the times (negatives as 0) and maxEdge rounded; the default edge is 1440', async () => {
     mockState.native = makeNative();
     const engine = loadEngine();
     await engine.extractFrames('file:///v.mp4', [0, -20, 1500.5], { maxEdge: 111.6 });
-    expect(mockState.native.extractFrames).toHaveBeenCalledWith('file:///v.mp4', [0, 0, 1500.5], 112);
+    expect(mockState.native.extractFrames).toHaveBeenCalledWith('file:///v.mp4', [0, 0, 1500.5], 112, false);
     await engine.extractFrames('file:///v.mp4', [0]);
-    expect(mockState.native.extractFrames).toHaveBeenLastCalledWith('file:///v.mp4', [0], 1440);
+    expect(mockState.native.extractFrames).toHaveBeenLastCalledWith('file:///v.mp4', [0], 1440, false);
+  });
+
+  test('exact crosses as a boolean, true only when asked for; anything else is false (audit item 4b)', async () => {
+    mockState.native = makeNative();
+    const engine = loadEngine();
+    await engine.extractFrames('file:///v.mp4', [0], { maxEdge: 1440, exact: true });
+    expect(mockState.native.extractFrames).toHaveBeenLastCalledWith('file:///v.mp4', [0], 1440, true);
+    await engine.extractFrames('file:///v.mp4', [0], { maxEdge: 1440, exact: 'yes' });
+    expect(mockState.native.extractFrames).toHaveBeenLastCalledWith('file:///v.mp4', [0], 1440, false);
+    await engine.extractFrames('file:///v.mp4', [0], { maxEdge: 1440, exact: false });
+    expect(mockState.native.extractFrames).toHaveBeenLastCalledWith('file:///v.mp4', [0], 1440, false);
+    // Four arguments on every call, never three (the native overload takes four).
+    mockState.native.extractFrames.mock.calls.forEach((c) => expect(c).toHaveLength(4));
   });
 
   test('native\'s upright size crosses as given: JS never swaps it', async () => {

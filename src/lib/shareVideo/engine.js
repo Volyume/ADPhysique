@@ -315,12 +315,18 @@ function toFrame(raw) {
  * (E_INVALID), with the calm line as the message. A build without the native
  * function resolves all nulls, so the caller shows its empty state.
  *
+ * `exact` (audit 2026-10-16, item 4): true only for the preview's still,
+ * which must be the very frame the export starts on; native then decodes the
+ * exact frame first. Otherwise (a thumbnail, the trim strip, the tone) native
+ * takes the nearest sync frame first, which is far quicker. Always sent as a
+ * boolean: the native function takes four arguments on both platforms.
+ *
  * @param {string} uri a file:// (or, on Android, content://) video
  * @param {number[]} timesMs
- * @param {{ maxEdge?: number }} [options]
+ * @param {{ maxEdge?: number, exact?: boolean }} [options]
  * @returns {Promise<Array<{ uri: string, width: number, height: number, timeMs: number } | null>>}
  */
-export async function extractFrames(uri, timesMs, { maxEdge = 1440 } = {}) {
+export async function extractFrames(uri, timesMs, { maxEdge = 1440, exact = false } = {}) {
   const list = Array.isArray(timesMs) ? timesMs : [];
   const native = getNative();
   if (!native || typeof native.extractFrames !== 'function') return list.map(() => null);
@@ -335,7 +341,7 @@ export async function extractFrames(uri, timesMs, { maxEdge = 1440 } = {}) {
   const times = list.map((t) => Math.max(0, t));
   let raw;
   try {
-    raw = await native.extractFrames(uri, times, Math.round(maxEdge));
+    raw = await native.extractFrames(uri, times, Math.round(maxEdge), exact === true);
   } catch (e) {
     throw fromNativeError(e, EXPORT_ERROR.DECODE);
   }

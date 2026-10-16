@@ -240,7 +240,13 @@ async function mount(params, navigation = makeNavigation()) {
   await flush();
   return { tree, navigation, rerender: async () => { await TestRenderer.act(async () => { tree.update(element(params, navigation)); }); await flush(); } };
 }
+// Re-pinned 2026-10-16 (audit item 1): Share and Save with a video wait
+// for the scrim's tone for the window and then run by themselves; these
+// blocks pin what happens once they run, so they are pressed once the tone
+// is read, as a person meets them a moment after the window settles. A
+// press before the tone is pinned in ShareCardScreen.videoAudit2.test.js.
 async function press(node) {
+  if (node && (node.props.title === 'Share video' || node.props.title === 'Save to gallery')) await settleTone();
   await TestRenderer.act(async () => { node.props.onPress(); });
   await flush();
 }
@@ -467,6 +473,8 @@ describe('F: Full screen\'s own shape reaches every video job (finding 7)', () =
   test('the share and the preview are made at the phone\'s shape, evened', async () => {
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     await press(byLabel(tree, 'Full screen')[0]);
+    // Re-pinned 2026-10-16 (audit item 1): Play waits for the new shape's tone.
+    await settleTone();
     await press(byLabel(tree, 'Play the video')[0]);
     await press(byLabel(tree, 'Pause the video')[0]);
     await press(buttonTitled(tree, 'Share video')[0]);
@@ -617,12 +625,22 @@ describe('K: a made video is reused only when nothing that went into it changed 
     expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(2);
   });
 
-  test('the scrim\'s tone arriving between two shares makes the video again', async () => {
+  // Re-pinned 2026-10-16 (audit item 1): a share can no longer be made on
+  // the bright tier while the reading is on its way (it waits for the
+  // reading), so the tone can no longer arrive between two shares of the
+  // same window. What finding 13 guarded still holds and is pinned here:
+  // the share is made with the READ tone, once, and reused.
+  test('a share pressed before the scrim\'s tone is read is made once, with the read tone, and then reused', async () => {
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
-    await press(buttonTitled(tree, 'Share video')[0]);
+    await TestRenderer.act(async () => { buttonTitled(tree, 'Share video')[0].props.onPress(); });
+    await flush();
+    expect(mockEngine.exportShareVideo).not.toHaveBeenCalled();
     await settleTone();
+    expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
+    expect(overlayDraws(1080).pop().toneOverride).toEqual({ ...BRIGHT_READING });
     await press(buttonTitled(tree, 'Share video')[0]);
-    expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(2);
+    expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
+    expect(mockSharing.shareAsync).toHaveBeenCalledTimes(2);
   });
 });
 

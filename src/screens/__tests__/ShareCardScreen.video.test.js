@@ -194,15 +194,26 @@ async function flush() {
 function makeNavigation() {
   return { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => () => {}) };
 }
+// Re-pinned 2026-10-16 (audit item 1): Play, Share and Save with a video
+// wait for the scrim's tone for the window (read a moment after the window
+// settles) and then run by themselves. These suites pin what happens once
+// they run, so a video opened from the route is given that moment, and
+// Share and Save are pressed once the tone is read, as a person meets them.
+async function settleTone() {
+  await TestRenderer.act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+  await flush();
+}
 async function mount(params, navigation = makeNavigation()) {
   let tree = null;
   await TestRenderer.act(async () => {
     tree = TestRenderer.create(React.createElement(ShareCardScreen, { route: { params, name: 'ShareCard' }, navigation }));
   });
   await flush();
+  if (params && params.clipId) await settleTone();
   return { tree, navigation };
 }
 async function press(node) {
+  if (node && (node.props.title === 'Share video' || node.props.title === 'Save to gallery')) await settleTone();
   await TestRenderer.act(async () => { node.props.onPress(); });
   await flush();
 }

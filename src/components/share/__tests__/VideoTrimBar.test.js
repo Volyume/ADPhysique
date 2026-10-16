@@ -14,6 +14,36 @@
  * gesture engine (__mocks__/react-native-gesture-handler.js), so the drag
  * rules are pinned through clampWindow, the function the worklets call.
  */
+// A recording gesture-handler (this file only): every builder call is kept
+// on the gesture it was made on, so the Pan's configuration can be read.
+// Nothing is ever driven, as with the repo's global mock.
+const mockGestures = [];
+jest.mock('react-native-gesture-handler', () => {
+  const mockReact = require('react');
+  const make = (kind) => {
+    const g = { kind, calls: [] };
+    const proxy = new Proxy(g, {
+      get: (target, prop) => {
+        if (prop in target) return target[prop];
+        if (typeof prop === 'symbol') return undefined;
+        return (...args) => { target.calls.push([prop, ...args]); return proxy; };
+      },
+    });
+    mockGestures.push(proxy);
+    return proxy;
+  };
+  const GestureDetector = ({ gesture, children }) => mockReact.createElement('GestureDetector', { gesture }, children);
+  return {
+    __esModule: true,
+    GestureDetector,
+    Gesture: {
+      Pan: () => make('Pan'), Tap: () => make('Tap'), Pinch: () => make('Pinch'), Native: () => make('Native'),
+      Race: () => make('Race'), Simultaneous: () => make('Simultaneous'), Exclusive: () => make('Exclusive'),
+    },
+    Directions: {},
+    State: {},
+  };
+});
 jest.mock('../../../lib/shareVideo/videoFrame', () => ({
   videoStripUris: jest.fn(async (uri, d, count) => new Array(count).fill(null).map((_x, i) => `file:///f${i}.jpg`)),
 }));
@@ -192,4 +222,32 @@ test('a video no longer than the minimum has no handles and says the whole video
   expect(bar(tree).props.accessibilityValue).toEqual({ text: 'The whole video goes on the share.' });
   fire(tree, 'increment');
   expect(onChange).not.toHaveBeenCalled();
+});
+
+// Audit 2026-10-16, item 5: a vertical page scroll that starts on the bar
+// must scroll the page. Each of the three Pans (the window, the start and
+// the end handles) activates only past 8 dp sideways and fails past 12 dp
+// up or down. Written to FAIL against the bar before (no offsets were set).
+describe('the bar never captures a vertical scroll (audit item 5)', () => {
+  test('every Pan: activeOffsetX([-8, 8]) and failOffsetY([-12, 12])', async () => {
+    mockGestures.length = 0;
+    const tree = mount({});
+    await settle();
+    const detectors = tree.root.findAll((n) => n.type === 'GestureDetector');
+    expect(detectors).toHaveLength(3);
+    for (const d of detectors) {
+      const g = d.props.gesture;
+      expect(g.kind).toBe('Pan');
+      expect(g.calls).toContainEqual(['activeOffsetX', [-8, 8]]);
+      expect(g.calls).toContainEqual(['failOffsetY', [-12, 12]]);
+    }
+  });
+
+  test('still enabled only when not disabled and not short', async () => {
+    mockGestures.length = 0;
+    const tree = mount({ disabled: true });
+    await settle();
+    const detectors = tree.root.findAll((n) => n.type === 'GestureDetector');
+    for (const d of detectors) expect(d.props.gesture.calls).toContainEqual(['enabled', false]);
+  });
 });

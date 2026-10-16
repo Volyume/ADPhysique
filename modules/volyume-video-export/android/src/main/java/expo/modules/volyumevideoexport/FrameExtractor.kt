@@ -21,6 +21,7 @@ internal class FrameRequest(
   val uri: Uri,
   val timesMs: DoubleArray,
   val maxEdge: Int,
+  val exact: Boolean,
 )
 
 /**
@@ -55,7 +56,7 @@ internal object FrameExtractor {
   private const val JPEG_QUALITY = 85
   private const val FALLBACK_FRAME_MS = 1000.0 / 30.0
 
-  fun parse(uri: String, timesMs: List<Double>, maxEdge: Double): FrameRequest? {
+  fun parse(uri: String, timesMs: List<Double>, maxEdge: Double, exact: Boolean): FrameRequest? {
     val parsed = SourceUris.parse(uri) ?: return null
     if (timesMs.isEmpty() || timesMs.size > MAX_TIMES) return null
     val times = DoubleArray(timesMs.size)
@@ -65,7 +66,7 @@ internal object FrameExtractor {
       times[i] = t
     }
     if (!maxEdge.isFinite() || maxEdge < MIN_EDGE || maxEdge > MAX_EDGE) return null
-    return FrameRequest(parsed, times, Math.round(maxEdge).toInt())
+    return FrameRequest(parsed, times, Math.round(maxEdge).toInt(), exact)
   }
 
   /** Runs on the module's frame thread and settles [promise] exactly once. */
@@ -134,7 +135,7 @@ internal object FrameExtractor {
       for (requested in request.timesMs) {
         val atMs = if (lastMs == null) max(0.0, requested) else min(max(0.0, requested), lastMs)
         val frame = try {
-          frameAt(retriever, atMs, box, request.maxEdge, rotation, uprightLandscape, dir)
+          frameAt(retriever, atMs, box, request.maxEdge, request.exact, rotation, uprightLandscape, dir)
         } catch (_: Throwable) {
           // One time that fails (memory included) is a null slot; the rest still come back.
           null
@@ -172,12 +173,13 @@ internal object FrameExtractor {
     atMs: Double,
     box: Int,
     maxEdge: Int,
+    exact: Boolean,
     rotation: Int,
     uprightLandscape: Boolean?,
     dir: File,
   ): Map<String, Any?>? {
     val us = Math.round(atMs * 1000.0)
-    val grabbed = grab(retriever, us, box) ?: return null
+    val grabbed = grab(retriever, us, box, exact) ?: return null
     var bitmap: Bitmap = grabbed
     try {
       bitmap = upright(bitmap, rotation, uprightLandscape)
@@ -205,18 +207,23 @@ internal object FrameExtractor {
   }
 
   /**
-   * The exact frame first, so the preview still is the frame the export starts
-   * on (lead ruling 2026-10-16; iOS asks for zero tolerance too), then the
-   * nearest sync frame when a decoder cannot give the exact one.
+   * [exact] (the preview still): the exact frame first, so the still is the
+   * frame the export starts on (lead ruling 2026-10-16; iOS asks for zero
+   * tolerance too), then the nearest sync frame when a decoder cannot give
+   * the exact one. Otherwise (a thumbnail, the trim strip, the tone): the
+   * nearest sync frame first, which needs no decoding forward from it, then
+   * the exact one.
    */
-  private fun grab(retriever: MediaMetadataRetriever, us: Long, box: Int): Bitmap? {
+  private fun grab(retriever: MediaMetadataRetriever, us: Long, box: Int, exact: Boolean): Bitmap? {
+    val first = if (exact) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+    val second = if (exact) MediaMetadataRetriever.OPTION_CLOSEST_SYNC else MediaMetadataRetriever.OPTION_CLOSEST
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-      return retriever.getScaledFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST, box, box)
-        ?: retriever.getScaledFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, box, box)
+      return retriever.getScaledFrameAtTime(us, first, box, box)
+        ?: retriever.getScaledFrameAtTime(us, second, box, box)
     }
     // API 26: no scaled call; the full frame is scaled down by fit().
-    return retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST)
-      ?: retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+    return retriever.getFrameAtTime(us, first)
+      ?: retriever.getFrameAtTime(us, second)
   }
 
   /** Turns the frame only when a 90 or 270 degree video came back with the wrong orientation (see the header). */

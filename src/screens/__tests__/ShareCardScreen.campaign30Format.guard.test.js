@@ -49,6 +49,9 @@ describe('Campaign 30 format system (D108/D109-1)', () => {
 
   test('template-strip tiles announce selection to screen readers (AY-6 carried forward)', () => {
     const strip = SRC.slice(SRC.indexOf('templateStrip'), SRC.indexOf('Format:'));
-    expect(strip).toContain('accessibilityState={{ selected: active }}');
+    // Re-pinned 2026-10-16 (audit item 2): the selection is still announced,
+    // now through lockedA11y, which adds `disabled` only while the share's
+    // video is being made.
+    expect(strip).toContain('accessibilityState={lockedA11y({ selected: active })}');
   });
 });

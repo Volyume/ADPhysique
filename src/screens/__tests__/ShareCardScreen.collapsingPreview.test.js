@@ -104,7 +104,9 @@ jest.mock('@shopify/react-native-skia', () => ({
 jest.mock('../../lib/shareCard/drawShareCard', () => {
   const actual = jest.requireActual('../../lib/shareCard/drawShareCard');
   return {
-    ...actual, drawShareCard: jest.fn(), cardHeight: (w) => (w === 1080 ? 1921 : 1080), drawSticker: jest.fn(), stickerHeight: () => 1080,
+    // Full screen is taller than the other formats at the preview's width
+    // (audit item 3: a format change while scrolled re-lays the header).
+    ...actual, drawShareCard: jest.fn(), cardHeight: (w, _sq, aspect) => (w === 1080 ? 1921 : aspect === 'full' ? 1600 : 1080), drawSticker: jest.fn(), stickerHeight: () => 1080,
     sessionLiftsThatFit: jest.fn(({ lifts }) => lifts.length),
   };
 });
@@ -264,6 +266,12 @@ async function mountWithVideo() {
   mockGetClip.mockResolvedValue(CLIP_SET);
   const tree = await mount({ ...SESSION, clipId: 'c2' });
   await waitFor(() => framers(card(tree)).length === 1);
+  // Re-pinned 2026-10-16 (audit item 1): Play, Share and Save with a video
+  // now wait for the scrim's tone for the window, read a moment after it
+  // settles, so the video is met here as a person meets it a moment later:
+  // with its tone read and Play ready.
+  await TestRenderer.act(async () => { await new Promise((r) => setTimeout(r, 450)); });
+  await waitFor(() => byLabel(card(tree), 'Play the video').length === 1);
   return tree;
 }
 
@@ -338,6 +346,43 @@ describe('the preview is the header above the page, and it collapses as the page
     expect(backButtons(tree)).toHaveLength(0);
   });
 
+  // Audit 2026-10-16, item 3. Written to FAIL against the screen before:
+  // the shared value held y over the OLD range, so after a format change
+  // the header was laid out from a stale fraction (at y = 100, Story to
+  // Full screen left it about 1462 tall, not 1516) until the next scroll.
+  test('scrolled, then a new format: the header is max(small, full - y) for the NEW preview height at once', async () => {
+    const tree = await mount(SESSION);
+    await waitFor(() => stills(tree.root).length === 1);
+    const fullFor = (previewH) => previewH + 2 * PAD;
+    for (const y of [100, 300]) {
+      // eslint-disable-next-line no-await-in-loop
+      await scroll(tree, 0);
+      // eslint-disable-next-line no-await-in-loop
+      await press(byLabel(tree.root, 'Story')[0]);
+      // eslint-disable-next-line no-await-in-loop
+      await scroll(tree, y);
+      expect(flatStyle(header(tree).props.style).height).toBeCloseTo(Math.max(HEADER_MINI, fullFor(1080) - y), 5);
+      // Full screen is 1600 tall at the preview's width here; no scroll.
+      // eslint-disable-next-line no-await-in-loop
+      await press(byLabel(tree.root, 'Full screen')[0]);
+      expect(flatStyle(page(tree).props.contentContainerStyle).paddingTop).toBe(fullFor(1600));
+      const h = flatStyle(header(tree).props.style).height;
+      expect(h).toBeCloseTo(Math.max(HEADER_MINI, fullFor(1600) - y), 5);
+      // The card scales to the same new height, and its foot is still on
+      // the content's top edge.
+      expect(flatStyle(card(tree).props.style).transform[1].scale).toBeCloseTo((h - 2 * PAD) / 1600, 5);
+      // And back to Story at the same scroll position.
+      // eslint-disable-next-line no-await-in-loop
+      await press(byLabel(tree.root, 'Story')[0]);
+      expect(flatStyle(header(tree).props.style).height).toBeCloseTo(Math.max(HEADER_MINI, fullFor(1080) - y), 5);
+    }
+    // Past the small size under one format, the small size under the other.
+    await scroll(tree, 5000);
+    await press(byLabel(tree.root, 'Full screen')[0]);
+    expect(flatStyle(header(tree).props.style).height).toBe(HEADER_MINI);
+    expect(backButtons(tree)).toHaveLength(1);
+  });
+
   test('a pull past the top (iOS bounce) never makes the header taller than full', async () => {
     const tree = await mount(SESSION);
     await scroll(tree, -120);
@@ -354,12 +399,17 @@ describe('the preview is the header above the page, and it collapses as the page
 
   test('the shrink is driven on the UI thread by the scroll, with one named small height', () => {
     expect(SCREEN).toContain('const MINI_PREVIEW_H = 112;');
-    expect(SCREEN).toMatch(/const collapse = useSharedValue\(0\);/);
-    expect(SCREEN).toMatch(/useAnimatedScrollHandler\(\{\s*onScroll: \(e\) => \{\s*'worklet';/);
-    expect(SCREEN).toMatch(/useAnimatedReaction\(\(\) => collapse\.value > 0\.5,/);
+    // Re-pinned 2026-10-16 (audit item 3): the shared value is the scroll
+    // position itself, and the collapse is worked out from it with the
+    // CURRENT range inside each worklet, so a format change while scrolled
+    // lays the header out again at once (a stored fraction did not).
+    expect(SCREEN).toMatch(/const scrollY = useSharedValue\(0\);/);
+    expect(SCREEN).toMatch(/useAnimatedScrollHandler\(\{\s*onScroll: \(e\) => \{\s*'worklet';\s*scrollY\.value = e\.contentOffset\.y;/);
+    expect(SCREEN).toMatch(/useAnimatedReaction\(\(\) => Math\.min\(1, Math\.max\(0, scrollY\.value \/ collapseRange\)\) > 0\.5,[\s\S]*?\}, \[collapseRange\]\);/);
     expect(SCREEN).toContain('const collapseRange = Math.max(1, previewH - miniH);');
     expect(SCREEN).toContain('const headerFullH = previewH + 2 * PREVIEW_HEADER_PAD;');
-    expect(SCREEN).toMatch(/height: interpolate\(collapse\.value, \[0, 1\], \[headerFullH, headerMiniH\], Extrapolation\.CLAMP\)/);
+    expect(SCREEN).toMatch(/height: interpolate\(collapse, \[0, 1\], \[headerFullH, headerMiniH\], Extrapolation\.CLAMP\)/);
+    expect(SCREEN).not.toMatch(/collapse\.value/);
     expect(SCREEN).toContain('contentContainerStyle={[styles.content, live.content, { paddingTop: headerFullH }]}');
     expect(SCREEN).toMatch(/<Animated\.ScrollView\s+ref=\{scrollRef\}[\s\S]*?onScroll=\{scrollHandler\}\s+scrollEventThrottle=\{16\}/);
     // No JS-thread Animated here (motionFitRules.guard's frozen allowlist).

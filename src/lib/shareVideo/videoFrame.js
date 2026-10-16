@@ -31,6 +31,14 @@
  *
  * Best effort throughout: a frame that fails is null and the caller shows
  * its empty state; nothing here throws.
+ *
+ * Time limits (audit 2026-10-16, item 4): native decodes on one thread per
+ * platform and a frame of a difficult video can take a long time, so every
+ * request here races a limit and resolves all nulls when it passes (the
+ * caller's spinner then clears and says its calm line): FRAME_TIMEOUT_MS for
+ * the preview's still, BATCH_TIMEOUT_MS for a thumbnail or the trim strip.
+ * Only the still asks native for the exact frame (`exact`); a thumbnail and
+ * the strip take the nearest quick one.
  */
 import { extractFrames, MAX_FRAME_TIMES } from './engine';
 
@@ -51,16 +59,47 @@ export const THUMB_EDGE = 192;
 export const STRIP_EDGE = 112;
 /** The strip's last frame sits at least this far before the end. */
 export const STRIP_END_MARGIN_MS = 100;
+/** The preview's still: given up (all nulls) after this long. */
+export const FRAME_TIMEOUT_MS = 10000;
+/** A thumbnail, the trim strip and the tone: given up after this long. */
+export const BATCH_TIMEOUT_MS = 15000;
 
 const isUri = (s) => typeof s === 'string' && s.trim().length > 0;
 
-async function framesOrNulls(uri, timesMs, maxEdge) {
+/**
+ * Resolves `promise`'s value, or `fallback` once `ms` has passed, whichever
+ * comes first; a rejection resolves `fallback` too. The timer is cleared as
+ * soon as either settles, so nothing is left running.
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {number} ms
+ * @param {T} fallback
+ * @returns {Promise<T>}
+ */
+export function withinTime(promise, ms, fallback) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(fallback), ms);
+    Promise.resolve(promise).then(finish, () => finish(fallback));
+  });
+}
+
+async function framesOrNulls(uri, timesMs, maxEdge, { exact = false, timeoutMs = BATCH_TIMEOUT_MS } = {}) {
+  const nulls = timesMs.map(() => null);
+  let request;
   try {
-    const out = await extractFrames(uri, timesMs, { maxEdge });
-    return Array.isArray(out) ? out : timesMs.map(() => null);
+    request = extractFrames(uri, timesMs, { maxEdge, exact });
   } catch (_e) {
-    return timesMs.map(() => null);
+    return nulls;
   }
+  const out = await withinTime(request, timeoutMs, nulls);
+  return Array.isArray(out) ? out : nulls;
 }
 
 /**
@@ -75,7 +114,7 @@ export async function grabVideoFrame(Skia, uri, ms = 0) {
   if (!Skia?.Data?.fromBase64 || !Skia?.Image?.MakeImageFromEncoded || !isUri(uri)) return null;
   if (!FileSystem || typeof FileSystem.readAsStringAsync !== 'function') return null;
   const at = Math.max(0, Number(ms) || 0);
-  const [frame] = await framesOrNulls(uri, [at], STILL_EDGE);
+  const [frame] = await framesOrNulls(uri, [at], STILL_EDGE, { exact: true, timeoutMs: FRAME_TIMEOUT_MS });
   if (!frame) return null;
   try {
     const b64 = await FileSystem.readAsStringAsync(frame.uri, {
@@ -104,7 +143,7 @@ export async function grabVideoFrame(Skia, uri, ms = 0) {
  */
 export async function videoThumbnailUri(uri) {
   if (!isUri(uri)) return null;
-  const [frame] = await framesOrNulls(uri, [0], THUMB_EDGE);
+  const [frame] = await framesOrNulls(uri, [0], THUMB_EDGE, { exact: false, timeoutMs: BATCH_TIMEOUT_MS });
   return frame ? frame.uri : null;
 }
 
@@ -138,6 +177,6 @@ export async function videoStripUris(uri, durationMs, count) {
   const times = stripTimes(durationMs, count);
   if (!times.length) return [];
   if (!isUri(uri)) return times.map(() => null);
-  const frames = await framesOrNulls(uri, times, STRIP_EDGE);
+  const frames = await framesOrNulls(uri, times, STRIP_EDGE, { exact: false, timeoutMs: BATCH_TIMEOUT_MS });
   return times.map((_t, i) => (frames[i] ? frames[i].uri : null));
 }

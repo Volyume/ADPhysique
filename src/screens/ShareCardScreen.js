@@ -110,6 +110,42 @@ const SHARE_VIDEO_KEEP_MS = 60 * 60 * 1000;
 // A second engine job while one is still finishing (for example, coming
 // back to the screen while the last video is still being stopped).
 const VIDEO_BUSY_LINE = 'A video is still being made. Try again in a moment.';
+// Audit 2026-10-16 (second pass). Item 2: a share or save whose inputs
+// changed while it was being made is never handed on. Item 1: a preview
+// that lands after something changed is kept, and the person told.
+// Item 6: a still at a new trim start that cannot be read; the window
+// stands, because the share starts there whatever the preview shows.
+const SHARE_CHANGED_LINE = 'Your share changed while the video was being made. Tap Share again.';
+const PREVIEW_CHANGED_LINE = 'Your video changed while the preview was being made. Tap play to see it now.';
+const MOMENT_FAILED_LINE = "The preview couldn't show that moment. Your share will still start there.";
+// What the preview's spinner says while a frame is on its way: a newly
+// chosen video opening, or the still at a new start of the one chosen.
+const FRAME_BUSY_LABEL = Object.freeze({ open: 'Opening your video', moment: 'Showing that moment' });
+// The scrim's frames are given up after this long (as the strip's, in
+// videoFrame.js), so nothing ever waits on them for good (item 4).
+const TONE_TIMEOUT_MS = 15000;
+// How long each kind of toast stays up (components/Toast.js, its own
+// table; a toast with no variant is a 'success' there), so the same line
+// is not queued again while it is still showing (item 10).
+const TOAST_SHOWN_MS = Object.freeze({ success: 2500, error: 4000, warning: 3500, info: 2500 });
+const TOAST_FALLBACK_MS = 4000;
+
+// `promise`'s value, or `fallback` once `ms` has passed or on a rejection;
+// the timer is cleared as soon as either settles.
+function settleWithin(promise, ms, fallback) {
+  return new Promise((resolve) => {
+    let done = false;
+    let timer = null;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    timer = setTimeout(() => finish(fallback), ms);
+    Promise.resolve(promise).then(finish, () => finish(fallback));
+  });
+}
 
 // The moments the tone is read at: `count` spaced through the window, the
 // first at its start and the last just inside its end.
@@ -286,7 +322,30 @@ function setLabel(o, unit) {
 }
 
 export default function ShareCardScreen({ navigation, route }) {
-  const toast = useToast();
+  // The same line is never queued again while it is still on screen
+  // (audit item 10: repeated taps queued one long line many times over).
+  // Screen-local; the Toast component itself is unchanged.
+  // Toasts queue one after another, so each line's time on screen is
+  // reckoned from when the one before it should have gone.
+  const rawToast = useToast();
+  const shownUntilRef = useRef(new Map()); // line -> when it should have gone
+  const queueEndRef = useRef(0);
+  const toast = useMemo(() => ({
+    ...rawToast,
+    show: (line, options = {}) => {
+      const now = Date.now();
+      const shown = shownUntilRef.current;
+      shown.forEach((until, key) => { if (until <= now) shown.delete(key); });
+      if (line && shown.has(line)) return undefined;
+      const ms = Number(options?.duration) > 0
+        ? Number(options.duration)
+        : (TOAST_SHOWN_MS[options?.variant || 'success'] || TOAST_FALLBACK_MS);
+      const until = Math.max(now, queueEndRef.current) + ms;
+      queueEndRef.current = until;
+      if (line) shown.set(line, until);
+      return rawToast.show(line, options);
+    },
+  }), [rawToast]);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Chrome
   // only (segmented controls, toggles, preview placeholder) -- the card
   // CONTENT (drawShareCard/buildParams) is GDPR-locked and untouched.
@@ -414,7 +473,9 @@ export default function ShareCardScreen({ navigation, route }) {
   // person has since moved on from never lands. A pending choice is shown
   // on its tile and over the preview while its first frame comes.
   const frameReqRef = useRef(0);
-  const [frameLoading, setFrameLoading] = useState(false);
+  // null, or what the frame on its way is for: 'open' (a newly chosen
+  // video) or 'moment' (the still at a new trim start), for its spoken label.
+  const [frameLoading, setFrameLoading] = useState(null);
   const [pendingClipKey, setPendingClipKey] = useState(null);
   const pendingClipKeyRef = useRef(null);
   // Thumbnails asked for already, by video id (each is asked for once).
@@ -423,6 +484,11 @@ export default function ShareCardScreen({ navigation, route }) {
   // framing it was read from; the frames decoded for the current window are
   // kept so a change of framing re-reads them without decoding again.
   const [clipTone, setClipTone] = useState(null);
+  // A tap that waits for the tone (audit item 1): 'play', 'share' or
+  // 'save', pressed before the scrim's tone for this window was read. It
+  // runs by itself once the tone is here, so the video is always made with
+  // the final tone and no tap is lost.
+  const [waitingFor, setWaitingFor] = useState(null);
   const toneReqRef = useRef(0);
   const toneFramesRef = useRef({ key: null, images: [] });
   // The overlay pictures written this session (J), cleared after each job
@@ -1013,7 +1079,8 @@ export default function ShareCardScreen({ navigation, route }) {
     toneReqRef.current += 1;
     pendingClipKeyRef.current = null;
     setPendingClipKey(null);
-    setFrameLoading(false);
+    setFrameLoading(null);
+    setWaitingFor(null);
     setClip(null);
     setClipStartMs(0);
     setClipEndMs(0);
@@ -1041,10 +1108,13 @@ export default function ShareCardScreen({ navigation, route }) {
   // is released and nothing is said about it. A frame that cannot be read
   // says so once and leaves the background as it was. `withProbe` also asks
   // the engine for the video's upright size and real length.
-  const requestFrame = useCallback(async (row, ms, { withProbe = false } = {}) => {
+  // `kind` 'moment' (the trim moved, item 6): a still that cannot be read
+  // says the preview could not show that moment, never that the video
+  // (already open) could not be opened.
+  const requestFrame = useCallback(async (row, ms, { withProbe = false, kind = 'open' } = {}) => {
     const req = frameReqRef.current + 1;
     frameReqRef.current = req;
-    setFrameLoading(true);
+    setFrameLoading(kind);
     const grab = (async () => {
       try {
         const f = await grabVideoFrame(Skia, row.uri, ms);
@@ -1068,9 +1138,10 @@ export default function ShareCardScreen({ navigation, route }) {
       disposeImage(frame?.image);
       return { status: 'stale' };
     }
-    setFrameLoading(false);
+    setFrameLoading(null);
     if (!frame) {
-      toast.show(CLIP_STRINGS.shareVideoCannotOpen, { variant: 'error' });
+      if (kind === 'moment') toast.show(MOMENT_FAILED_LINE, { variant: 'info', duration: 5000 });
+      else toast.show(CLIP_STRINGS.shareVideoCannotOpen, { variant: 'error' });
       return { status: 'failed' };
     }
     return { status: 'ok', frame, probe: facts };
@@ -1116,13 +1187,15 @@ export default function ShareCardScreen({ navigation, route }) {
 
   // The still at a new start (the trim moved): the same video, so the look,
   // its strength and the framing all stay; the framer is redrawn from the
-  // new frame so the preview SHOWS the new start (finding 9).
+  // new frame so the preview SHOWS the new start (finding 9). A still that
+  // cannot be read keeps the window (the share starts there) and says so
+  // once (item 6).
   const showFrameAt = useCallback(async (row, ms) => {
     // A choice still on its way is given up: the trim belongs to the video
     // already chosen.
     pendingClipKeyRef.current = null;
     setPendingClipKey(null);
-    const result = await requestFrame(row, ms);
+    const result = await requestFrame(row, ms, { kind: 'moment' });
     if (result.status !== 'ok') return;
     const bounded = boundPhotoForCanvas(result.frame.image);
     setBgPhoto(bounded);
@@ -1211,8 +1284,11 @@ export default function ShareCardScreen({ navigation, route }) {
 
   // The safety gate closing with a video chosen (finding 14): the video goes
   // and every video surface with it; a video still being made is stopped.
+  // The video chooser closes too, whatever is chosen (audit item 8).
   useEffect(() => {
     if (!suppress) return;
+    setVideoSheetOpen(false);
+    setWaitingFor(null);
     if (!clipRef.current && pendingClipKeyRef.current == null) return;
     if (makingPreviewRef.current || makingVideoRef.current) cancelEngineJob();
     clearPhoto();
@@ -1223,12 +1299,14 @@ export default function ShareCardScreen({ navigation, route }) {
   const clipFlow = useClipRecorder({ navigation, userId, workoutId });
   const filmNow = useCallback(() => {
     setVideoSheetOpen(false);
+    if (suppressRef.current) return; // the safety gate (item 8)
     clipFlow.openRecorder({ source: 'share' });
   }, [clipFlow]);
 
   // A video from the gallery: the system picker (no broad permission on
   // Android 13+ and iOS 14+), its length from the engine's probe.
   const pickGalleryVideo = useCallback(async () => {
+    if (suppressRef.current) { setVideoSheetOpen(false); return; } // the safety gate (item 8)
     if (!ImagePicker || !Skia || !FileSystem) {
       toast.show("Video backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
       return;
@@ -1405,6 +1483,10 @@ export default function ShareCardScreen({ navigation, route }) {
     if (!toneKey) return null;
     return clipTone && clipTone.key === toneKey ? clipTone.tone : BRIGHT_TIER_TONE;
   }, [toneKey, clipTone]);
+  // True once the tone for exactly this window, shape and framing has been
+  // read (or there is no video to read). Play, Share and Save with a video
+  // wait for it (audit item 1).
+  const toneReady = !toneKey || (!!clipTone && clipTone.key === toneKey);
   useEffect(() => {
     if (!toneKey || !liveClip || !Skia || suppress) return undefined;
     if (clipTone && clipTone.key === toneKey) return undefined;
@@ -1424,8 +1506,14 @@ export default function ShareCardScreen({ navigation, route }) {
           images = [];
           let frames = [];
           try {
+            // The nearest quick frames (exact: false), given up after
+            // TONE_TIMEOUT_MS as no frames at all (item 4).
             frames = typeof shareVideoEngine.extractFrames === 'function'
-              ? await shareVideoEngine.extractFrames(uri, toneSampleTimes(start, end), { maxEdge: TONE_FRAME_EDGE })
+              ? await settleWithin(
+                shareVideoEngine.extractFrames(uri, toneSampleTimes(start, end), { maxEdge: TONE_FRAME_EDGE, exact: false }),
+                TONE_TIMEOUT_MS,
+                [],
+              )
               : [];
           } catch (e) {
             logError('ShareCardScreen.clipToneFrames', e, { code: e?.code });
@@ -1446,7 +1534,12 @@ export default function ShareCardScreen({ navigation, route }) {
         }
         const tone = sampleClipTone(Skia, images, TONE_W, H, crop);
         if (current()) setClipTone({ key: toneKey, tone });
-      })().catch((e) => { logError('ShareCardScreen.clipTone', e); });
+      })().catch((e) => {
+        logError('ShareCardScreen.clipTone', e);
+        // A reading that fails is the bright tier (rule 3's safe side), and
+        // it is still a reading: nothing waiting on the tone waits for good.
+        if (current()) setClipTone({ key: toneKey, tone: BRIGHT_TIER_TONE });
+      });
     }, TONE_DEBOUNCE_MS);
     return () => { clearTimeout(timer); };
     // clipTone is read, not followed: a reading that lands must not start
@@ -1536,6 +1629,15 @@ export default function ShareCardScreen({ navigation, route }) {
     });
     return { params, W, H, durationMs, tone, signature };
   }, [liveClip, buildParams, videoHeightAt, clipStartMs, clipEndMs, photoCrop, photoLook, photoLookStrength, videoTone, appTypefaces, wordmark, wordmarkDark]);
+  // What the share would be made from right now, kept in a ref so a share
+  // that lands after an await is checked against the screen as it is THEN
+  // (audit item 2).
+  const shareSignature = useMemo(
+    () => (liveClip && Skia ? videoJobAt(1080).signature : null),
+    [liveClip, videoJobAt],
+  );
+  const shareSignatureRef = useRef(null);
+  shareSignatureRef.current = shareSignature;
 
   // Draws the card without its photo at the job's size, over the scrim read
   // from the video, writes it as the overlay PNG and hands everything to the
@@ -1554,16 +1656,17 @@ export default function ShareCardScreen({ navigation, route }) {
     const image = surface.makeImageSnapshot();
     const b64 = image ? image.encodeToBase64() : null;
     if (!b64) return null;
+    // The video's own upright size (finding 6), the frame's if the engine
+    // could not say; read before any await, as a still that is replaced
+    // meanwhile is released (item 11).
+    const size = clipSize.width > 0 && clipSize.height > 0
+      ? clipSize
+      : { width: bgPhoto ? bgPhoto.width() : 0, height: bgPhoto ? bgPhoto.height() : 0 };
     const overlayPngUri = `${FileSystem.cacheDirectory || ''}volyume-overlay-${W}-${Date.now()}.png`;
     overlayFilesRef.current.add(overlayPngUri);
     try {
       await FileSystem.writeAsStringAsync(overlayPngUri, b64, { encoding: FileSystem.EncodingType.Base64 });
       if (!mountedRef.current) return null;
-      // The video's own upright size (finding 6), the frame's if the engine
-      // could not say.
-      const size = clipSize.width > 0 && clipSize.height > 0
-        ? clipSize
-        : { width: bgPhoto ? bgPhoto.width() : 0, height: bgPhoto ? bgPhoto.height() : 0 };
       const rect = photoCoverRect(size.width, size.height, W, H, photoCrop);
       const matrix = photoLook && photoLook !== 'none' ? lookMatrix(photoLook, photoLookStrength) : null;
       const options = {
@@ -1617,13 +1720,24 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     const job = videoJobAt(1080);
     if (videoCacheRef.current[job.signature]) return videoCacheRef.current[job.signature];
+    const jobClip = clipRef.current;
     setMakingVideo(true);
     makingVideoRef.current = true;
     setVideoProgress(0);
     try {
       const uri = await runVideoJob(job, null, (p) => { if (mountedRef.current) setVideoProgress(p); });
-      if (uri) videoCacheRef.current[job.signature] = uri;
-      return mountedRef.current ? uri : null;
+      if (!mountedRef.current || !uri) return null;
+      // Used only if it is still the share on screen (audit item 2): the
+      // same video and exactly the inputs on screen now. Anything else (the
+      // video gone, the app's typefaces or marks arriving, the phone turned)
+      // is said plainly, and nothing is shared or saved.
+      if (clipRef.current !== jobClip) return null;
+      videoCacheRef.current[job.signature] = uri;
+      if (shareSignatureRef.current !== job.signature) {
+        if (!suppressRef.current) toast.show(SHARE_CHANGED_LINE, { variant: 'info', duration: 6000 });
+        return null;
+      }
+      return uri;
     } catch (e) {
       engineFailed(e, 'ShareCardScreen.renderVideo');
       return null;
@@ -1640,6 +1754,9 @@ export default function ShareCardScreen({ navigation, route }) {
     () => (liveClip && Skia ? videoJobAt(PREVIEW_VIDEO_W).signature : null),
     [liveClip, videoJobAt],
   );
+  // The latest of both, for a job that lands after an await (items 1 and 2).
+  const previewSignatureRef = useRef(null);
+  previewSignatureRef.current = previewSignature;
   const playingPreview = !!previewVideo && !!liveClip && !suppress && previewVideo.signature === previewSignature;
   useEffect(() => {
     if (previewVideo && previewVideo.signature !== previewSignature) setPreviewVideo(null);
@@ -1650,6 +1767,10 @@ export default function ShareCardScreen({ navigation, route }) {
   // instant. A failure says the engine's calm line and stays on the still.
   const playPreview = useCallback(async () => {
     if (!liveClip || !Skia || !FileSystem || !typefaces || suppress) return;
+    // Before the tone for this window is read, the tap waits for it and
+    // then plays by itself (audit item 1): a preview made on the bright
+    // tier would only be thrown away when the reading lands.
+    if (!toneReady) { setWaitingFor('play'); return; }
     if (makingVideoRef.current || makingPreviewRef.current) {
       toast.show(VIDEO_BUSY_LINE, { variant: 'info', duration: 5000 });
       return;
@@ -1661,14 +1782,22 @@ export default function ShareCardScreen({ navigation, route }) {
     const job = videoJobAt(PREVIEW_VIDEO_W);
     const cached = previewCacheRef.current[job.signature];
     if (cached) { setPreviewVideo({ uri: cached, signature: job.signature }); return; }
+    const jobClip = clipRef.current;
     setMakingPreview(true);
     makingPreviewRef.current = true;
     setPreviewProgress(0);
     try {
       const uri = await runVideoJob(job, PREVIEW_VIDEO_BITRATE, (p) => { if (mountedRef.current) setPreviewProgress(p); });
       if (!mountedRef.current || !uri) return;
+      if (suppressRef.current || clipRef.current !== jobClip) return;
       previewCacheRef.current[job.signature] = uri;
-      if (suppressRef.current) return;
+      // Something changed while it was made (the controls stay open while
+      // a preview is made): it is kept for if that comes back, and the
+      // person, still on this video, is told rather than left waiting.
+      if (previewSignatureRef.current !== job.signature) {
+        toast.show(PREVIEW_CHANGED_LINE, { variant: 'info', duration: 5000 });
+        return;
+      }
       setPreviewVideo({ uri, signature: job.signature });
     } catch (e) {
       engineFailed(e, 'ShareCardScreen.previewVideo');
@@ -1676,9 +1805,39 @@ export default function ShareCardScreen({ navigation, route }) {
       makingPreviewRef.current = false;
       if (mountedRef.current) setMakingPreview(false);
     }
-  }, [liveClip, typefaces, suppress, toast, videoJobAt, runVideoJob, engineFailed]);
+  }, [liveClip, typefaces, suppress, toneReady, toast, videoJobAt, runVideoJob, engineFailed]);
 
   const pausePreview = useCallback(() => { setPreviewVideo(null); }, []);
+
+  // A tap that waited for the tone (audit item 1) runs by itself once the
+  // tone for this window is read; with the video gone, or the safety gate
+  // closed, it is let go (the button it came from is no longer waiting).
+  useEffect(() => {
+    if (!waitingFor) return;
+    if (!liveClip || suppress) { setWaitingFor(null); return; }
+    if (!toneReady) return;
+    const what = waitingFor;
+    setWaitingFor(null);
+    if (what === 'play') playPreview().catch((e) => { logError('ShareCardScreen.playWaited', e); });
+    else if (what === 'share') handleShareToStories().catch((e) => { logError('ShareCardScreen.shareWaited', e); });
+    else if (what === 'save') handleSaveToGallery().catch((e) => { logError('ShareCardScreen.saveWaited', e); });
+    // The handlers are read as they are now, when the tone has landed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitingFor, toneReady, liveClip, suppress]);
+
+  // A still the screen no longer shows is released once it has been
+  // replaced (audit item 11): each trim move decodes a new one, and a new
+  // photo or None replaces it too. The last one goes when the screen does.
+  const heldStillRef = useRef(null);
+  useEffect(() => {
+    const prev = heldStillRef.current;
+    heldStillRef.current = bgPhoto;
+    if (prev && prev !== bgPhoto) disposeImage(prev);
+  }, [bgPhoto]);
+  useEffect(() => () => {
+    disposeImage(heldStillRef.current);
+    heldStillRef.current = null;
+  }, []);
 
   // Opening the screen clears the engine's finished videos older than an
   // hour, off the critical path (finding 12). Leaving it stops any engine
@@ -1726,6 +1885,9 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     // The Sticker saves the image (the panel), even with a video chosen.
     const video = !!liveClip;
+    // A video is made with the tone for its window; the tap waits for it
+    // and saves by itself (audit item 1).
+    if (video && !toneReady) { setWaitingFor('save'); return; }
     setSavingToGallery(true);
     try {
       const perm = await MediaLibrary.requestPermissionsAsync();
@@ -1783,6 +1945,9 @@ export default function ShareCardScreen({ navigation, route }) {
       toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }
+    // A video is made with the tone for its window; the tap waits for it
+    // and shares by itself (audit item 1).
+    if (video && !toneReady) { setWaitingFor('share'); return; }
     setSharingToStories(true);
     try {
       if (video) {
@@ -1893,28 +2058,36 @@ export default function ShareCardScreen({ navigation, route }) {
   const headerFullH = previewH + 2 * PREVIEW_HEADER_PAD;
   const headerMiniH = miniH + 2 * PREVIEW_HEADER_PAD;
   const collapseRange = Math.max(1, previewH - miniH);
-  const collapse = useSharedValue(0); // 0 at full size, 1 at the small size
+  // The page's scroll position, as it is (audit item 3): the collapse is
+  // worked out from it inside each animated style and the reaction, with
+  // the range as it is NOW, so a new format (a new preview height) while
+  // the page is scrolled lays the header out again at once. A stored
+  // fraction of the old range left it out of step until the next scroll.
+  // Each worklet does the clamp itself (a plain helper called from a
+  // worklet is a fatal error on the new architecture: VOLUME-2A).
+  const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       'worklet';
 
-      const y = e.contentOffset.y;
-      collapse.value = Math.min(1, Math.max(0, y / collapseRange));
+      scrollY.value = e.contentOffset.y;
     },
-  }, [collapseRange]);
-  useAnimatedReaction(() => collapse.value > 0.5, (small, prev) => {
+  });
+  useAnimatedReaction(() => Math.min(1, Math.max(0, scrollY.value / collapseRange)) > 0.5, (small, prev) => {
     if (small !== prev) runOnJS(setPreviewSmall)(small);
-  }, []);
-  const previewHeaderStyle = useAnimatedStyle(() => ({
-    height: interpolate(collapse.value, [0, 1], [headerFullH, headerMiniH], Extrapolation.CLAMP),
-  }), [headerFullH, headerMiniH]);
+  }, [collapseRange]);
+  const previewHeaderStyle = useAnimatedStyle(() => {
+    const collapse = Math.min(1, Math.max(0, scrollY.value / collapseRange)); // 0 full, 1 small
+    return { height: interpolate(collapse, [0, 1], [headerFullH, headerMiniH], Extrapolation.CLAMP) };
+  }, [collapseRange, headerFullH, headerMiniH]);
   // The card scales with the header's height, about its centre, and is
   // lifted by half what it lost, so it shrinks towards the header's top.
   const previewCardStyle = useAnimatedStyle(() => {
-    const h = interpolate(collapse.value, [0, 1], [previewH, miniH], Extrapolation.CLAMP);
+    const collapse = Math.min(1, Math.max(0, scrollY.value / collapseRange));
+    const h = interpolate(collapse, [0, 1], [previewH, miniH], Extrapolation.CLAMP);
     const scale = previewH > 0 ? h / previewH : 1;
     return { transform: [{ translateY: -(previewH - h) / 2 }, { scale }] };
-  }, [previewH, miniH]);
+  }, [collapseRange, previewH, miniH]);
   // What is being made, for the small preview's progress chip, so a greyed
   // Share and Save always has a visible reason wherever the page is.
   const makingLine = makingVideo
@@ -1923,6 +2096,15 @@ export default function ShareCardScreen({ navigation, route }) {
       ? `Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`
       : null;
   const makingPct = makingVideo ? videoProgress : previewProgress;
+  // While the share's video is being made, nothing that changes what is
+  // shared can be changed (audit item 2): every such control is disabled,
+  // looks it (the house 0.5) and says so; the making row's Cancel is the
+  // way out. A result that lands after anything changed anyway is never
+  // handed on (renderVideoToFile).
+  const locked = makingVideo;
+  // Play waits for the tone (item 1): pressed or not, it shows so.
+  const playWaiting = !playingPreview && (!toneReady || waitingFor === 'play');
+  const lockedA11y = (state) => (locked ? { ...(state || {}), disabled: true } : state);
   const scrollToPreview = useCallback(() => {
     scrollRef.current?.scrollTo?.({ y: 0, animated: !reduceMotion });
   }, [reduceMotion]);
@@ -1947,8 +2129,11 @@ export default function ShareCardScreen({ navigation, route }) {
             {!isCentreCrop(photoCrop) ? (
               <TouchableOpacity
                 onPress={() => setPhotoCrop(null)}
+                disabled={locked}
                 accessibilityRole="button"
                 accessibilityLabel={clip ? 'Reset the video to the centre' : 'Reset the photo to the centre'}
+                accessibilityState={lockedA11y(undefined)}
+                style={locked ? styles.lockedControl : null}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
                 <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
@@ -1974,10 +2159,11 @@ export default function ShareCardScreen({ navigation, route }) {
               return (
                 <TouchableOpacity
                   key={tType}
-                  style={[styles.templateTile, live.templateTile, active && [styles.templateTileActive, live.templateTileActive]]}
+                  style={[styles.templateTile, live.templateTile, active && [styles.templateTileActive, live.templateTileActive], locked && styles.lockedControl]}
                   onPress={() => setCardType(tType)}
+                  disabled={locked}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
+                  accessibilityState={lockedA11y({ selected: active })}
                   accessibilityLabel={label}
                 >
                   {thumbs[tType] ? (
@@ -2007,6 +2193,7 @@ export default function ShareCardScreen({ navigation, route }) {
           <SectionLabel>Format</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
+              disabled={locked}
               label="Story"
               stacked
               active={format === 'story'}
@@ -2014,6 +2201,7 @@ export default function ShareCardScreen({ navigation, route }) {
               icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
+              disabled={locked}
               label="Full screen"
               stacked
               active={format === 'full'}
@@ -2021,6 +2209,7 @@ export default function ShareCardScreen({ navigation, route }) {
               icon={<Ionicons name="expand-outline" size={15} color={format === 'full' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
+              disabled={locked}
               label="Feed"
               stacked
               active={format === 'portrait'}
@@ -2028,6 +2217,7 @@ export default function ShareCardScreen({ navigation, route }) {
               icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
+              disabled={locked}
               label="Square"
               stacked
               active={format === 'square'}
@@ -2035,6 +2225,7 @@ export default function ShareCardScreen({ navigation, route }) {
               icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
+              disabled={locked}
               label="Sticker"
               stacked
               active={isSticker}
@@ -2057,12 +2248,14 @@ export default function ShareCardScreen({ navigation, route }) {
           <SectionLabel>Theme</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
+              disabled={locked}
               label="Dark"
               active={shareTheme === 'dark'}
               onPress={() => setShareTheme('dark')}
               icon={<Ionicons name="moon-outline" size={15} color={shareTheme === 'dark' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
+              disabled={locked}
               label="Light"
               active={shareTheme === 'light'}
               onPress={() => setShareTheme('light')}
@@ -2087,6 +2280,7 @@ export default function ShareCardScreen({ navigation, route }) {
           <SectionLabel>Background</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
+              disabled={locked}
               label="Gallery"
               accessibilityLabel="Gallery, choose a photo"
               active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY}
@@ -2094,6 +2288,7 @@ export default function ShareCardScreen({ navigation, route }) {
               icon={<Ionicons name="images-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
+              disabled={locked}
               label="Photo"
               accessibilityLabel="Photo, take one with the camera"
               active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO}
@@ -2102,6 +2297,7 @@ export default function ShareCardScreen({ navigation, route }) {
             />
             {!suppress ? (
               <SegmentBtn
+                disabled={locked}
                 label="Video"
                 accessibilityLabel="Video, choose a video"
                 active={!!clip}
@@ -2110,6 +2306,7 @@ export default function ShareCardScreen({ navigation, route }) {
               />
             ) : null}
             <SegmentBtn
+              disabled={locked}
               label="None"
               accessibilityLabel="None, no photo"
               active={!bgPhoto}
@@ -2135,10 +2332,11 @@ export default function ShareCardScreen({ navigation, route }) {
                   return (
                     <TouchableOpacity
                       key={row.id}
-                      style={[styles.templateTile, live.templateTile, active && [styles.templateTileActive, live.templateTileActive]]}
+                      style={[styles.templateTile, live.templateTile, active && [styles.templateTileActive, live.templateTileActive], locked && styles.lockedControl]}
                       onPress={() => { acceptClip(row).catch((e) => { logError('ShareCardScreen.chooseVideo', e); }); }}
+                      disabled={locked}
                       accessibilityRole="button"
-                      accessibilityState={opening ? { selected: active, busy: true } : { selected: active }}
+                      accessibilityState={lockedA11y(opening ? { selected: active, busy: true } : { selected: active })}
                       accessibilityLabel={`Use video: ${clipDisplayName(row)}, ${secondsWords(row.durationMs)}`}
                     >
                       <View>
@@ -2194,7 +2392,8 @@ export default function ShareCardScreen({ navigation, route }) {
 
         {/* Addendum 17: where a video comes from. This workout's own videos,
             the gallery, or the camera now. */}
-        <BottomSheet visible={videoSheetOpen} onClose={() => setVideoSheetOpen(false)} accessibilityLabel="Choose a video">
+        {/* Never open under calm mode or an open flag (audit item 8). */}
+        <BottomSheet visible={videoSheetOpen && !suppress} onClose={() => setVideoSheetOpen(false)} accessibilityLabel="Choose a video">
           <Text style={[styles.sheetTitle, live.sheetTitle]} accessibilityRole="header">Choose a video</Text>
           {workoutClips.length ? (
             <>
@@ -2204,10 +2403,11 @@ export default function ShareCardScreen({ navigation, route }) {
                 return (
                   <TouchableOpacity
                     key={row.id}
-                    style={[styles.sheetRow, live.sheetRow]}
+                    style={[styles.sheetRow, live.sheetRow, locked && styles.lockedControl]}
                     onPress={() => { acceptClip(row).catch((e) => { logError('ShareCardScreen.chooseVideo', e); }); }}
+                    disabled={locked}
                     accessibilityRole="button"
-                    accessibilityState={{ selected: chosen }}
+                    accessibilityState={lockedA11y({ selected: chosen })}
                     accessibilityLabel={`${clipDisplayName(row)}, ${secondsWords(row.durationMs)}`}
                   >
                     <Ionicons name="videocam-outline" size={18} color={chosen ? t.colors.primary : t.colors.textMuted} />
@@ -2219,8 +2419,8 @@ export default function ShareCardScreen({ navigation, route }) {
             </>
           ) : null}
           <View style={styles.sheetActions}>
-            <Button title="From your gallery" variant="secondary" icon="images-outline" onPress={pickGalleryVideo} />
-            {workoutId ? <Button title="Film now" variant="secondary" icon="videocam-outline" onPress={filmNow} /> : null}
+            <Button title="From your gallery" variant="secondary" icon="images-outline" onPress={pickGalleryVideo} disabled={locked} />
+            {workoutId ? <Button title="Film now" variant="secondary" icon="videocam-outline" onPress={filmNow} disabled={locked} /> : null}
           </View>
         </BottomSheet>
 
@@ -2243,10 +2443,11 @@ export default function ShareCardScreen({ navigation, route }) {
               return (
                 <TouchableOpacity
                   key={look.key}
-                  style={[styles.lookTile, live.lookTile, active && [styles.lookTileActive, live.lookTileActive]]}
+                  style={[styles.lookTile, live.lookTile, active && [styles.lookTileActive, live.lookTileActive], locked && styles.lockedControl]}
                   onPress={() => chooseLook(look.key)}
+                  disabled={locked}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
+                  accessibilityState={lockedA11y({ selected: active })}
                   accessibilityLabel={`${look.name}: ${look.description}`}
                 >
                   {lookThumbs[look.key] ? (
@@ -2280,6 +2481,7 @@ export default function ShareCardScreen({ navigation, route }) {
                   onValueChange={previewStrength}
                   onSlidingComplete={commitStrength}
                   accessibilityLabel="Look strength"
+                  disabled={locked}
                 />
               </View>
             </>
@@ -2296,10 +2498,12 @@ export default function ShareCardScreen({ navigation, route }) {
             <SectionLabel>{chosenLifts.length > 1 ? 'Top lifts' : 'Top lift'}</SectionLabel>
             <View style={[styles.togglesCard, live.togglesCard]}>
               <TouchableOpacity
-                style={styles.pickerRow}
+                style={[styles.pickerRow, locked && styles.lockedControl]}
                 onPress={() => setLiftSheetOpen(true)}
+                disabled={locked}
                 accessibilityRole="button"
                 accessibilityLabel={liftRowLabel}
+                accessibilityState={lockedA11y(undefined)}
               >
                 <View style={styles.pickerText}>
                   <Text style={[styles.pickerValue, live.pickerValue]} numberOfLines={1}>{liftRowValue}</Text>
@@ -2332,7 +2536,7 @@ export default function ShareCardScreen({ navigation, route }) {
                     label={o.text}
                     value={on}
                     onChange={(v) => toggleHighlight(o.key, v)}
-                    disabled={!on && highlightKeys.length >= 2}
+                    disabled={locked || (!on && highlightKeys.length >= 2)}
                     last={i === highlightOptions.length - 1}
                   />
                 );
@@ -2349,8 +2553,10 @@ export default function ShareCardScreen({ navigation, route }) {
             <SectionLabel>Quote or caption</SectionLabel>
             <View style={[styles.togglesCard, live.togglesCard]}>
               <TouchableOpacity
-                style={styles.pickerRow}
+                style={[styles.pickerRow, locked && styles.lockedControl]}
                 onPress={() => { setCaptionDraft(quote && !quote.by && !SHARE_LINES.includes(quote.text) ? quote.text : ''); setQuoteSheetOpen(true); }}
+                disabled={locked}
+                accessibilityState={lockedA11y(undefined)}
                 accessibilityRole="button"
                 accessibilityLabel={quote ? `Quote or caption: ${quote.text}${quote.by ? `, ${quote.by}` : ''}. Change` : 'Quote or caption: none. Choose one'}
               >
@@ -2376,8 +2582,10 @@ export default function ShareCardScreen({ navigation, route }) {
               <SectionLabel>Which PR</SectionLabel>
               <View style={[styles.togglesCard, live.togglesCard]}>
                 <TouchableOpacity
-                  style={styles.pickerRow}
+                  style={[styles.pickerRow, locked && styles.lockedControl]}
                   onPress={() => setPrSheetOpen(true)}
+                  disabled={locked}
+                  accessibilityState={lockedA11y(undefined)}
                   accessibilityRole="button"
                   accessibilityLabel={`Personal record: ${selectedPrName}. Change`}
                 >
@@ -2395,24 +2603,24 @@ export default function ShareCardScreen({ navigation, route }) {
           ) : null}
           <SectionLabel>What to include</SectionLabel>
           <View style={[styles.togglesCard, live.togglesCard]}>
-            <ToggleRow label="Date" value={showDate} onChange={setShowDate} />
+            <ToggleRow label="Date" value={showDate} onChange={setShowDate} disabled={locked} />
             {isSession && (
               <>
-                <ToggleRow label="Plan name" value={showPlanName} onChange={setShowPlanName} />
-                <ToggleRow label="Total weight lifted" value={showVolume} onChange={setShowVolume} last />
+                <ToggleRow label="Plan name" value={showPlanName} onChange={setShowPlanName} disabled={locked} />
+                <ToggleRow label="Total weight lifted" value={showVolume} onChange={setShowVolume} last disabled={locked} />
               </>
             )}
             {cardType === 'pr' && (
               <>
-                <ToggleRow label="PR weight" value={showPRWeight} onChange={setShowPRWeight} />
-                <ToggleRow label="Previous best" value={showPrevBest} onChange={setShowPrevBest} last />
+                <ToggleRow label="PR weight" value={showPRWeight} onChange={setShowPRWeight} disabled={locked} />
+                <ToggleRow label="Previous best" value={showPrevBest} onChange={setShowPrevBest} last disabled={locked} />
               </>
             )}
             {isWeekly && !suppress && (
               <>
-                <ToggleRow label="Weight progress" value={showProgress} onChange={setShowProgress} />
+                <ToggleRow label="Weight progress" value={showProgress} onChange={setShowProgress} disabled={locked} />
                 {bestLift ? (
-                  <ToggleRow label="Best lift of the week" value={showBestLift} onChange={setShowBestLift} last />
+                  <ToggleRow label="Best lift of the week" value={showBestLift} onChange={setShowBestLift} last disabled={locked} />
                 ) : null}
               </>
             )}
@@ -2452,7 +2660,7 @@ export default function ShareCardScreen({ navigation, route }) {
           trailingIcon="logo-facebook"
           onPress={handleShareToStories}
           disabled={sharingToStories || !cardReady || makingVideo || makingPreview}
-          loading={sharingToStories}
+          loading={sharingToStories || waitingFor === 'share'}
           accessibilityLabel={liveClip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
           variant="emphatic"
           size="lg"
@@ -2467,7 +2675,7 @@ export default function ShareCardScreen({ navigation, route }) {
           icon="download-outline"
           onPress={handleSaveToGallery}
           disabled={savingToGallery || !cardReady || makingVideo || makingPreview}
-          loading={savingToGallery}
+          loading={savingToGallery || waitingFor === 'save'}
           accessibilityLabel="Save to gallery"
           variant="secondary"
           size="lg"
@@ -2565,6 +2773,8 @@ export default function ShareCardScreen({ navigation, route }) {
               overlayUri={framerOverlay}
               onChange={setPhotoCrop}
               blocksGesture={scrollGesture}
+              subject={liveClip ? 'video' : 'photo'}
+              disabled={locked}
             />
           ) : previewStatus === 'ready' && previewB64 ? (
             <Image
@@ -2606,15 +2816,23 @@ export default function ShareCardScreen({ navigation, route }) {
                 <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={cancelVideo} accessibilityLabel="Cancel making the preview" />
               </View>
             ) : (
+              // Before the tone for this window is read, Play shows a small
+              // spinner and says so; a press waits and plays by itself once
+              // the tone is here (audit item 1), so no tap is lost.
               <TouchableOpacity
-                onPress={playingPreview ? pausePreview : playPreview}
+                onPress={playingPreview ? pausePreview : () => { playPreview().catch((e) => { logError('ShareCardScreen.play', e); }); }}
                 disabled={!playingPreview && makingVideo}
                 accessibilityRole="button"
-                accessibilityLabel={playingPreview ? 'Pause the video' : 'Play the video'}
-                accessibilityState={{ disabled: !playingPreview && makingVideo }}
+                accessibilityLabel={playingPreview ? 'Pause the video' : playWaiting ? 'Getting your video ready' : 'Play the video'}
+                accessibilityState={playWaiting && !makingVideo ? { disabled: false, busy: true } : { disabled: !playingPreview && makingVideo }}
                 style={[styles.playControl, live.playControl, !playingPreview && makingVideo ? styles.playControlDisabled : null]}
+                testID="share-play-control"
               >
-                <Ionicons name={playingPreview ? 'pause' : 'play'} size={20} color={t.colors.textPrimary} />
+                {playWaiting ? (
+                  <ActivityIndicator size="small" color={t.colors.primary} testID="share-play-waiting" />
+                ) : (
+                  <Ionicons name={playingPreview ? 'pause' : 'play'} size={20} color={t.colors.textPrimary} />
+                )}
               </TouchableOpacity>
             )
           ) : null}
@@ -2626,7 +2844,7 @@ export default function ShareCardScreen({ navigation, route }) {
               style={[styles.previewBusy, live.previewBusy]}
               pointerEvents="none"
               accessible
-              accessibilityLabel="Opening your video"
+              accessibilityLabel={FRAME_BUSY_LABEL[frameLoading] || FRAME_BUSY_LABEL.open}
               accessibilityLiveRegion="polite"
               testID="share-preview-busy"
             >
@@ -2829,19 +3047,22 @@ function OptionRow({ title, meta, note, selected, onPress, last, disabled = fals
 // size. Every segment's word is held to the chrome cap, as Chip and Button
 // hold theirs.
 // `accessibilityLabel`: a fuller spoken name that starts with the visible word.
-function SegmentBtn({ label, active, onPress, icon, stacked = false, accessibilityLabel = null }) {
+// `disabled`: cannot be chosen just now (while the share's video is being
+// made, audit item 2); it looks it and says so.
+function SegmentBtn({ label, active, onPress, icon, stacked = false, accessibilityLabel = null, disabled = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <TouchableOpacity accessibilityRole="button"
-      style={[styles.segment, stacked && styles.segmentStacked, active && [styles.segmentActive, live.segmentActive]]}
+      style={[styles.segment, stacked && styles.segmentStacked, active && [styles.segmentActive, live.segmentActive], disabled && styles.lockedControl]}
       onPress={onPress}
+      disabled={disabled}
       // AY-6: the segmented control (card type / format / background) never
       // announced which segment was selected to a screen reader. Mirrors the
       // in-repo pattern already used for the "which PR" chips above
       // (accessibilityState={{ selected }}) and the Settings body-weight-unit
       // segmented control (SettingsWorkoutScreen.js).
-      accessibilityState={{ selected: active }}
+      accessibilityState={disabled ? { selected: active, disabled: true } : { selected: active }}
       accessibilityLabel={accessibilityLabel || label}
     >
       {icon}
@@ -2975,6 +3196,9 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.surface, 0.9),
   },
   playControlDisabled: { opacity: 0.5 },
+  // A control that cannot be used while the share's video is being made
+  // (audit item 2): the house disabled treatment, Button's one opacity.
+  lockedControl: { opacity: 0.5 },
   previewMaking: {
     position: 'absolute', left: spacing.sm, right: spacing.sm, bottom: spacing.sm,
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

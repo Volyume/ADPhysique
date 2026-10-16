@@ -24,13 +24,13 @@ public class VolyumeVideoExportModule: Module {
     // is never used). Resolves one slot per time, NSNull where that time
     // failed; rejects only for bad options or a source that cannot be opened.
     // The work runs in a Task, off the JS thread and off Expo's shared
-    // AsyncFunction queue.
-    AsyncFunction("extractFrames") { (uri: String, timesMs: [Double], maxEdge: Double, promise: Promise) in
+    // AsyncFunction queue. `exact` is true for the preview's still only.
+    AsyncFunction("extractFrames") { (uri: String, timesMs: [Double], maxEdge: Double, exact: Bool, promise: Promise) in
       guard let url = SourceURL.parse(uri) else {
         promise.reject(ExportCode.source, "Not a file URI.")
         return
       }
-      guard let request = FrameRequest.parse(url: url, timesMs: timesMs, maxEdge: maxEdge) else {
+      guard let request = FrameRequest.parse(url: url, timesMs: timesMs, maxEdge: maxEdge, exact: exact) else {
         promise.reject(ExportCode.invalid, "Frame options failed validation.")
         return
       }

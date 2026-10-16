@@ -154,7 +154,13 @@ export default function VideoTrimBar({
 
   const gestures = useMemo(() => {
     const build = (moved) => {
+      // A drag must be mostly sideways to move the window: 8 dp across
+      // activates it, and 12 dp up or down first hands the touch back to
+      // the page, so a vertical scroll that starts on the bar scrolls the
+      // page (audit 2026-10-16, item 5; LookStrengthSlider's own pairing).
       let g = Gesture.Pan()
+        .activeOffsetX([-8, 8])
+        .failOffsetY([-12, 12])
         .enabled(!disabled && !short)
         .onStart(() => {
           'worklet';

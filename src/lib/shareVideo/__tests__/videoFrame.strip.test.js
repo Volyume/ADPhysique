@@ -22,7 +22,7 @@ const FileSystem = require('expo-file-system/legacy');
 const { extractFrames } = require('../engine');
 const {
   grabVideoFrame, videoThumbnailUri, videoStripUris, stripTimes,
-  STILL_EDGE, THUMB_EDGE, STRIP_EDGE,
+  STILL_EDGE, THUMB_EDGE, STRIP_EDGE, FRAME_TIMEOUT_MS, BATCH_TIMEOUT_MS, withinTime,
 } = require('../videoFrame');
 
 function makeSkia({ image = { tag: 'img' } } = {}) {
@@ -49,7 +49,8 @@ describe('grabVideoFrame', () => {
     const Skia = makeSkia();
     const out = await grabVideoFrame(Skia, 'file:///v.mp4', 5000);
     expect(extractFrames).toHaveBeenCalledTimes(1);
-    expect(extractFrames).toHaveBeenCalledWith('file:///v.mp4', [5000], { maxEdge: STILL_EDGE });
+    // Re-pinned 2026-10-16 (audit item 4): the still alone asks for the exact frame.
+    expect(extractFrames).toHaveBeenCalledWith('file:///v.mp4', [5000], { maxEdge: STILL_EDGE, exact: true });
     expect(STILL_EDGE).toBe(1440);
     expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith('file:///cache/share-frames/a.jpg', { encoding: 'base64' });
     expect(Skia.Data.fromBase64).toHaveBeenCalledWith('JPEGB64');
@@ -98,7 +99,8 @@ describe('videoThumbnailUri', () => {
   test('one frame at 0 and 192, returned as its file URI', async () => {
     extractFrames.mockResolvedValue([frame('file:///cache/share-frames/t.jpg', 108, 192)]);
     expect(await videoThumbnailUri('file:///v.mp4')).toBe('file:///cache/share-frames/t.jpg');
-    expect(extractFrames).toHaveBeenCalledWith('file:///v.mp4', [0], { maxEdge: THUMB_EDGE });
+    // Re-pinned 2026-10-16 (audit item 4): a thumbnail takes the nearest quick frame.
+    expect(extractFrames).toHaveBeenCalledWith('file:///v.mp4', [0], { maxEdge: THUMB_EDGE, exact: false });
     expect(THUMB_EDGE).toBe(192);
     expect(FileSystem.readAsStringAsync).not.toHaveBeenCalled();
   });
@@ -126,7 +128,8 @@ describe('videoStripUris', () => {
     extractFrames.mockImplementation(async (_uri, times) => times.map((t, i) => frame(`file:///s${i}.jpg`, 63, 112, t)));
     const out = await videoStripUris('file:///v.mp4', 60000, 5);
     expect(extractFrames).toHaveBeenCalledTimes(1);
-    expect(extractFrames).toHaveBeenCalledWith('file:///v.mp4', [0, 14975, 29950, 44925, 59900], { maxEdge: STRIP_EDGE });
+    // Re-pinned 2026-10-16 (audit item 4): the strip takes the nearest quick frames.
+    expect(extractFrames).toHaveBeenCalledWith('file:///v.mp4', [0, 14975, 29950, 44925, 59900], { maxEdge: STRIP_EDGE, exact: false });
     expect(STRIP_EDGE).toBe(112);
     expect(out).toEqual(['file:///s0.jpg', 'file:///s1.jpg', 'file:///s2.jpg', 'file:///s3.jpg', 'file:///s4.jpg']);
   });
@@ -141,5 +144,55 @@ describe('videoStripUris', () => {
     await expect(videoStripUris('file:///v.mp4', 30000, 3)).resolves.toEqual([null, null, null]);
     expect(await videoStripUris('file:///v.mp4', 30000, 0)).toEqual([]);
     expect(await videoStripUris('', 30000, 2)).toEqual([null, null]);
+  });
+});
+
+// Audit 2026-10-16, item 4(a): a frame request that never answers is given
+// up, so no spinner waits on it for ever. Written to FAIL against the module
+// before the limits (each of these awaited a promise that never settles).
+describe('time limits (audit item 4)', () => {
+  const never = () => new Promise(() => {});
+  afterEach(() => { jest.useRealTimers(); });
+
+  test('the still gives up after 10 s, not before, and reads no file', async () => {
+    jest.useFakeTimers();
+    extractFrames.mockImplementation(never);
+    const Skia = makeSkia();
+    let out = 'pending';
+    grabVideoFrame(Skia, 'file:///v.mp4', 2000).then((v) => { out = v; });
+    await jest.advanceTimersByTimeAsync(FRAME_TIMEOUT_MS - 1);
+    expect(out).toBe('pending');
+    await jest.advanceTimersByTimeAsync(1);
+    expect(out).toBeNull();
+    expect(FRAME_TIMEOUT_MS).toBe(10000);
+    expect(FileSystem.readAsStringAsync).not.toHaveBeenCalled();
+    expect(Skia.Image.MakeImageFromEncoded).not.toHaveBeenCalled();
+  });
+
+  test('a thumbnail and the strip give up after 15 s, as a null and as all nulls', async () => {
+    jest.useFakeTimers();
+    extractFrames.mockImplementation(never);
+    let thumb = 'pending';
+    let strip = 'pending';
+    videoThumbnailUri('file:///v.mp4').then((v) => { thumb = v; });
+    videoStripUris('file:///v.mp4', 60000, 4).then((v) => { strip = v; });
+    await jest.advanceTimersByTimeAsync(BATCH_TIMEOUT_MS - 1);
+    expect(thumb).toBe('pending');
+    expect(strip).toBe('pending');
+    await jest.advanceTimersByTimeAsync(1);
+    expect(thumb).toBeNull();
+    expect(strip).toEqual([null, null, null, null]);
+    expect(BATCH_TIMEOUT_MS).toBe(15000);
+  });
+
+  test('withinTime: the value when it comes first, the fallback on a rejection or the limit, and no timer left behind', async () => {
+    jest.useFakeTimers();
+    await expect(withinTime(Promise.resolve(7), 1000, 0)).resolves.toBe(7);
+    await expect(withinTime(Promise.reject(new Error('x')), 1000, 0)).resolves.toBe(0);
+    expect(jest.getTimerCount()).toBe(0);
+    const late = withinTime(never(), 1000, 'gave up');
+    await jest.advanceTimersByTimeAsync(1000);
+    await expect(late).resolves.toBe('gave up');
+    expect(jest.getTimerCount()).toBe(0);
   });
 });

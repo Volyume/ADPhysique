@@ -11,16 +11,17 @@ struct FrameRequest {
   let url: URL
   let timesMs: [Double]
   let maxEdge: Int
+  let exact: Bool
 
   static let maxTimes = 64
 
-  static func parse(url: URL, timesMs: [Double], maxEdge: Double) -> FrameRequest? {
+  static func parse(url: URL, timesMs: [Double], maxEdge: Double, exact: Bool) -> FrameRequest? {
     guard !timesMs.isEmpty, timesMs.count <= maxTimes else { return nil }
     for t in timesMs {
       guard t.isFinite, t >= 0, t <= 86_400_000 else { return nil }
     }
     guard maxEdge.isFinite, maxEdge >= 16, maxEdge <= 4096 else { return nil }
-    return FrameRequest(url: url, timesMs: timesMs, maxEdge: Int(maxEdge.rounded()))
+    return FrameRequest(url: url, timesMs: timesMs, maxEdge: Int(maxEdge.rounded()), exact: exact)
   }
 }
 
@@ -31,9 +32,11 @@ struct FrameRequest {
 ///
 /// AVAssetImageGenerator with appliesPreferredTrackTransform gives the frame
 /// upright, and maximumSize as a square box keeps its longer edge within
-/// maxEdge whichever way it turns (it never enlarges). The exact frame is
-/// asked for first; a time that cannot be decoded exactly is tried again with
-/// a quarter of a second's tolerance, then left as a null slot. The async
+/// maxEdge whichever way it turns (it never enlarges). For the preview's
+/// still (`exact`) the exact frame is asked for first; a time that cannot be
+/// decoded exactly is tried again with a quarter of a second's tolerance,
+/// then left as a null slot. A thumbnail, the trim strip and the tone ask
+/// with the tolerance first and exactly second. The async
 /// image(at:) is iOS 16, the podspec's deployment target.
 enum FrameExtractor {
   static let outputDirectoryName = "share-frames"
@@ -83,6 +86,8 @@ enum FrameExtractor {
     loose.maximumSize = box
     loose.requestedTimeToleranceBefore = looseTolerance
     loose.requestedTimeToleranceAfter = looseTolerance
+    let first = request.exact ? exact : loose
+    let second = request.exact ? loose : exact
 
     var results: [Any] = []
     for ms in request.timesMs {
@@ -90,7 +95,7 @@ enum FrameExtractor {
       if let last = lastSeconds { seconds = min(seconds, last) }
       let time = CMTime(seconds: seconds, preferredTimescale: 600)
       var frame: [String: Any]? = nil
-      if let image = await grab(exact: exact, loose: loose, at: time) {
+      if let image = await grab(first: first, second: second, at: time) {
         // No autoreleasepool here: the closure form is avoided in an async
         // function; the JPEG data is released when write(_:timeMs:) returns.
         frame = write(image, timeMs: seconds * 1000)
@@ -110,17 +115,17 @@ enum FrameExtractor {
     try? FileManager.default.removeItem(at: caches.appendingPathComponent(outputDirectoryName, isDirectory: true))
   }
 
-  private static func grab(exact: AVAssetImageGenerator, loose: AVAssetImageGenerator, at time: CMTime) async -> CGImage? {
+  private static func grab(first: AVAssetImageGenerator, second: AVAssetImageGenerator, at time: CMTime) async -> CGImage? {
     // image(at:) is the async form of generateCGImageAsynchronously(for:),
     // both iOS 16; it returns (image, actualTime), destructured by position.
     do {
-      let (image, _) = try await exact.image(at: time)
+      let (image, _) = try await first.image(at: time)
       return image
     } catch {
-      // Not decodable at exactly this time; try with the tolerance below.
+      // Not decodable by the first generator at this time; try the second.
     }
     do {
-      let (image, _) = try await loose.image(at: time)
+      let (image, _) = try await second.image(at: time)
       return image
     } catch {
       return nil
