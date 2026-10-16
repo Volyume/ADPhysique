@@ -38,7 +38,7 @@ describe('ClipPrimerSheet', () => {
     const json = JSON.stringify(render().toJSON());
     expect(json).toContain('Videos stay on this phone');
     // Addendum 13 (two minutes) and addendum 14 (where the videos are kept).
-    expect(json).toContain('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
+    expect(json).toContain('Prop your phone up, tap the button, and get into position. Recording starts after the countdown and stops by itself, up to two minutes, with no sound. Your videos are kept with the workout on this phone, under the three dots on each exercise in Your videos, and are never uploaded. A video is kept for 7 days unless you keep it; you can change this in Settings, under Your data. Keep bright lights behind the phone, not behind you. The clear band across the middle of the picture is where the share shows your lift best.');
   });
 
   test('"Open camera" and "Not now" each fire their own handler once', () => {

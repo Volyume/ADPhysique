@@ -92,7 +92,7 @@ import {
   parseLength, parseGuides, leadInLabel, leadInA11yLabel, lengthLabel, lengthA11yLabel, startA11yLabel,
   guidesLabel, guidesA11yLabel,
   CUES_KEY, DEFAULT_CUES, nextCues, parseCues, cuesLabel, cuesA11yLabel, cuesHaveSound, cuesHaveLight,
-  MIN_FREE_BYTES,
+  MIN_FREE_BYTES, KEEP_DAYS_KEY, parseKeepDays, savedLine,
 } from '../lib/clips/rules';
 import { cameraTipFor } from '../lib/clips/cameraTips';
 import { cueFor, pickLenses, PULSE_MS, END_PULSE_GAP_MS } from '../lib/clips/cues';
@@ -217,6 +217,7 @@ export default function ClipCameraScreen({ navigation, route }) {
   const limitMsRef = useRef(MAX_CLIP_MS);
   const holdActiveRef = useRef(false);
   const cuesRef = useRef(DEFAULT_CUES);
+  const keepDaysRef = useRef(null);
   const facingRef = useRef('back');
   const wideViewRef = useRef(false);
   // The light pulses of the countdown (cleared with the other timers) and of
@@ -316,6 +317,12 @@ export default function ClipCameraScreen({ navigation, route }) {
       cuesRef.current = m;
       setCues(m);
     }).catch((e) => { logError('ClipCamera.cuesRead', e); });
+    // Addendum 15: the saved toast says the keep window in the person's own
+    // setting (read once; the default reads as 7 days).
+    AsyncStorage.getItem(KEEP_DAYS_KEY).then((raw) => {
+      if (!aliveRef.current || raw == null) return;
+      keepDaysRef.current = parseKeepDays(raw);
+    }).catch((e) => { logError('ClipCamera.keepRead', e); });
   }, []);
 
   // Addendum 13 (E): which lenses this phone has, asked of the camera once it
@@ -422,7 +429,7 @@ export default function ClipCameraScreen({ navigation, route }) {
         navigation.navigate({ name: 'ActiveWorkout', params: { watchClipId: clip.id }, merge: true });
       },
     };
-    toast.show(CLIP_STRINGS.saved, { variant: 'undo', action: undo, secondaryAction: watch });
+    toast.show(savedLine(keepDaysRef.current), { variant: 'undo', action: undo, secondaryAction: watch });
     leave(() => navigation.goBack());
   }, [navigation, source, toast]);
 

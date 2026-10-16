@@ -1126,7 +1126,7 @@ describe('after a save', () => {
     expect(mockShow).toHaveBeenCalledTimes(1);
     const [message, options] = mockShow.mock.calls[0];
     expect(message).toBe(CLIP_STRINGS.saved);
-    expect(message).toBe('Saved with this workout. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.');
+    expect(message).toBe('Saved with this workout, kept for 7 days unless you keep it. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.');
     expect(options.variant).toBe('undo');
     expect(options.action.label).toBe('Undo');
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
@@ -1134,6 +1134,15 @@ describe('after a save', () => {
     expect(mockDeleteClip).not.toHaveBeenCalled();
     await act(async () => { options.action.onPress(); });
     expect(mockDeleteClip).toHaveBeenCalledWith('clip-1');
+  });
+
+  test('the saved toast says the keep window in the person\'s own setting (addendum 15)', async () => {
+    await AsyncStorage.setItem('@volyume_clip_keep_days', '30');
+    await recordFiveSeconds({ source: 'workout' });
+    expect(mockShow.mock.calls[0][0]).toBe('Saved with this workout, kept for 30 days unless you keep it. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.');
+    await AsyncStorage.setItem('@volyume_clip_keep_days', '0');
+    await recordFiveSeconds({ source: 'workout' });
+    expect(mockShow.mock.calls[1][0]).toBe('Saved with this workout, kept until you delete it. Find it later under the three dots on this exercise, in Your videos, or on your share when you finish.');
   });
 
   test('workout: "Watch" beside Undo returns to the logger naming the video, which opens its videos sheet playing it (addendum 13, F)', async () => {
