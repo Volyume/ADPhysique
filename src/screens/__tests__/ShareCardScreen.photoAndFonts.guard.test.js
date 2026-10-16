@@ -54,7 +54,14 @@ describe('moving and resizing the photo, right on the preview', () => {
   test('a drag on the photo can never scroll the page: the gestures block the page scroll', () => {
     expect(SCREEN).toContain('const scrollGesture = useMemo(() => Gesture.Native(), []);');
     // D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows t.screenPadding
-    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<ScrollView contentContainerStyle=\{\[styles\.content, live\.content\]\}>/);
+    // Re-pinned 2026-10-16 (the collapsing preview brought back, D229
+    // addendum 5 item 8): the page is now Reanimated's ScrollView, so its
+    // scroll can drive the preview's header on the UI thread, with a ref for
+    // the "Back to the preview" scroll, and its content starts with room for
+    // the full header lying over it (paddingTop: headerFullH, the 1:1
+    // collapsing-header layout). The page scroll is still the one the
+    // gesture system knows, and the photo's gestures still block it.
+    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<Animated\.ScrollView\s+ref=\{scrollRef\}\s+contentContainerStyle=\{\[styles\.content, live\.content, \{ paddingTop: headerFullH \}\]\}/);
     expect(SCREEN).toContain('blocksGesture={scrollGesture}');
     expect(FRAMER).toContain('pinch = pinch.blocksExternalGesture(blocksGesture);');
     expect(FRAMER).toContain('pan = pan.blocksExternalGesture(blocksGesture);');
