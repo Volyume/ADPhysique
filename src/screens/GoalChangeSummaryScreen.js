@@ -16,6 +16,7 @@ import { getOpenEdPatternFlag } from '../lib/database';
 // installed a library plan, shared with first run and Adjust training.
 import { libraryKitInstalledLine } from '../lib/startWithPlan';
 import useAppStore from '../store/useAppStore';
+import { formatEnergy, energyUnitLabel } from '../lib/format';
 
 // ─── Reasoning helpers ────────────────────────────────────────────────────────
 
@@ -50,28 +51,31 @@ function buildGoalReason(prevGoal, nextGoal) {
   return `Your plan shifts more of its weekly sets to the muscles judged in this category.`;
 }
 
-function buildKcalReason(prevKcal, nextKcal, nextPhase) {
+function buildKcalReason(prevKcal, nextKcal, nextPhase, energyUnit = 'kcal') {
   if (prevKcal == null || nextKcal == null) return null;
   const delta = nextKcal - prevKcal;
   if (Math.abs(delta) < 50) return `Your daily calories stay roughly the same.`;
   const up = delta > 0;
   const direction = up ? 'up' : 'down';
-  const absDelta = Math.abs(delta);
+  // Display only: the threshold above stays in stored kcal, the figure shown
+  // is in the person's own unit.
+  const absDelta = formatEnergy(Math.abs(delta), energyUnit);
+  const unitLabel = energyUnitLabel(energyUnit);
   if (nextPhase === 'cut') {
     // Reason must track the actual direction: a deeper cut goes down, a milder
     // cut goes up. Never imply a rise sets a bigger deficit.
     return up
-      ? `Calories come up by ${absDelta} kcal/day for the smaller deficit your new phase needs.`
-      : `Calories come down by ${absDelta} kcal/day to set the deficit your new phase needs.`;
+      ? `Calories come up by ${absDelta} ${unitLabel}/day for the smaller deficit your new phase needs.`
+      : `Calories come down by ${absDelta} ${unitLabel}/day to set the deficit your new phase needs.`;
   }
   if (nextPhase === 'bulk' || nextPhase === 'lean_gain') {
     // A rise fuels growth; a fall is a leaner, more controlled gain. Do not say
     // a calorie cut "fuels new muscle growth": that reads as contradictory.
     return up
-      ? `Calories go up by ${absDelta} kcal/day to fuel new muscle growth.`
-      : `Calories come down by ${absDelta} kcal/day for a leaner, more controlled gain.`;
+      ? `Calories go up by ${absDelta} ${unitLabel}/day to fuel new muscle growth.`
+      : `Calories come down by ${absDelta} ${unitLabel}/day for a leaner, more controlled gain.`;
   }
-  return `Calories shift ${direction} by ${absDelta} kcal/day to match your new phase.`;
+  return `Calories shift ${direction} by ${absDelta} ${unitLabel}/day to match your new phase.`;
 }
 
 function buildProteinApproachReason(prevApproach, nextApproach) {
@@ -163,6 +167,8 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
     planInstalledKit = null, planInstalledName = null,
   } = route.params || {};
   const planKeptOnPurpose = planKeptReason === 'style_lock';
+  // The person's energy unit (kcal or kJ), read as CoachOutputScreen reads it.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -214,7 +220,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
   const goalReason = buildGoalReason(previous.goal, next.goal);
   const kcalReason = edFlagOpen
     ? (kcalChanged ? 'Your daily calories adjust to match your goal.' : null)
-    : buildKcalReason(prevKcal, nextKcal, next.phase);
+    : buildKcalReason(prevKcal, nextKcal, next.phase, energyUnit);
   const approachReason = buildProteinApproachReason(previous.approach, next.approach);
 
   function handleDone() {
@@ -280,8 +286,8 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
               <ChangeCard
                 icon="flame-outline"
                 title="Daily calories"
-                prev={`${prevKcal.toLocaleString('en-GB')} kcal`}
-                next={`${nextKcal.toLocaleString('en-GB')} kcal`}
+                prev={`${formatEnergy(prevKcal, energyUnit)} ${energyUnitLabel(energyUnit)}`}
+                next={`${formatEnergy(nextKcal, energyUnit)} ${energyUnitLabel(energyUnit)}`}
                 reason={kcalReason}
               />
             )}

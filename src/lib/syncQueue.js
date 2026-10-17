@@ -350,6 +350,37 @@ export async function getPendingDeleteOpCount(userId) {
 }
 
 /**
+ * B3: make this user's cloud DELETE tombstones (workout_delete,
+ * workout_set_delete) due now, whatever their backoff or park state.
+ *
+ * Sign-out refuses to wipe while any of these remain (getPendingDeleteOpCount
+ * counts every retry state). An op in backoff is invisible to the drain, and a
+ * parked one (retries >= MAX_RETRIES, next attempt a year away) is invisible
+ * for ever, so without this a single failed delete made sign-out impossible
+ * without "Sign out anyway". Resets BOTH columns the drain's SELECT filters on
+ * (retries and next_attempt_at); user-scoped, delete ops only, idempotent.
+ *
+ * @param {string} userId
+ * @returns {Promise<{ ok: boolean, reset: number }>}
+ */
+export async function resetDeleteOpsForRetry(userId) {
+  if (!userId) return { ok: false, reset: 0 };
+  try {
+    const d = await db();
+    const r = await d.runAsync(
+      `UPDATE pending_sync_ops SET retries = 0, next_attempt_at = ?
+        WHERE user_id = ? AND op_type IN ('workout_delete', 'workout_set_delete')
+          AND (retries > 0 OR next_attempt_at > ?)`,
+      [Date.now(), userId, Date.now()],
+    );
+    return { ok: true, reset: r?.changes ?? 0 };
+  } catch (e) {
+    logError('syncQueue.resetDeleteOpsForRetry', e, { userId });
+    return { ok: false, reset: 0 };
+  }
+}
+
+/**
  * Item 8 (D141): let the user un-park ops that gave up after MAX_RETRIES.
  * The 365-day park (_scheduleRetry above) only stalls SCHEDULING - the row
  * stays in the table with its last_error - so a since-fixable failure (a

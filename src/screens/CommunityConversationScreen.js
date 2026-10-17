@@ -144,7 +144,16 @@ export default function CommunityConversationScreen({ navigation, route }) {
   const ref = route?.params?.ref ?? null;
 
   const [other, setOther] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessagesState] = useState([]);
+  // A2: the thread, mirrored in a ref and written through setMessages below, so
+  // a merge is computed from the live thread OUTSIDE any React state updater
+  // (an updater must be pure; these also wrote the cursor ref and state).
+  const messagesRef = useRef([]);
+  const setMessages = useCallback((next) => {
+    const value = typeof next === 'function' ? next(messagesRef.current) : next;
+    messagesRef.current = value;
+    setMessagesState(value);
+  }, []);
   const [cursor, setCursor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [closed, setClosed] = useState(false);
@@ -182,12 +191,10 @@ export default function CommunityConversationScreen({ navigation, route }) {
         next = page.cursor;
       }
       if (quiet) {
-        setMessages((prev) => {
-          const merged = mergeNewestPage(prev, cursorRef.current, { messages: rows, cursor: next });
-          cursorRef.current = merged.cursor;
-          setCursor(merged.cursor);
-          return merged.messages;
-        });
+        const merged = mergeNewestPage(messagesRef.current, cursorRef.current, { messages: rows, cursor: next });
+        cursorRef.current = merged.cursor;
+        setMessages(merged.messages);
+        setCursor(merged.cursor);
       } else {
         setMessages(rows);
         setCursor(next);
@@ -230,7 +237,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, [routeId, routeUserId, refreshMe]);
+  }, [routeId, routeUserId, refreshMe, setMessages]);
 
   /** The quiet re-read: no spinner, no list walk, and the thread on
    * screen stays if it fails. */
@@ -240,14 +247,12 @@ export default function CommunityConversationScreen({ navigation, route }) {
     try {
       const page = await listMessages(id, { limit: PAGE });
       // Merged, not replaced: older pages the person scrolled to stay.
-      setMessages((prev) => {
-        const merged = mergeNewestPage(prev, cursorRef.current, page);
-        cursorRef.current = merged.cursor;
-        setCursor(merged.cursor);
-        return merged.messages;
-      });
+      const merged = mergeNewestPage(messagesRef.current, cursorRef.current, page);
+      cursorRef.current = merged.cursor;
+      setMessages(merged.messages);
+      setCursor(merged.cursor);
     } catch (_e) { /* best effort: what is on screen stays */ }
-  }, []);
+  }, [setMessages]);
 
   const focusedOnceRef = useRef(false);
   useFocusEffect(useCallback(() => {
@@ -279,7 +284,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
     } finally {
       olderBusyRef.current = false;
     }
-  }, [cursor, toast]);
+  }, [cursor, toast, setMessages]);
 
   const openProfile = other?.user_id
     ? () => navigation.navigate('CommunityProfile', {

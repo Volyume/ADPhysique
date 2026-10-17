@@ -12,6 +12,11 @@
  * database.js's getRoutineExercisesWithDetails / useAppStore.js's
  * startWorkout->withSetsArrays contract).
  */
+// C6 (audit 2026-10-17): the screen reloads on focus; outside a navigator the
+// focus hook runs its effect once on mount.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb) => { require('react').useEffect(() => cb(), [cb]); },
+}));
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
 const mockPeekOpen = jest.fn();
 jest.mock('../../components/PeekMenu', () => {

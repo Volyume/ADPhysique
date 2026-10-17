@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View, StyleSheet, ScrollView, TouchableOpacity,
   Animated,
@@ -321,10 +322,19 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const [deletingExercise, setDeletingExercise] = useState(false);
   const toast = useToast();
 
-  useEffect(() => {
-    if (exerciseId) loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exerciseId]);
+  // C6: reload on every focus (a set logged or edited elsewhere shows when the
+  // person comes back), as AnalyticsScreen does. Only the first load shows the
+  // loading state; a later one is quiet and keeps what is on screen if it fails.
+  const loadedOnceRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (exerciseId) {
+        loadData({ quiet: loadedOnceRef.current });
+        loadedOnceRef.current = true;
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [exerciseId]),
+  );
 
   // COMP-019: pick the chart's initial window, persisted choice if it holds
   // enough sessions, else widen to the narrowest window with >=2 (never dead).
@@ -353,9 +363,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, []);
 
-  async function loadData() {
-    setLoadingExercise(true);
-    setLoadError(null);
+  async function loadData({ quiet = false } = {}) {
+    if (!quiet) {
+      setLoadingExercise(true);
+      setLoadError(null);
+    }
     try {
       let ex = await getExerciseById(exerciseId);
       let mySets = null;
@@ -552,8 +564,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       }
     } catch (e) {
       logError('ExerciseDetailScreen.loadData', e);
-      setExercise(null);
-      setLoadError('read_failed');
+      if (!quiet) {
+        setExercise(null);
+        setLoadError('read_failed');
+      }
     } finally {
       setLoadingExercise(false);
     }

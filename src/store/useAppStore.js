@@ -568,7 +568,18 @@ const useAppStore = create((set, get) => ({
           const sq = require('../lib/syncQueue');
           // eslint-disable-next-line global-require
           const sbClient = require('../lib/supabase').getSupabaseClient?.();
-          if (sbClient) await sq.drainSyncQueue(sbClient, prevUid);
+          if (sbClient) {
+            // B3: a delete op in backoff, or parked after its retries ran out,
+            // is invisible to the drain and would refuse sign-out for ever.
+            // Make this user's delete ops due now, then drain in a small loop
+            // (the drain reads 50 at a time) until none are left.
+            await sq.resetDeleteOpsForRetry(prevUid);
+            for (let pass = 0; pass < 3; pass += 1) {
+              await sq.drainSyncQueue(sbClient, prevUid);
+              const left = await sq.getPendingDeleteOpCount(prevUid);
+              if (left?.ok && (left.count ?? 0) === 0) break;
+            }
+          }
           // P1 sync truth: `ok:false` means the queue could not be READ, which
           // is not the same as it being empty. Wiping on an unreadable queue
           // destroys delete tombstones and resurrects workouts the user
@@ -584,7 +595,8 @@ const useAppStore = create((set, get) => ({
             log.logWarn('clearAuthStateForSignOut.pendingDeletes',
               'sign-out aborted: delete tombstones not yet shipped, keeping user signed in',
               { prevUid, remainingDeletes: deletes.count });
-            return { ok: false, reason: 'unsynced' };
+            // pendingDeletes lets the alert say that deletions are waiting.
+            return { ok: false, reason: 'unsynced', pendingDeletes: deletes.count };
           }
         } catch (e) {
           if (!force) {
@@ -648,6 +660,16 @@ const useAppStore = create((set, get) => ({
       // clean of user data. The fail-closed rule is unchanged; what died is
       // the dead end where one spurious throw blocked sign-out forever
       // (per-attempt errors are logged inside the retry helper).
+      // B4: the sync watermarks go BEFORE the SQLite wipe. In the other order a
+      // failed AsyncStorage clear left pull watermarks over an empty database,
+      // so the next pull was incremental and brought back only newer rows. A
+      // failure here only costs a full pull; it never blocks sign-out.
+      try {
+        // eslint-disable-next-line global-require
+        await require('../lib/sync/watermark').clearWatermarksForUser(prevUid);
+      } catch (e) {
+        log.logWarn('clearAuthStateForSignOut.watermarks', e?.message ?? 'could not clear sync watermarks', { prevUid });
+      }
       // eslint-disable-next-line global-require
       const { wipeAllUserDataWithRetry } = require('../lib/database');
       const wipe = await wipeAllUserDataWithRetry(prevUid);

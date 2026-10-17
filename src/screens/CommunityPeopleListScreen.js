@@ -52,7 +52,6 @@ import HeaderGlyph from '../components/community/HeaderGlyph';
 import Band, { BandGap } from '../components/community/Band';
 import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
-import ConnectSheet from '../components/community/ConnectSheet';
 import PeopleFiltersSheet from '../components/community/PeopleFiltersSheet';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
@@ -129,7 +128,6 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
   const [error, setError] = useState(null);
-  const [connectCard, setConnectCard] = useState(null);
   const [filters, setFilters] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [count, setCount] = useState(null);
@@ -183,16 +181,12 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
     }
   }, [cursor, paging, read, rows.length]);
 
-  /** Replace one card in place, so a follow or a connect does not reload. */
+  /** Replace one card in place, so a follow does not reload. */
   function patch(card) {
     if (!card?.user_id) return;
     setRows((prev) => prev.map((row) => (row.card.user_id === card.user_id
       ? { ...row, card }
       : row)));
-  }
-
-  function openRules() {
-    navigation.navigate('CommunityRules', { mustAccept: true });
   }
 
   const door = doorsFor(me).find((d) => d.mode === mode)
@@ -303,16 +297,11 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
               inBand
               card={item.row.card}
               reasons={item.row.reasons}
-              me={me}
               onPress={() => navigation.navigate('CommunityProfile', { handle: item.row.card.handle })}
               onPressWithLayout={(rect) => navigation.navigate('CommunityProfile', {
                 handle: item.row.card.handle, __heroOrigin: rect || undefined,
               })}
               onFollowChange={(relationship) => patch({ ...item.row.card, relationship })}
-              onConnect={(card) => setConnectCard(card)}
-              onConnectChange={patch}
-              onMessage={(card) => navigation.navigate('CommunityConversation', { userId: card.user_id })}
-              onRulesOutdated={openRules}
             />
           </Band>
         ))}
@@ -335,17 +324,6 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
             colors={[t.colors.primary]}
           />
         )}
-      />
-
-      <ConnectSheet
-        visible={!!connectCard}
-        onClose={() => setConnectCard(null)}
-        card={connectCard}
-        // The partners door is the one place a request already has its
-        // reason: that is the door the person came through (SD-25).
-        preselect={mode === 'partners' ? ['train_together'] : []}
-        onSent={patch}
-        onRulesOutdated={openRules}
       />
 
       {filterable ? (

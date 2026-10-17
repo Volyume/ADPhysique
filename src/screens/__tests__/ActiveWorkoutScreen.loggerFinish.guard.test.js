@@ -109,8 +109,8 @@ describe('logger finish and save safety (audit 2026-10-17)', () => {
     const start = between('function handleDeleteSetWithUndo(target)', 'async function handleChangeLoggedSetType');
     expect(start).not.toContain('deleteWorkoutSet(');
     expect(start).toContain("variant: 'undo'");
-    expect(start).toContain('onTimeout: () => { commitPendingDelete(target.id); },');
-    const commit = between('async function commitPendingDelete(setId)', 'function flushPendingDeletes()');
+    expect(start).toContain('onTimeout: () => { commitPendingDelete(target.id, true); },');
+    const commit = between('async function commitPendingDelete(setId, fromToast = false)', 'function flushPendingDeletes()');
     expect(commit).toContain('await deleteWorkoutSet(p.userId, setId);');
     expect(commit).toContain("enqueueSyncOp('workout_set_delete'");
     expect(SRC).not.toContain('This cannot be undone.');

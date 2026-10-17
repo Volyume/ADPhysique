@@ -64,7 +64,7 @@ import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 import { workoutDayMs } from '../lib/workoutDate';
-import { localWeekStartMs } from '../lib/dayKey';
+import { localWeekStartMs, localWeekEndMs } from '../lib/dayKey';
 import { formatNumber, formatWithUnit } from '../lib/format';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
@@ -900,9 +900,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // the Monday-start local week. Anchored to the SESSION's week, bounded
     // both ends, so a history reopen shows that week's totals rather than a
     // window trailing from today.
-    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    // C5: the end is the next local Monday (calendar arithmetic), not start
+    // plus 7 x 24 h, which lands an hour off in the two DST weeks a year.
     const sessionWeekStart = localWeekStartMs(workoutDayMs({ startedAt, endedAt }));
-    const sessionWeekEnd = sessionWeekStart + weekMs;
+    const sessionWeekEnd = localWeekEndMs(sessionWeekStart);
     // D218 (founder order 2026-10-03, audit F-1, F-3): the shared exercise
     // lookup, unfiltered (a soft-deleted custom exercise still credits its
     // muscles, as the volume trend and Recovery already count it),

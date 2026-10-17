@@ -139,7 +139,8 @@ describe('nothing new is about the body or food', () => {
 describe('round 3R wiring', () => {
   const chat = code('src/screens/CommunityGroupChatScreen.js');
   test('F1, F2: the poll merges by id, older pages are guarded and de-duplicated', () => {
-    expect(chat).toMatch(/mergeNewestPage\(prev, cursorRef\.current, page\)/);
+    // Audit A2 (2026-10-17): merged from the messages ref, outside any updater.
+    expect(chat).toMatch(/mergeNewestPage\(messagesRef\.current, cursorRef\.current, page\)/);
     expect(chat).toMatch(/olderBusyRef\.current/);
     expect(chat).toMatch(/appendOlderPage\(prev, page\.messages\)/);
     expect(chat).not.toMatch(/setMessages\(page\.messages\);\s*setCursor\(page\.cursor\);\s*clearUnread/);

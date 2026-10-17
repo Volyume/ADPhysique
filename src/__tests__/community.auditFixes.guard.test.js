@@ -51,7 +51,9 @@ test.each(['screens/CommunityGroupChatScreen.js', 'screens/CommunityConversation
 test('item f and 4: the DM thread polls on foreground and merges the newest page', () => {
   const src = read('screens/CommunityConversationScreen.js');
   expect(src).toMatch(/AppState\.addEventListener\('change'[\s\S]*?next === 'active'\) poll\(\)/);
-  expect(src).toContain('mergeNewestPage(prev, cursorRef.current');
+  // Audit A2 (2026-10-17): the merge is computed from the messages ref OUTSIDE
+  // any state updater, which used to also write the cursor.
+  expect(src).toContain('mergeNewestPage(messagesRef.current, cursorRef.current');
   expect(src).toContain('appendOlderPage(prev, page.messages)');
   expect(src).not.toMatch(/setMessages\(page\.messages\)/);
 });

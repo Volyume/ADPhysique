@@ -3315,6 +3315,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // counted warm-ups, so the first working set after a warm-up was "2").
       // Warm-ups get their own 1,2 sequence; set_type distinguishes them.
       const isWarmupSet = (currentSet.setType ?? 'straight') === 'warmup';
+      // A1: a delete still inside its Undo window is hidden but stored; commit
+      // it before numbering so this set's number and the stored renumber agree.
+      await flushPendingDeletes();
       const setNumber = setNumberForKind(loggedSets, isWarmupSet);
       // D229 addendum 9: the number the rows and the Now card show for this
       // set (countProgressSets: warm-ups and drop sets never move it), which
@@ -4084,10 +4087,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     try { AccessibilityInfo.announceForAccessibility('Set restored'); } catch (_) { /* best-effort */ }
   }
 
-  async function commitPendingDelete(setId) {
+  async function commitPendingDelete(setId, fromToast = false) {
     const p = pendingDeletesRef.current.get(setId);
     if (!p) return;
     pendingDeletesRef.current.delete(setId);
+    // A6: when something other than the toast running out commits this
+    // delete (a finish, the screen flush, another set action), the Undo
+    // toast must not stay up offering a restore that no longer exists.
+    if (!fromToast) { try { toast.hide?.(`set-delete-${setId}`); } catch (_) { /* best-effort */ } }
     try {
       // false = the row is already gone from this device, which is what was
       // asked; the cloud delete below still runs so it cannot be resurrected.
@@ -4155,9 +4162,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // Spoken like a log and an edit are (audit P5).
     try { AccessibilityInfo.announceForAccessibility('Set deleted'); } catch (_) { /* best-effort */ }
     toast.show('Set deleted.', {
+      key: `set-delete-${target.id}`,
       variant: 'undo',
       action: { label: 'Undo', onPress: () => undoDeleteSet(target.id) },
-      onTimeout: () => { commitPendingDelete(target.id); },
+      onTimeout: () => { commitPendingDelete(target.id, true); },
     });
   }
 
@@ -4171,6 +4179,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // that becomes one is checked against the history without itself.
   async function handleChangeLoggedSetType(target, newType) {
     if (!target?.id || !newType) return;
+    // A1: a delete still inside its Undo window is hidden on screen but
+    // stored; commit it first so the renumber below sees the same sets the
+    // person sees.
+    await flushPendingDeletes();
     const oldType = target.setType ?? target.set_type ?? 'straight';
     if (oldType === newType) return;
     const newEvidenceClass = newType === 'warmup' ? null : currentEvidenceClass;
@@ -4611,16 +4623,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
 
   async function handleFinishWorkout() {
-    // A "Finish anyway" has already been confirmed once; read the flag and
-    // clear it at once so it can never carry over to a later Finish tap.
-    const skipEndedEarlyConfirm = skipEndedEarlyConfirmRef.current;
-    skipEndedEarlyConfirmRef.current = false;
     if (!activeWorkout) { navigation.goBack(); return; }
     // A set save in flight has not reached the database yet: finishing now
     // would total the workout without it. Do nothing; the button works again
     // a moment later, when the save ends.
     if (saving) return;
     if (finishingRef.current) return; // double-tap guard
+    // A "Finish anyway" has already been confirmed once; read the flag and
+    // clear it only now that this call is really going ahead (A3: a call the
+    // guards above drop must not use up the confirmation), so it can never
+    // carry over to a later Finish tap that does run.
+    const skipEndedEarlyConfirm = skipEndedEarlyConfirmRef.current;
+    skipEndedEarlyConfirmRef.current = false;
     setFinishingFlag(true);
     // A set deleted a moment ago is still inside its Undo window: delete it
     // for real first, so the finish counts (and the cloud holds) exactly the

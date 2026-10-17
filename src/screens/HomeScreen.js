@@ -529,6 +529,10 @@ export default function HomeScreen({ navigation, route }) {
     AsyncStorage.setItem('@volyume_seen_coaching_nudge', 'true').catch(() => {});
   }
 
+  // A5 refs (see the dataPulledVersion effect below).
+  const pulledFirstRunRef = useRef(true);
+  const homeFocusedRef = useRef(false);
+  const pulledWhileAwayRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
       // Reset starting flag when screen regains focus (prevents "Session in Progress"
@@ -539,8 +543,12 @@ export default function HomeScreen({ navigation, route }) {
           seedRoutinesIfNeeded(user.id).catch((e) => logWarn('HomeScreen.seedRoutines', e?.message));
           setSeeded(true);
         }
+        // This focus reload also covers any pull that landed while Home was away.
+        pulledWhileAwayRef.current = false;
         loadData();
       }
+      homeFocusedRef.current = true;
+      return () => { homeFocusedRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]),
   );
@@ -557,10 +565,15 @@ export default function HomeScreen({ navigation, route }) {
 
   // A background or foreground sync pull finished: re-read what it may have
   // written (a weigh-in from another phone) without the user leaving Home.
+  // A5: the first run (mount, with a version already above zero) is skipped,
+  // the focus reload above already loads; and while Home is unfocused the pull
+  // is only marked, so the next focus reload covers it instead of loading in
+  // the background.
   useEffect(() => {
-    if (dataPulledVersion > 0 && user?.id) {
-      loadDataRef.current?.().catch(() => { /* best-effort */ });
-    }
+    if (pulledFirstRunRef.current) { pulledFirstRunRef.current = false; return; }
+    if (!(dataPulledVersion > 0 && user?.id)) return;
+    if (!homeFocusedRef.current) { pulledWhileAwayRef.current = true; return; }
+    loadDataRef.current?.().catch(() => { /* best-effort */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataPulledVersion]);
 
@@ -1133,8 +1146,11 @@ export default function HomeScreen({ navigation, route }) {
       // Every figure that depends on the weight re-reads now (the strip's
       // recent weights, "ever weighed in", this week's weigh-in count), and the
       // fresh request id drops any slower load still in flight from before.
-      await loadTodayWeight();
-      await loadFirstReviewFacts();
+      // A4: ONE request id for both reads. Each call bumping loadReqRef on its
+      // own made the second invalidate the first's results mid-flight.
+      const weighReqId = ++loadReqRef.current;
+      await loadTodayWeight(weighReqId);
+      await loadFirstReviewFacts(weighReqId);
       toast.show('Weight saved.', { variant: 'success' });
       // Activation funnel: a deliberate weigh-in from Today, once per user,
       // count only, never the value (same event BodyMetricsScreen emits on

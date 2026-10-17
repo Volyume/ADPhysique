@@ -27,6 +27,11 @@
  * dropping the visible duration and set-count chips from screen readers.
  * Pins that the label now carries both, in the same wording.
  */
+// C6 (audit 2026-10-17): the screen reloads on focus; outside a navigator the
+// focus hook runs its effect once on mount.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb) => { require('react').useEffect(() => cb(), [cb]); },
+}));
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
 jest.mock('../../components/PeekMenu', () => {
   const React = require('react');

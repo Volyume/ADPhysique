@@ -38,7 +38,7 @@ import { resolveProgressScanCoachNote } from '../lib/progressScanCoachResolver';
 import { composeScanEvidencePacket } from '../lib/progressScanCheckInEvidence';
 import { recordScanClassification } from '../lib/progressScanClassificationHistory';
 import { confidenceChipLabel } from '../lib/progressScanResultsContract';
-import { localDayKey, localWeekStartMs } from '../lib/dayKey';
+import { localDayKey, localWeekStartMs, localWeekEndMs } from '../lib/dayKey';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import {
   formatWeekRange, hasLoggedToday, earliestWeightTs,
@@ -551,14 +551,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // sessions happened. getWeeklyVolumeByMuscle returns [lastWeek, thisWeek]
         // with the same allocation the heatmap uses. ALGO-001: anchor the
         // windows to the END of this Monday-anchored check-in week
-        // (weekStartMs + 7d), so "this week" is the week being submitted and
+        // (localWeekEndMs, the next local Monday), so "this week" is the week being submitted and
         // "last week" is the full prior Mon-Sun week, not a rolling 7-day
         // window read off the wall clock.
         let volDeltaPct = null;
         let volThisWeek = null;
         let volLastWeek = null;
         try {
-          const vol = await getWeeklyVolumeByMuscle(user.id, 2, weekStartMs + 7 * 86400000);
+          const vol = await getWeeklyVolumeByMuscle(user.id, 2, localWeekEndMs(weekStartMs));
           if (Array.isArray(vol) && vol.length === 2) {
             const sumSets = (w) => Object.values(w?.volumeByMuscle ?? {}).reduce((a, n) => a + (Number(n) || 0), 0);
             volLastWeek = Math.round(sumSets(vol[0]));

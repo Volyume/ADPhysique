@@ -12,11 +12,9 @@
  *      `same_age_band`) read as copy, never a raw key.
  *   3. The age band joins the handle/place caption line when the card
  *      carries one.
- *   4. `connectDenyLine`: the one deterministic case (already following,
- *      still refused) reads "Not taking requests"; every other case
- *      names the thing that might open it, never a guess dressed as fact.
- *   5. `can_connect === false` hides Connect and renders Follow with that
- *      line; a fallback row (empty reasons) never shows a reasons line.
+ *   4. Audit E2: the row's never-enabled Connect/Message branch is gone;
+ *      the old props are inert and the source carries none of them. A
+ *      fallback row (empty reasons) never shows a reasons line.
  *
  * The client library is mocked: this is about what the card composes
  * from a card object, not about the RPC.
@@ -63,7 +61,9 @@ jest.mock('../../../lib/community', () => ({
   unfollow: jest.fn(),
 }));
 
-import ProfileCard, { placeLine, connectDenyLine } from '../ProfileCard';
+import fs from 'fs';
+import path from 'path';
+import ProfileCard, { placeLine } from '../ProfileCard';
 
 function flattenText(node) {
   if (node == null) return '';
@@ -105,17 +105,6 @@ describe('placeLine: place_label leads, area_label is the pre-163 fallback', () 
   });
 });
 
-describe('connectDenyLine: what it can state as fact versus what it can only invite', () => {
-  test('already following, still refused: only "nobody" fits, so it says so', () => {
-    expect(connectDenyLine({ relationship: { following: 'accepted' } })).toBe('Not taking requests');
-  });
-
-  test('not yet following: names the one thing that might open it', () => {
-    expect(connectDenyLine({ relationship: { following: 'none' } }))
-      .toBe('Accepts requests from people who follow them');
-  });
-});
-
 describe('rendering', () => {
   async function mount(props) {
     let tree;
@@ -151,18 +140,19 @@ describe('rendering', () => {
     expect(flattenText(tree.toJSON())).not.toMatch(/·\s*$/);
   });
 
-  test('can_connect false hides Connect, shows Follow, and the deny line', async () => {
-    const tree = await mount({
-      card: baseCard({ can_connect: false }), me: ME, showConnect: true,
-    });
+  // Audit E2: the row's never-enabled connect branch is gone. Even a caller
+  // that still passes the old props gets Follow alone, never Connect.
+  test('the old connect props are inert: Follow only, no Connect, no deny line', async () => {
+    const tree = await mount({ card: baseCard({ can_connect: true }), me: ME, showConnect: true, onConnect: jest.fn(), onMessage: jest.fn() });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Accepts requests from people who follow them');
     expect(text).not.toContain('Connect');
+    expect(text).not.toContain('Accepts requests from people who follow them');
+    expect(text).not.toContain('Not taking requests');
   });
 
-  test('can_connect true (or absent): the deny line never appears', async () => {
-    const tree = await mount({ card: baseCard(), me: ME, showConnect: true });
-    expect(flattenText(tree.toJSON())).not.toContain('Accepts requests from people who follow them');
-    expect(flattenText(tree.toJSON())).not.toContain('Not taking requests');
+  test('source guard: ProfileCard carries no connect props or ConnectButton', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'ProfileCard.js'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(src).not.toMatch(/showConnect|onConnect|onMessage|ConnectButton|connectDenyLine/);
   });
 });

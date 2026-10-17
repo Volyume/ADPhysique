@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
 import { View, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import Text from '../components/Text';
@@ -191,12 +192,20 @@ export default function WorkoutHistoryScreen({ navigation }) {
   // JOIN in database.js, so no new database read is needed here.
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    loadWorkouts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  // C6: reload on every focus (a session finished, edited or deleted elsewhere
+  // shows when the person comes back), as AnalyticsScreen does. Only the first
+  // load shows the spinner; a later one is quiet and leaves the list in place
+  // if it fails.
+  const loadedOnceRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkouts({ quiet: loadedOnceRef.current });
+      loadedOnceRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id]),
+  );
 
-  async function loadWorkouts() {
+  async function loadWorkouts({ quiet = false } = {}) {
     const requestId = loadRequestRef.current + 1;
     loadRequestRef.current = requestId;
     const isCurrentRequest = () => loadRequestRef.current === requestId;
@@ -204,8 +213,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setLoadError(false);
+    if (!quiet) {
+      setLoading(true);
+      setLoadError(false);
+    }
     try {
       // LB-7: the list renders only the most recent 50 completed sessions, so
       // the database query and set fan-out are both bounded to that page.
@@ -234,7 +245,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
     } catch (e) {
       if (!isCurrentRequest()) return;
       logError('WorkoutHistoryScreen.loadWorkouts', e, { userId: user?.id });
-      setLoadError(true);
+      if (!quiet) setLoadError(true);
     } finally {
       if (isCurrentRequest()) setLoading(false);
     }

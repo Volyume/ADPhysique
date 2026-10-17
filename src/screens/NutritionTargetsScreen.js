@@ -233,7 +233,7 @@ function NumericField({ fieldStyle, inputStyle, ...props }) {
   );
 }
 
-function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor }) {
+function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor, energyUnit = 'kcal' }) {
   // CP-10 batch E (2026-07-10): sibling function-component scope, own
   // useTheme() call and shared buildLiveStyles(t). `barColor` itself already
   // arrives live from the caller (t.colors.macroProtein/macroCarb/macroFat,
@@ -271,7 +271,7 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
       {/* Descriptive %-of-calories this macro contributes (grams × its Atwater
           factor ÷ target kcal). Factual readout, not a judgement. */}
       {kcalPercent != null ? (
-        <Text style={[styles.macroPercent, live.macroPercent]}>{`~${kcalPercent}% of kcal`}</Text>
+        <Text style={[styles.macroPercent, live.macroPercent]}>{`~${kcalPercent}% of ${energyUnitLabel(energyUnit)}`}</Text>
       ) : null}
     </Card>
   );
@@ -1514,9 +1514,10 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       basis={results.proteinBasis}
                       kcalPercent={pct(results.proteinG, 4)}
                       barColor={t.colors.macroProtein}
+                      energyUnit={energyUnit}
                     />
-                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} barColor={t.colors.macroCarb} />
-                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)}   barColor={t.colors.macroFat} />
+                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} barColor={t.colors.macroCarb} energyUnit={energyUnit} />
+                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)}   barColor={t.colors.macroFat} energyUnit={energyUnit} />
                   </View>
                 );
               })()}
@@ -1771,10 +1772,10 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 const carbWhy = isGain
                   ? `Carbs are your main training fuel. Glycogen (the carbohydrate stored in muscle) powers you through your sets. By the fourth or fifth set it is almost exclusively glycogen being used. Your ${results.carbsG}g gives you plenty to top up between sessions and arrive at every workout ready to push hard. Better-fuelled sessions mean better training, which means more muscle growth.`
                   : isCut
-                  ? `After protein and fat are set, carbs fill the remaining ${carbKcal} kcal. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that's a sign to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
+                  ? `After protein and fat are set, carbs fill the remaining ${formatEnergy(carbKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that's a sign to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
                   : isMaintain
-                  ? `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. At maintenance there's no need to restrict them. Your ${results.carbsG}g keeps glycogen full so every session has the fuel to push hard. Timing the bulk of them around training is the only nuance worth bothering with.`
-                  : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
+                  ? `Carbs fill the remaining ${formatEnergy(carbKcal, energyUnit)} ${energyUnitLabel(energyUnit)} after protein and fat are set. At maintenance there's no need to restrict them. Your ${results.carbsG}g keeps glycogen full so every session has the fuel to push hard. Timing the bulk of them around training is the only nuance worth bothering with.`
+                  : `Carbs fill the remaining ${formatEnergy(carbKcal, energyUnit)} ${energyUnitLabel(energyUnit)} after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
 
                 return (
                   <View style={[styles.whyGroup, live.whyGroup]}>

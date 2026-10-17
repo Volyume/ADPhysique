@@ -138,3 +138,52 @@ describe('Toast auto-dismiss (QA repro)', () => {
     expect(onTimeout).not.toHaveBeenCalled();
   });
 });
+
+// Audit A6 (2026-10-17): the "Set deleted." Undo toast stayed up after its
+// delete had been committed by something else (a finish, the screen flush).
+// hide(key) takes a keyed toast away, queued or showing, WITHOUT running its
+// onTimeout (the caller already did that work).
+describe('Toast hide(key) (audit A6)', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockAccessibilityInfo.isScreenReaderEnabled.mockResolvedValue(false);
+    mockAccessibilityInfo.addEventListener.mockReturnValue({ remove: jest.fn() });
+  });
+  afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); jest.clearAllMocks(); });
+
+  test('hide removes the keyed toast that is showing and does not run its onTimeout', () => {
+    const onTimeout = jest.fn();
+    let api;
+    function Grab() { api = useToast(); return null; }
+    let tree;
+    act(() => {
+      tree = create(
+        <ToastProvider>
+          <Grab />
+        </ToastProvider>,
+      );
+    });
+    act(() => {
+      api.show('Set deleted.', { variant: 'undo', key: 'set-delete-s1', action: { label: 'Undo', onPress: () => {} }, onTimeout });
+    });
+    act(() => { jest.advanceTimersByTime(50); });
+    expect(text(tree)).toContain('Set deleted.');
+    act(() => { api.hide('set-delete-s1'); });
+    act(() => { jest.advanceTimersByTime(500); });
+    expect(text(tree)).not.toContain('Set deleted.');
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  test('hide leaves a toast with a different key alone', () => {
+    let api;
+    function Grab() { api = useToast(); return null; }
+    let tree;
+    act(() => { tree = create(<ToastProvider><Grab /></ToastProvider>); });
+    act(() => { api.show('Set deleted.', { variant: 'undo', key: 'set-delete-s1', action: { label: 'Undo', onPress: () => {} } }); });
+    act(() => { jest.advanceTimersByTime(50); });
+    act(() => { api.hide('set-delete-other'); });
+    act(() => { jest.advanceTimersByTime(500); });
+    expect(text(tree)).toContain('Set deleted.');
+  });
+});
+
