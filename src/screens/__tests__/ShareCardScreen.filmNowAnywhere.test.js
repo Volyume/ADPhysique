@@ -147,6 +147,7 @@ const mockEngine = {
   cancelExport: jest.fn(() => Promise.resolve()),
   setLockScreenWallpaper: jest.fn(() => Promise.resolve()),
   // As the real wrapper: nothing to say for a cancel or a busy engine.
+  errorContext: jest.fn(() => ({})),
   lineForExportError: jest.fn((code) => (code === 'E_CANCELLED' || code === 'E_BUSY' ? null : 'The video could not be made on this phone this time.')),
   EXPORT_ERROR: { UNAVAILABLE: 'E_UNAVAILABLE', CANCELLED: 'E_CANCELLED', BUSY: 'E_BUSY', DECODE: 'E_DECODE' },
 };

@@ -130,6 +130,7 @@ const mockEngine = {
   exportShareVideo: jest.fn(() => Promise.resolve({ uri: 'file:///cache/volyume-share.mp4' })),
   cancelExport: jest.fn(() => Promise.resolve()),
   setLockScreenWallpaper: jest.fn(() => Promise.resolve()),
+  errorContext: jest.fn(() => ({})),
   lineForExportError: jest.fn((code) => (code === 'cancelled' ? null : "Couldn't make the video. Try again.")),
   EXPORT_ERROR: { UNAVAILABLE: 'unavailable', CANCELLED: 'cancelled', DECODE: 'decode_failed', BUSY: 'E_BUSY' },
 };
