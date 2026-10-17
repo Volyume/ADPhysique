@@ -155,6 +155,15 @@ export const WHATS_NEW = {
   // 2.14.0 (2026-10-12): the new plan builder (register D222) and the
   // calorie choice inside the range (D226); the privacy notice rides inside
   // the Community line.
+  // 2.20.0 (2026-10-17): founder order, "simplify it ... keep it high level
+  // as to what the user sees": the logger revamp, recording and sharing
+  // set videos, and Community improvements. The privacy line rides inside
+  // the videos line, as the policy promises.
+  '2.20.0': [
+    { icon: 'barbell-outline', text: 'The workout logger has been completely revamped. Logging, fixing a set and finishing a workout are all quicker and smoother.' },
+    { icon: 'videocam-outline', text: 'Record videos of your sets and share them, with your lifts and PRs on top. Videos stay on your phone and are never uploaded; our privacy policy says so, in Settings, under Privacy and legal.' },
+    { icon: 'people-outline', text: 'Community has been improved, with smoother feeds, chats and profiles.' },
+  ],
   // 2.19.0 (2026-10-16): the same two things, with the food audit (register
   // D230 landing note): a note on any food, your own portions, the history
   // import, a recipe's cooked weight, and an edit that keeps an entry's

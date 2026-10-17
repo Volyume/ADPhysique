@@ -195,6 +195,9 @@ private notes — with the single founder-approved exception (progress-photos
 programme, 2026-07-03) of the Pro before/after progress card, which may show
 bodyweight beside each photo; that card is withheld entirely under calm mode
 or an open ED flag, and name/measurements/private notes stay banned on it.
+A second founder-approved exception (2026-10-17, "Keep it as it is"): the
+session share card's opt-in "show progress" (off by default) may show a cut
+goal's weekly bodyweight change, withheld under calm mode or an open ED flag.
 Consent flows fail CLOSED for new users (a transient read failure must not
 bypass the gate).
 
