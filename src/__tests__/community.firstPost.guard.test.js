@@ -5,7 +5,7 @@
  * property here, and the behaviour tests cannot see an order that a refactor
  * quietly swaps), locking:
  *
- *  1. The auto-share effect on WorkoutSummaryScreen: the sharing and
+ *  1. (2026-10-17: the summary sheet is REMOVED, see the guard below.) The auto-share effect: the sharing and
  *     membership checks, THEN the calm / open-flag gate
  *     (`sessionShareGateState`), THEN the first-post confirmation read, THEN
  *     the sheet, and only after all of those the publish. The sheet decision
@@ -32,7 +32,6 @@ const path = require('path');
 const read = (rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8');
 const SUMMARY = read('../screens/WorkoutSummaryScreen.js');
 const HUB = read('../screens/CommunityHubScreen.js');
-const SHEET = read('../components/community/FirstPostSheet.js');
 const FIRST_POST = read('../lib/community/firstPost.js');
 const JOIN_RECEIPT = read('../lib/community/joinReceipt.js');
 const AMBIENT = read('../lib/community/ambient.js');
@@ -47,31 +46,34 @@ function between(source, startMarker, endMarker) {
 
 const EFFECT = between(SUMMARY, 'ambientPublishedRef.current = true;', '}, [readOnly, workoutId, user?.id]);');
 const HELPER = between(SUMMARY, 'const runAmbientPublish = async () => {', 'ambientPublishedRef.current = true;');
-const ANSWER = between(SUMMARY, 'const answerFirstPost = async (choice) => {', '// Communities revamp phase 3 (Q2): decide whether to show the');
-
-describe('the summary decision order: the sheet sits after the gate and before the publish', () => {
-  test('membership and sharing-on, then the gate, then the confirmation, then the sheet, then the publish', () => {
-    const at = (needle) => {
-      const i = EFFECT.indexOf(needle);
-      expect(i).toBeGreaterThan(-1);
-      return i;
-    };
-    const order = [
-      at('readCachedMe(user.id)'),
-      at("skipped: 'no_profile'"),
-      at("skipped: 'sharing_off'"),
-      at('sessionShareGateState(user.id, share.share_sessions)'),
-      at('readFirstPostConfirmed(user.id)'),
-      at('setFirstPostSheetOpen(true)'),
-      at('runAmbientPublish()'),
-    ];
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
+describe('the summary has no first-post sheet and no post-to-Community action (founder order 2026-10-17)', () => {
+  test('no sheet, no answer handler, no sheet state', () => {
+    expect(SUMMARY).not.toMatch(/FirstPostSheet|firstPostSheet|answerFirstPost|setFirstPostSheet|saveShareSessions|markFirstPostConfirmed/);
   });
 
-  test('an unconfirmed person returns before the publish is reachable', () => {
-    const ask = EFFECT.indexOf('setFirstPostSheetOpen(true);');
+  test('no invitation copy and no post action on the strip', () => {
+    expect(SUMMARY).not.toMatch(/Only you can see this session|Post this session|Share this session|are what Community is for/);
+    expect(SUMMARY).not.toMatch(/Share every session/);
+  });
+
+  test('the factual states stay', () => {
+    expect(SUMMARY).toContain("'Shared to Community'");
+    expect(SUMMARY).toContain("'Shares to Community when you are back online'");
+    expect(SUMMARY).toContain("'Not shared to Community'");
+    expect(SUMMARY).toContain("'Check sharing settings'");
+    expect(SUMMARY).toContain("'Add a note'");
+  });
+
+  test('unconfirmed: the gate runs first, then the outcome is recorded silently and nothing is published', () => {
+    const gate = EFFECT.indexOf('sessionShareGateState(user.id, share.share_sessions)');
+    const read = EFFECT.indexOf('readFirstPostConfirmed(user.id)');
+    const skip = EFFECT.indexOf("skipped: 'not_confirmed'");
     const publish = EFFECT.indexOf('runAmbientPublish()');
-    expect(EFFECT.slice(ask, publish)).toMatch(/return;/);
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(read);
+    expect(read).toBeLessThan(skip);
+    expect(skip).toBeLessThan(publish);
+    expect(EFFECT.slice(skip, publish)).toMatch(/return;/);
   });
 
   test('a closed (or unanswerable) gate records "gated" and returns before the confirmation is even read', () => {
@@ -82,87 +84,10 @@ describe('the summary decision order: the sheet sits after the gate and before t
     expect(between_).toMatch(/if \(!gateOpen\) \{ setAmbientOutcome\(\{ created: 0, queued: 0, skipped: 'gated' \}\); return; \}/);
   });
 
-  test('publishAmbientItems has one call site, inside runAmbientPublish', () => {
+  test('publishAmbientItems has one call site, inside runAmbientPublish, reached once', () => {
     expect(SUMMARY.match(/publishAmbientItems\(/g)).toHaveLength(1);
     expect(HELPER).toMatch(/publishAmbientItems\(/);
-  });
-
-  test('runAmbientPublish is reached from exactly two places, each past the confirmation', () => {
-    expect(SUMMARY.match(/runAmbientPublish\(\)/g)).toHaveLength(2);
-    expect(EFFECT.indexOf('readFirstPostConfirmed(')).toBeLessThan(EFFECT.indexOf('runAmbientPublish()'));
-    expect(ANSWER.indexOf('markFirstPostConfirmed(')).toBeGreaterThan(-1);
-    expect(ANSWER.indexOf('markFirstPostConfirmed(')).toBeLessThan(ANSWER.indexOf('runAmbientPublish()'));
-  });
-});
-
-describe('the sheet answers go through the existing sharing path', () => {
-  test('saveShareSessions, then the confirmation, then the publish; never a direct store write', () => {
-    const save = ANSWER.indexOf('saveShareSessions(');
-    const mark = ANSWER.indexOf('markFirstPostConfirmed(');
-    const publish = ANSWER.indexOf('runAmbientPublish()');
-    expect(save).toBeGreaterThan(-1);
-    expect(save).toBeLessThan(mark);
-    expect(mark).toBeLessThan(publish);
-    expect(ANSWER).not.toMatch(/writeShareSettings\(/);
-    expect(ANSWER).not.toMatch(/AsyncStorage/);
-  });
-
-  test('Not now returns before anything is written, marked or posted', () => {
-    const notNow = ANSWER.indexOf("choice === 'not_now'");
-    expect(notNow).toBeGreaterThan(-1);
-    expect(notNow).toBeLessThan(ANSWER.indexOf('saveShareSessions('));
-    expect(ANSWER.slice(notNow, ANSWER.indexOf('let confirmed')))
-      .toMatch(/keepPrivate\(\); return;/);
-  });
-
-  test('a minor is clamped to followers and passed as a minor to the setter', () => {
-    expect(ANSWER).toMatch(/sessions_audience: isMinor \? 'followers' : choice/);
-    expect(ANSWER).toMatch(/saveShareSessions\(user\.id, prev, next, \{ isMinor \}\)/);
-  });
-
-  test('rules_outdated confirms nothing', () => {
-    const rules = ANSWER.indexOf("saved?.status === 'rules_outdated'");
-    expect(rules).toBeGreaterThan(-1);
-    expect(rules).toBeLessThan(ANSWER.indexOf('markFirstPostConfirmed('));
-  });
-
-  test('the sheet is rendered by the screen and wired to the answer handler', () => {
-    expect(SUMMARY).toMatch(/<FirstPostSheet\s+visible=\{firstPostSheetOpen\}\s+isMinor=\{firstPostSheetMinor\}\s+onChoose=\{answerFirstPost\}\s+onNotNow=\{\(\) => answerFirstPost\('not_now'\)\}/);
-  });
-});
-
-describe('the sheet itself', () => {
-  test('is the app BottomSheet and Button, with the exact words', () => {
-    expect(SHEET).toMatch(/import BottomSheet from '\.\.\/BottomSheet';/);
-    expect(SHEET).toMatch(/import Button from '\.\.\/Button';/);
-    expect(SHEET).toContain("export const FIRST_POST_TITLE = 'Share this session?';");
-    expect(SHEET).toContain(
-      "'Every session you finish can post to Community automatically: exercises, sets, the total lifted and any PRs. Never your body, food or coaching. Who should see them?'",
-    );
-  });
-
-  test('three actions, in this order: Everyone, People who follow me, Not now', () => {
-    const a = SHEET.indexOf('title="Everyone"');
-    const b = SHEET.indexOf('title="People who follow me"');
-    const c = SHEET.indexOf('title="Not now"');
-    expect(a).toBeGreaterThan(-1);
-    expect(a).toBeLessThan(b);
-    expect(b).toBeLessThan(c);
-  });
-
-  test('only Everyone is withheld from a minor', () => {
-    expect(SHEET).toMatch(/\{isMinor \? null : \(\s*<Button[\s\S]*?title="Everyone"/);
-    expect(SHEET.match(/isMinor/g).length).toBeGreaterThanOrEqual(2);
-  });
-
-  test('a swipe, a scrim tap or back is Not now', () => {
-    expect(SHEET).toMatch(/onClose=\{onNotNow\}/);
-  });
-
-  test('Everyone and People who follow me carry the same weight; Not now is a plain equal way out', () => {
-    expect(SHEET).toMatch(/variant="primary"\s+title="Everyone"/);
-    expect(SHEET).toMatch(/variant="primary"\s+title="People who follow me"/);
-    expect(SHEET).toMatch(/variant="secondary"\s+title="Not now"/);
+    expect(SUMMARY.match(/runAmbientPublish\(\)/g)).toHaveLength(1);
   });
 });
 
@@ -218,13 +143,9 @@ describe('the Hub receipt', () => {
 
 describe('copy and defaults', () => {
   test('no em dash in any file this lane adds', () => {
-    for (const source of [SHEET, FIRST_POST, JOIN_RECEIPT]) {
+    for (const source of [FIRST_POST, JOIN_RECEIPT]) {
       expect(source).not.toMatch(/—/);
     }
-  });
-
-  test('no first-person plural for a coaching decision in the sheet words', () => {
-    expect(SHEET.replace(/\/\*[\s\S]*?\*\//, '')).not.toMatch(/\b[Ww]e\b/);
   });
 
   test('D194 addendum 2 stands: sharing is still on by default, to everyone', () => {

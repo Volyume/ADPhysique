@@ -96,11 +96,51 @@ function exportError(code, detail) {
   return err;
 }
 
+/**
+ * A native message with every file location reduced to the kind of folder
+ * and the extension ("caches/*.png", "documents/*.mov"), so a log never
+ * carries a path with a person's container or file names in it.
+ */
+export function scrubDetail(text) {
+  if (text == null) return null;
+  const kindOf = (path) => {
+    const p = path.toLowerCase();
+    if (p.includes('/caches/') || p.includes('/cache/')) return 'caches';
+    if (p.includes('/documents/') || p.includes('/files/')) return 'documents';
+    if (p.includes('/tmp/')) return 'tmp';
+    return 'other';
+  };
+  const scrubbed = String(text).replace(
+    /(?:file:\/\/|content:\/\/)\S*|\/(?:var|private|data|storage|Users|tmp)\/\S*/g,
+    (m) => {
+      const tail = (m.match(/[)"'.,;:]+$/) || [''])[0];
+      const clean = m.slice(0, m.length - tail.length).split('?')[0];
+      const name = clean.slice(clean.lastIndexOf('/') + 1);
+      const dot = name.lastIndexOf('.');
+      const ext = dot > 0 ? name.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+      return `${kindOf(clean)}/*${ext ? `.${ext}` : ''}${tail}`;
+    },
+  );
+  return scrubbed.slice(0, 300);
+}
+
+/**
+ * What a log may say about an engine failure (Sentry VOLYUME-3N: the native
+ * message never reached the event): the code and the scrubbed native detail,
+ * which for a validation failure names the field ("invalid rect").
+ */
+export function errorContext(e) {
+  return {
+    code: e && typeof e.code === 'string' ? e.code : null,
+    detail: e && e.detail ? scrubDetail(e.detail) : null,
+  };
+}
+
 function fromNativeError(e, fallbackCode = EXPORT_ERROR.ENCODE) {
   const nativeCode = e && typeof e.code === 'string' ? e.code : null;
   const code = nativeCode && KNOWN_CODES.has(nativeCode) ? nativeCode : fallbackCode;
   const detail = [nativeCode, e && e.message ? String(e.message) : null].filter(Boolean).join(': ');
-  return exportError(code, detail || null);
+  return exportError(code, scrubDetail(detail) || null);
 }
 
 let resolved = false;
@@ -164,17 +204,23 @@ function toNativeOptions(options) {
     if (!Array.isArray(o.matrix) || o.matrix.length !== 20 || !o.matrix.every(isFiniteNumber)) throw invalid('matrix');
     matrix = o.matrix.slice();
   }
-  return {
+  const payload = {
     sourceUri: o.sourceUri,
     startMs: o.startMs,
     durationMs: o.durationMs,
-    matrix,
     rect: { x: r.x, y: r.y, w: r.w, h: r.h },
     overlayPngUri: o.overlayPngUri,
     outWidth: o.outWidth,
     outHeight: o.outHeight,
     bitrate: Math.round(bitrate),
   };
+  // No look: the key is left out, never sent as null (Sentry VOLYUME-3N).
+  // Expo's iOS bridge hands a JS null inside an options object to Swift as a
+  // boxed nil rather than NSNull, which the native parser read as a
+  // malformed matrix and refused with E_INVALID. Both natives read a
+  // missing key as no look.
+  if (matrix) payload.matrix = matrix;
+  return payload;
 }
 
 let busy = false;

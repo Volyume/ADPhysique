@@ -33,7 +33,6 @@ const TestRenderer = require('react-test-renderer');
 const fs = require('fs');
 const path = require('path');
 const SectionLabel = require('../../components/SectionLabel').default;
-const Button = require('../../components/Button').default;
 const BackHeader = require('../../components/BackHeader').default;
 
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn().mockResolvedValue(true), shareAsync: jest.fn() }));
@@ -291,10 +290,11 @@ describe('opening the screen never selects a set video', () => {
 });
 
 describe('a video from the camera roll uses the same pipeline as a set video', () => {
-  test('Background > Video > From your gallery opens the picker for videos and hands it to acceptClip', () => {
-    expect(SCREEN).toMatch(/launchImageLibraryAsync\(\{ mediaTypes: \['videos'\] \}\)/);
-    expect(SCREEN).toMatch(/acceptClip\(\{ id: null, uri: asset\.uri, durationMs: Number\(asset\.duration\) \|\| 0, source: 'gallery' \}\)/);
-    expect(SCREEN).toMatch(/title="From your gallery"[^\n]*onPress=\{pickGalleryVideo\}/);
+  test('Background > Gallery opens the picker for photos AND videos and hands a video to acceptClip', () => {
+    expect(SCREEN).toMatch(/launchImageLibraryAsync\(\{ mediaTypes: \['images', 'videos'\]/);
+    expect(SCREEN).toMatch(/acceptClip\(\{ id: null, uri: picked\.uri, durationMs: Number\(picked\.duration\) \|\| 0, source: 'gallery' \}\)/);
+    expect(SCREEN).toMatch(/onPress=\{pickGymPhoto\}/);
+    expect(SCREEN).not.toMatch(/title="From your gallery"/);
     // The trim bar is the page's, for any chosen video, set or camera roll.
     expect(PAGE_SRC).toMatch(/\{clip && !suppress \? \([\s\S]*?<VideoTrimBar/);
   });
@@ -302,11 +302,9 @@ describe('a video from the camera roll uses the same pipeline as a set video', (
   test('picking a camera-roll video shows the trim bar, the look strip and the preview', async () => {
     const ImagePicker = require('expo-image-picker');
     ImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: true });
-    ImagePicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///roll/v.mp4', duration: 20000 }] });
+    ImagePicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///roll/v.mp4', type: 'video', duration: 20000 }] });
     const tree = await mount(SESSION);
-    await press(byLabel(tree.root, 'Video, choose a video')[0]);
-    const sheet = tree.root.findAll((n) => n.type === Button && n.props.title === 'From your gallery')[0];
-    await press(sheet);
+    await press(byLabel(tree.root, 'Gallery, choose a photo or video')[0]);
     await waitFor(() => framers(card(tree)).length === 1);
     expect(tree.root.findAll((n) => n.type === 'VideoTrimBar')).toHaveLength(1);
     expect(headings(tree)).toContain('Look');

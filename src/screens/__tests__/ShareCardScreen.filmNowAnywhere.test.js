@@ -147,6 +147,7 @@ const mockEngine = {
   cancelExport: jest.fn(() => Promise.resolve()),
   setLockScreenWallpaper: jest.fn(() => Promise.resolve()),
   // As the real wrapper: nothing to say for a cancel or a busy engine.
+  errorContext: jest.fn(() => ({})),
   lineForExportError: jest.fn((code) => (code === 'E_CANCELLED' || code === 'E_BUSY' ? null : 'The video could not be made on this phone this time.')),
   EXPORT_ERROR: { UNAVAILABLE: 'E_UNAVAILABLE', CANCELLED: 'E_CANCELLED', BUSY: 'E_BUSY', DECODE: 'E_DECODE' },
 };
@@ -325,10 +326,11 @@ beforeEach(() => {
 });
 
 describe('with no workout, the chooser offers Film now', () => {
-  test.each([['a PR from a lift\'s history', PR_ONLY], ['a milestone', MILESTONE]])('%s: Film now beside the gallery', async (_name, params) => {
+  test.each([['a PR from a lift\'s history', PR_ONLY], ['a milestone', MILESTONE]])('%s: Film now in the chooser', async (_name, params) => {
     const { tree } = await mount(params);
     await openChooser(tree);
-    expect(buttonTitled(tree, 'From your gallery')).toHaveLength(1);
+    // The gallery is one route, in the Background row (photos and videos).
+    expect(buttonTitled(tree, 'From your gallery')).toHaveLength(0);
     expect(buttonTitled(tree, 'Film now')).toHaveLength(1);
     // There is no workout, so nothing lists a workout's videos.
     expect(mockListClips).not.toHaveBeenCalled();
@@ -359,7 +361,7 @@ describe('Film now with no workout opens Volyume\'s camera for this share alone'
     expect(mockGrab).toHaveBeenCalledWith(expect.anything(), SHARED.uri, 0);
     expect(lastStill().bgPhoto.name).toBe('F-filmed-0');
     expect(texts(tree)).toContain('Share video');
-    expect(videoSegment(tree).props.accessibilityState).toEqual(expect.objectContaining({ selected: true }));
+    expect(byLabel(tree, 'Camera, take a photo or record a video')[0].props.accessibilityState).toEqual(expect.objectContaining({ selected: true }));
     const bar = trimBar(tree);
     expect(bar.props.uri).toBe(SHARED.uri);
     expect(bar.props.durationMs).toBe(9000);

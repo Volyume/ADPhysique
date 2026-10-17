@@ -107,7 +107,9 @@ describe('L5: one truthful audience sentence', () => {
     expect(receipt).not.toContain('Sessions you choose to share');
     const summary = read('screens/WorkoutSummaryScreen.js');
     expect(summary).toContain('sessionsSharingSentence(true, ambientOutcome?.sessionAudience');
-    expect(summary).toContain('Off: only you see your sessions.');
+    // Founder order 2026-10-17: the summary no longer offers or explains an
+    // off state; the sentence is only shown once a session has been shared.
+    expect(summary).not.toContain('Only you can see this session');
     expect(summary).not.toContain('People who train like you can see this session.');
   });
 });

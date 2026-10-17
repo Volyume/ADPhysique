@@ -130,6 +130,7 @@ const mockEngine = {
   exportShareVideo: jest.fn(() => Promise.resolve({ uri: 'file:///cache/volyume-share.mp4' })),
   cancelExport: jest.fn(() => Promise.resolve()),
   setLockScreenWallpaper: jest.fn(() => Promise.resolve()),
+  errorContext: jest.fn(() => ({})),
   lineForExportError: jest.fn((code) => (code === 'cancelled' ? null : "Couldn't make the video. Try again.")),
   EXPORT_ERROR: { UNAVAILABLE: 'unavailable', CANCELLED: 'cancelled', DECODE: 'decode_failed', BUSY: 'E_BUSY' },
 };
@@ -273,11 +274,11 @@ beforeEach(() => {
 const SECTIONS = ['Format', 'Theme', 'Background', 'Look', 'Top lift', 'Quote or caption', 'What to include'];
 
 describe('a video is one more background on the one share screen', () => {
-  test('with no video: the screen is the image screen, with Video offered beside Gallery, Photo and None', async () => {
+  test('with no video: the screen is the image screen, with Video offered beside Gallery, Camera and None', async () => {
     const { tree } = await mount(SESSION);
     const all = texts(tree);
     expect(all).toContain('Share image');
-    for (const label of ['Gallery', 'Photo', 'Video', 'None']) expect(all).toContain(label);
+    for (const label of ['Gallery', 'Camera', 'Video', 'None']) expect(all).toContain(label);
     for (const s of ['Format', 'Theme', 'Background', 'Quote or caption', 'What to include']) expect(all).toContain(s);
   });
 
@@ -328,7 +329,7 @@ describe('choosing a video', () => {
     expect(texts(second.tree)).not.toContain('Your videos from this workout');
   });
 
-  test('"Video" opens the chooser with this workout\'s videos, the gallery and Film now; a tap makes that video the background', async () => {
+  test('"Video" opens the chooser with this workout\'s videos, and Film now; a tap makes that video the background', async () => {
     const { tree } = await mount(SESSION);
     const videoBtn = hostsByLabel(tree, 'Video, choose a video')[0];
     expect(videoBtn).toBeDefined();
@@ -336,7 +337,6 @@ describe('choosing a video', () => {
     const all = texts(tree);
     expect(all).toContain('Choose a video');
     expect(all).toContain('Bench press, set 3');
-    expect(buttonTitled(tree, 'From your gallery').length).toBeGreaterThan(0);
     expect(buttonTitled(tree, 'Film now').length).toBeGreaterThan(0);
     const row = hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0];
     await press(row);
@@ -351,14 +351,13 @@ describe('choosing a video', () => {
     expect(mockOpenRecorder).toHaveBeenCalledWith({ source: 'share' });
   });
 
-  test('a gallery video is picked with the system picker and its length probed', async () => {
-    mockPicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///gallery/v.mp4', duration: 30000 }] });
+  test('Gallery (photo or video) picks a video with the system picker and its length probed', async () => {
+    mockPicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///gallery/v.mp4', type: 'video', duration: 30000 }] });
     mockEngine.probeVideo.mockResolvedValue({ durationMs: 30000, width: 1920, height: 1080 });
     mockGrab.mockImplementation((_S, uri, ms) => ({ image: FAKE_FRAME, width: 1920, height: 1080, durationMs: 30000, ms }));
     const { tree } = await mount(SESSION);
-    await press(hostsByLabel(tree, 'Video, choose a video')[0]);
-    await press(buttonTitled(tree, 'From your gallery')[0]);
-    expect(mockPicker.launchImageLibraryAsync).toHaveBeenCalledWith({ mediaTypes: ['videos'] });
+    await press(hostsByLabel(tree, 'Gallery, choose a photo or video')[0]);
+    expect(mockPicker.launchImageLibraryAsync).toHaveBeenCalledWith(expect.objectContaining({ mediaTypes: ['images', 'videos'] }));
     expect(mockEngine.probeVideo).toHaveBeenCalledWith('file:///gallery/v.mp4');
     expect(mockGrab).toHaveBeenCalledWith(expect.anything(), 'file:///gallery/v.mp4', 0);
     expect(texts(tree)).toContain('Share video');

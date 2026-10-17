@@ -2868,7 +2868,13 @@ export default function HomeScreen({ navigation, route }) {
               </Text>
             </TouchableOpacity>
           </Card>
-        ) : activePlan && nextWorkout ? (
+        ) : activePlan && displayWorkout ? (
+          /* Founder device report 2026-10-17 (2.20.0): gated on the session
+             this hero SHOWS and STARTS (displayWorkout: the options-sheet
+             pick, else the plan's next), never on nextWorkout alone. On a
+             resolved week nextWorkout is null by design (B-1), so a day
+             picked through "Do another session" used to fall past this
+             state to "No active plan yet" with nothing to start. */
           <Card surface="surfaceElevated" style={styles.heroCard}>
             {/* Founder device report 2026-09-07: planProgress bakes in the
                 plan's own name (goal, phase and split can all be present),

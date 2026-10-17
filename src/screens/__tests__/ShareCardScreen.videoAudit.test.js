@@ -443,10 +443,10 @@ describe('E: a photo chosen after a video replaces it (finding 5)', () => {
     mockPicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///photos/p.jpg' }] });
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     expect(texts(tree)).toContain('Share video');
-    await press(byLabel(tree, 'Gallery, choose a photo')[0]);
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
     expect(texts(tree)).toContain('Share image');
     expect(trimBar(tree)).toBeUndefined();
-    expect(byLabel(tree, 'Gallery, choose a photo')[0].props.accessibilityState).toEqual({ selected: true });
+    expect(byLabel(tree, 'Gallery, choose a photo or video')[0].props.accessibilityState).toEqual({ selected: true });
     expect(byLabel(tree, 'Video, choose a video')[0].props.accessibilityState).toEqual({ selected: false });
     expect(lastStill().bgPhoto).toBe(mockPhoto);
     await press(buttonTitled(tree, 'Share image')[0]);
@@ -460,7 +460,8 @@ describe('E: a photo chosen after a video replaces it (finding 5)', () => {
     mockPicker.launchCameraAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///photos/cam.jpg' }] });
     const { tree } = await mount(SESSION);
     await press(byLabelStart(tree, 'Use video: Bench press')[0]);
-    await press(byLabel(tree, 'Photo, take one with the camera')[0]);
+    await press(byLabel(tree, 'Camera, take a photo or record a video')[0]);
+    await press(buttonTitled(tree, 'Take a photo')[0]);
     expect(byTestID(tree, 'share-preview-busy')).toHaveLength(0);
     await TestRenderer.act(async () => { slow.resolve(frameAt(CLIP_SET, 0)); });
     await flush();

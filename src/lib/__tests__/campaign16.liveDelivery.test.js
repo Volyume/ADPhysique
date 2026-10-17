@@ -344,9 +344,11 @@ describe('C16-LIVE amendment 17-20: block-boundary copy and notification', () =>
     const s = screen('PlansScreen.js');
     // Activation is only ever reached from a confirm handler.
     const activations = s.match(/runBlockActivation\(/g) ?? [];
-    // One definition plus exactly two call sites: the repeat confirm and the
-    // reviewed-adjust confirm.
-    expect(activations.length).toBe(3);
+    // One definition plus exactly three call sites: the repeat confirm, the
+    // reviewed-adjust confirm and the "Start again" confirm of the
+    // Start-this-plan-again alert (fromStart, intent repeat, refine false).
+    expect(activations.length).toBe(4);
+    expect(s).toMatch(/text: 'Start again',\s*onPress: async \(\) => \{[\s\S]{0,200}runBlockActivation\(\{ intent: 'repeat', refine: false, fromStart: true \}\)/);
     // The notification goes through the EXISTING category, so every opt-out,
     // quiet-hours and budget rule already in force keeps applying.
     const sched = lib('notifications/scheduler.js');

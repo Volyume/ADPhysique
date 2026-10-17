@@ -109,7 +109,6 @@ const AMBER_COUNTS = [
   ['ConnectRequestRow.js', 0],
   ['ConnectSheet.js', 0],
   ['ConversationRow.js', 1], // the unread dot fill
-  ['FirstPostSheet.js', 0], // D228 item 1: the one-time first-post question; no amber of its own (the Buttons carry the house variants)
   ['FollowButton.js', 0],
   ['GroupInviteSheet.js', 0],
   ['GymDetailSheet.js', 0],

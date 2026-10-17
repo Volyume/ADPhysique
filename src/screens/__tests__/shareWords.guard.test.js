@@ -77,7 +77,7 @@ describe('no jargon or machine talk in anything a person reads on the share scre
 
   test('the screen\'s own words are what the scan reads', () => {
     const strings = readableStrings(fs.readFileSync(FILES['screens/ShareCardScreen.js'], 'utf8'));
-    ['Gallery', 'Photo', 'None', 'Full screen', 'Feed', 'Share image', 'Save to gallery', 'Set as wallpaper', 'Save it, then set it from Photos.']
+    ['Gallery', 'Camera', 'None', 'Full screen', 'Feed', 'Share image', 'Save to gallery', 'Set as wallpaper', 'Save it, then set it from Photos.']
       .forEach((w) => expect(strings).toContain(w));
   });
 

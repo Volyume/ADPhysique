@@ -179,7 +179,7 @@ async function addPhoto(tree) {
   // RE-POINTED 2026-10-15 (D229 addendum 5 item 4): "My photo" reads
   // "Gallery", spoken "Gallery, choose a photo"; the photo-look heading
   // reads "Look". The same picker and the same strip.
-  const [btn] = findByA11yLabel(tree, 'Gallery, choose a photo');
+  const [btn] = findByA11yLabel(tree, 'Gallery, choose a photo or video');
   await press(btn);
   await waitFor(() => heading(tree, 'Look') === 1);
 }

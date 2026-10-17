@@ -74,13 +74,13 @@ struct ExportSpec {
     else { return nil }
 
     var bitrate = 8_000_000.0
-    if let raw = o["bitrate"], !(raw is NSNull) {
+    if let raw = o["bitrate"], !isAbsent(raw) {
       guard let b = number(raw), b >= 1_000_000, b <= 20_000_000 else { return nil }
       bitrate = b
     }
 
     var matrix: [CGFloat]? = nil
-    if let raw = o["matrix"], !(raw is NSNull) {
+    if let raw = o["matrix"], !isAbsent(raw) {
       guard let list = raw as? [Any], list.count == 20 else { return nil }
       var values: [CGFloat] = []
       for item in list {
@@ -101,6 +101,17 @@ struct ExportSpec {
       outHeight: outHeight,
       bitrate: Int(bitrate.rounded())
     )
+  }
+
+  /// A JS null inside the options object: NSNull, or (Sentry VOLYUME-3N)
+  /// the boxed nil Optional that expo-modules-core stores for it, since its
+  /// dictionary cast does `getRaw() as Any` and getRaw() is nil for null.
+  /// `is NSNull` is not reliably true for that box, which made a no-look
+  /// export fail validation.
+  static func isAbsent(_ value: Any) -> Bool {
+    if value is NSNull { return true }
+    let mirror = Mirror(reflecting: value)
+    return mirror.displayStyle == .optional && mirror.children.isEmpty
   }
 
   static func number(_ value: Any?) -> Double? {
