@@ -17,7 +17,7 @@
  * Sticker; under Full screen the image can be set as the lock screen
  * wallpaper on Android, and iOS says how to do it from Photos. Share is the
  * one amber action, with Save to gallery and Post to Community beneath it
- * (addendum 5 items 4 and 7: the Background row reads Gallery, Photo, None
+ * (addendum 5 items 4 and 7: the Background row reads Gallery, Camera, Video, None
  * and "Photo look" reads "Look").
  *
  * D229 addendum 17 (2026-10-16, the founder): a VIDEO is one more background
@@ -260,6 +260,12 @@ async function sweepOldShareVideos(FS) {
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
 // real build provides Skia + the sharing packages.
+// A picker asset that is a video (expo-image-picker reports type, and a mime
+// type on newer versions).
+function isPickedVideo(asset) {
+  return asset?.type === 'video' || String(asset?.mimeType || '').startsWith('video/');
+}
+
 let FileSystem; let Sharing; let Skia; let matchFont; let ImageFormat; let ImagePicker; let MediaLibrary;
 try { FileSystem = require('expo-file-system/legacy'); } catch (_) { /* optional */ }
 try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
@@ -489,6 +495,7 @@ export default function ShareCardScreen({ navigation, route }) {
   const [workoutClips, setWorkoutClips] = useState([]);
   const [clipsVersion, setClipsVersion] = useState(0);
   const [videoSheetOpen, setVideoSheetOpen] = useState(false);
+  const [cameraChoiceOpen, setCameraChoiceOpen] = useState(false);
   const [makingVideo, setMakingVideo] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
   const makingVideoRef = useRef(false);
@@ -1358,41 +1365,6 @@ export default function ShareCardScreen({ navigation, route }) {
     clipFlow.openRecorder({ source: 'share' });
   }, [clipFlow]);
 
-  // A video from the gallery: the system picker (no broad permission on
-  // Android 13+ and iOS 14+), its length from the engine's probe.
-  const pickGalleryVideo = useCallback(async () => {
-    if (suppressRef.current) { setVideoSheetOpen(false); return; } // the safety gate (item 8)
-    if (!ImagePicker || !Skia || !FileSystem) {
-      toast.show("Video backgrounds are not available on this phone.", { variant: 'error', duration: 5000 });
-      return;
-    }
-    // A denied library permission no longer ends it: the system picker
-    // needs no broad permission on newer phones, so it is tried anyway, and
-    // the permission line is said only if the picker itself cannot open.
-    let denied = false;
-    try {
-      try {
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        denied = !perm?.granted;
-      } catch (_e) { /* the picker below says if it cannot open */ }
-      if (!mountedRef.current) return;
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'] });
-      if (!mountedRef.current || res.canceled || !res.assets?.[0]?.uri) return;
-      denied = false;
-      const asset = res.assets[0];
-      trackScratchVideo(asset.uri);
-      // The picker's own length stands until acceptClip's probe reads the
-      // real one (with the upright size) alongside the first frame.
-      await acceptClip({ id: null, uri: asset.uri, durationMs: Number(asset.duration) || 0, source: 'gallery' });
-    } catch (e) {
-      logError('ShareCardScreen.pickVideo', e);
-      if (mountedRef.current) {
-        if (denied) toast.show('Photo access is needed to choose a video.', { variant: 'warning' });
-        else toast.show('That video could not be opened. Try another.', { variant: 'error' });
-      }
-    }
-  }, [toast, acceptClip, trackScratchVideo]);
-
   // Film now with no workout to keep a video with (a PR from a lift's
   // history, a milestone, the weekly recap). Founder: "recording one in the
   // share screen after the same as you do with photos". Volyume's own
@@ -1522,9 +1494,18 @@ export default function ShareCardScreen({ navigation, route }) {
         denied = !perm?.granted;
       } catch (_e) { /* the picker below says if it cannot open */ }
       if (!mountedRef.current) return;
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.9 });
       if (!mountedRef.current || res.canceled || !res.assets?.[0]?.uri) return;
       denied = false;
+      const picked = res.assets[0];
+      if (isPickedVideo(picked)) {
+        // A video from the library takes the same road as every other video:
+        // the probe, the first frame, the 15 second window, the Look, preview.
+        if (suppressRef.current) return; // the safety gate (item 8)
+        trackScratchVideo(picked.uri);
+        await acceptClip({ id: null, uri: picked.uri, durationMs: Number(picked.duration) || 0, source: 'gallery' });
+        return;
+      }
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       if (!mountedRef.current) return;
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
@@ -1539,7 +1520,20 @@ export default function ShareCardScreen({ navigation, route }) {
         else toast.show("Could not open your photos. Please try again.", { variant: 'error' });
       }
     }
-  }, [toast, acceptPhoto, dropVideo]);
+  }, [toast, acceptPhoto, dropVideo, acceptClip, trackScratchVideo]);
+
+  // Camera, record a video: the app's own recorder (muted, countdown, cues),
+  // which hands the clip back through the same accept path. With a workout the
+  // video is kept with it (filmNow); without one it is for this share alone.
+  const recordVideoHere = useCallback(() => {
+    setCameraChoiceOpen(false);
+    if (suppressRef.current) return; // the safety gate (item 8)
+    if (workoutId) filmNow(); else filmShareOnly();
+  }, [workoutId, filmNow, filmShareOnly]);
+  const takePhotoHere = useCallback(() => {
+    setCameraChoiceOpen(false);
+    takeGymPhoto();
+  }, [takeGymPhoto]);
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
@@ -1810,7 +1804,7 @@ export default function ShareCardScreen({ navigation, route }) {
       toast.show(VIDEO_BUSY_LINE, { variant: 'info', duration: 5000 });
       return;
     }
-    logError(where, e, { code });
+    logError(where, e, shareVideoEngine.errorContext(e));
     const line = shareVideoEngine.lineForExportError(code, { fromGallery: clip?.source === 'gallery' });
     if (line) toast.show(line, { variant: 'error', duration: 7000 });
   }, [clip, toast]);
@@ -2357,19 +2351,19 @@ export default function ShareCardScreen({ navigation, route }) {
             <SegmentBtn
               disabled={locked}
               label="Gallery"
-              accessibilityLabel="Gallery, choose a photo"
-              active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY}
+              accessibilityLabel="Gallery, choose a photo or video"
+              active={(!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY) || clip?.source === 'gallery'}
               onPress={pickGymPhoto}
-              icon={<Ionicons name="images-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="images-outline" size={15} color={(bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY) || clip?.source === 'gallery' ? t.colors.primary : t.colors.textMuted} />}
               stacked={bgStacked}
             />
             <SegmentBtn
               disabled={locked}
-              label="Photo"
-              accessibilityLabel="Photo, take one with the camera"
-              active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO}
-              onPress={takeGymPhoto}
-              icon={<Ionicons name="camera-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO ? t.colors.primary : t.colors.textMuted} />}
+              label="Camera"
+              accessibilityLabel="Camera, take a photo or record a video"
+              active={(!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO) || clip?.source === 'camera' || cameraChoiceOpen}
+              onPress={() => setCameraChoiceOpen((o) => !o)}
+              icon={<Ionicons name="camera-outline" size={15} color={(bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO) || clip?.source === 'camera' || cameraChoiceOpen ? t.colors.primary : t.colors.textMuted} />}
               stacked={bgStacked}
             />
             {suppress && !videoSlotSettled ? (
@@ -2380,9 +2374,9 @@ export default function ShareCardScreen({ navigation, route }) {
                 disabled={locked}
                 label="Video"
                 accessibilityLabel="Video, choose a video"
-                active={!!clip}
+                active={!!clip && clip.source !== 'gallery' && clip.source !== 'camera'}
                 onPress={() => setVideoSheetOpen(true)}
-                icon={<Ionicons name="videocam-outline" size={15} color={clip ? t.colors.primary : t.colors.textMuted} />}
+                icon={<Ionicons name="videocam-outline" size={15} color={clip && clip.source !== 'gallery' && clip.source !== 'camera' ? t.colors.primary : t.colors.textMuted} />}
                 stacked={bgStacked}
               />
             ) : null}
@@ -2390,12 +2384,20 @@ export default function ShareCardScreen({ navigation, route }) {
               disabled={locked}
               label="None"
               accessibilityLabel="None, no photo"
-              active={!bgPhoto}
+              active={!bgPhoto && !cameraChoiceOpen}
               onPress={clearPhoto}
-              icon={<Ionicons name="close-circle-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="close-circle-outline" size={15} color={!bgPhoto && !cameraChoiceOpen ? t.colors.primary : t.colors.textMuted} />}
               stacked={bgStacked}
             />
           </View>
+          {cameraChoiceOpen ? (
+            <View style={styles.cameraChoice} testID="share-camera-choice">
+              <Button title="Take a photo" variant="secondary" icon="camera-outline" onPress={takePhotoHere} disabled={locked} />
+              {!suppress ? (
+                <Button title="Record a video" variant="secondary" icon="videocam-outline" onPress={recordVideoHere} disabled={locked} />
+              ) : null}
+            </View>
+          ) : null}
           {liveClip && !suppress ? (
             <Text style={[styles.formatHint, live.formatHint]} testID="share-using-video">
               {`Using: ${(typeof liveClip.exerciseName === 'string' && liveClip.exerciseName.trim()) || 'your video'}, ${secondsWords(shareWindowMs)}`}
@@ -2506,7 +2508,6 @@ export default function ShareCardScreen({ navigation, route }) {
             </>
           ) : null}
           <View style={styles.sheetActions}>
-            <Button title="From your gallery" variant="secondary" icon="images-outline" onPress={pickGalleryVideo} disabled={locked} />
             {/* Film now everywhere: Volyume's camera, keeping the video with
                 the workout when there is one (filmNow), else for this share
                 alone (filmShareOnly). */}
@@ -3412,6 +3413,7 @@ const styles = StyleSheet.create({
   photoHintRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md,
   },
+  cameraChoice: { gap: spacing.sm, marginTop: spacing.sm },
   photoHint: { ...type.captionTight, color: colors.textMuted, textAlign: 'center' },
   sheetTitle: { ...type.h3, color: colors.textPrimary, marginBottom: spacing.xs },
   sheetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },

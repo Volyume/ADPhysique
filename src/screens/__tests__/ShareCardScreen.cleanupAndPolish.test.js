@@ -377,10 +377,9 @@ describe('E1: nothing a share makes is left in the cache', () => {
   });
 
   test('a gallery copy of a video goes with the screen; a stored workout video never does', async () => {
-    mockPicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///cache/ImagePicker/g.mp4', duration: 9000 }] });
+    mockPicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///cache/ImagePicker/g.mp4', type: 'video', duration: 9000 }] });
     const { tree } = await mount(SESSION);
-    await press(byLabel(tree, 'Video, choose a video')[0]);
-    await press(buttonTitled(tree, 'From your gallery')[0]);
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
     await settleTone();
     await unmount(tree);
     expect(deleted()).toContain('file:///cache/ImagePicker/g.mp4');
@@ -396,26 +395,25 @@ describe('E1: nothing a share makes is left in the cache', () => {
 });
 
 describe('E4: a denied library permission still tries the picker', () => {
-  test('video: the picker opens anyway; the permission line only if it cannot', async () => {
+  test('gallery (photo or video): the picker opens anyway; the permission line only if it cannot', async () => {
     mockPicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: false });
     const { tree } = await mount(SESSION);
-    await press(byLabel(tree, 'Video, choose a video')[0]);
-    await press(buttonTitled(tree, 'From your gallery')[0]);
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
     expect(mockPicker.launchImageLibraryAsync).toHaveBeenCalledTimes(1);
     expect(mockToastShow).not.toHaveBeenCalled();
     mockPicker.launchImageLibraryAsync.mockRejectedValueOnce(new Error('no access'));
-    await press(buttonTitled(tree, 'From your gallery')[0]);
-    expect(mockToastShow).toHaveBeenCalledWith('Photo access is needed to choose a video.', { variant: 'warning' });
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
+    expect(mockToastShow).toHaveBeenCalledWith('Photo access is needed to choose a background', { variant: 'warning' });
   });
 
   test('photo: the picker opens anyway; the permission line only if it cannot', async () => {
     mockPicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: false });
     const { tree } = await mount(SESSION);
-    await press(byLabel(tree, 'Gallery, choose a photo')[0]);
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
     expect(mockPicker.launchImageLibraryAsync).toHaveBeenCalledTimes(1);
     expect(mockToastShow).not.toHaveBeenCalled();
     mockPicker.launchImageLibraryAsync.mockRejectedValueOnce(new Error('no access'));
-    await press(byLabel(tree, 'Gallery, choose a photo')[0]);
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
     expect(mockToastShow).toHaveBeenCalledWith('Photo access is needed to choose a background', { variant: 'warning' });
   });
 
@@ -423,7 +421,7 @@ describe('E4: a denied library permission still tries the picker', () => {
     mockPicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: true });
     mockPicker.launchImageLibraryAsync.mockRejectedValueOnce(new Error('boom'));
     const { tree } = await mount(SESSION);
-    await press(byLabel(tree, 'Gallery, choose a photo')[0]);
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
     expect(mockToastShow).toHaveBeenCalledWith("Could not open your photos. Please try again.", { variant: 'error' });
   });
 });
@@ -546,7 +544,7 @@ describe('U4, U5, U9: the lines under Background, Sticker and Film now', () => {
 
 describe('U10: the largest text stacks the Background row as the Format row does', () => {
   const RN = require('react-native');
-  const gallery = (tree) => byLabel(tree, 'Gallery, choose a photo')[0];
+  const gallery = (tree) => byLabel(tree, 'Gallery, choose a photo or video')[0];
   const flatStyle = (node) => Object.assign({}, ...[].concat(node.props.style).flat(Infinity).filter(Boolean));
   let spy;
   afterEach(() => { if (spy) spy.mockRestore(); spy = null; });

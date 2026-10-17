@@ -421,7 +421,7 @@ describe('1: Play, Share and Save wait for the tone, and nothing finished is thr
 describe('2: while the share\'s video is made, nothing that changes it can be changed', () => {
   const lockedLabels = (look) => [
     'Story', 'Full screen', 'Feed', 'Square', 'Sticker', 'Dark', 'Light',
-    'Gallery, choose a photo', 'Photo, take one with the camera', 'Video, choose a video', 'None, no photo',
+    'Gallery, choose a photo or video', 'Camera, take a photo or record a video', 'Video, choose a video', 'None, no photo',
     'Session', 'New PR', 'Reset the video to the centre', `${look.name}: ${look.description}`,
   ];
   const lockedPrefixes = ['Top lift', 'Quote or caption:', 'Use video:'];
@@ -602,17 +602,21 @@ describe('8: the safety gate and the video chooser', () => {
     expect(sheet(tree).props.visible).toBe(false);
   });
 
-  test('Film now and the gallery do nothing under the gate, even from a chooser opened before it closed', async () => {
+  test('Film now does nothing, and a gallery video is never accepted, under the gate, even from a chooser opened before it closed', async () => {
     const { tree, rerender, navigation } = await mount(SESSION);
     await press(byLabel(tree, 'Video, choose a video')[0]);
-    const gallery = buttonTitled(tree, 'From your gallery')[0].props.onPress;
+    const gallery = byLabel(tree, 'Gallery, choose a photo or video')[0].props.onPress;
     const film = buttonTitled(tree, 'Film now')[0].props.onPress;
     mockSuppress.value = true;
     await rerender();
     await TestRenderer.act(async () => { await gallery(); film(); });
     await flush();
-    expect(mockPicker.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
-    expect(mockPicker.launchImageLibraryAsync).not.toHaveBeenCalled();
+    // The gallery still opens for photos, but a video from it is never taken.
+    mockGrab.mockClear();
+    mockPicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///roll/g.mp4', type: 'video', duration: 9000 }] });
+    await TestRenderer.act(async () => { await gallery(); });
+    await flush();
+    expect(mockGrab).not.toHaveBeenCalled();
     expect(navigation.navigate).not.toHaveBeenCalled();
     expect(texts(tree)).not.toContain(CLIP_STRINGS.primerTitle);
   });
@@ -650,7 +654,7 @@ describe('9: the framer names what is under the card', () => {
     expect(v.props.accessibilityActions.map((a) => a.label)).toEqual(['Zoom in', 'Zoom out', 'Move video up', 'Move video down', 'Move video left', 'Move video right']);
     expect(byLabel(tree, 'Your photo on the share image')).toHaveLength(0);
     mockPicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///photos/p.jpg' }] });
-    await press(byLabel(tree, 'Gallery, choose a photo')[0]);
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
     const p = byLabel(tree, 'Your photo on the share image')[0];
     expect(p.props.accessibilityHint).toBe('Drag to move your photo. Pinch to make it bigger or smaller.');
     expect(p.props.accessibilityActions.map((a) => a.label)).toEqual(['Zoom in', 'Zoom out', 'Move photo up', 'Move photo down', 'Move photo left', 'Move photo right']);
@@ -708,5 +712,28 @@ describe('11: a still that is replaced is released', () => {
     expect(second.dispose).not.toHaveBeenCalled();
     await TestRenderer.act(async () => { tree.unmount(); });
     expect(second.dispose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Camera offers a photo and a video; the gallery asks for both', () => {
+  test('Camera opens a choice of Take a photo and Record a video', async () => {
+    const { tree } = await mount(SESSION);
+    expect(buttonTitled(tree, 'Take a photo')).toHaveLength(0);
+    await press(byLabel(tree, 'Camera, take a photo or record a video')[0]);
+    expect(buttonTitled(tree, 'Take a photo').length).toBeGreaterThan(0);
+    expect(buttonTitled(tree, 'Record a video').length).toBeGreaterThan(0);
+  });
+
+  test('Record a video opens the app own recorder (share-only with no workout)', async () => {
+    const { tree, navigation } = await mount({ ...SESSION, workoutId: undefined, clipId: undefined });
+    await press(byLabel(tree, 'Camera, take a photo or record a video')[0]);
+    await press(buttonTitled(tree, 'Record a video')[0]);
+    expect(navigation.navigate).toHaveBeenCalledWith('ClipCamera', expect.objectContaining({ mode: 'share' }));
+  });
+
+  test('Gallery requests photos and videos together', async () => {
+    const { tree } = await mount(SESSION);
+    await press(byLabel(tree, 'Gallery, choose a photo or video')[0]);
+    expect(mockPicker.launchImageLibraryAsync).toHaveBeenCalledWith(expect.objectContaining({ mediaTypes: ['images', 'videos'] }));
   });
 });

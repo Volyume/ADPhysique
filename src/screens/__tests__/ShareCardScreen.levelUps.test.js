@@ -161,6 +161,7 @@ async function press(node) {
 const hostsByLabel = (tree, label) => tree.root.findAll(
   (n) => typeof n.type === 'string' && n.props && n.props.accessibilityLabel === label,
 );
+const buttonTitle = (tree, title) => tree.root.findAll((n) => n.props && n.props.title === title && typeof n.props.onPress === 'function');
 const texts = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Text')
   .map((n) => [].concat(n.props.children).join(''));
 const heading = (tree, str) => tree.root.findAll((n) => n.type === SectionLabel && n.props.children === str).length;
@@ -313,14 +314,14 @@ describe('the one amber action', () => {
 });
 
 describe('the Background words', () => {
-  test('the row reads Gallery, Photo, None, and the old words are gone', async () => {
+  test('the row reads Gallery, Camera, Video, None, and the old words are gone', async () => {
     const tree = await mount(SESSION);
     const all = texts(tree);
-    ['Gallery', 'Photo', 'None'].forEach((w) => expect(all).toContain(w));
-    ['My photo', 'Camera', 'No photo'].forEach((w) => expect(all).not.toContain(w));
+    ['Gallery', 'Camera', 'None'].forEach((w) => expect(all).toContain(w));
+    ['My photo', 'Photo', 'No photo'].forEach((w) => expect(all).not.toContain(w));
     // The spoken names start with the visible word.
-    expect(hostsByLabel(tree, 'Gallery, choose a photo')).toHaveLength(1);
-    expect(hostsByLabel(tree, 'Photo, take one with the camera')).toHaveLength(1);
+    expect(hostsByLabel(tree, 'Gallery, choose a photo or video')).toHaveLength(1);
+    expect(hostsByLabel(tree, 'Camera, take a photo or record a video')).toHaveLength(1);
     expect(hostsByLabel(tree, 'None, no photo')).toHaveLength(1);
   });
 
@@ -329,15 +330,18 @@ describe('the Background words', () => {
     const selected = (label) => hostsByLabel(tree, label)[0].props.accessibilityState.selected;
     expect(selected('None, no photo')).toBe(true);
 
-    await press(hostsByLabel(tree, 'Gallery, choose a photo')[0]);
+    await press(hostsByLabel(tree, 'Gallery, choose a photo or video')[0]);
     await waitFor(() => heading(tree, 'Look') === 1);
     expect(heading(tree, 'Photo look')).toBe(0);
-    expect(selected('Gallery, choose a photo')).toBe(true);
-    expect(selected('Photo, take one with the camera')).toBe(false);
+    expect(selected('Gallery, choose a photo or video')).toBe(true);
+    expect(selected('Camera, take a photo or record a video')).toBe(false);
 
-    await press(hostsByLabel(tree, 'Photo, take one with the camera')[0]);
-    await waitFor(() => selected('Photo, take one with the camera') === true);
-    expect(selected('Gallery, choose a photo')).toBe(false);
+    await press(hostsByLabel(tree, 'Camera, take a photo or record a video')[0]);
+    // Camera offers a photo (and a video, pinned in videoAudit2).
+    expect(buttonTitle(tree, 'Take a photo').length).toBeGreaterThan(0);
+    await press(buttonTitle(tree, 'Take a photo')[0]);
+    await waitFor(() => selected('Camera, take a photo or record a video') === true);
+    expect(selected('Gallery, choose a photo or video')).toBe(false);
 
     await press(hostsByLabel(tree, 'None, no photo')[0]);
     await waitFor(() => heading(tree, 'Look') === 0);
