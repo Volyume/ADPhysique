@@ -12,7 +12,11 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_197` (197 applied 2026-10-17 02:49:39 UTC under the founder's
+> `migrate_199` (198 and 199 applied 2026-10-17 09:31:56 and 09:31:59 UTC
+> under the founder's "run against production 198 199", through the
+> apply-named-sql workflow: member email, prefs and topics, the app
+> check-in, campaigns, automations, the runner's pg_cron job (its function
+> is not yet deployed); 197 applied 2026-10-17 02:49:39 UTC under the founder's
 > "run against production 197": food deletes pushed late now reach every
 > device, the tombstone carries the server's time and the pull's deleted
 > slices read it, plus `food_favourites.updated_at`; 196 applied
@@ -86,7 +90,7 @@ is absolute — all user data stays in Dublin (one founder exception,
 Resend, which sends from Ireland and keeps its records in the United States
 under the standard contract clauses; the privacy policy says so). Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_197`, applied through 197 except 049 HELD; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_199`, applied through 199 except 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,
