@@ -256,7 +256,7 @@ export default function PostRow({
             importantForAccessibility="no-hide-descendants"
             accessibilityElementsHidden
           >
-            <Text style={[t.type.bodyStrong, styles.name, { color: t.colors.textPrimary }]} numberOfLines={1}>
+            <Text style={[t.type.bodyStrong, styles.name, { color: t.colors.textPrimary }]} numberOfLines={2}>
               {name}
             </Text>
             {timeLabel ? (

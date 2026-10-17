@@ -147,7 +147,7 @@ export default function PersonRow({
           </View>
         </View>
         <View style={styles.body}>
-          <Text style={[styles.name, { color: t.colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: t.colors.textPrimary }]} numberOfLines={2}>
             {name}
           </Text>
           {hasDays ? (

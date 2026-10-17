@@ -33,6 +33,7 @@ jest.mock('../../lib/community', () => ({
   buildBlockPayload: jest.fn(() => ({ weeks: 4 })),
   buildMilestonePayload: jest.fn(() => ({ kind: 'streak' })),
   CAPTION_MAX: 280,
+  sessionShareGateState: jest.fn(async () => ({ allowed: true, gated: false })),
 }));
 
 import { loadMe } from '../../lib/community';

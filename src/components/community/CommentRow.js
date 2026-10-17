@@ -48,8 +48,9 @@ const AVATAR = 32;
  * Props:
  *   onSubmit     (body: string) => Promise<boolean>, true clears the field
  *   placeholder  optional
+ *   inputRef     optional ref to the text field, so a parent can focus it
  */
-export function CommentComposer({ onSubmit, placeholder = 'Add a comment' }) {
+export function CommentComposer({ onSubmit, placeholder = 'Add a comment', inputRef }) {
   const t = useTheme();
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
@@ -69,6 +70,7 @@ export function CommentComposer({ onSubmit, placeholder = 'Add a comment' }) {
       style={[styles.composer, { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle }]}
     >
       <TextInput
+        ref={inputRef}
         value={body}
         onChangeText={setBody}
         placeholder={placeholder}

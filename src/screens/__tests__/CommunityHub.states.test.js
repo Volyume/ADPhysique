@@ -69,6 +69,7 @@ jest.mock('../../lib/community', () => ({
   publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
   flushPendingAmbientItems: jest.fn(() => Promise.resolve({ flushed: 0, dropped: 0, remaining: 0 })),
   retryPendingSharingPublish: jest.fn(() => Promise.resolve({ sent: false, reason: 'nothing_pending' })),
+  clearStaleTrainingNow: jest.fn(() => Promise.resolve(false)),
   myStatus: jest.fn(() => Promise.resolve({ status: null, reason_class: null, since: null })),
   isModeratedStatus: (status) => status === 'restricted' || status === 'suspended',
   REPORT_REASONS: {},
@@ -81,6 +82,7 @@ import { Share } from 'react-native';
 import {
   loadHub, loadHubSummary, reactToPost, consistencyGateState, loadConsistency, getProfile, follow,
   readHostDismissed, listMyGroups, acceptGroupInvite, declineGroupInvite, COMMUNITY_HOST_USER_ID,
+  clearStaleTrainingNow,
 } from '../../lib/community';
 import { getLatestCompletedWorkoutId } from '../../lib/database';
 import useCommunityMe from '../../hooks/useCommunityMe';
@@ -702,6 +704,43 @@ describe('quiet reload on focus', () => {
     asMember();
     await render();
     expect(loadHub).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('audit 2026-10-17: paging and the foreground guard', () => {
+  test('item 3: a next page that fails keeps the posts and the cursor, and a later scroll retries', async () => {
+    asMember();
+    loadHub.mockResolvedValueOnce(emptyHub({ posts: [post({ post: { ...post().post, id: 'p1' } })], cursor: 'c1' }));
+    const view = await render();
+    expect(view.list.props.data.map((r) => r.post.id)).toEqual(['p1']);
+
+    // The failed next page answers an empty page with a null cursor and an error.
+    loadHub.mockResolvedValueOnce(emptyHub({ error: 'offline' }));
+    await act(async () => { await view.list.props.onEndReached(); });
+    await flush();
+    view.refresh();
+    expect(view.list.props.data.map((r) => r.post.id)).toEqual(['p1']);
+
+    // The cursor survived: the next scroll asks for the same page and it lands.
+    loadHub.mockResolvedValueOnce(emptyHub({ posts: [post({ post: { ...post().post, id: 'p2' } })], cursor: null }));
+    await act(async () => { await view.list.props.onEndReached(); });
+    await flush();
+    view.refresh();
+    expect(loadHub).toHaveBeenLastCalledWith('following', expect.objectContaining({ cursor: 'c1' }));
+    expect(view.list.props.data.map((r) => r.post.id)).toEqual(['p1', 'p2']);
+  });
+
+  test('item 9: the stale training-now guard runs on mount for a member', async () => {
+    asMember();
+    await render();
+    expect(clearStaleTrainingNow).toHaveBeenCalledWith('u1');
+  });
+
+  test('item g: the cached-posts offline line is already visible', async () => {
+    asMember();
+    loadHub.mockResolvedValue(emptyHub({ posts: [post()], fromCache: true, error: 'offline' }));
+    const view = await render();
+    expect(view.text).toContain('Showing what you last saw. You are offline.');
   });
 });
 

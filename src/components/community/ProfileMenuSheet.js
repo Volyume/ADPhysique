@@ -39,6 +39,10 @@ import {
 } from '../../lib/community';
 import { RESTRICTION_REFUSALS } from '../../lib/community/restriction';
 
+// The Hub row that opens the blocked list is titled "Privacy and sharing"
+// (CommunityHubScreen), so the toast names it exactly.
+export const BLOCKED_TOAST = 'Blocked. You can undo this in Privacy and sharing.';
+
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
   ...RESTRICTION_REFUSALS,
@@ -77,7 +81,7 @@ export default function ProfileMenuSheet({
         {
           text: 'Block',
           style: 'destructive',
-          onPress: () => run(blockUser, { blocked: true, following: 'none', followed_by: false }, 'Blocked'),
+          onPress: () => run(blockUser, { blocked: true, following: 'none', followed_by: false }, BLOCKED_TOAST),
         },
       ],
     );

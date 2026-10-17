@@ -536,8 +536,25 @@ export async function setCommunityQuietHours(startMinutes, endMinutes, tz) {
   });
 }
 
+/**
+ * After a block or mute the server stops returning that person's posts, but
+ * the device keeps a cached Hub (feed.js) that would still show them on the
+ * next offline or slow open. Clearing it here covers every caller (profile
+ * menu, conversation menu, post screen). Lazy require: feed.js imports from
+ * this module. Best-effort: the block or mute has already succeeded.
+ */
+async function clearHubCacheAfterHide() {
+  try {
+    const uid = currentUserId();
+    // eslint-disable-next-line global-require
+    await require('./feed').clearCachedHub(uid);
+  } catch (_e) { /* best-effort */ }
+}
+
 export async function blockUser(targetUserId) {
-  return callCommunity('community_block', { _target: targetUserId });
+  const out = await callCommunity('community_block', { _target: targetUserId });
+  await clearHubCacheAfterHide();
+  return out;
 }
 
 export async function unblockUser(targetUserId) {
@@ -545,7 +562,9 @@ export async function unblockUser(targetUserId) {
 }
 
 export async function muteUser(targetUserId) {
-  return callCommunity('community_mute', { _target: targetUserId });
+  const out = await callCommunity('community_mute', { _target: targetUserId });
+  await clearHubCacheAfterHide();
+  return out;
 }
 
 export async function unmuteUser(targetUserId) {

@@ -38,10 +38,11 @@ import useAppStore from '../store/useAppStore';
 import { spacing } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
+import { appAlert } from '../components/AppAlert';
 import {
   loadMe, hasProfile, createPost, setPostNote, listMyGroups,
   buildPrPayload, buildSessionPayload, buildBlockPayload, buildMilestonePayload,
-  CAPTION_MAX,
+  CAPTION_MAX, sessionShareGateState,
 } from '../lib/community';
 import { restrictionLine } from '../lib/community/restriction';
 
@@ -54,6 +55,38 @@ const VISIBILITY_OPTIONS = [
   { label: 'Followers', value: 'followers' },
   { label: 'Everyone', value: 'public' },
 ];
+
+/** The calm confirm (founder ruling 2026-10-17, "Allow, with a gentle
+ * check"): shown before a MANUAL post goes out while an ED flag is open or
+ * calm mode is on. The person can still post. */
+export const CALM_SHARE_TITLE = 'Before you share';
+export const CALM_SHARE_BODY = 'You have chosen a calmer experience for now. Would you still like to share this post?';
+
+/**
+ * True when the ED-flag or calm-mode gate is closed for this person. This
+ * is the SAME read the automatic Community path uses
+ * (`sessionShareGateState` -> `readEdOrCalmSuppressed`). A read that throws
+ * counts as gated: the screen fails towards asking, never towards posting
+ * silently.
+ */
+export async function isCalmGateClosed(uid) {
+  try {
+    const { gated } = await sessionShareGateState(uid, true);
+    return !!gated;
+  } catch (_e) {
+    return true;
+  }
+}
+
+/** Resolves true on "Share", false on "Not now" or a dismissed dialog. */
+export function confirmCalmShare() {
+  return new Promise((resolve) => {
+    appAlert(CALM_SHARE_TITLE, CALM_SHARE_BODY, [
+      { text: 'Not now', style: 'cancel', onPress: () => resolve(false) },
+      { text: 'Share', onPress: () => resolve(true) },
+    ], { onDismiss: () => resolve(false) });
+  });
+}
 
 /**
  * L12 (D221): the ONE default audience rule for a new post. It is the
@@ -227,6 +260,13 @@ export default function CommunityComposeScreen({ navigation, route }) {
     postingRef.current = true;
     setPosting(true);
     try {
+      // Allow, with a gentle check: under an open ED flag or calm mode the
+      // person may still post, but is asked first. "Not now" posts nothing
+      // and the draft stays exactly as it is.
+      if (await isCalmGateClosed(user?.id ?? null)) {
+        const go = await confirmCalmShare();
+        if (!go) return;
+      }
       if (noteMode) {
         const updated = await setPostNote(params.postId, caption.trim() || null);
         toast.show('Note saved', { variant: 'success' });

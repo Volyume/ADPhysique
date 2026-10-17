@@ -17,8 +17,8 @@
  */
 
 import { navigateCommunity } from '../navigation/navigateCommunity';
-import { useCallback, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { View, StyleSheet, RefreshControl } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -85,6 +85,11 @@ export default function CommunityPostScreen({ navigation, route }) {
   const [myReaction, setMyReaction] = useState(false);
   const [comments, setComments] = useState([]);
   const [cursor, setCursor] = useState(null);
+  // A failed comments read is its own state: an empty list and a list that
+  // could not be read must never look the same (audit 2026-10-17, item 8).
+  const [commentsError, setCommentsError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const composerRef = useRef(null);
   // What the report sheet is aimed at: the story from the header menu, or
   // one comment from its own flag. A report filed against the wrong row
   // leaves the reported thing untouched and never counts toward the
@@ -94,9 +99,10 @@ export default function CommunityPostScreen({ navigation, route }) {
   // Mute, Share link) for the post's author, not Report alone.
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const load = useCallback(async () => {
+  // `quiet` is a pull-to-refresh: the page stays up while it reloads.
+  const load = useCallback(async ({ quiet = false } = {}) => {
     if (!id) { setLoading(false); setErrorCode('not_found'); return; }
-    setLoading(true);
+    if (!quiet) setLoading(true);
     try {
       const payload = await getPost(id);
       setData(payload ?? null);
@@ -111,13 +117,31 @@ export default function CommunityPostScreen({ navigation, route }) {
       const page = await listComments('post', id);
       setComments(Array.isArray(page?.comments) ? page.comments : []);
       setCursor(page?.cursor ?? null);
+      setCommentsError(false);
     } catch (_e) {
-      setComments([]);
-      setCursor(null);
+      // Whatever the reader already has stays; the failure is shown, not
+      // read as "no comments yet".
+      setCommentsError(true);
     }
   }, [id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await load({ quiet: true }); } finally { setRefreshing(false); }
+  }, [load]);
+
+  const retryComments = useCallback(async () => {
+    try {
+      const page = await listComments('post', id);
+      setComments(Array.isArray(page?.comments) ? page.comments : []);
+      setCursor(page?.cursor ?? null);
+      setCommentsError(false);
+    } catch (_e) {
+      setCommentsError(true);
+    }
+  }, [id]);
 
   const loadMoreComments = useCallback(async () => {
     if (!cursor || !id) return;
@@ -250,8 +274,19 @@ export default function CommunityPostScreen({ navigation, route }) {
       <BandGap />
       <Band>
         <SectionHeader title="Comments" />
-        {comments.length === 0 ? (
-          <BandLine text="No comments yet. Anything useful about the training is welcome here." />
+        {commentsError && comments.length === 0 ? (
+          <BandLine
+            text="Comments could not be loaded just now."
+            action={{ label: 'Try again', onPress: retryComments }}
+          />
+        ) : null}
+        {!commentsError && comments.length === 0 ? (
+          <BandLine
+            text="No comments yet."
+            action={joined
+              ? { label: 'Be the first to reply.', onPress: () => composerRef.current?.focus?.() }
+              : undefined}
+          />
         ) : null}
       </Band>
     </View>
@@ -298,6 +333,14 @@ export default function CommunityPostScreen({ navigation, route }) {
             contentContainerStyle={styles.content}
             onEndReachedThreshold={0.4}
             onEndReached={loadMoreComments}
+            refreshControl={(
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={t.colors.textMuted}
+                colors={[t.colors.primary]}
+              />
+            )}
             renderItem={({ item }) => (
               <Band>
                 <CommentRow
@@ -316,7 +359,7 @@ export default function CommunityPostScreen({ navigation, route }) {
             )}
           />
           {joined ? (
-            <CommentComposer onSubmit={handleAddComment} />
+            <CommentComposer onSubmit={handleAddComment} inputRef={composerRef} />
           ) : (
             <Band>
               <JoinToInteractRow
@@ -333,7 +376,12 @@ export default function CommunityPostScreen({ navigation, route }) {
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
         card={author}
-        onChanged={(relationship) => setData((prev) => (prev?.author ? { ...prev, author: { ...prev.author, relationship } } : prev))}
+        onChanged={(relationship) => {
+          setData((prev) => (prev?.author ? { ...prev, author: { ...prev.author, relationship } } : prev));
+          // A blocked author's post is no longer visible to this person, so
+          // the screen leaves rather than keep showing it (audit 2026-10-17).
+          if (relationship?.blocked) navigation.goBack();
+        }}
         onReport={() => setReportTarget({ targetKind: 'post', targetId: post?.id })}
       />
       <ReportSheet

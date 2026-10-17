@@ -473,15 +473,20 @@ export default function CommunityHubScreen({ navigation, route }) {
     // eslint-disable-next-line global-require
     const {
       publishConsistencyOnForeground, flushPendingAmbientItems, retryPendingSharingPublish,
+      clearStaleTrainingNow,
     } = require('../lib/community');
     publishConsistencyOnForeground(consistencyUid).catch(() => {});
     flushPendingAmbientItems(consistencyUid).catch(() => {});
     retryPendingSharingPublish(consistencyUid).catch(() => {});
+    // The stale "training now" guard (presenceSession.js): clears a marker
+    // this device raised more than three hours ago. Self-guarding no-op.
+    clearStaleTrainingNow(consistencyUid).catch(() => {});
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         publishConsistencyOnForeground(consistencyUid).catch(() => {});
         flushPendingAmbientItems(consistencyUid).catch(() => {});
         retryPendingSharingPublish(consistencyUid).catch(() => {});
+        clearStaleTrainingNow(consistencyUid).catch(() => {});
       }
     });
     return () => sub.remove();
@@ -516,6 +521,11 @@ export default function CommunityHubScreen({ navigation, route }) {
         cursor: hub.cursor, limit: PAGE, joined, sort: sortRef.current,
       });
       if (id !== requestRef.current) return;
+      // A next page that failed answers `{posts: [], cursor: null, error}`.
+      // Merging it would wipe the cursor and end the feed early, so the
+      // posts and the cursor already held stay and a later scroll retries
+      // (audit 2026-10-17, item 3).
+      if (next?.error) return;
       // SF4: a Respect-sorted cursor can re-serve a post; one row per id.
       setHub((prev) => {
         if (!prev) return next;
