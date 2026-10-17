@@ -149,7 +149,7 @@ describe('admin actions', () => {
     await flush();
 
     expect(approveGroupRequest).toHaveBeenCalledWith('g1', 'u3');
-    expect(mockToastShow).toHaveBeenCalledWith('Approved.');
+    expect(mockToastShow).toHaveBeenCalledWith('Request approved.');
   });
 
   test('"Remove from group" on the row menu calls removeGroupMember with the group and user id', async () => {
@@ -165,7 +165,7 @@ describe('admin actions', () => {
     await flush();
 
     expect(removeGroupMember).toHaveBeenCalledWith('g1', 'u1');
-    expect(mockToastShow).toHaveBeenCalledWith('Removed from the group.');
+    expect(mockToastShow).toHaveBeenCalledWith('They have been removed from the group.');
   });
 
   test('"Make admin" on the row menu calls promoteGroupMember with the group and user id', async () => {
@@ -181,7 +181,7 @@ describe('admin actions', () => {
     await flush();
 
     expect(promoteGroupMember).toHaveBeenCalledWith('g1', 'u1');
-    expect(mockToastShow).toHaveBeenCalledWith('Now an admin.');
+    expect(mockToastShow).toHaveBeenCalledWith('They are now an admin.');
   });
 
   // The row menu never offers "Make admin" for a row that is already an

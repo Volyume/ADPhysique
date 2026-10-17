@@ -125,7 +125,7 @@ const VIDEO_BUSY_LINE = 'A video is still being made. Try again in a moment.';
 // stands, because the share starts there whatever the preview shows.
 const SHARE_CHANGED_LINE = 'Your share changed while the video was being made. Tap Share again.';
 const PREVIEW_CHANGED_LINE = 'Your video changed while the preview was being made. Tap play to see it now.';
-const MOMENT_FAILED_LINE = "The preview couldn't show that moment. Your share will still start there.";
+const MOMENT_FAILED_LINE = "The preview could not show that moment. Your share will still start there.";
 // What the preview's spinner says while a frame is on its way: a newly
 // chosen video opening, or the still at a new start of the one chosen.
 const FRAME_BUSY_LABEL = Object.freeze({ open: 'Opening your video', moment: 'Showing that moment' });
@@ -1393,7 +1393,7 @@ export default function ShareCardScreen({ navigation, route }) {
   const pickGalleryVideo = useCallback(async () => {
     if (suppressRef.current) { setVideoSheetOpen(false); return; } // the safety gate (item 8)
     if (!ImagePicker || !Skia || !FileSystem) {
-      toast.show("Video backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
+      toast.show("Video backgrounds are not available on this phone.", { variant: 'error', duration: 5000 });
       return;
     }
     // A denied library permission no longer ends it: the system picker
@@ -1511,7 +1511,7 @@ export default function ShareCardScreen({ navigation, route }) {
     if (!ImagePicker || !Skia || !FileSystem) {
       // P-16: a missing native module reads as "this device can't do this",
       // never as "you're on an incomplete build".
-      toast.show("Photo backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
+      toast.show("Photo backgrounds are not available on this phone.", { variant: 'error', duration: 5000 });
       return;
     }
     try {
@@ -1527,9 +1527,9 @@ export default function ShareCardScreen({ navigation, route }) {
       // anything made from it go (finding 5).
       if (img) { dropVideo(); setBackgroundSource(BACKGROUND_SOURCES.PHOTO); }
       if (img) acceptPhoto(img);
-      else toast.show("Couldn't load that photo, try again", { variant: 'error' });
+      else toast.show("Could not load that photo. Please try again.", { variant: 'error' });
     } catch (_) {
-      if (mountedRef.current) toast.show("Couldn't take that photo, try again", { variant: 'error' });
+      if (mountedRef.current) toast.show("Could not take that photo. Please try again.", { variant: 'error' });
     }
   }, [toast, acceptPhoto, dropVideo]);
 
@@ -1540,7 +1540,7 @@ export default function ShareCardScreen({ navigation, route }) {
   // permission request below covers older platforms.
   const pickGymPhoto = useCallback(async () => {
     if (!ImagePicker || !Skia || !FileSystem) {
-      toast.show("Photo backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
+      toast.show("Photo backgrounds are not available on this phone.", { variant: 'error', duration: 5000 });
       return;
     }
     // As the video picker: a denied permission still tries the system picker,
@@ -1562,11 +1562,11 @@ export default function ShareCardScreen({ navigation, route }) {
       // anything made from it go (finding 5).
       if (img) { dropVideo(); setBackgroundSource(BACKGROUND_SOURCES.GALLERY); }
       if (img) acceptPhoto(img);
-      else toast.show("Couldn't load that photo, try again", { variant: 'error' });
+      else toast.show("Could not load that photo. Please try again.", { variant: 'error' });
     } catch (_) {
       if (mountedRef.current) {
         if (denied) toast.show('Photo access is needed to choose a background', { variant: 'warning' });
-        else toast.show("Couldn't open your photos, try again", { variant: 'error' });
+        else toast.show("Could not open your photos. Please try again.", { variant: 'error' });
       }
     }
   }, [toast, acceptPhoto, dropVideo]);
@@ -2083,11 +2083,11 @@ export default function ShareCardScreen({ navigation, route }) {
   async function handleSaveToGallery() {
     if (!Skia || !FileSystem || !MediaLibrary) {
       // P-16: device-specific, not "incomplete build".
-      toast.show("Saving to your gallery isn't available on your device.", { variant: 'error', duration: 5000 });
+      toast.show("Saving to your gallery is not available on this phone.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      toast.show('This is not ready yet. Give it a moment, then try again.', { variant: 'info' });
       return;
     }
     // The Sticker saves the image (the panel), even with a video chosen.
@@ -2120,7 +2120,7 @@ export default function ShareCardScreen({ navigation, route }) {
       }
       const uri = await renderCardToFile();
       if (!mountedRef.current) return;
-      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show("Could not make the image. Please try again.", { variant: 'error' }); return; }
       try {
         await MediaLibrary.saveToLibraryAsync(uri);
       } finally {
@@ -2158,11 +2158,11 @@ export default function ShareCardScreen({ navigation, route }) {
     const video = !!liveClip;
     if (!Skia || !FileSystem || (isIos && !video ? !Share : !Sharing)) {
       // P-16: device-specific, not "incomplete build".
-      toast.show("Story sharing isn't available on your device.", { variant: 'error', duration: 5000 });
+      toast.show("Story sharing is not available on this phone.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      toast.show('This is not ready yet. Give it a moment, then try again.', { variant: 'info' });
       return;
     }
     // A video is made with the tone for its window; the tap waits for it
@@ -2188,7 +2188,7 @@ export default function ShareCardScreen({ navigation, route }) {
       }
       const uri = await renderCardToFile();
       if (!mountedRef.current) return;
-      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show("Could not make the image. Please try again.", { variant: 'error' }); return; }
       // The card picture is deleted when the screen goes (a target app may
       // still be reading it when the sheet returns), or by the hour sweep.
       exportFilesRef.current.add(uri);
@@ -2232,24 +2232,24 @@ export default function ShareCardScreen({ navigation, route }) {
   async function handleSetWallpaper() {
     const engine = loadWallpaperEngine();
     if (!engine || !Skia || !FileSystem) {
-      toast.show("Setting a wallpaper isn't available on your device.", { variant: 'error', duration: 5000 });
+      toast.show("Setting a wallpaper is not available on this phone.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      toast.show('This is not ready yet. Give it a moment, then try again.', { variant: 'info' });
       return;
     }
     setSettingWallpaper(true);
     try {
       const uri = await renderCardToFile();
       if (!mountedRef.current) return;
-      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show("Could not make the image. Please try again.", { variant: 'error' }); return; }
       exportFilesRef.current.add(uri);
       await engine.setLockScreenWallpaper(uri);
       if (mountedRef.current) toast.show('Set as your lock screen wallpaper', { variant: 'success' });
     } catch (e) {
       logError('ShareCardScreen.setWallpaper', e);
-      if (mountedRef.current) toast.show("Couldn't set the wallpaper, try again", { variant: 'error' });
+      if (mountedRef.current) toast.show("Could not set the wallpaper. Please try again.", { variant: 'error' });
     } finally {
       if (mountedRef.current) setSettingWallpaper(false);
     }
@@ -3133,7 +3133,7 @@ export default function ShareCardScreen({ navigation, route }) {
           ) : previewStatus === 'error' ? (
             <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
               <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
-              <Text style={[styles.previewErrorText, live.previewErrorText]}>Couldn't build the preview.</Text>
+              <Text style={[styles.previewErrorText, live.previewErrorText]}>Could not build the preview.</Text>
               <Button
                 title="Retry"
                 onPress={renderPreview}
@@ -3230,7 +3230,7 @@ export default function ShareCardScreen({ navigation, route }) {
           );
         })}
         <OptionRow
-          title="Don't show any lifts"
+          title="Do not show any lifts"
           selected={chosenLifts.length === 0}
           onPress={() => { setLiftPicks([]); setLiftSheetOpen(false); }}
           last

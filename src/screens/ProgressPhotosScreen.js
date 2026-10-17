@@ -324,7 +324,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   async function pickFrom(source) {
     setScanFlow(null);
     setCapturePose(null);
-    if (!ImagePicker) { toast.show("Photo library isn't available on this device.", { variant: 'warning' }); return; }
+    if (!ImagePicker) { toast.show("Photo library is not available on this phone.", { variant: 'warning' }); return; }
     setBusy(true);
     try {
       const opts = { mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'Images', quality: 0.7 };
@@ -356,7 +356,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
     if (!ImagePicker) {
       await abandonLapsedScanFlow(flow);
-      toast.show("Photo library isn't available on this device.", { variant: 'warning' });
+      toast.show("Photo library is not available on this phone.", { variant: 'warning' });
       return;
     }
     setBusy(true);
@@ -1464,7 +1464,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           <Card style={[styles.loadErrorCard, live.loadErrorCard]}>
             <View style={styles.loadErrorTop}>
               <Ionicons name="warning-outline" size={iconSize.sm} color={t.colors.warning} />
-              <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh photos</Text>
+              <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Could not refresh photos</Text>
             </View>
             <Text style={[styles.loadErrorBody, live.loadErrorBody]}>
               Your saved photos are still here. Try again to refresh the library and latest score.
@@ -1599,7 +1599,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       return (
         <EmptyState
           icon="warning-outline"
-          title="Couldn't load progress photos"
+          title="Could not load progress photos"
           text="Try again. Volyume has not deleted or changed your photo library."
           actionLabel="Try again"
           onAction={refresh}
@@ -1612,7 +1612,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         <EmptyState
           icon="camera-outline"
           title="No saved photos yet"
-          text="Add front, back and side photos to start.\n\nThe scale can't tell muscle from water. Photos can."
+          text="Add front, back and side photos to start.\n\nThe scale cannot tell muscle from water. Photos can."
         />
       );
     }

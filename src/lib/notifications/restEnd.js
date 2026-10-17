@@ -59,7 +59,7 @@ export async function scheduleRestEndNotification(endsAtMs) {
       identifier: NOTIF_ID_REST_END,
       content: {
         title: 'Rest done',
-        body: 'Next set when you\'re ready.',
+        body: 'Your next set is ready when you are.',
         data: { type: 'rest_end' },
         sound: true,
       },

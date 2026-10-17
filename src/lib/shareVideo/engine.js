@@ -64,7 +64,7 @@ const EXPORT_LINES = Object.freeze({
   E_SPACE: 'There is not enough space on your phone to make the video. Once some space is free you can try again.',
   E_ICLOUD: 'That video is still downloading from iCloud. Try again once it has finished.',
   E_BACKGROUND: 'The video stops if Volyume is closed while it is being made. Keep Volyume open and try again.',
-  E_UNAVAILABLE: "Videos can't be made on this phone. Choose None under Background to share the card as an image.",
+  E_UNAVAILABLE: "Videos cannot be made on this phone. Choose None under Background to share the card as an image.",
 });
 
 // The same two failures for a video filmed in Volyume: the advice about

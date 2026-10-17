@@ -31,7 +31,7 @@ describe('scheduler.js copy fixes (P-11)', () => {
 
   test('the evening weigh-in rotation carries the corrected sentence', () => {
     expect(SOURCE).toContain(
-      "If you haven\\'t weighed in today, there\\'s still time whenever it suits you.",
+      "If you have not weighed in today, there is still time whenever it suits you.",
     );
   });
 

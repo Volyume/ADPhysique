@@ -143,7 +143,7 @@ export default function CommunityGroupMembersScreen({ route }) {
     try {
       await approveGroupRequest(groupId, userId);
       setRows((prev) => prev.map((r) => (r.card.user_id === userId ? { ...r, state: 'member' } : r)));
-      toast.show('Approved.');
+      toast.show('Request approved.');
     } catch (e) {
       toast.show(REFUSALS[e?.code] ?? 'Could not approve that request just now.', { variant: 'error' });
     } finally {
@@ -155,7 +155,7 @@ export default function CommunityGroupMembersScreen({ route }) {
     try {
       await removeGroupMember(groupId, userId);
       setRows((prev) => prev.filter((r) => r.card.user_id !== userId));
-      toast.show('Removed from the group.');
+      toast.show('They have been removed from the group.');
     } catch (e) {
       toast.show(REFUSALS[e?.code] ?? 'Could not remove that member just now.', { variant: 'error' });
     }
@@ -165,7 +165,7 @@ export default function CommunityGroupMembersScreen({ route }) {
     try {
       await promoteGroupMember(groupId, userId);
       setRows((prev) => prev.map((r) => (r.card.user_id === userId ? { ...r, role: 'admin' } : r)));
-      toast.show('Now an admin.');
+      toast.show('They are now an admin.');
     } catch (e) {
       toast.show(REFUSALS[e?.code] ?? 'Could not do that just now.', { variant: 'error' });
     }

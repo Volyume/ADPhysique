@@ -311,7 +311,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           disabled={!!loggingId}
           accessibilityRole="button"
           accessibilityLabel={`Log ${item.name}`}
-          accessibilityHint="Choose servings before adding it to your diary. Use the info button to view what's inside, or edit or delete"
+          accessibilityHint="Choose servings before adding it to your diary. Use the info button to view what is inside, or edit or delete"
         >
           <View style={styles.rowText}>
             <Text style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
@@ -407,7 +407,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         <EmptyState
           icon="warning-outline"
           title="Your recipes did not load"
-          text="Something went wrong loading these. Your saved recipes have not been changed."
+          text="These could not be loaded. Your saved recipes have not been changed."
           actionLabel="Try again"
           onAction={reload}
         />

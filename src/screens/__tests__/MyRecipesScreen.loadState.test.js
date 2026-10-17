@@ -103,7 +103,7 @@ describe('MyRecipesScreen load states', () => {
     // L05-MM2 (2026-07-09 design audit): this is a local SQLite read failure,
     // not a network failure — "Check your connection and try again." ->
     // "Something went wrong loading these. Your saved recipes have not been changed."
-    expect(text).toContain('Something went wrong loading these. Your saved recipes have not been changed.');
+    expect(text).toContain('These could not be loaded. Your saved recipes have not been changed.');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Create your first recipe');
     expect(logError).toHaveBeenCalledWith('MyRecipesScreen.reload', expect.any(Error), { userId: 'u1' });

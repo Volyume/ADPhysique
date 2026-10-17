@@ -7,7 +7,7 @@
  *   - usePhotoSuppression() true → NEVER renders (calm mode / open ED flag /
  *     any read failure all suppress);
  *   - a persisted opt-out ('photo_prompt_optout') → NEVER renders;
- *   - "Don't ask again" persists the opt-out flag, and it then holds;
+ *   - "Do not ask again" persists the opt-out flag, and it then holds;
  *   - the ≤1/day + never-twice-per-milestone frequency ceiling holds;
  *   - the copy is verbatim and carries none of the banned appearance/body
  *     vocabulary (it is a TRAINING moment, not the body).
@@ -99,11 +99,11 @@ describe('ProgressPhotoPrompt, renders on a competence milestone', () => {
     const copy = flattenText(tree.toJSON());
     expect(copy).toContain('Mark the moment');
     expect(copy).toContain(
-      "You've just hit a milestone. If you'd like, add a photo. Your own pace, always private to this phone.",
+      "You have just hit a milestone. If you would like, add a photo. Your own pace, always private to this phone.",
     );
     expect(copy).toContain('Add a photo');
     expect(copy).toContain('Not now');
-    expect(copy).toContain("Don't ask again");
+    expect(copy).toContain("Do not ask again");
     // An impression fires the shown telemetry (feature key only).
     expect(track).toHaveBeenCalledWith('u1', 'photo_prompt_shown');
   });
@@ -147,7 +147,7 @@ describe('ProgressPhotoPrompt, opt-out persistence', () => {
   test('"Don\'t ask again" persists the opt-out flag and then never renders', async () => {
     const first = await render();
     expect(isRendered(first.tree)).toBe(true);
-    await press(first.tree, "Don't ask again");
+    await press(first.tree, "Do not ask again");
     // Flag persisted under the spec-mandated key.
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(OPTOUT_KEY, '1');
     expect(first.tree.toJSON()).toBeNull();

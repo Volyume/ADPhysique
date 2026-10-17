@@ -182,7 +182,7 @@ describe('connectRefusalLine: every code names what happened, none of them revea
   });
 
   test('a declined-or-withdrawn cool off never says which one happened', () => {
-    expect(connectRefusalLine('not_allowed')).toBe('Not available just now. You can try again later.');
+    expect(connectRefusalLine('not_allowed')).toBe('This is not available right now. You can try again later.');
   });
 
   test('an unknown code still answers something calm', () => {

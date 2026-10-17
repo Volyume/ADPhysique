@@ -267,7 +267,7 @@ export default function CommunityModerationScreen() {
         <View style={[styles.content, { paddingHorizontal: t.screenPadding }]}>
           <EmptyState
             icon="shield-outline"
-            title="Not available"
+            title="This is not available right now"
             text="The moderator queue is only open to moderators."
           />
         </View>

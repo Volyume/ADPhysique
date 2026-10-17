@@ -306,7 +306,7 @@ const { PHOTO_LOOKS } = require('../../lib/shareCard/photoLooks');
 
 const SHARE_CHANGED_LINE = 'Your share changed while the video was being made. Tap Share again.';
 const PREVIEW_CHANGED_LINE = 'Your video changed while the preview was being made. Tap play to see it now.';
-const MOMENT_FAILED_LINE = "The preview couldn't show that moment. Your share will still start there.";
+const MOMENT_FAILED_LINE = "The preview could not show that moment. Your share will still start there.";
 const flatStyle = (style) => Object.assign({}, ...[].concat(style).flat(Infinity).filter(Boolean));
 // Re-pinned 2026-10-16 (render audit, lead ruling 1): Play is now a
 // secondary button under the preview, off the card, whose visible label is

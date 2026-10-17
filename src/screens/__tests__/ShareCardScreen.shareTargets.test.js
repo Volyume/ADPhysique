@@ -286,7 +286,7 @@ describe('ShareCardScreen — top lifts (founder orders 2026-09-26)', () => {
     expect(heading(tree, 'Top lift')).toBe(1);
     // None at all is a choice too.
     await press(findByA11yLabel(tree, 'Top lift: Cable Fly, 30 kg × 12. Change')[0]);
-    await press(findByA11yLabel(tree, "Don't show any lifts")[0]);
+    await press(findByA11yLabel(tree, "Do not show any lifts")[0]);
     await waitFor(() => liftNames() === '');
     expect(findByA11yLabel(tree, 'Top lift: not shown. Choose a lift').length).toBeGreaterThan(0);
   });

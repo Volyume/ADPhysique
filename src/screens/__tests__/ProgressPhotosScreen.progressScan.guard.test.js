@@ -276,7 +276,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('library scan imports abandon unfinished draft sessions on every failed path', () => {
     expect(SCREEN).toMatch(/async function pickScanPoseFromLibrary\(flow = scanFlow, pose = capturePose\)/);
-    expect(SCREEN).toMatch(/if \(!ImagePicker\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*Photo library isn't available on this device/);
+    expect(SCREEN).toMatch(/if \(!ImagePicker\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*Photo library is not available on this phone/);
     expect(SCREEN).toMatch(/if \(result\?\.canceled\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
     expect(SCREEN).toMatch(/if \(!uri\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
     expect(SCREEN).toMatch(/let savedPhoto = null;[\s\S]*savedPhoto = saved;/);

@@ -317,7 +317,7 @@ export default function CommunityPostScreen({ navigation, route }) {
         <View style={[styles.centre, { paddingHorizontal: t.screenPadding }]}>
           <EmptyState
             icon="cloud-offline-outline"
-            title="Not available"
+            title="This is not available right now"
             text={postErrorLine(errorCode)}
             actionLabel="Try again"
             onAction={load}
