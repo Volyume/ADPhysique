@@ -332,7 +332,7 @@ async function overview(admin: SupabaseClient): Promise<Response> {
   if (campErr) throw new Error('campaigns read failed')
   const { data: surveys, error: survErr } = await admin
     .from('member_surveys')
-    .select('id, title, intro, questions, status, created_at, updated_at, member_survey_answers(count)')
+    .select('id, title, intro, questions, status, closes_at, anonymous, created_at, updated_at, member_survey_answers(count)')
     .order('created_at', { ascending: false }).limit(50)
   if (survErr) throw new Error('surveys read failed')
   const c = (counts ?? {}) as Record<string, number>

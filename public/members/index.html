@@ -34,7 +34,7 @@
   body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
     font-size:1.0625rem; line-height:1.55; -webkit-font-smoothing:antialiased; overflow-wrap:anywhere;}
   a{color:var(--amber);}
-  .wrap{max-width:760px; margin:0 auto; padding:0 16px;}
+  .wrap{max-width:860px; margin:0 auto; padding:0 16px;}
 
   header.top{background:#0D0D0D; color:#FFFFFF; border-bottom:1px solid #2E2E2C;}
   header.top .wrap{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; padding-top:12px; padding-bottom:12px;}
@@ -50,6 +50,22 @@
   .small{font-size:.9rem; color:var(--textMuted);}
 
   .tabs{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 20px;}
+  .subtabs{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px;}
+  .block{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:14px; padding:12px 14px; margin:0 0 10px;}
+  .block .bhead{font-weight:800; color:var(--amber);}
+  .block .row{margin:8px 0;}
+  .block .row .btn{flex:1 1 7rem; min-height:44px;}
+  .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(11rem,1fr)); gap:0 12px;}
+  .meter{height:18px; border-radius:9px; background:var(--surface2); overflow:hidden; margin:6px 0;}
+  .meter > span{display:block; height:100%; background:var(--amberFill);}
+  .spark{display:flex; align-items:flex-end; gap:2px; height:64px; margin:8px 0;}
+  .spark > span{flex:1 1 0; background:var(--amberFill); min-height:2px; border-radius:2px 2px 0 0;}
+  iframe.preview.phone{max-width:390px; display:block; margin:0 auto;}
+  iframe.preview.dark{background:#111111;}
+  table.t{width:100%; border-collapse:collapse; font-size:.95rem;}
+  table.t th, table.t td{text-align:left; padding:8px 6px; border-top:1px solid var(--borderSubtle); vertical-align:top;}
+  .notes{margin:8px 0 0; padding-left:1.2rem; color:var(--textSecondary);}
+  .chip.bad{border-color:var(--danger); color:var(--danger);}
   .tab{flex:1 1 auto;}
 
   .btn{display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:8px;

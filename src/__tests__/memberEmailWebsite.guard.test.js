@@ -29,6 +29,7 @@ const membersHtml = read('public', 'members', 'index.html');
 const membersJs = read('public', 'members', 'members.js');
 const surveyHtml = read('public', 'survey', 'index.html');
 const unsubHtml = read('public', 'email', 'unsubscribe', 'index.html');
+const prefsHtml = read('public', 'email', 'preferences', 'index.html');
 
 const REF = 'sujrylzzxcqxxfygptns';
 const FN = `https://${REF}.supabase.co/functions/v1/`;
@@ -52,6 +53,7 @@ const PAGES = {
   members: { html: membersHtml, code: membersJs + '\n' + inlineScript(membersHtml) },
   survey: { html: surveyHtml, code: inlineScript(surveyHtml) },
   unsubscribe: { html: unsubHtml, code: inlineScript(unsubHtml) },
+  preferences: { html: prefsHtml, code: inlineScript(prefsHtml) },
 };
 
 describe('member email website pages', () => {
@@ -59,6 +61,7 @@ describe('member email website pages', () => {
     expect(scriptSrcs(membersHtml)).toEqual(['members.js']);
     expect(scriptSrcs(surveyHtml)).toEqual([]);
     expect(scriptSrcs(unsubHtml)).toEqual([]);
+    expect(scriptSrcs(prefsHtml)).toEqual([]);
     for (const { html } of Object.values(PAGES)) {
       expect(html).not.toMatch(/<script[^>]*\bsrc=["'](?:https?:)?\/\//i);
       expect(html).not.toMatch(/<link[^>]*rel=["']stylesheet["']/i);
@@ -75,20 +78,58 @@ describe('member email website pages', () => {
     expect(membersJs).not.toMatch(/XMLHttpRequest|sendBeacon|WebSocket/);
     expect(membersJs).not.toMatch(/\/rest\/v1\/|\/auth\/v1\//);
     expect(inlineScript(membersHtml).trim()).toBe('');
-    expect(membersJs).not.toMatch(/apikey|anon/i);
+    expect(membersJs).not.toMatch(/apikey|anon_key|\banon\b/i);
   });
 
-  test('the members page sends only the actions the spec names', () => {
-    const spec = [
-      'request_login', 'exchange', 'overview', 'save_campaign', 'delete_campaign', 'preview',
-      'send_test', 'send_campaign', 'save_survey', 'set_survey_status', 'survey_results',
-      'export_survey', 'list_members', 'exclude', 'include', 'list_exclusions',
+  test('the members page sends only actions the admin function documents, and all of the v2 screens', () => {
+    const documented = [
+      'request_login', 'exchange', 'overview', 'delete_campaign', 'save_survey', 'set_survey_status',
+      'survey_results', 'export_survey', 'list_members', 'exclude', 'include', 'list_exclusions',
+      'home', 'insights', 'list_campaigns', 'get_campaign', 'save_campaign', 'duplicate_campaign', 'preview',
+      'send_test', 'send_seed', 'campaign_count', 'send_campaign', 'schedule_campaign', 'cancel_campaign',
+      'undo_send', 'pause_campaign', 'resume_campaign', 'schedule_resend', 'campaign_stats',
+      'list_segments', 'save_segment', 'delete_segment', 'segment_count',
+      'list_templates', 'save_template', 'delete_template',
+      'list_automations', 'save_automation', 'set_automation', 'automation_stats', 'preview_automation',
+      'test_automation', 'member_detail', 'export_member', 'get_settings', 'save_settings',
+      'set_kill_switch', 'add_seed', 'remove_seed', 'domain_status', 'set_domain_tracking',
+      'audit_log', 'export_records', 'upload_asset', 'list_assets', 'delete_asset', 'set_survey_options',
     ];
     const used = [...membersJs.matchAll(/\bcall\("([a-z_]+)"/g)].map((m) => m[1]);
-    for (const a of used) expect(spec).toContain(a);
-    for (const a of spec) expect(used).toContain(a);
+    for (const a of used) expect(documented).toContain(a);
+    for (const a of [
+      'request_login', 'exchange', 'home', 'insights', 'list_campaigns', 'get_campaign', 'save_campaign',
+      'preview', 'send_test', 'send_seed', 'campaign_count', 'send_campaign', 'schedule_campaign', 'undo_send',
+      'pause_campaign', 'resume_campaign', 'schedule_resend', 'campaign_stats', 'upload_asset',
+      'list_automations', 'save_automation', 'set_automation', 'preview_automation', 'test_automation',
+      'save_survey', 'set_survey_options', 'list_members', 'member_detail', 'export_member', 'list_exclusions',
+      'exclude', 'include', 'list_segments', 'save_segment', 'segment_count', 'audit_log', 'export_records',
+      'get_settings', 'save_settings', 'set_kill_switch', 'add_seed', 'domain_status', 'set_domain_tracking',
+    ]) expect(used).toContain(a);
     expect(membersJs).toMatch(/expected_recipients: live/);
     expect(membersJs).toMatch(/body\.session = state\.session/);
+    expect(membersJs).toContain('?action=upload_asset');
+  });
+
+  test('the page follows the admin structure, shows lint as blocking errors and notes, and gates the send', () => {
+    for (const label of ['Home', 'Emails', 'Automations', 'Surveys', 'People', 'More']) {
+      expect(membersJs).toContain(`"${label}"]`);
+    }
+    for (const label of ['Insights', 'Records', 'Settings']) expect(membersJs).toContain(`"${label}"`);
+    expect(membersJs).toMatch(/lint\.errors/);
+    expect(membersJs).toMatch(/lint\.warnings/);
+    expect(membersJs).toMatch(/lint\.manual_checks/);
+    expect(membersJs).toContain('This email cannot be sent yet. Fix these first.');
+    // The four checklist items the server requires, ticked by the founder.
+    for (const key of ['audience_confirmed', 'topic_confirmed', 'test_sent', 'links_checked']) expect(membersJs).toContain(`"${key}"`);
+    // Undo window with Cancel, schedule in UK time, the domain tracking warning.
+    expect(membersJs).toContain('"Cancel the send"');
+    expect(membersJs).toMatch(/call\("undo_send"/);
+    expect(membersJs).toContain('Europe/London');
+    expect(membersJs).toMatch(/also applies to sign-in emails/);
+    // Block editor: every block type the server accepts, image alt text required.
+    for (const t of ['heading', 'paragraph', 'image', 'button', 'divider', 'spacer', 'survey']) expect(membersJs).toContain(`["${t}", `);
+    expect(membersJs).toMatch(/needs a short description for people who cannot see it/);
   });
 
   test('the members page is noindex and keeps its session in sessionStorage only', () => {
@@ -144,7 +185,7 @@ describe('member email website pages', () => {
   test('every URL in page code is on the allowed list', () => {
     const allowed = [
       /^https:\/\/sujrylzzxcqxxfygptns\.supabase\.co\//,
-      /^https:\/\/volyume\.app\//,
+      /^https:\/\/volyume\.app(?:\/|$)/,
       /^https:\/\/play\.google\.com\//,
       /^https:\/\/example\.com/,
     ];
@@ -153,6 +194,29 @@ describe('member email website pages', () => {
         expect({ name, u, ok: allowed.some((re) => re.test(u)) }).toEqual({ name, u, ok: true });
       }
     }
+  });
+
+  test('the preferences page calls only member-email-public and offers the four topics', () => {
+    const backend = urlsIn(PAGES.preferences.code).filter((u) => u.includes('supabase.co'));
+    expect(new Set(backend)).toEqual(new Set([PUBLIC_URL]));
+    expect(PAGES.preferences.code).not.toMatch(/XMLHttpRequest|sendBeacon|WebSocket|eval\(|member-email-admin|\/rest\/v1\//);
+    expect(prefsHtml).toMatch(/<meta name="robots" content="[^"]*noindex/i);
+    for (const a of ['get_preferences', 'set_preferences', 'turn_all_off', 'turn_all_on', 'unsubscribe_reason']) {
+      expect(prefsHtml).toContain(`"${a}"`);
+    }
+    for (const t of ['product_news', 'surveys', 'weekly_summary', 'community_events']) expect(prefsHtml).toContain(`data-topic="${t}"`);
+    // The token travels in a POST body, never to another page.
+    expect(prefsHtml).toMatch(/method: "POST"/);
+    expect(prefsHtml).not.toMatch(/innerHTML/);
+  });
+
+  test('the unsubscribe page offers the optional reason after success, using the four reasons the server keeps', () => {
+    for (const r of ['too_many', 'not_relevant', 'not_expected', 'other']) {
+      expect(unsubHtml).toContain(`data-reason="${r}"`);
+      expect(prefsHtml).toContain(`data-reason="${r}"`);
+    }
+    expect(unsubHtml).toContain('action: "unsubscribe_reason"');
+    expect(unsubHtml).toMatch(/offerReason\(\);\s*return;/);
   });
 
   test('the legacy survey still posts q_overall to q_more and still works with no id', () => {
@@ -180,9 +244,13 @@ describe('member email website pages', () => {
   });
 
   test('no em dash and no contractions in any page copy', () => {
-    const files = { membersHtml, membersJs, surveyHtml, unsubHtml };
+    const files = { membersHtml, membersJs, surveyHtml, unsubHtml, prefsHtml };
     for (const [name, text] of Object.entries(files)) {
       expect({ name, dash: /\u2014|&mdash;|&#8212;/.test(text) }).toEqual({ name, dash: false });
+    }
+    // The founder dropped "offers" from every member email surface.
+    for (const [name, text] of Object.entries({ membersHtml, membersJs, unsubHtml, prefsHtml })) {
+      expect({ name, offers: /\boffers?\b/i.test(text) }).toEqual({ name, offers: false });
     }
     for (const [name, { html, code }] of Object.entries(PAGES)) {
       const copy = [visibleText(html), ...stringLiterals(code)].join('\n');
@@ -208,7 +276,9 @@ describe('member email website pages', () => {
     expect(membersJs).toContain('"Workouts: none logged yet"');
     // The rows are displayed only: nothing on the page sends these fields back
     // to the server or filters the audience by them.
-    expect(membersJs).not.toMatch(/[{,]\s*["']?(last_seen_day|app_version|workouts_7d|workouts_30d|last_workout_at)["']?\s*:/);
+    // (The group builder names rule fields in its own table; that block is not a request.)
+    const withoutRules = membersJs.replace(/var RULES = \{[\s\S]*?\n  \};/, '');
+    expect(withoutRules).not.toMatch(/[{,]\s*["']?(last_seen_day|app_version|workouts_7d|workouts_30d|last_workout_at)["']?\s*:/);
   });
 
   test('the news-email section is in every privacy copy, with the founder-ruled basis', () => {
@@ -218,8 +288,8 @@ describe('member email website pages', () => {
     expect(read('docs', 'web', 'privacy.html')).toBe(html);
     for (const text of [html.replace(/\s+/g, ' '), md.replace(/\s+/g, ' ')]) {
       expect(text).toMatch(/News emails/);
-      expect(text).toMatch(/When you create an account you are told that Volyume will email you about new features, offers and the occasional short survey/);
-      expect(text).toMatch(/News and offers by email/);
+      expect(text).toMatch(/When you create an account you are told that Volyume will email you about new features, short surveys and a weekly summary/);
+      expect(text).toMatch(/News by email/);
       expect(text).toMatch(/Unsubscribe link in every email/);
       expect(text).toMatch(/Resend sends these emails for us from Ireland and keeps its email records in the United States/);
       expect(text).toMatch(/Deleting your account deletes all of this/);
