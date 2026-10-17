@@ -215,6 +215,16 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry20).toContain('Settings, under Privacy and legal');
     expect(entry20).toContain('Community has been improved');
     expect({ bad: /\bclips?\b/i.test(entry20) }).toEqual({ bad: false });
+    // 2.21.0 (2026-10-17): the share rework with its privacy line, plan
+    // restart, and news by email.
+    const start21 = sheet.indexOf("'2.21.0': [");
+    expect(start21).toBeGreaterThan(-1);
+    const entry21 = sheet.slice(start21, sheet.indexOf('],', start21));
+    expect(entry21).toContain('Videos stay on your phone and are never uploaded');
+    expect(entry21).toContain('Settings, under Privacy and legal');
+    expect(entry21).toContain('start your plan again from week 1');
+    expect(entry21).toContain('News by email');
+    expect({ bad: /\bclips?\b|offers/i.test(entry21) }).toEqual({ bad: false });
   });
   test('the running version has a What\'s new entry', () => {
     const app = JSON.parse(readRepoFile('app.json'));
