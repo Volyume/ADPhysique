@@ -154,9 +154,12 @@
   }
 
   if (token) {
-    document.getElementById("intro").textContent = "This only affects news emails from the Volyume team. It does not change anything else inside the app, and it takes effect straight away.";
+    // Click to confirm, never on load: some mail security scanners open links
+    // (and run their scripts) by themselves, which would unsubscribe people
+    // who never asked. Mail apps' own one-click unsubscribe (RFC 8058) posts
+    // to the function directly and needs no page.
+    document.getElementById("intro").textContent = "Press the button to stop news emails from Volyume. It does not change anything else inside the app, and it takes effect straight away.";
     stopBtn.addEventListener("click", unsubscribeWithToken);
-    unsubscribeWithToken();
   } else if (!userId) {
     actions.classList.add("hidden");
     showResult("This link is missing its reference, so nothing can be changed from here. If you want to stop these emails, reply to the one you received and it will be handled by a person.");
