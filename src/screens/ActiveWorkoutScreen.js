@@ -1548,7 +1548,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           text: 'Log them',
           onPress: () => {
             tickAllRemainingRef.current = count;
-            tickAllRunRef.current = { exerciseId: exercise?.id ?? null, expectedLength: loggedSets.length };
+            tickAllRunRef.current = { exerciseId: exercise?.id ?? null, expectedLength: loggedSets.length, total: count };
             tickAllStep();
           },
         },
@@ -1579,6 +1579,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   useEffect(() => {
     if (tickAllRemainingRef.current <= 0) return;
+    // A save still in flight: wait. This effect also depends on `saving`, so
+    // it runs again the moment the save ends, even when loggedSets landed in
+    // an earlier render than the end of the save (the two updates are not
+    // always batched), which used to stall the run on the last set.
+    if (saving) return;
     const run = tickAllRunRef.current;
     // Continue only when exactly one more set landed on the SAME exercise;
     // anything else (a delete, a group jump, a failed log) ends the run.
@@ -1588,10 +1593,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
     run.expectedLength = loggedSets.length;
     tickAllRemainingRef.current -= 1;
-    if (tickAllRemainingRef.current > 0 && !saving) tickAllStep();
-    else if (tickAllRemainingRef.current <= 0) clearTickAll();
+    if (tickAllRemainingRef.current > 0) tickAllStep();
+    else {
+      // The run is complete: one beat and one spoken line for the whole run
+      // (each set has already had its own tick and "Set N logged").
+      const total = run.total;
+      clearTickAll();
+      hapticsVocab.commit();
+      if (total > 0) {
+        try {
+          AccessibilityInfo.announceForAccessibility(`${total} ${total === 1 ? 'set' : 'sets'} logged.`);
+        } catch (_) { /* announcement is best-effort */ }
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loggedSets.length]);
+  }, [loggedSets.length, saving]);
   useEffect(() => { clearTickAll(); }, [currentExerciseIndex]);
 
   function handleJumpToExercise(i) {
@@ -2282,6 +2298,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // stale-Activity sweep. stopRestTimer() is called explicitly below
   // whenever a rest is still active at the moment of discard, closing that
   // gap without touching the store file.
+  // Set drafts (`@volyume_setdraft_<workoutId>_<exerciseId>`) outlive the
+  // workout they belong to unless removed, so a finish or a discard removes
+  // every draft key of THIS workout. Best effort: it never blocks or fails
+  // the finish or the discard. draftsClearedForRef stops the draft effect's
+  // closing flush from writing one back as the screen winds down.
+  function clearWorkoutDrafts(workoutId) {
+    if (!workoutId) return;
+    draftsClearedForRef.current = workoutId;
+    const prefix = `@volyume_setdraft_${workoutId}_`;
+    AsyncStorage.getAllKeys()
+      .then((keys) => {
+        const mine = (keys || []).filter((k) => typeof k === 'string' && k.startsWith(prefix));
+        return mine.length ? AsyncStorage.multiRemove(mine) : undefined;
+      })
+      .catch(() => { /* best-effort: a stale draft is harmless and never blocks the finish or discard */ });
+  }
   async function discardWorkout(errorSource) {
     const discardId = activeWorkout?.id;
     if (!discardId) {
@@ -2306,6 +2338,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (useAppStore.getState().restTimerActive) {
         useAppStore.getState().stopRestTimer();
       }
+      clearWorkoutDrafts(discardId);
       endWorkout();
       // D221 3a: a discard clears presence. Best effort.
       // eslint-disable-next-line global-require
@@ -2329,6 +2362,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // confirmation, so widen the gate to cover it with the same calm
     // discard-confirm the app already uses once any set is logged.
     if (totalSets === 0 && !hasInProgressSetEntry()) {
+      clearWorkoutDrafts(activeWorkout?.id);
       store.endWorkout();
       // eslint-disable-next-line global-require
       try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
@@ -3140,6 +3174,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const draftSaveTimer = useRef(null);
   const draftRef = useRef(null);
   const draftArmedRef = useRef(false);
+  const draftsClearedForRef = useRef(null); // workout id whose drafts a finish or discard removed
+  // Closing flush: the pending (debounced) payload is written when the
+  // workout or exercise changes or the screen goes, instead of being lost
+  // with its cleared timer. Declared BEFORE the draft effect so its cleanup
+  // runs first, while the timer is still pending.
+  useEffect(() => () => {
+    const pending = draftRef.current;
+    if (!draftSaveTimer.current || !pending) return;
+    if (draftsClearedForRef.current && pending.key.startsWith(`@volyume_setdraft_${draftsClearedForRef.current}_`)) return;
+    if (pending.payload) AsyncStorage.setItem(pending.key, JSON.stringify(pending.payload)).catch(() => {});
+    else AsyncStorage.removeItem(pending.key).catch(() => {});
+  }, [activeWorkout?.id, exercise?.id]);
   useEffect(() => {
     if (!activeWorkout?.id || !exercise?.id) { draftRef.current = null; return undefined; }
     // Not before this exercise's load has had its chance to restore (audit
@@ -3164,10 +3210,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     draftRef.current = { key, payload }; // mirror for the immediate background flush
     if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
     draftSaveTimer.current = setTimeout(() => {
+      draftSaveTimer.current = null; // written: nothing left pending for the closing flush
       if (payload) AsyncStorage.setItem(key, JSON.stringify(payload)).catch(() => {});
       else AsyncStorage.removeItem(key).catch(() => {});
     }, 250);
-    return () => { if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current); };
+    return () => { if (draftSaveTimer.current) { clearTimeout(draftSaveTimer.current); draftSaveTimer.current = null; } };
   }, [currentSet, loggedSets, activeWorkout?.id, exercise?.id, exercise?.exerciseType]);
 
   // Flush the draft the INSTANT the app backgrounds, so a quick type-then-switch
@@ -3224,6 +3271,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // up for correction.
     Keyboard.dismiss();
     setSaving(true);
+    // True once createWorkoutSet has resolved: from then on the set IS stored,
+    // so a throw in the work after it must never claim the set was not stored.
+    let setPersisted = false;
     // D2: warm-ups get the softer tick, working sets the standard beat.
     if ((currentSet.setType ?? 'straight') === 'warmup') hapticsVocab.warmupLogged();
     else hapticsVocab.setLogged();
@@ -3280,6 +3330,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         }),
       });
 
+      setPersisted = true;
       const setData = {
         id: savedSet.id,
         exerciseId: exercise.id,
@@ -3370,6 +3421,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // only when that read also fails, and then the set is left alone: no
       // record claimed, and no first-lift claim either, because both would
       // be assertions we cannot support.
+      // Post-save work, part one (PR detection, prescription resolve, record
+      // notifications): its own try, closed below at "Update last activity",
+      // so a throw here is logged and the set stays saved, the rest timer
+      // still starts and the screen carries on. (Body left at its original
+      // indentation to keep the diff reviewable.)
+      try {
       let priorSets = allTimeSets;
       let priorUnknown = false;
       if (!historyLoadedRef.current) {
@@ -3555,6 +3612,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         }
       }
 
+      } catch (postSaveError) {
+        logError('ActiveWorkout.postSave', postSaveError, {
+          workoutId: activeWorkout?.id,
+          exerciseId: exercise?.id,
+          setId: savedSet?.id,
+        });
+      }
+
       // Update last activity timestamp
       updateLastActivity();
 
@@ -3712,18 +3777,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         }
       }
     } catch (e) {
-      logError('ActiveWorkoutScreen.handleCompleteSet', e, {
-        userId: user?.id,
-        workoutId: activeWorkout?.id,
-        exerciseId: exercise?.id,
-        setType: currentSet.setType,
-      });
-      // The check is the one control; its spoken name is the action's name.
-      const retryAction = 'the check';
-      appAlert(
-        'Couldn\'t save set',
-        `Your set wasn't saved. Tap ${retryAction} to try again. If it keeps happening, please contact support.`,
-      );
+      if (setPersisted) {
+        // The row is stored; only the work after it failed (the rest timer,
+        // the auto-advance). A "not saved" message would invite a duplicate.
+        logError('ActiveWorkout.postSave', e, {
+          workoutId: activeWorkout?.id,
+          exerciseId: exercise?.id,
+          setType: currentSet.setType,
+        });
+      } else {
+        logError('ActiveWorkoutScreen.handleCompleteSet', e, {
+          userId: user?.id,
+          workoutId: activeWorkout?.id,
+          exerciseId: exercise?.id,
+          setType: currentSet.setType,
+        });
+        // The check is the one control; its spoken name is the action's name.
+        const retryAction = 'the check';
+        appAlert(
+          'Could not save set',
+          `Your set was not saved. Tap ${retryAction} to try again. If it keeps happening, please contact support.`,
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -4290,6 +4365,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function setFinishingFlag(v) { finishingRef.current = v; setFinishing(v); }
   async function handleFinishWorkout() {
     if (!activeWorkout) { navigation.goBack(); return; }
+    // A set save in flight has not reached the database yet: finishing now
+    // would total the workout without it. Do nothing; the button works again
+    // a moment later, when the save ends.
+    if (saving) return;
     if (finishingRef.current) return; // double-tap guard
     setFinishingFlag(true);
     audit('workout.finish.tap', {
@@ -4483,6 +4562,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // The session's records, captured BEFORE endWorkout clears the slice -
       // the same shape of guard finishedAdjustments above already needs.
       const finishedPRs = detectedPRs;
+      // Finishing mid-rest: endWorkout() clears the rest timer in the store
+      // but is not one of the Live Activity lifecycle call sites, so stop it
+      // explicitly (the same fresh read the discard path makes) or the iOS
+      // Live Activity keeps counting a session that is over.
+      if (useAppStore.getState().restTimerActive) {
+        useAppStore.getState().stopRestTimer();
+      }
+      clearWorkoutDrafts(activeWorkout.id);
       endWorkout();
       // D2: the whole-workout completion beat (the vocabulary event
       // existed but was never called anywhere).
@@ -5223,14 +5310,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const n = parseInt(text, 10);
       // 1 to 200 reps; a keystroke that leaves that range is refused, never
       // clamped silently (D220 addendum 34, audit D14).
-      if (!Number.isNaN(n)) { if (n >= 1 && n <= 200) writeActiveField('reps', n); }
-      else if (text === '') writeActiveField('reps', '');
+      if (!Number.isNaN(n)) {
+        if (n >= 1 && n <= 200) writeActiveField('reps', n);
+        else hapticsVocab.press(); // refused keystroke: a light tap says it did not take
+      } else if (text === '') writeActiveField('reps', '');
       return;
     }
     const ok = setTableKind === 'distance'
       ? /^\d{0,5}\.?\d{0,2}$/.test(text)
       : (/^\d{0,3}(\.\d{0,2})?$/.test(text) && (text === '' || Number(text) <= 500));
     if (ok) writeActiveField('weight', text);
+    else hapticsVocab.press(); // refused keystroke (a third decimal, over 500): a light tap
   }
   // An iOS number pad has no return key. Left typed as 'next' or 'done', the
   // founder's iPhone drew a floating return-key capsule over the keypad that

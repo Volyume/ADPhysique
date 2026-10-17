@@ -380,7 +380,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // D220 review: the check is the one control, so the retry names it.
     expect(ACTIVE_WORKOUT).toContain("const retryAction = 'the check';");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
-    expect(ACTIVE_WORKOUT).toMatch(/Your set wasn't saved\. Tap \$\{retryAction\} to try again/);
+    expect(ACTIVE_WORKOUT).toMatch(/Your set was not saved\. Tap \$\{retryAction\} to try again/);
   });
 
   test('long workout utility sheets are scroll-safe on phone screens', () => {
