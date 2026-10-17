@@ -5906,7 +5906,7 @@ export async function setActivePlan(userId, planId) {
 // Stage 1 seam (2026-08-09): `ledger` is the Block Ledger result the Stage 6
 // build threads into seeding. Accepted now so the "Continue with
 // adjustments" path has a real parameter to carry it; unused until Stage 6.
-export async function activatePlanWithBlock(userId, planId, planName, { ledger = null, allowLearnedCarry = true } = {}) {
+export async function activatePlanWithBlock(userId, planId, planName, { ledger = null, allowLearnedCarry = true, fromStart = false } = {}) {
   // Activation-funnel elevation (lead programme ruling, D139): plan_replaced
   // must fire only on a genuine replacement, never a user's first-ever
   // activation, so read whether an active block already exists BEFORE
@@ -5963,7 +5963,9 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   const d = await db();
   const now = Date.now();
   const id = uid();
-  const authored = await authoredBlockFor(planId, _priorActiveBlock?.id, id);
+  // `fromStart` (Start this plan again): an authored plan begins at its own
+  // block 1, week 1 targets, not carrying on from the level reached.
+  const authored = await authoredBlockFor(planId, fromStart ? null : _priorActiveBlock?.id, id);
   // C6 T-2 (D97-24): store the LOCAL activation day, not the UTC one - an
   // evening activation in the Americas used to store tomorrow's date.
   const _sd = new Date();

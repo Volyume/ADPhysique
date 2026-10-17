@@ -787,7 +787,7 @@ export default function PlansScreen({ navigation }) {
    * than inferred, so the Repeat route cannot acquire a refinement by a
    * change somewhere else in this file.
    */
-  async function runBlockActivation({ intent, refine, review = null }) {
+  async function runBlockActivation({ intent, refine, review = null, fromStart = false }) {
     // eslint-disable-next-line global-require
     const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
     // FOUNDER DECISION (fully free, no tier split): only the 'adjust' option
@@ -810,7 +810,8 @@ export default function PlansScreen({ navigation }) {
     // above never asks for a rebuild of it, so refine is false.
     const styleLock = styleLockFromTags(activePlan?.tags);
     const mayRefine = refine === true && seedIntent === 'adjust' && !authoredPlan && !styleLock;
-    const seedRanges = review?.seedRanges ?? blockReview?.seedRanges ?? await buildSeedRangesForNextBlock(user.id, {
+    // fromStart: the plan's own starting targets, so no prior-block ledger.
+    const seedRanges = fromStart ? null : review?.seedRanges ?? blockReview?.seedRanges ?? await buildSeedRangesForNextBlock(user.id, {
       intent: seedIntent, userProfile, tier,
     }).catch(() => null);
 
@@ -874,6 +875,7 @@ export default function PlansScreen({ navigation }) {
       await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), {
         ledger: seedRanges,
         allowLearnedCarry: seedIntent !== 'repeat',
+        fromStart,
       });
       if (structurePlan) {
         await afterStructureBlockStart(activePlan.id)
@@ -1126,6 +1128,36 @@ export default function PlansScreen({ navigation }) {
     peekRef.current?.open({ title: `Move ${planHeadingName(plan.name)}`, items });
   }
 
+  // "Start this plan again" (founder 2026-10-17): available at any time from
+  // the active plan's options. A new block of the same plan at week 1 from the
+  // plan's own starting targets (an authored plan's authored week 1). The
+  // existing workouts stay in history; the literal repeat path, no generator.
+  function handleStartPlanAgain() {
+    if (!activePlan || restartingRef.current) return;
+    restartingRef.current = true;
+    appAlert(
+      'Start this plan again?',
+      'Your plan starts fresh from week 1 today. Your logged workouts stay in your history.',
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => { restartingRef.current = false; } },
+        {
+          text: 'Start again',
+          onPress: async () => {
+            try {
+              logInfo('PlansScreen.blockRestart', 'intent=repeat fromStart=true');
+              await runBlockActivation({ intent: 'repeat', refine: false, fromStart: true });
+            } catch (e) {
+              logError('PlansScreen.handleStartPlanAgain', e, { userId: user?.id, planId: activePlan?.id });
+              toast.show("Could not restart your plan. Please try again.", { variant: 'error' });
+            } finally {
+              restartingRef.current = false;
+            }
+          },
+        },
+      ],
+    );
+  }
+
   async function handlePlanOptions(plan) {
     // R9 (D70): every peek-menu-opening tap ticks selection().
     haptics.selection();
@@ -1151,6 +1183,13 @@ export default function PlansScreen({ navigation }) {
         onPress: () => handleMovePlanOptions(plan),
       },
     ];
+    if (isActiveForUser) {
+      items.push({
+        icon: 'refresh-outline',
+        label: 'Start this plan again',
+        onPress: handleStartPlanAgain,
+      });
+    }
     if (!isActiveForUser) {
       items.push({
         icon: 'archive-outline',
