@@ -271,3 +271,69 @@ Admin actions `list_members`, `exclude`, `include`, `list_exclusions`;
 status per member, Exclude with an optional note, Include, and an
 exclude-an-address field that also covers a future sign-up). A member
 withheld for wellbeing shows only "Paused", never the reason.
+
+## 8. Phase 2: a full email marketing system (founder 2026-10-17)
+
+Founder order, verbatim: "A fully fledged email marketing system in effect if
+possible and you can steal this from other apps if needed." Features are taken
+from the common shape of Mailchimp, Loops and Buttondown; no code is copied
+(licences, and the no-new-dependency rule). Founder answers the same day:
+**"Track opens and clicks"** (asked with the PECR note that a tracking pixel
+needs consent members are not asked for; the founder holds that risk) and
+**scheduling included** ("Yes, include it": pg_cron is installed; pg_net is
+enabled in the phase 2 migration).
+
+Builds on phase 1 (sections 1 to 7). Cloud schema in
+`supabase/migrate_199_member_email_phase2.sql` (WRITTEN, NOT APPLIED until the
+founder's phrase).
+
+A. **Editor.** Block body (heading, paragraph, image, button, divider,
+   spacer) stored as JSON next to the plain body; images uploaded through the
+   admin function into a public Storage bucket `member-email-assets` (size
+   and type bounded: PNG, JPEG, GIF, WebP up to 2 MB); personalisation
+   `{{first_name}}` with a fallback (`{{first_name|there}}`) from
+   users_profile.first_name; preview as phone, desktop and dark; saved
+   templates (save as template, start from template); duplicate any email.
+B. **Segments.** Saved, named filters on ACCOUNT data only, never health
+   data (Article 9 data is not used for marketing): joined before or after a
+   date; last opened the app within or over N days (an app-open signal, not
+   workout logs; if no non-health signal exists in the cloud the app pushes a
+   coarse `last_seen_day`); platform if stored; Community member or not;
+   opened or clicked a given earlier email, or not; received a given email,
+   or not. Live count. A campaign targets everyone or one segment; the
+   wellbeing hold, opt-outs, turned-off and exclusions always apply on top.
+C. **Scheduling and the daily allowance.** `scheduled_at` per campaign; a
+   pg_cron job every 5 minutes calls `member-email-runner` through pg_net
+   with a service-only secret from `member_email_config`; the runner sends
+   due campaigns and continues partial ones, never above the configured daily
+   and monthly allowance (default 100 a day and 3,000 a month, Resend free
+   tier, editable on the page), so a large send spreads across days by itself.
+D. **Automations.** On or off, each with its own email: a welcome email N
+   hours after an account's email is confirmed, and a win-back email after N
+   days without opening the app (at most once per member per 90 days). Each
+   member gets each automation once per window, logged; all the audience
+   rules apply.
+E. **Tracking (founder: opens and clicks).** A `member-email-webhook`
+   function verifies Resend's signed webhook (Svix headers, secret
+   `RESEND_WEBHOOK_SECRET`) and stores delivered, opened, clicked (with the
+   link), bounced, complained and delayed events against the send. A hard
+   bounce or a complaint turns that member off automatically. Open and click
+   tracking is switched on for the domain through Resend's API by the admin
+   function (or by the founder in Resend if the API refuses). Stats per
+   email: sent, delivered, unique opens, unique clicks, clicks per link,
+   bounces, complaints, unsubscribes, survey answers; a member view lists the
+   emails they were sent and what happened.
+F. **A/B subject test.** Two subjects; a test share (default 20 percent,
+   split evenly); after a chosen wait (default 4 hours) the runner sends the
+   subject with more unique opens (ties: more clicks, then A) to the rest.
+G. **Unsubscribe reason.** After unsubscribing, an optional single choice
+   (too many emails, not relevant, I did not expect these, other) stored with
+   the opt-out.
+H. **Overview.** The last 30 days: emails sent, delivered, opened, clicked,
+   unsubscribes, and the audience now.
+I. **Privacy page:** says opens and clicks are measured, and how to stop
+   (unsubscribe).
+
+Founder actions added: set `RESEND_WEBHOOK_SECRET` and add the webhook URL in
+Resend (Claude gives the exact URL and event list); "run against production
+199".
