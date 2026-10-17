@@ -215,6 +215,14 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry20).toContain('Settings, under Privacy and legal');
     expect(entry20).toContain('Community has been improved');
     expect({ bad: /\bclips?\b/i.test(entry20) }).toEqual({ bad: false });
+    // 2.22.0: the same three founder lines.
+    const start22 = sheet.indexOf("'2.22.0': [");
+    expect(start22).toBeGreaterThan(-1);
+    const entry22 = sheet.slice(start22, sheet.indexOf('],', start22));
+    expect(entry22).toContain('The workout logger has been completely revamped.');
+    expect(entry22).toContain('Videos stay on your phone and are never uploaded');
+    expect(entry22).toContain('Community has been improved');
+    expect({ bad: /\bclips?\b|email|plan again/i.test(entry22) }).toEqual({ bad: false });
     // 2.21.0 (founder order 2026-10-17): exactly the three founder lines.
     const start21 = sheet.indexOf("'2.21.0': [");
     expect(start21).toBeGreaterThan(-1);
