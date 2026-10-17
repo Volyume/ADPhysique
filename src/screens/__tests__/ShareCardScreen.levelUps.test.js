@@ -198,21 +198,24 @@ describe('the fit choice', () => {
     expect(labels).toEqual(FORMATS);
   });
 
-  test('Full screen hands over the phone\'s own shape and safe areas; no other format carries them', async () => {
+  // Full screen is the default (founder 2026-10-17) and is the stories' own
+  // 9:16 frame, so Instagram and the rest fill with it instead of shrinking
+  // a phone-shaped image to fit ("too narrow"); the safe areas stay the
+  // phone's own.
+  test('Full screen is the default, hands over the 9:16 story frame and the phone\'s safe areas; no other format carries them', async () => {
     const tree = await mount(SESSION);
-    await waitFor(() => !!lastParams());
-    expect(lastParams().aspect).toBe('story');
-    expect(lastParams()).not.toHaveProperty('fullAspect');
-
-    await press(hostsByLabel(tree, 'Full screen')[0]);
     await waitFor(() => lastParams() && lastParams().aspect === 'full');
-    expect(lastParams().fullAspect).toBeCloseTo(812 / 375, 10);
+    expect(lastParams().fullAspect).toBeCloseTo(16 / 9, 10);
     expect(lastParams().safeTopRatio).toBeCloseTo(48 / 812, 10);
     expect(lastParams().safeBottomRatio).toBeCloseTo(24 / 812, 10);
     expect(lastParams().isSquare).toBe(false);
 
     await press(hostsByLabel(tree, 'Feed')[0]);
     await waitFor(() => lastParams() && lastParams().aspect === 'portrait');
+    expect(lastParams()).not.toHaveProperty('fullAspect');
+
+    await press(hostsByLabel(tree, 'Story')[0]);
+    await waitFor(() => lastParams() && lastParams().aspect === 'story');
     expect(lastParams()).not.toHaveProperty('fullAspect');
   });
 });
@@ -224,13 +227,16 @@ describe('Set as wallpaper, under Full screen', () => {
   test('Android: offered only under Full screen when the module can, and sets the lock screen from the saved image', async () => {
     await withPlatform('android', async () => {
       const tree = await mount(SESSION);
-      expect(hostsByLabel(tree, WALLPAPER)).toHaveLength(0); // Story
+      await press(hostsByLabel(tree, 'Story')[0]);
+      expect(hostsByLabel(tree, WALLPAPER)).toHaveLength(0);
       await press(hostsByLabel(tree, 'Full screen')[0]);
       await waitFor(() => hostsByLabel(tree, WALLPAPER).length > 0);
       expect(texts(tree)).not.toContain(IOS_LINE);
       await press(hostsByLabel(tree, WALLPAPER)[0]);
       await waitFor(() => mockEngine.setLockScreenWallpaper.mock.calls.length > 0);
       expect(mockEngine.setLockScreenWallpaper.mock.calls[0][0]).toMatch(/^file:\/\/\/cache\/volyume-session-full-\d+\.png$/);
+      // The wallpaper fills the phone itself, so it alone takes the phone's shape.
+      expect(lastParams().fullAspect).toBeCloseTo(812 / 375, 10);
       await waitFor(() => mockToastShow.mock.calls.some((c) => c[0] === 'Set as your lock screen wallpaper'));
       // Gone again on another format.
       await press(hostsByLabel(tree, 'Square')[0]);
@@ -262,6 +268,7 @@ describe('Set as wallpaper, under Full screen', () => {
   test('iOS: no button, the line that says how, and only under Full screen', async () => {
     await withPlatform('ios', async () => {
       const tree = await mount(SESSION);
+      await press(hostsByLabel(tree, 'Story')[0]);
       expect(texts(tree)).not.toContain(IOS_LINE);
       await press(hostsByLabel(tree, 'Full screen')[0]);
       await waitFor(() => texts(tree).includes(IOS_LINE));
@@ -281,7 +288,7 @@ describe('the text link when sharing', () => {
       await waitFor(() => RN.Share.share.mock.calls.length > 0);
       const [content] = RN.Share.share.mock.calls[RN.Share.share.mock.calls.length - 1];
       expect(content.message).toBe('volyume.app');
-      expect(content.url).toMatch(/^file:\/\/\/cache\/volyume-session-story-\d+\.png$/);
+      expect(content.url).toMatch(/^file:\/\/\/cache\/volyume-session-full-\d+\.png$/);
       expect(mockSharing.shareAsync).not.toHaveBeenCalled();
     });
   });

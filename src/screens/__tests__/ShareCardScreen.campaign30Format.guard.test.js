@@ -24,18 +24,20 @@ const SRC = fs.readFileSync(
 );
 
 describe('Campaign 30 format system (D108/D109-1)', () => {
-  test('story is the default format (D109-1)', () => {
-    expect(SRC).toMatch(/useState\('story'\)/);
+  // D109-1 made Story the default; the founder moved it to Full screen on
+  // 2026-10-17 ("make full screen the default").
+  test('full screen is the default format (founder 2026-10-17)', () => {
+    expect(SRC).toMatch(/const \[format, setFormat\] = useState\('full'\)/);
     expect(SRC).not.toMatch(/const \[format, setFormat\] = useState\('square'\)/);
   });
 
   test('the sticker draws via drawSticker with the shared buildParams output (suppression inherits)', () => {
-    expect(SRC).toMatch(/const params = buildParams\(\);/);
+    expect(SRC).toMatch(/const params = buildParams\(shape\);/);
     expect(SRC).toMatch(/drawSticker\(surface\.getCanvas\(\), \{ Skia, width, params, typefaces, wordmark \}\)/);
     // No separate params construction for the sticker: exactly one
     // buildParams() call inside renderCardBase64 feeds both paths.
     const renderFn = SRC.slice(SRC.indexOf('const renderCardBase64'), SRC.indexOf('// Template-strip thumbnails'));
-    expect((renderFn.match(/buildParams\(\)/g) || []).length).toBe(1);
+    expect((renderFn.match(/buildParams\(/g) || []).length).toBe(1);
   });
 
   test('backgrounds offer the gallery picker, not camera capture alone', () => {

@@ -396,7 +396,9 @@ describe('B: one upright size for the framer, the cover rect and the share (find
     expect(framer(tree).props).toMatchObject({ photoWidth: 720, photoHeight: 1280 });
     await press(buttonTitled(tree, 'Share video')[0]);
     const opts = mockEngine.exportShareVideo.mock.calls[0][0];
-    expect(opts.rect).toEqual(photoCoverRect(720, 1280, 1080, 1920, null));
+    // Full screen is the default (founder 2026-10-17): the mocked cardHeight
+    // gives it 2001, evened to 2000.
+    expect(opts.rect).toEqual(photoCoverRect(720, 1280, 1080, 2000, null));
   });
 
   test('with no probe, the frame\'s own upright size', async () => {
