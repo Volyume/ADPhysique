@@ -2,7 +2,7 @@
  * Member email topics (Wave C): the weekly summary choice. Pins: default ON;
  * cloud map read; failed read shows the mirror; a pending choice is pushed
  * again on read and outranks a stale cloud answer; a write calls
- * member_email_set_topic(topic, on); offline writes queue a
+ * member_email_set_topic(_topic, _on); offline writes queue a
  * member_email_topic op; replay throws when unreachable.
  */
 const mockStore = {};
@@ -53,7 +53,7 @@ test('names', () => {
 
 describe('getTopic', () => {
   test('cloud map wins and is mirrored', async () => {
-    mockRpc.mockResolvedValue({ data: { weekly_summary: false }, error: null });
+    mockRpc.mockResolvedValue({ data: { subscribed: true, topics: { weekly_summary: false } }, error: null });
     expect(await getTopic(UID, T)).toEqual({ on: false, source: 'cloud' });
     expect(mockRpc).toHaveBeenCalledWith('member_email_get_topics');
     expect(mockStore[topicMirrorKey(UID, T)]).toBe('false');
@@ -73,7 +73,7 @@ describe('getTopic', () => {
     mockRpc.mockResolvedValue({ data: { weekly_summary: true }, error: null });
     expect(await getTopic(UID, T)).toEqual({ on: false, source: 'mirror' });
     await new Promise((r) => setImmediate(r));
-    expect(mockRpc).toHaveBeenCalledWith('member_email_set_topic', { topic: T, on: false });
+    expect(mockRpc).toHaveBeenCalledWith('member_email_set_topic', { _topic: T, _on: false });
     expect(mockRpc).not.toHaveBeenCalledWith('member_email_get_topics');
     expect(mockStore[topicPendingKey(UID, T)]).toBeUndefined();
   });
@@ -86,7 +86,7 @@ describe('getTopic', () => {
 describe('setTopic', () => {
   test('online: mirror, RPC, marker cleared', async () => {
     expect(await setTopic(UID, T, false)).toEqual({ ok: true, queued: false });
-    expect(mockRpc).toHaveBeenCalledWith('member_email_set_topic', { topic: T, on: false });
+    expect(mockRpc).toHaveBeenCalledWith('member_email_set_topic', { _topic: T, _on: false });
     expect(mockStore[topicMirrorKey(UID, T)]).toBe('false');
     expect(mockStore[topicPendingKey(UID, T)]).toBeUndefined();
     expect(mockEnqueue).not.toHaveBeenCalled();
@@ -115,7 +115,7 @@ describe('replayTopicOp', () => {
     mockStore[topicMirrorKey(UID, T)] = 'false';
     mockStore[topicPendingKey(UID, T)] = 'true';
     expect(await replayTopicOp(row({ topic: T, on: false }))).toBe(true);
-    expect(mockRpc).toHaveBeenCalledWith('member_email_set_topic', { topic: T, on: false });
+    expect(mockRpc).toHaveBeenCalledWith('member_email_set_topic', { _topic: T, _on: false });
     expect(mockStore[topicPendingKey(UID, T)]).toBeUndefined();
   });
   test('throws when unreachable or refused', async () => {

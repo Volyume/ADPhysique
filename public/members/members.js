@@ -1736,10 +1736,15 @@
 
   /* ---------- automations ---------- */
 
+  // The keys the server accepts (v2.ts validParams, migrate_199): welcome_1..3
+  // delay_days 0-30, win_back days 14 or 30, update_nudge after_days 1-90,
+  // re_permission grace_days 7-60. Nothing else is saved.
   var PARAM_LABEL = {
-    days: "Days", after_days: "Days to wait", inactive_days: "Days without opening the app", cooldown_days: "Days before it can repeat",
-    workouts: "Number of workouts", min_workouts: "Fewest workouts", delay_days: "Days to wait"
+    delay_days: "Days to wait after joining", days: "Days without opening the app (14 or 30)",
+    after_days: "Days after a new version is out", grace_days: "Days to wait after the reminder"
   };
+  var PARAM_RANGE = { delay_days: [0, 30], days: [14, 30], after_days: [1, 90], grace_days: [7, 60] };
+
 
   function automationFromServer(a) {
     var params = a.params && typeof a.params === "object" && !Array.isArray(a.params) ? JSON.parse(JSON.stringify(a.params)) : {};
@@ -1790,6 +1795,12 @@
     if (!a.subject.trim()) problems.push("Add a subject.");
     if (EM_DASH.test(a.subject)) problems.push("The subject has an em dash. Use a comma, a full stop or a colon instead.");
     if (EM_DASH.test(a.preheader)) problems.push("The preview line has an em dash. Use a comma, a full stop or a colon instead.");
+    Object.keys(a.params || {}).forEach(function (k) {
+      var r = PARAM_RANGE[k], v = a.params[k];
+      if (!r || typeof v !== "number") return;
+      var bad = v !== Math.floor(v) || v < r[0] || v > r[1] || (a.key === "win_back" && k === "days" && v !== 14 && v !== 30);
+      if (bad) problems.push((PARAM_LABEL[k] || k) + " must be " + (a.key === "win_back" && k === "days" ? "14 or 30." : "a whole number from " + r[0] + " to " + r[1] + "."));
+    });
     return problems.concat(blockProblems(a.blocks, a.key === "weekly_summary"));
   }
 

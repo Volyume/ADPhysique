@@ -72,7 +72,7 @@ async function usableClient() {
 async function pushPendingChoice(uid, topic, value) {
   const sb = await usableClient();
   if (!sb) return;
-  const { error } = await sb.rpc('member_email_set_topic', { topic, on: value });
+  const { error } = await sb.rpc('member_email_set_topic', { _topic: topic, _on: value });
   if (!error && (await readTopicMirror(uid, topic)) === value) await setPending(uid, topic, false);
 }
 
@@ -92,9 +92,11 @@ export async function getTopic(uid, topic = TOPIC_WEEKLY_SUMMARY) {
     const sb = await usableClient();
     if (sb) {
       const { data, error } = await sb.rpc('member_email_get_topics');
-      if (!error && data && typeof data[topic] === 'boolean') {
-        await writeMirror(uid, topic, data[topic]);
-        return { on: data[topic], source: 'cloud' };
+      // The RPC returns { subscribed, topics: { product_news, ... } }.
+      const cloudOn = data && data.topics ? data.topics[topic] : undefined;
+      if (!error && typeof cloudOn === 'boolean') {
+        await writeMirror(uid, topic, cloudOn);
+        return { on: cloudOn, source: 'cloud' };
       }
     }
   } catch (e) {
@@ -125,7 +127,7 @@ export async function setTopic(uid, topic, on) {
   try {
     const sb = await usableClient();
     if (sb) {
-      const { error } = await sb.rpc('member_email_set_topic', { topic, on: value });
+      const { error } = await sb.rpc('member_email_set_topic', { _topic: topic, _on: value });
       if (!error) {
         await setPending(uid, topic, false);
         return { ok: true, queued: false };
@@ -158,7 +160,7 @@ export async function replayTopicOp(row) {
   if (!payload || typeof payload.on !== 'boolean' || typeof payload.topic !== 'string' || !row?.user_id) return true;
   const sb = await usableClient();
   if (!sb) throw new Error('network: no usable session for the member email topic');
-  const { error } = await sb.rpc('member_email_set_topic', { topic: payload.topic, on: payload.on });
+  const { error } = await sb.rpc('member_email_set_topic', { _topic: payload.topic, _on: payload.on });
   if (error) throw new Error(error.message || 'member_email_set_topic failed');
   if ((await readTopicMirror(row.user_id, payload.topic)) === payload.on) await setPending(row.user_id, payload.topic, false);
   return true;

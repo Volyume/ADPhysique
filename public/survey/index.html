@@ -297,7 +297,7 @@
           var chips = el("div", "chips");
           chips.setAttribute("role", multi ? "group" : "radiogroup");
           chips.setAttribute("aria-label", q.prompt);
-          (q.options || []).forEach(function(opt, j){
+          (q.type === "nps" ? ["0","1","2","3","4","5","6","7","8","9","10"] : q.type === "rating" ? ["1","2","3","4","5"] : (q.options || [])).forEach(function(opt, j){
             var chip = el("span", "chip");
             var input = el("input");
             input.type = multi ? "checkbox" : "radio";
