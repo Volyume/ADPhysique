@@ -25,9 +25,6 @@
       "buildNumber": "10",
       "requireFullScreen": true,
       "usesAppleSignIn": true,
-      "associatedDomains": [
-        "applinks:volyume.app"
-      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSSupportsLiveActivities": true,
