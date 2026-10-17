@@ -26,7 +26,6 @@ import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import BottomSheet from '../components/BottomSheet';
-import FirstPostSheet from '../components/community/FirstPostSheet';
 import TextField from '../components/TextField';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
@@ -76,8 +75,7 @@ import {
 } from '../lib/community';
 // D228 item 1: the first automatic post waits for one confirmation. Direct
 // imports, beside the barrel, because these two modules are new in this lane.
-import { readFirstPostConfirmed, markFirstPostConfirmed } from '../lib/community/firstPost';
-import { saveShareSessions } from '../lib/community/shareSessions';
+import { readFirstPostConfirmed } from '../lib/community/firstPost';
 // D229 addendum 5 (video shares): the video row ("Record a video", then
 // "Use your video on the share").
 import { NavRow, NavGroup } from '../components/NavRow';
@@ -303,12 +301,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [ambientOutcome, setAmbientOutcome] = useState(null);
   const [communityMember, setCommunityMember] = useState(null);
   const [calmKnown, setCalmKnown] = useState(false);
-  // D228 item 1 (option B): the one-time "Share this session?" sheet, shown
-  // before the FIRST automatic post. `firstPostSheetMinor` is kept apart from
-  // `firstPostSheetOpen` so a minor's sheet does not flash the Everyone action
-  // while it closes.
-  const [firstPostSheetOpen, setFirstPostSheetOpen] = useState(false);
-  const [firstPostSheetMinor, setFirstPostSheetMinor] = useState(false);
   // Keep the completion state calm: the workout is done, and the primary
   // actions must be visible immediately. These optional answers still feed the
   // coaching loop, but only open when the lifter deliberately rates the session.
@@ -430,13 +422,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // D228 item 1: the FIRST such post waits for the person's one-time
   // confirmation (the sheet below); the flush holds the queue until then.
   const ambientPublishedRef = useRef(false);
-  // D228 item 1: the sheet is answered once; a second call (a double tap, or
-  // the sheet's own close arriving after a choice) is ignored.
-  const firstPostAnsweredRef = useRef(false);
 
-  // The normal publish for THIS workout. Unchanged in what it sends; lifted out
-  // of the effect below so the first-post sheet can run it after a
-  // confirmation. It is only ever reached past the gate and the confirmation.
+  // The normal publish for THIS workout. It is only ever reached past the
+  // gate and the confirmation.
   const runAmbientPublish = async () => {
     const prList = (detectedPRs || []).map((p) => ({
       exerciseId: p.exerciseId,
@@ -493,15 +481,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         // ED flag gate FIRST (it decides before anything is asked or posted;
         // a gate that cannot answer is closed), then the person's one-time
         // confirmation, and only then the publish. Unconfirmed: nothing is
-        // posted; the sheet asks who should see their sessions.
+        // posted and nothing pops up.
         let gateOpen = false;
         try {
           gateOpen = (await sessionShareGateState(user.id, share.share_sessions)).allowed === true;
         } catch (_e) { gateOpen = false; }
         if (!gateOpen) { setAmbientOutcome({ created: 0, queued: 0, skipped: 'gated' }); return; }
         if (!(await readFirstPostConfirmed(user.id))) {
-          setFirstPostSheetMinor(!!me.is_minor);
-          setFirstPostSheetOpen(true);
+          // Founder order 2026-10-17: no pop-up. Unconfirmed: nothing is
+          // posted and nothing is asked; the outcome is recorded silently.
+          // Posting a session to Community happens from the share screen.
+          setAmbientOutcome({ created: 0, queued: 0, skipped: 'not_confirmed' });
           return;
         }
         await runAmbientPublish();
@@ -512,38 +502,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly, workoutId, user?.id]);
-
-  // D228 item 1: the sheet's answers. "Everyone" and "People who follow me"
-  // write the audience through the one existing sharing path
-  // (`saveShareSessions`, the Training profile screen's own setter), record
-  // the confirmation, and only then run the normal publish for this workout.
-  // "Not now" (and a swipe, scrim tap or back) posts nothing, writes nothing
-  // and records nothing, so the question returns at the next finished workout.
-  const answerFirstPost = async (choice) => {
-    if (firstPostAnsweredRef.current) return;
-    firstPostAnsweredRef.current = true;
-    setFirstPostSheetOpen(false);
-    const keepPrivate = () => setAmbientOutcome({ created: 0, queued: 0, skipped: 'not_confirmed' });
-    if (choice === 'not_now' || !user?.id) { keepPrivate(); return; }
-    let confirmed = false;
-    try {
-      const isMinor = firstPostSheetMinor;
-      const prev = await readShareSettings(user.id);
-      // An unreadable store is not a baseline to write over.
-      if (prev.read_failed) { keepPrivate(); return; }
-      const next = { ...prev, share_sessions: true, sessions_audience: isMinor ? 'followers' : choice };
-      const saved = await saveShareSessions(user.id, prev, next, { isMinor });
-      // The rules moved on: the choice was not saved, so nothing is confirmed.
-      if (saved?.status === 'rules_outdated') { keepPrivate(); return; }
-      await markFirstPostConfirmed(user.id);
-      confirmed = true;
-      await runAmbientPublish();
-    } catch (e) {
-      logError('WorkoutSummary.firstPostConfirm', e, { workoutId });
-      if (confirmed) setAmbientOutcome((prev) => prev ?? { created: 0, queued: 0, skipped: 'failed' });
-      else keepPrivate();
-    }
-  };
 
   // Communities revamp phase 3 (Q2): decide whether to show the
   // once-only offer, once eligibility (the first completed workout ever,
@@ -681,9 +639,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // the @volyume_feedback_prompt_history_v1 store. Never fires in
   // read-only mode (viewing old history).
   useEffect(() => {
-    // D228 item 1: never stack this on top of the first-post sheet; it waits
-    // for that sheet to close, then runs its own beat from there.
-    if (readOnly || !feedbackSheet || firstPostSheetOpen) return;
+    if (readOnly || !feedbackSheet) return;
     const totalDone = completedWorkoutCount ?? 0;
     // Trigger windows: after session 1 (the "is this for you?" beat)
     // and after session 10 (the "still working?" beat). Both gated
@@ -705,7 +661,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       });
     }, 1400);
     return () => clearTimeout(t);
-  }, [readOnly, completedWorkoutCount, feedbackSheet, firstPostSheetOpen]);
+  }, [readOnly, completedWorkoutCount, feedbackSheet]);
 
   // 4-week comparison against prior sessions of the SAME routine, and the
   // last of them (compareWithPriorSessions). Skipped for one-off sessions
@@ -1543,9 +1499,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // Founder order 2026-09-22: what the Community share strip under the
   // hero says (see the render comment there). Null until the auto-share
   // attempt has settled and the device knows whether this account has a
-  // Community profile, so the strip never flickers from "Post this
-  // session" to "Shared" a second later. Every string here is calm and
-  // plain: an invitation, never a nudge with a cost attached.
+  // Community profile. Factual states only (founder order 2026-10-17): no
+  // invitation and no post action; posting is the share screen's job.
   const openCompose = (params) => { hapticSelection(); navigation.navigate('CommunityCompose', params); };
   const shareStripState = (() => {
     if (autoSessionPost) {
@@ -1561,21 +1516,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       };
     }
     if (!ambientOutcome || communityMember == null) return null;
-    // D228 item 1: "Not now" on the first-post sheet. Said plainly: nothing
-    // was posted, the manual post is still there, and the question will come
-    // back after the next workout (it is not a "sharing is off" state).
-    if (ambientOutcome.skipped === 'not_confirmed') {
-      return {
-        title: 'Only you can see this session',
-        sub: 'It has not been posted. Post it now if you like. You will be asked again after your next workout.',
-        action: {
-          title: 'Post this session',
-          a11y: 'Post this session to Community',
-          onPress: () => openCompose({ kind: 'session', workoutId }),
-        },
-        link: null,
-      };
-    }
     if (ambientOutcome.queued > 0) {
       return {
         title: 'Shares to Community when you are back online',
@@ -1590,11 +1530,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       return {
         title: 'Not shared to Community',
         sub: 'Your Community sharing settings did not allow this session, so it was not posted.',
-        action: {
-          title: 'Post this session',
-          a11y: 'Post this session to Community',
-          onPress: () => openCompose({ kind: 'session', workoutId }),
-        },
+        action: null,
         link: {
           title: 'Check sharing settings',
           a11y: 'Open your Community sharing settings',
@@ -1602,32 +1538,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         },
       };
     }
-    if (!communityMember) {
-      return {
-        title: 'Sessions like this one are what Community is for',
-        sub: 'Share it with people who train like you. Never your weight, food or photos.',
-        action: {
-          title: 'Share this session',
-          a11y: 'Share this session to Community',
-          onPress: () => openCompose({ kind: 'session', workoutId }),
-        },
-        link: null,
-      };
-    }
-    return {
-      title: 'Only you can see this session',
-      sub: 'Off: only you see your sessions. Post this one now, or share every session as you finish it.',
-      action: {
-        title: 'Post this session',
-        a11y: 'Post this session to Community',
-        onPress: () => openCompose({ kind: 'session', workoutId }),
-      },
-      link: {
-        title: 'Share every session',
-        a11y: 'Share every session from your training profile',
-        onPress: () => navigateCrossTab(navigation, 'CommunityTab', 'CommunityTrainingProfile'),
-      },
-    };
+    // Nothing else is said here: posting a session to Community happens only
+    // from the share screen (founder order 2026-10-17).
+    return null;
   })();
 
   return (
@@ -1798,7 +1711,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   {shareStripState.sub}
                 </Text>
               </View>
-              {shareStripState.action ? (
+              {shareStripState.action || shareStripState.link ? (
                 <View style={styles.shareStripActions}>
                   {shareStripState.link ? (
                     <Button
@@ -1810,15 +1723,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                       accessibilityLabel={shareStripState.link.a11y}
                     />
                   ) : null}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth={false}
-                    icon="people-outline"
-                    title={shareStripState.action.title}
-                    onPress={shareStripState.action.onPress}
-                    accessibilityLabel={shareStripState.action.a11y}
-                  />
+                  {shareStripState.action ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      fullWidth={false}
+                      icon="people-outline"
+                      title={shareStripState.action.title}
+                      onPress={shareStripState.action.onPress}
+                      accessibilityLabel={shareStripState.action.a11y}
+                    />
+                  ) : null}
                 </View>
               ) : null}
             </Card>
@@ -2575,15 +2490,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           />
         </View>
       </BottomSheet>
-      {/* D228 item 1 (option B): the one-time question before the FIRST
-          automatic post. Only ever opened by the auto-share effect, after the
-          calm / open-flag gate and the sharing and membership checks. */}
-      <FirstPostSheet
-        visible={firstPostSheetOpen}
-        isMinor={firstPostSheetMinor}
-        onChoose={answerFirstPost}
-        onNotNow={() => answerFirstPost('not_now')}
-      />
       {/* D2: gold burst over the summary for the 50/100-session rungs. Set
           only inside the calm/ED-suppressed-free branch; renders nothing
           under reduce-motion; never blocks taps. */}

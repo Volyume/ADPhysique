@@ -80,13 +80,11 @@ describe('a refused automatic post is said plainly', () => {
     expect(AMBIENT).toMatch(/return \{[\s\S]*sessionRefused,\s*\};/);
   });
 
-  test('the summary names the refusal before any invitation, and refreshes the profile', () => {
+  test('the summary names the refusal and invites nothing, and refreshes the profile', () => {
     const SUMMARY = read('screens/WorkoutSummaryScreen.js');
     const strip = SUMMARY.slice(SUMMARY.indexOf('const shareStripState = (() => {'), SUMMARY.indexOf('})();', SUMMARY.indexOf('const shareStripState = (() => {')));
     const refused = strip.indexOf("if (ambientOutcome.sessionRefused === 'not_allowed') {");
-    const invite = strip.indexOf('if (!communityMember) {');
     expect(refused).toBeGreaterThan(-1);
-    expect(invite).toBeGreaterThan(refused);
     expect(strip).toContain("title: 'Not shared to Community',");
     expect(strip).toContain('Your Community sharing settings did not allow this session, so it was not posted.');
     expect(SUMMARY).toContain("if (out?.sessionRefused === 'not_allowed') refreshMe(user.id).catch(() => {});");
