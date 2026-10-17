@@ -87,6 +87,8 @@ When you create an account you are told that Volyume will email you about new fe
 
 **Who sends them.** Resend sends these emails for us from Ireland and keeps its email records in the United States under the standard contract clauses. It receives your email address and the email itself, and only for that purpose. We measure whether each news email is opened and which of its links are clicked.
 
+**What the team can see.** To choose who to email, the team can see the last day you opened the app, your app version and how many workouts you logged recently, never what was in them.
+
 **What we keep.** Your email address, a record of each time you turned them on or off and the wording you saw, a log of which news emails were sent to you, and your answers to any survey you take. A survey opened from one of our emails links your answers to your account, so a second answer replaces the first.
 
 **Deleting.** Deleting your account deletes all of this.

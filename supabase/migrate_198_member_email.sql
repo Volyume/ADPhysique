@@ -89,6 +89,37 @@
 --                      itself, so a read of this table yields no usable
 --                      link.
 --
+--                    FOUNDER ORDER 2026-10-17, ADDED: "It would be good to
+--                    see in the system when someone has last used the app and
+--                    maybe their workout history to a degree." Asked how far,
+--                    the founder chose: "Last used and counts: last day they
+--                    opened the app, app version, and how many workouts they
+--                    logged (last 7 and 30 days, and the date of the last
+--                    one). No exercises, weights, food or body data." Also
+--                    standing: "Emails should still work to old users ...
+--                    Version checking and only going to new users ... is not
+--                    acceptable". So this is INFORMATION ONLY: nothing below
+--                    changes who is emailed. `_member_email_roster()` and
+--                    `member_email_audience()` do not read the two sources
+--                    (pinned by the guard test).
+--                    * `member_app_seen_days`: one row per account, the last
+--                      London calendar day the app checked in, its version
+--                      (x.y.z) and platform (ios, android, other). No client
+--                      privilege: RLS on, service_role policy only.
+--                    * `member_app_seen(_app_version text, _platform text)`,
+--                      authenticated only: upserts the caller's row with
+--                      today's London date; 22023 on a malformed version or
+--                      an unknown platform. The app calls it at most once a
+--                      day, best effort (src/lib/memberEmail/appSeen.js).
+--                    * `member_email_members` rows gain `last_seen_day`,
+--                      `app_version`, `platform` (null until the first
+--                      check-in) and `workouts_7d`, `workouts_30d`,
+--                      `last_workout_at`: counts and the latest time over
+--                      public.workouts rows that are finished
+--                      (is_completed) and not deleted (deleted_at IS NULL),
+--                      by started_at. NOTHING else is read from workouts: no
+--                      exercise, set, weight, note, food or body data.
+--
 --                    DATA: email addresses are read from auth.users at send
 --                    time and never copied except into an opt-out row (as
 --                    `marketing_email_optout` already holds) or an admin
@@ -109,6 +140,7 @@
 --                    link_secret seed ON CONFLICT DO NOTHING (a re-run
 --                    never rotates the secret), acceptance block read-only.
 -- Rollback:          DROP FUNCTION IF EXISTS
+--                    public.member_app_seen(text, text),
 --                    public.member_email_set_subscribed(boolean, text, text),
 --                    public.member_email_get_subscribed(),
 --                    public.member_email_audience(),
@@ -123,14 +155,16 @@
 --                    public.member_email_prefs,
 --                    public.member_email_admin_logins,
 --                    public.member_email_config,
---                    public.member_email_exclusions; (in that order). No
+--                    public.member_email_exclusions,
+--                    public.member_app_seen_days; (in that order). No
 --                    existing table, function or policy is touched, so
 --                    nothing else is reversed. Rows the unsubscribe RPC
 --                    wrote to `marketing_email_optout` stay (they are a
 --                    person's opt-out and must be honoured).
 -- Transaction:       no explicit BEGIN/COMMIT; the runner supplies one.
 -- Depends on:        123 (marketing_email_optout, marketing_admins via
---                    120), 180 (`_community_ed_flag_open(uuid)`,
+--                    120), 012 (workouts.deleted_at; is_completed and
+--                    started_at are from the base schema), 180 (`_community_ed_flag_open(uuid)`,
 --                    owned by postgres, EXECUTE revoked from the client
 --                    roles: callable from these SECURITY DEFINER functions,
 --                    which run as their owner, postgres; verified read-only
@@ -146,6 +180,11 @@ DO $$
 BEGIN
   IF to_regprocedure('public._community_ed_flag_open(uuid)') IS NULL THEN
     RAISE EXCEPTION 'migrate_198 refused: public._community_ed_flag_open(uuid) (migrate_180) is missing';
+  END IF;
+  IF (SELECT count(*) FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'workouts'
+         AND column_name IN ('user_id', 'started_at', 'is_completed', 'deleted_at')) <> 4 THEN
+    RAISE EXCEPTION 'migrate_198 refused: public.workouts is missing user_id, started_at, is_completed or deleted_at (migrate_012)';
   END IF;
   IF to_regclass('public.marketing_email_optout') IS NULL THEN
     RAISE EXCEPTION 'migrate_198 refused: public.marketing_email_optout (migrate_123) is missing';
@@ -314,6 +353,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS member_email_exclusions_user_key
 CREATE UNIQUE INDEX IF NOT EXISTS member_email_exclusions_email_key
   ON public.member_email_exclusions (lower(email)) WHERE email IS NOT NULL;
 
+-- The last day each account's app checked in (founder order 2026-10-17).
+-- Information only: not read by the roster or the audience.
+CREATE TABLE IF NOT EXISTS public.member_app_seen_days (
+  user_id       uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  app_version   text NOT NULL CHECK (app_version ~ '^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$'),
+  platform      text NOT NULL CHECK (platform IN ('ios', 'android', 'other')),
+  last_seen_day date NOT NULL,
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
 -- RLS on, a service_role policy, no client policy and no client privilege.
 DO $$
 DECLARE
@@ -322,7 +371,7 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'member_surveys', 'member_email_campaigns', 'member_email_sends',
     'member_survey_answers', 'member_email_admin_logins',
-    'member_email_config', 'member_email_exclusions'
+    'member_email_config', 'member_email_exclusions', 'member_app_seen_days'
   ] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || '_service_role_all', t);
@@ -439,6 +488,49 @@ END $$;
 REVOKE ALL ON FUNCTION public.member_email_get_subscribed() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.member_email_get_subscribed() TO authenticated;
 
+-- The app's once-a-day check-in. The day is the server's London calendar
+-- day, so a wrong phone clock cannot write a false one. Both inputs are
+-- validated; a bad one is 22023 (invalid_parameter_value), written nowhere.
+CREATE OR REPLACE FUNCTION public.member_app_seen(
+  _app_version text,
+  _platform text)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_row public.member_app_seen_days%ROWTYPE;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated';
+  END IF;
+  IF _app_version IS NULL OR _app_version !~ '^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$' THEN
+    RAISE EXCEPTION 'invalid_app_version' USING ERRCODE = '22023';
+  END IF;
+  IF _platform IS NULL OR _platform NOT IN ('ios', 'android', 'other') THEN
+    RAISE EXCEPTION 'invalid_platform' USING ERRCODE = '22023';
+  END IF;
+
+  INSERT INTO public.member_app_seen_days (user_id, app_version, platform, last_seen_day, updated_at)
+  VALUES (v_uid, _app_version, _platform, (now() AT TIME ZONE 'Europe/London')::date, now())
+  ON CONFLICT (user_id) DO UPDATE
+     SET app_version = EXCLUDED.app_version,
+         platform = EXCLUDED.platform,
+         last_seen_day = EXCLUDED.last_seen_day,
+         updated_at = now()
+  RETURNING * INTO v_row;
+
+  RETURN jsonb_build_object('last_seen_day', v_row.last_seen_day,
+                            'app_version', v_row.app_version,
+                            'platform', v_row.platform);
+END $$;
+
+REVOKE ALL ON FUNCTION public.member_app_seen(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.member_app_seen(text, text) TO authenticated;
+
 -- ─── Part 4: the roster and the audience (service role only) ───────────
 
 -- The ONE place a member's email status is decided. First match wins; see
@@ -502,7 +594,11 @@ GRANT EXECUTE ON FUNCTION public.member_email_audience() TO service_role;
 -- The admin page's member list: newest accounts first, an optional
 -- case-insensitive email search (LIKE wildcards in the query are escaped)
 -- or an exact user id, at most 50 a page. Status words only, never a
--- reason.
+-- reason. Each row also carries information only (founder order
+-- 2026-10-17): the last check-in day, app version and platform, and the
+-- counts of finished, non-deleted workouts by their started_at (last 7 and
+-- 30 days) with the latest one. Nothing else is read from workouts. None of
+-- this feeds the roster or the audience.
 CREATE OR REPLACE FUNCTION public.member_email_members(
   _query text DEFAULT NULL,
   _offset integer DEFAULT 0,
@@ -533,12 +629,30 @@ BEGIN
 
   SELECT coalesce(jsonb_agg(jsonb_build_object(
            'user_id', s.user_id, 'email', s.email,
-           'created_at', s.created_at, 'status', s.status)
+           'created_at', s.created_at, 'status', s.status,
+           'last_seen_day', s.last_seen_day, 'app_version', s.app_version,
+           'platform', s.platform, 'workouts_7d', s.workouts_7d,
+           'workouts_30d', s.workouts_30d, 'last_workout_at', s.last_workout_at)
            ORDER BY s.created_at DESC, s.user_id), '[]'::jsonb)
     INTO v_members
     FROM (
-      SELECT r.user_id, r.email, r.created_at, r.status
+      SELECT r.user_id, r.email, r.created_at, r.status,
+             a.last_seen_day, a.app_version, a.platform,
+             coalesce(wk.workouts_7d, 0) AS workouts_7d,
+             coalesce(wk.workouts_30d, 0) AS workouts_30d,
+             wk.last_workout_at
         FROM public._member_email_roster() r
+        LEFT JOIN public.member_app_seen_days a ON a.user_id = r.user_id
+        LEFT JOIN LATERAL (
+          SELECT count(*) FILTER (WHERE w.started_at >= now() - interval '7 days') AS workouts_7d,
+                 count(*) FILTER (WHERE w.started_at >= now() - interval '30 days') AS workouts_30d,
+                 max(w.started_at)::timestamptz AS last_workout_at
+            FROM public.workouts w
+           WHERE w.user_id = r.user_id
+             AND w.is_completed = true
+             AND w.deleted_at IS NULL
+             AND w.started_at <= now()
+        ) wk ON true
        WHERE v_q IS NULL
           OR lower(coalesce(r.email, '')) LIKE v_pattern ESCAPE '\'
           OR r.user_id::text = lower(v_q)
@@ -635,7 +749,7 @@ GRANT EXECUTE ON FUNCTION public.member_email_unsubscribe(uuid) TO service_role;
 -- Run after the apply and read the output before declaring this migration
 -- landed. Expect: every table present with RLS on; no client privilege on
 -- any admin table and SELECT only on the prefs table; every function
--- SECURITY DEFINER on the pinned search_path; the two member RPCs
+-- SECURITY DEFINER on the pinned search_path; the three member RPCs
 -- executable by authenticated and not anon; the audience, members, counts,
 -- unsubscribe and roster functions executable by neither client role; the
 -- roster and the audience calling the migrate_180 gate; one link secret of
@@ -651,7 +765,8 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'member_email_prefs', 'member_email_pref_events', 'member_surveys',
     'member_email_campaigns', 'member_email_sends', 'member_survey_answers',
-    'member_email_admin_logins', 'member_email_config', 'member_email_exclusions'
+    'member_email_admin_logins', 'member_email_config', 'member_email_exclusions',
+    'member_app_seen_days'
   ] LOOP
     IF to_regclass('public.' || t) IS NULL THEN
       RAISE EXCEPTION 'acceptance failed: table % missing', t;
@@ -682,6 +797,7 @@ BEGIN
     WHERE n.nspname = 'public'
       AND p.proname IN (
         'member_email_set_subscribed', 'member_email_get_subscribed',
+        'member_app_seen',
         '_member_email_roster', 'member_email_audience', 'member_email_members',
         'member_email_counts', 'member_email_unsubscribe')
       -- `proconfig IS NULL` named explicitly: `= ANY (NULL)` is NULL, not
@@ -695,17 +811,20 @@ BEGIN
   IF (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.proname IN (
         'member_email_set_subscribed', 'member_email_get_subscribed',
+        'member_app_seen',
         '_member_email_roster', 'member_email_audience', 'member_email_members',
-        'member_email_counts', 'member_email_unsubscribe')) <> 7 THEN
-    RAISE EXCEPTION 'acceptance failed: expected exactly seven migrate_198 functions (one overload each)';
+        'member_email_counts', 'member_email_unsubscribe')) <> 8 THEN
+    RAISE EXCEPTION 'acceptance failed: expected exactly eight migrate_198 functions (one overload each)';
   END IF;
 
   IF NOT has_function_privilege('authenticated', 'public.member_email_set_subscribed(boolean, text, text)', 'EXECUTE')
-     OR NOT has_function_privilege('authenticated', 'public.member_email_get_subscribed()', 'EXECUTE') THEN
+     OR NOT has_function_privilege('authenticated', 'public.member_email_get_subscribed()', 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', 'public.member_app_seen(text, text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'acceptance failed: a member RPC is not executable by authenticated';
   END IF;
   IF has_function_privilege('anon', 'public.member_email_set_subscribed(boolean, text, text)', 'EXECUTE')
-     OR has_function_privilege('anon', 'public.member_email_get_subscribed()', 'EXECUTE') THEN
+     OR has_function_privilege('anon', 'public.member_email_get_subscribed()', 'EXECUTE')
+     OR has_function_privilege('anon', 'public.member_app_seen(text, text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'acceptance failed: a member RPC is executable by anon';
   END IF;
 
@@ -738,6 +857,14 @@ BEGIN
   IF strpos(v_def, '_community_ed_flag_open(r.user_id) IS NOT DISTINCT FROM false') = 0
      OR strpos(v_def, 'r.status = ''receives''') = 0 THEN
     RAISE EXCEPTION 'acceptance failed: the audience does not re-check the wellbeing gate on the receives rows';
+  END IF;
+  -- Information only: the app-seen day and the workouts table never decide
+  -- who is emailed.
+  IF strpos(pg_get_functiondef(to_regprocedure('public._member_email_roster()')), 'member_app_seen_days') > 0
+     OR strpos(pg_get_functiondef(to_regprocedure('public._member_email_roster()')), 'workouts') > 0
+     OR strpos(v_def, 'member_app_seen_days') > 0
+     OR strpos(v_def, 'workouts') > 0 THEN
+    RAISE EXCEPTION 'acceptance failed: the roster or the audience reads the app-seen day or workouts';
   END IF;
 
   IF (SELECT count(*) FROM public.member_email_config

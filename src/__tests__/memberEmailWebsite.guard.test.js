@@ -198,6 +198,19 @@ describe('member email website pages', () => {
     expect(copy).toContain('Check your email');
   });
 
+  test('each People row shows last used, the app version and the workout counts, as information only', () => {
+    expect(membersJs).toContain('"Last used "');
+    expect(membersJs).toContain('"Not seen yet"');
+    expect(membersJs).toContain('"App version "');
+    expect(membersJs).toContain('" this week, "');
+    expect(membersJs).toContain('" in 30 days"');
+    expect(membersJs).toContain('", last on "');
+    expect(membersJs).toContain('"Workouts: none logged yet"');
+    // The rows are displayed only: nothing on the page sends these fields back
+    // to the server or filters the audience by them.
+    expect(membersJs).not.toMatch(/[{,]\s*["']?(last_seen_day|app_version|workouts_7d|workouts_30d|last_workout_at)["']?\s*:/);
+  });
+
   test('the news-email section is in every privacy copy, with the founder-ruled basis', () => {
     const html = read('public', 'privacy.html');
     const md = read('public', 'privacy-policy.md');
@@ -210,6 +223,7 @@ describe('member email website pages', () => {
       expect(text).toMatch(/Unsubscribe link in every email/);
       expect(text).toMatch(/Resend sends these emails for us from Ireland and keeps its email records in the United States/);
       expect(text).toMatch(/Deleting your account deletes all of this/);
+      expect(text).toContain('To choose who to email, the team can see the last day you opened the app, your app version and how many workouts you logged recently, never what was in them.');
       expect(text).toMatch(/consent history|record of each time you turned them on or off/);
       expect(/\u2014/.test(text)).toBe(false);
     }

@@ -56,6 +56,9 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(flat).toContain('You get these emails unless you turn them off');
     expect(flat).toContain('in Settings, under Privacy and legal, or with the unsubscribe link in any email');
     expect(flat).toContain("No news emails are sent while Volyume's safety check has paused your calorie changes");
+    // Founder order 2026-10-17: the team's member list shows the last day the
+    // app was opened, its version and workout counts (never their content).
+    expect(flat).toContain('To choose who to email, the team can see the last day you opened the app, your app version and how many workouts you logged recently, never what was in them.');
     const settings = readRepoFile('src', 'screens', 'SettingsPrivacyScreen.js');
     expect(settings).toContain('MEMBER_EMAIL_SWITCH_LABEL');
     expect(settings).toContain('<SectionHeader title="Email" />');

@@ -75,6 +75,42 @@
     return d.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
+  // A calendar day with no year, for "Last used 12 Oct". A date-only value
+  // (the app's check-in day) is read as UTC so the day never shifts with the
+  // browser's time zone; a full timestamp is read in London time.
+  function formatDayMonth(value) {
+    if (!value) return "";
+    var dateOnly = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+    var d = new Date(value);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: dateOnly ? "UTC" : "Europe/London" });
+  }
+
+  var PLATFORM_LABEL = { ios: "iPhone", android: "Android", other: "other device" };
+
+  // Information only (founder order 2026-10-17): last day the app was
+  // opened, its version and counts of workouts logged. Never what was in
+  // them. None of this decides who is emailed.
+  function lastUsedText(m) {
+    var day = formatDayMonth(m.last_seen_day);
+    return day ? "Last used " + day : "Not seen yet";
+  }
+
+  function versionText(m) {
+    if (typeof m.app_version !== "string" || !m.app_version) return "";
+    var where = PLATFORM_LABEL[m.platform];
+    return "App version " + m.app_version + (where ? " on " + where : "");
+  }
+
+  function workoutsText(m) {
+    if (typeof m.workouts_30d !== "number") return "";
+    var last = formatDayMonth(m.last_workout_at);
+    if (!m.workouts_30d && !last) return "Workouts: none logged yet";
+    var week = typeof m.workouts_7d === "number" ? m.workouts_7d : 0;
+    var text = "Workouts: " + week + " this week, " + m.workouts_30d + " in 30 days";
+    return last ? text + ", last on " + last : text;
+  }
+
   function plural(n, one, many) {
     return n + " " + (n === 1 ? one : many);
   }
@@ -605,6 +641,9 @@
       card.appendChild(h("div", { class: "person" }, [
         h("div", { class: "em", text: m.email || "No email address" }),
         h("div", { class: "small", text: m.created_at ? "Joined " + formatDate(m.created_at) : "" }),
+        h("div", { class: "small", text: lastUsedText(m) }),
+        versionText(m) ? h("div", { class: "small", text: versionText(m) }) : null,
+        workoutsText(m) ? h("div", { class: "small", text: workoutsText(m) }) : null,
         h("div", {}, [h("span", { class: chipClass, text: status })]),
         m.status === "paused" ? h("div", { class: "small", text: "Volyume holds emails for this person for now." }) : null,
         h("div", { class: "row" }, [action])

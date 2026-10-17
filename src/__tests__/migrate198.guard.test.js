@@ -19,6 +19,14 @@
  * secret is generated once and never rotated; that no existing object is
  * altered or dropped; that the acceptance block checks all of it; and that
  * the tracker knows the file.
+ *
+ * ADDED (founder 2026-10-17, last used and workout counts): that the
+ * app-seen table and `member_app_seen` RPC are shut to the client except the
+ * authenticated, validated, caller-only RPC; that the members list adds the
+ * seen day, version, platform and workout counts from finished, non-deleted
+ * workouts and reads no other workouts column; and that the roster, the
+ * audience and the counts never reference either source (information only,
+ * "Emails should still work to old users").
  */
 
 const fs = require('fs');
@@ -46,12 +54,14 @@ const AUDIENCE = fnSpan('CREATE OR REPLACE FUNCTION public.member_email_audience
 const MEMBERS = fnSpan('CREATE OR REPLACE FUNCTION public.member_email_members(');
 const COUNTS = fnSpan('CREATE OR REPLACE FUNCTION public.member_email_counts(');
 const UNSUB = fnSpan('CREATE OR REPLACE FUNCTION public.member_email_unsubscribe(');
-const ALL_FNS = [SET_SUB, GET_SUB, ROSTER, AUDIENCE, MEMBERS, COUNTS, UNSUB];
+const APP_SEEN = fnSpan('CREATE OR REPLACE FUNCTION public.member_app_seen(');
+const ALL_FNS = [SET_SUB, GET_SUB, ROSTER, AUDIENCE, MEMBERS, COUNTS, UNSUB, APP_SEEN];
 
 const TABLES = [
   'member_email_prefs', 'member_email_pref_events', 'member_surveys',
   'member_email_campaigns', 'member_email_sends', 'member_survey_answers',
   'member_email_admin_logins', 'member_email_config', 'member_email_exclusions',
+  'member_app_seen_days',
 ];
 const ADMIN_TABLES = TABLES.filter((t) => t !== 'member_email_prefs' && t !== 'member_email_pref_events');
 
@@ -64,6 +74,11 @@ describe('house migration shape', () => {
     expect(HEADER).toContain('run against production 198');
     expect(HEADER).toContain('No consent to sign up');
     expect(HEADER).toContain('exclude people myself too');
+    expect(HEADER).toContain('see in the system when someone has last used the app');
+    expect(HEADER).toContain('No exercises, weights, food or body data');
+    expect(HEADER).toContain('Version checking and only going to new users');
+    expect(HEADER).toContain('public.member_app_seen(text, text)');
+    expect(HEADER).toContain('public.member_app_seen_days;');
   });
 
   test('additive only: no DROP TABLE, no TRUNCATE, no ALTER of an existing table, no DROP FUNCTION statement', () => {
@@ -91,6 +106,7 @@ describe('house migration shape', () => {
     const guard = BODY.slice(0, BODY.indexOf('-- ─── Part 1'));
     expect(guard).toContain("to_regprocedure('public._community_ed_flag_open(uuid)') IS NULL");
     expect(guard).toContain("to_regclass('public.marketing_email_optout') IS NULL");
+    expect(guard).toMatch(/table_name = 'workouts'\s+AND column_name IN \('user_id', 'started_at', 'is_completed', 'deleted_at'\)\) <> 4/);
     expect(guard).toContain("to_regclass('public.marketing_admins') IS NULL");
     expect(guard).toContain("to_regprocedure('extensions.gen_random_bytes(integer)') IS NULL");
   });
@@ -122,11 +138,25 @@ describe('tables: RLS on, client roles shut out', () => {
     expect(BODY).not.toMatch(/GRANT[^;]*member_email_pref_events TO (anon|authenticated)/);
   });
 
+  test('member_app_seen_days: the agreed columns and checks, cascades with the account, no client privilege', () => {
+    const start = BODY.indexOf('CREATE TABLE IF NOT EXISTS public.member_app_seen_days (');
+    const table = BODY.slice(start, BODY.indexOf(');', start));
+    expect(table).toContain('user_id       uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE');
+    expect(table).toMatch(/app_version\s+text NOT NULL CHECK \(app_version ~ '\^\[0-9\]\{1,4\}\\\.\[0-9\]\{1,4\}\\\.\[0-9\]\{1,4\}\$'\)/);
+    expect(table).toMatch(/platform\s+text NOT NULL CHECK \(platform IN \('ios', 'android', 'other'\)\)/);
+    expect(table).toMatch(/last_seen_day date NOT NULL/);
+    expect(table).toMatch(/updated_at\s+timestamptz NOT NULL DEFAULT now\(\)/);
+    // Shut out by the same loop as the other admin tables.
+    expect(ADMIN_TABLES).toContain('member_app_seen_days');
+    expect(BODY).not.toMatch(/GRANT[^;]*member_app_seen_days[^;]*TO (anon|authenticated)/);
+    expect(BODY).not.toMatch(/CREATE POLICY[^;]*member_app_seen_days[^;]*TO (anon|authenticated)/);
+  });
+
   test('subscribed by default, every user row cascades with the account', () => {
     expect(BODY).toMatch(/subscribed\s+boolean NOT NULL DEFAULT true/);
     expect(BODY).toMatch(/source\s+text NOT NULL CHECK \(source IN \('settings', 'email'\)\)/);
     const fks = BODY.match(/REFERENCES auth\.users\(id\)[^,\n]*/g) || [];
-    expect(fks.length).toBe(5);
+    expect(fks.length).toBe(6);
     for (const fk of fks) expect(fk).toContain('ON DELETE CASCADE');
   });
 
@@ -163,6 +193,23 @@ describe('functions: posture', () => {
     expect(BODY).toContain('REVOKE ALL ON FUNCTION public.member_email_get_subscribed() FROM PUBLIC, anon;');
     expect(BODY).toContain('GRANT EXECUTE ON FUNCTION public.member_email_get_subscribed() TO authenticated;');
     expect(BODY).not.toMatch(/GRANT EXECUTE ON FUNCTION public\.member_email_\w+\([^)]*\) TO anon/);
+  });
+
+  test('member_app_seen: authenticated only, never anon, the caller only, London day, both inputs validated with 22023', () => {
+    expect(BODY).toContain('REVOKE ALL ON FUNCTION public.member_app_seen(text, text) FROM PUBLIC, anon;');
+    expect(BODY).toContain('GRANT EXECUTE ON FUNCTION public.member_app_seen(text, text) TO authenticated;');
+    expect(BODY).not.toMatch(/GRANT[^;]*member_app_seen[^;]*TO (anon|service_role)/);
+    expect(APP_SEEN).toContain('RETURNS jsonb');
+    expect(APP_SEEN).toContain('v_uid uuid := auth.uid();');
+    expect(APP_SEEN).toMatch(/IF v_uid IS NULL THEN\s+RAISE EXCEPTION 'not_authenticated';/);
+    // The row is the caller's: the user id comes from auth.uid(), never an argument.
+    expect(APP_SEEN).not.toMatch(/\b_user_id\b|\b_uid\b/);
+    expect(APP_SEEN).toContain("(now() AT TIME ZONE 'Europe/London')::date");
+    expect(APP_SEEN).toMatch(/_app_version !~ '\^\[0-9\]\{1,4\}\\\.\[0-9\]\{1,4\}\\\.\[0-9\]\{1,4\}\$' THEN\s+RAISE EXCEPTION 'invalid_app_version' USING ERRCODE = '22023'/);
+    expect(APP_SEEN).toMatch(/_platform NOT IN \('ios', 'android', 'other'\) THEN\s+RAISE EXCEPTION 'invalid_platform' USING ERRCODE = '22023'/);
+    expect(APP_SEEN).toContain('ON CONFLICT (user_id) DO UPDATE');
+    // It reads nothing else and touches only its own table.
+    expect(APP_SEEN).not.toMatch(/workouts|auth\.users|marketing_email|member_email_/);
   });
 
   test('the service-role functions are revoked from every client role', () => {
@@ -226,6 +273,37 @@ describe('who is emailed: the roster and the audience', () => {
     }
   });
 
+  // Founder 2026-10-17: "Emails should still work to old users ... Version
+  // checking and only going to new users ... is not acceptable". The app-seen
+  // day and the workout counts are information on the People list only.
+  test('INFORMATION ONLY: the roster, the audience, counts and unsubscribe never read the app-seen day or workouts', () => {
+    for (const fn of [ROSTER, AUDIENCE, COUNTS, UNSUB, SET_SUB, GET_SUB]) {
+      expect(fn).not.toMatch(/member_app_seen|app_version|last_seen_day|workouts|platform/);
+    }
+    // The roster and audience are exactly their pre-existing shape: no new condition.
+    expect(ROSTER).toMatch(/FROM auth\.users u\s+WHERE u\.deleted_at IS NULL\s+AND coalesce\(u\.is_anonymous, false\) = false\s+AND \(u\.banned_until IS NULL OR u\.banned_until <= now\(\)\);/);
+    expect(AUDIENCE).toMatch(/WHERE r\.status = 'receives'\s+AND r\.email IS NOT NULL\s+AND public\._community_ed_flag_open\(r\.user_id\) IS NOT DISTINCT FROM false;/);
+  });
+
+  test('the members list adds the app-seen fields and the workout counts, nothing else from workouts, outside the status decision', () => {
+    for (const f of ['last_seen_day', 'app_version', 'platform', 'workouts_7d', 'workouts_30d', 'last_workout_at']) {
+      expect(MEMBERS).toContain(`'${f}', s.${f}`);
+    }
+    // Both new sources are joined on the page rows, after the roster decided the status.
+    expect(MEMBERS).toContain('LEFT JOIN public.member_app_seen_days a ON a.user_id = r.user_id');
+    expect(MEMBERS).toContain('FROM public.workouts w');
+    expect(MEMBERS).toMatch(/WHERE w\.user_id = r\.user_id\s+AND w\.is_completed = true\s+AND w\.deleted_at IS NULL/);
+    expect(MEMBERS).toContain('max(w.started_at)::timestamptz AS last_workout_at');
+    expect(MEMBERS).toContain("count(*) FILTER (WHERE w.started_at >= now() - interval '7 days') AS workouts_7d");
+    expect(MEMBERS).toContain("count(*) FILTER (WHERE w.started_at >= now() - interval '30 days') AS workouts_30d");
+    // Only these workouts columns are read: no notes, sets, weights, names or readiness data.
+    const cols = [...MEMBERS.matchAll(/\bw\.(\w+)/g)].map((m) => m[1]);
+    expect([...new Set(cols)].sort()).toEqual(['deleted_at', 'is_completed', 'started_at', 'user_id']);
+    expect(MEMBERS).not.toMatch(/workout_sets|notes|total_volume|name\b/);
+    // The status filter and counts do not use the new data.
+    expect(COUNTS).not.toMatch(/workouts|app_seen/);
+  });
+
   test('unsubscribe: opt-out row with the email, prefs off with source email, one event on a change, gone account writes nothing', () => {
     expect(UNSUB).toContain('INSERT INTO public.marketing_email_optout (user_id, email, opted_out_at, source)');
     expect(UNSUB).toContain("VALUES (_user_id, false, 'email', NULL, now())");
@@ -247,6 +325,10 @@ describe('acceptance block', () => {
     expect(ACCEPT).toContain("NOT ('search_path=public, pg_temp' = ANY (p.proconfig))");
     expect(ACCEPT).toContain("'_community_ed_flag_open(u.id) IS DISTINCT FROM false'");
     expect(ACCEPT).toContain("'_community_ed_flag_open(r.user_id) IS NOT DISTINCT FROM false'");
+    expect(ACCEPT).toContain("has_function_privilege('authenticated', 'public.member_app_seen(text, text)', 'EXECUTE')");
+    expect(ACCEPT).toContain("has_function_privilege('anon', 'public.member_app_seen(text, text)', 'EXECUTE')");
+    expect(ACCEPT).toContain("expected exactly eight migrate_198 functions");
+    expect(ACCEPT).toContain("the roster or the audience reads the app-seen day or workouts");
     expect(ACCEPT).toContain("value ~ '^[0-9a-f]{64}$'");
     expect(ACCEPT).toContain("RAISE NOTICE 'migrate_198 acceptance: OK';");
     // Counts only, never an address.

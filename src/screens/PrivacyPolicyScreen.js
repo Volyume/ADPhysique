@@ -189,6 +189,10 @@ export default function PrivacyPolicyScreen() {
             measure whether each news email is opened and which of its links are clicked.
           </Body>
           <Body>
+            To choose who to email, the team can see the last day you opened the app, your app version and
+            how many workouts you logged recently, never what was in them.
+          </Body>
+          <Body>
             We send them through Resend, which sends from Ireland and keeps its email records in the United States under the standard contract clauses. We keep your email address, your choice and
             when you made it, a log of the emails sent to you and any survey answers you give. All of it is
             deleted with your account.
