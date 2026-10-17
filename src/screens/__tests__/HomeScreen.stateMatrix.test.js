@@ -783,6 +783,63 @@ describe('Hero precedence — week complete (B-1)', () => {
   });
 });
 
+// Founder device report 2026-10-17 (2.20.0, authored plan): on a complete
+// week, "Do another session" -> pick a day left Home on "No active plan yet",
+// with no way to start. loadNextWorkout sets nextWorkout to null on a resolved
+// week (the B-1 guard), and the training hero was gated on `nextWorkout`
+// rather than on the session the hero actually shows (displayWorkout = the
+// sheet's pick, else nextWorkout), so the pick fell through every hero state
+// to the no-plan empty state. Mounted, the full tap path, both announcement
+// states.
+async function pressByLabel(tree, label) {
+  const node = findByLabel(tree, label)[0];
+  expect(node).toBeTruthy();
+  await TestRenderer.act(async () => {
+    node.props.onPress();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+  });
+}
+
+describe('Hero precedence — choosing a workout after the announcement states', () => {
+  test('week complete: picking a day from the sheet shows that session with Start, never "No active plan yet"', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: { ...withPlan(), getAllWorkouts: async () => [completedWorkout('w1', 0)] },
+      lib: { resolveProgrammePosition: resolvedWeekPosition(null) },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    expect(REGION.heroWeekComplete(tree)).toBe(true);
+    await pressByLabel(tree, 'Do another session from your plan');
+    await pressByLabel(tree, 'Day 1, Push Day');
+    expect(REGION.heroNoPlan(tree)).toBe(false);
+    expect(REGION.heroWeekComplete(tree)).toBe(false);
+    expect(REGION.heroPlanned(tree)).toBe(true);
+    expect(findByLabel(tree, 'Start Push Day').length).toBeGreaterThan(0);
+  });
+
+  test('block awaiting a decision on a resolved week: picking a day shows that session with Start', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        ...withPlan(),
+        getAllWorkouts: async () => [completedWorkout('w1', 0)],
+        getCurrentMesocycleWeek: async () => ({ awaitingDecision: true, mesocycleId: 'm1', weekIndex: 6, plannedWeeks: 6 }),
+      },
+      lib: { resolveProgrammePosition: resolvedWeekPosition(null) },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    expect(REGION.heroBlockComplete(tree)).toBe(true);
+    await pressByLabel(tree, 'Do another session from your plan');
+    await pressByLabel(tree, 'Day 1, Push Day');
+    expect(REGION.heroNoPlan(tree)).toBe(false);
+    expect(REGION.heroBlockComplete(tree)).toBe(false);
+    expect(REGION.heroPlanned(tree)).toBe(true);
+    expect(findByLabel(tree, 'Start Push Day').length).toBeGreaterThan(0);
+  });
+});
+
 describe('Hero precedence — active plan with no sessions (B-2)', () => {
   test('renders its own empty state, never "No active plan yet"', async () => {
     useAppStore.setState(PRO_USER);

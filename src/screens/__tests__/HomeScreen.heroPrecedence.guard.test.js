@@ -52,7 +52,7 @@ describe('the hero precedence is stated once, in one place', () => {
     const active = at('{hasActiveWorkout ? (');
     const block = at(') : blockAwaitingDecision ? (');
     const week = at(') : weekComplete ? (');
-    const training = at(') : activePlan && nextWorkout ? (');
+    const training = at(') : activePlan && displayWorkout ? (');
     const noSessions = at(') : activePlan && planHasNoSessions ? (');
     const noPlan = at('<View style={styles.noPlanSection}>');
     expect(active).toBeLessThan(block);
@@ -60,6 +60,13 @@ describe('the hero precedence is stated once, in one place', () => {
     expect(week).toBeLessThan(training);
     expect(training).toBeLessThan(noSessions);
     expect(noSessions).toBeLessThan(noPlan);
+  });
+
+  test('the training state is gated on the session it shows, not on nextWorkout', () => {
+    // Founder device report 2026-10-17: nextWorkout is null on a resolved
+    // week, so a gate on it sent the sheet's pick to "No active plan yet".
+    expect(home).not.toMatch(/\) : activePlan && nextWorkout \? \(/);
+    expect(home).toMatch(/const displayWorkout = selectedWorkoutOverride \|\| nextWorkout;/);
   });
 
   test('choosing a workout from the sheet drops the two announcement states', () => {
@@ -92,7 +99,7 @@ describe('B-1 — the week-complete state', () => {
 
   test('the secondary action opens the existing options sheet, it does not start a session', () => {
     const start = home.indexOf(') : weekComplete ? (');
-    const end = home.indexOf(') : activePlan && nextWorkout ? (');
+    const end = home.indexOf(') : activePlan && displayWorkout ? (');
     const branch = withoutComments(home.slice(start, end));
     expect(branch).toContain('setShowChangeWorkout(true)');
     expect(branch).not.toContain('handleStartNextWorkout');
