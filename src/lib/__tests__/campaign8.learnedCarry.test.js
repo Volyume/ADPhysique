@@ -312,7 +312,7 @@ describe('Review D5: a repeat never falls through to the learned carry', () => {
 
   test('activatePlanWithBlock takes an allowLearnedCarry gate and honours it', () => {
     const SRC = read('lib/database.js');
-    expect(SRC).toMatch(/activatePlanWithBlock\(userId, planId, planName, \{ ledger = null, allowLearnedCarry = true \} = \{\}\)/);
+    expect(SRC).toMatch(/activatePlanWithBlock\(userId, planId, planName, \{ ledger = null, allowLearnedCarry = true, fromStart = false \} = \{\}\)/);
     expect(SRC).toMatch(/if \(!effectiveLedger && allowLearnedCarry\)/);
   });
 
