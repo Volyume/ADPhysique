@@ -438,18 +438,25 @@ export default function ShareCardScreen({ navigation, route }) {
   // the phone's own shape, D229 addendum 6), Feed ('portrait', 4:5) and
   // Square 1:1 stay one tap away; 'sticker' is the transparent stat-panel
   // export (ELITE-SHARE-SPEC pillar 3) for pasting onto the user's own story.
-  const [format, setFormat] = useState('story');
+  // Full screen is the default (founder 2026-10-17: "make full screen the
+  // default").
+  const [format, setFormat] = useState('full');
   const [savingToGallery, setSavingToGallery] = useState(false);
   const [sharingToStories, setSharingToStories] = useState(false);
   const [settingWallpaper, setSettingWallpaper] = useState(false);
-  // Full screen takes the phone's own shape: the window's height over its
-  // width, and its status bar and home indicator as fractions of that
-  // height, so the card's outline clears them (the renderer holds the shape
-  // between 16:9 and 2.3).
+  // Full screen is the stories' own frame, 1080 by 1920 (9:16), with its
+  // outline out near the edges: the phone's status bar and home indicator as
+  // fractions of its height, not Story's wider chrome margins. It used to take
+  // the phone's own shape (about 9:19.5 on a modern iPhone), which Instagram,
+  // Facebook, TikTok and Snapchat stories all shrink to fit their 9:16 frame,
+  // leaving bars down both sides (founder 2026-10-17: "the dimensions look
+  // off it's too narrow"). The phone's own shape is kept for the lock screen
+  // wallpaper only, which fills the phone itself.
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const fullAspect = windowWidth > 0 && windowHeight > 0 ? windowHeight / windowWidth : null;
+  const fullAspect = 16 / 9;
+  const phoneAspect = windowWidth > 0 && windowHeight > 0 ? windowHeight / windowWidth : null;
   const safeTopRatio = windowHeight > 0 ? (insets?.top || 0) / windowHeight : 0;
   const safeBottomRatio = windowHeight > 0 ? (insets?.bottom || 0) / windowHeight : 0;
 
@@ -865,12 +872,14 @@ export default function ShareCardScreen({ navigation, route }) {
   // The selected card's params: the per-type build plus the chosen aspect
   // preset (the renderer's cardHeight/draw both key off params.aspect), and
   // for Full screen the phone's own shape and safe areas.
+  // `shape` overrides Full screen's height over width (the wallpaper passes
+  // the phone's own).
   const buildParams = useCallback(
-    () => ({
+    (shape) => ({
       ...buildParamsFor(cardType),
       aspect: cardAspect,
       quote,
-      ...(isFullScreen ? { fullAspect, safeTopRatio, safeBottomRatio } : {}),
+      ...(isFullScreen ? { fullAspect: shape?.fullAspect || fullAspect, safeTopRatio, safeBottomRatio } : {}),
     }),
     [buildParamsFor, cardType, cardAspect, quote, isFullScreen, fullAspect, safeTopRatio, safeBottomRatio],
   );
@@ -918,7 +927,7 @@ export default function ShareCardScreen({ navigation, route }) {
       : `Top lifts: ${chosenLifts.map((o) => `${o.exerciseName}, ${setLabel(o, liftUnit)}`).join('; ')}. Change`;
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
-  const renderCardBase64 = useCallback((width) => {
+  const renderCardBase64 = useCallback((width, shape) => {
     // R1 (share-card audit 2026-07-27): `wordmark` is loaded asynchronously,
     // so the first render always ran with it null and drawShareCard silently
     // fell back to plain system-font text instead of the brand mark. That is
@@ -941,7 +950,7 @@ export default function ShareCardScreen({ navigation, route }) {
       return null;
     }
     try {
-      const params = buildParams();
+      const params = buildParams(shape);
       // Sticker: the transparent stat panel (ELITE-SHARE-SPEC pillar 3). Same
       // params object the full card would draw from, so every upstream gate
       // (suppress, toggles) applies identically - suppressed content has NO
@@ -1689,8 +1698,8 @@ export default function ShareCardScreen({ navigation, route }) {
   // file URI. Shared by the OS share sheet, Save to gallery and Instagram
   // Stories so all three export exactly the same image. Returns null if the
   // card can't be generated.
-  const renderCardToFile = useCallback(async () => {
-    const b64 = renderCardBase64(1080);
+  const renderCardToFile = useCallback(async (shape) => {
+    const b64 = renderCardBase64(1080, shape);
     if (!b64) return null;
     // R11/L4 (share-card audit 2026-07-27): a fixed filename meant a second
     // export in the same session (e.g. toggling a switch, then sharing again)
@@ -2205,7 +2214,8 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     setSettingWallpaper(true);
     try {
-      const uri = await renderCardToFile();
+      // The wallpaper fills the phone itself, so it takes the phone's shape.
+      const uri = await renderCardToFile(phoneAspect ? { fullAspect: phoneAspect } : undefined);
       if (!mountedRef.current) return;
       if (!uri) { toast.show("Could not make the image. Please try again.", { variant: 'error' }); return; }
       exportFilesRef.current.add(uri);
