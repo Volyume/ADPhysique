@@ -61,7 +61,7 @@ describe('moving and resizing the photo, right on the preview', () => {
     // the full header lying over it (paddingTop: headerFullH, the 1:1
     // collapsing-header layout). The page scroll is still the one the
     // gesture system knows, and the photo's gestures still block it.
-    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<Animated\.ScrollView\s+ref=\{scrollRef\}\s+contentContainerStyle=\{\[styles\.content, live\.content, \{ paddingTop: headerFullH \}\]\}/);
+    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<ScrollView\s+contentContainerStyle=\{\[styles\.content, live\.content\]\}/);
     expect(SCREEN).toContain('blocksGesture={scrollGesture}');
     expect(FRAMER).toContain('pinch = pinch.blocksExternalGesture(blocksGesture);');
     expect(FRAMER).toContain('pan = pan.blocksExternalGesture(blocksGesture);');

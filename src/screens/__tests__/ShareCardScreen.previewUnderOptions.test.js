@@ -1,54 +1,31 @@
 /**
- * ShareCardScreen: the collapsing preview, brought back (founder,
- * 2026-10-16: "Ok yes I want the collapsing preview"; D229 addendum 5 item
- * 8, as rebuilt by the fresh-eyes review of 2026-10-15, should-fix 7, in
- * 161acbb, and lost when the screen was restored from 77f530b).
+ * ShareCardScreen: the preview sits UNDER THE OPTIONS (founder, 2026-10-17:
+ * "The preview should be UNDER THE OPTIONS. Why would it be above like that!?
+ * You change the settings and then see what it looks like. When I said the
+ * order is nonsensical, that doesn't mean make the video smaller and keep the
+ * same order."; "It shouldn't auto to the video saved either. People can
+ * select their share option ... and then they set the settings and then the
+ * preview."). This replaces the collapsing-preview suite: there is no
+ * collapsing header any more.
  *
- * The preview is ONE header above the page, the first thing on the screen,
- * and shrinks on the UI thread as the page scrolls, so nothing floats over
- * the controls. Every preview state lives in that header and shrinks with
- * it: the still image, the photo framer, the playing preview video, the
- * error box and the spinner. Play/Pause and the "Making your preview" row
- * are NOT on the card (render audit 2026-10-16, lead ruling 1: the round
- * Play drawn over the card covered its footer in Full screen, Feed and
- * Square); they are a secondary button under the preview, the first thing
- * in the page, which scrolls away with the page as the hint does.
+ * Pinned, written to FAIL against the screen with the collapsing header:
+ *   1. one ScrollView holds the whole page, in the order Background, Format,
+ *      Theme, Look, Quote, What to include, THEN the preview, THEN Share,
+ *      Save to gallery; nothing is drawn above the page and nothing floats;
+ *   2. the header title is "Share" in every state;
+ *   3. every preview state (the still, the framer, the playing video, the
+ *      error box and the spinner) is the one preview card in the page, with
+ *      Play with your look and the hint under it;
+ *   4. the framer's drag and pinch still block the page scroll;
+ *   5. opening the screen never selects a set video (the default background
+ *      is None) unless a specific video was handed in (the summary's video
+ *      row or the camera coming back);
+ *   6. a video from the camera roll (Video, From your gallery) is the same
+ *      pipeline as a set video;
+ *   7. calm mode or an open ED flag withholds every video surface, and the
+ *      privacy line is unchanged.
  *
- * Pinned, written to FAIL against the restored screen (where the preview was
- * a section half way down the page):
- *   1. the header is above the scroll and the page opens on the Format row;
- *   2. the header's height and the card's scale follow the scroll position
- *      1:1 (lead ruling 2026-10-16, the standard collapsing-header layout):
- *      the header lies over the top of the page, the page's content starts
- *      with the FULL header height as its top padding, and at scroll y the
- *      header is max(small, full - y) tall, so its foot stays on the
- *      content's top edge; a pull past the top never makes it taller; driven
- *      by a shared value, an animated scroll handler and animated styles
- *      (the UI thread), never JS-thread Animated;
- *   3. every preview state renders inside the header, none in the page;
- *      Play/Pause and the making row are in the page, never in the header;
- *   4. the framer takes touches at full size and none at the small size,
- *      and a drag on it still blocks the page's scroll gesture;
- *   5. Play/Pause ("Play with your look", "Pause") and the "Making your
- *      preview" row are the first thing in the page, above the hint, in
- *      every format, and never drawn over the card; small, they scroll with
- *      the page and the small preview stays one target, "Back to the
- *      preview"; a playing video keeps playing small, and a tap on it at
- *      full size still pauses it;
- *   6. a tap on the small preview scrolls the page back to the top, animated
- *      unless Reduce Motion is on, read as Volyume's own setting OR the
- *      phone's;
- *   6b. at the small size, while a PREVIEW is made and its making row (in
- *      the page) has scrolled out of sight, a compact progress chip over the
- *      small card says so (no touches, a polite live region); never for the
- *      share video, whose making row is by Share (lead ruling 6, one
- *      progress indicator per place);
- *   7. no live Skia view in the header (Sentry VOLYUME-3M), and under calm
- *      mode or an open flag the header carries no video surface.
- *
- * Mock scaffold mirrors ShareCardScreen.video.test.js; Reanimated's scroll
- * handler and reaction are made to run here (as the 161acbb suite did), so
- * the shrink can be driven and read.
+ * Mock scaffold mirrors ShareCardScreen.video.test.js.
  */
 
 const React = require('react');
@@ -57,6 +34,7 @@ const fs = require('fs');
 const path = require('path');
 const SectionLabel = require('../../components/SectionLabel').default;
 const Button = require('../../components/Button').default;
+const BackHeader = require('../../components/BackHeader').default;
 
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn().mockResolvedValue(true), shareAsync: jest.fn() }));
 jest.mock('expo-media-library', () => ({ requestPermissionsAsync: jest.fn(), saveToLibraryAsync: jest.fn() }));
@@ -86,10 +64,6 @@ jest.mock('react-native-safe-area-context', () => {
     useSafeAreaFrame: () => ({ x: 0, y: 0, width: 375, height: 812 }),
   };
 });
-// The phone's own Reduce Motion, which the manual react-native mock lacks
-// (set on the module, as Toast.test.js does).
-const mockA11y = { isReduceMotionEnabled: jest.fn(() => Promise.resolve(false)) };
-require('react-native').AccessibilityInfo = mockA11y;
 // A render that can be made to fail (the error box) or succeed.
 const mockSkiaState = { snapshotOk: true };
 const FAKE_IMG = { width: () => 800, height: () => 600, encodeToBase64: () => 'AAAA', dispose: () => {} };
@@ -159,54 +133,13 @@ jest.mock('../../components/clips/useClipRecorder', () => ({
   __esModule: true,
   default: () => ({ count: 0, clips: [], refreshCount: jest.fn(), openRecorder: jest.fn(), openClips: jest.fn(), sheets: null }),
 }));
-// Reanimated, made to run: the scroll handler's worklet is called with the
-// event, shared values are boxes kept across renders, the reaction runs after
-// a render when its value changed (as on the UI thread), animated styles are
-// their updater's result, and interpolate is the real clamped linear map.
-// The ScrollView forwards its ref, so the scroll back to the top is seen.
-jest.mock('react-native-reanimated', () => {
-  const manual = jest.requireActual('../../../__mocks__/react-native-reanimated');
-  const mockReact = require('react');
-  const lerp = (x, [a, b], [p, q]) => {
-    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-    return p + (q - p) * t;
-  };
-  const ScrollView = mockReact.forwardRef((props, ref) => mockReact.createElement('Animated.ScrollView', { ...props, ref }, props.children));
-  return {
-    ...manual,
-    default: { ...manual.default, ScrollView },
-    ScrollView,
-    useSharedValue: (v) => mockReact.useRef({ value: v }).current,
-    useAnimatedScrollHandler: (handlers) => (e) => handlers.onScroll(e.nativeEvent || e),
-    useAnimatedReaction: (prepare, react) => {
-      const prev = mockReact.useRef(undefined);
-      const value = prepare();
-      mockReact.useEffect(() => {
-        if (value !== prev.current) { const was = prev.current; prev.current = value; react(value, was); }
-      });
-    },
-    useAnimatedStyle: (updater) => updater(),
-    interpolate: lerp,
-  };
-});
-
 const ShareCardScreen = require('../ShareCardScreen').default;
 const useAppStore = require('../../store/useAppStore').default;
 
-const SCREEN = fs.readFileSync(path.join(__dirname, '..', 'ShareCardScreen.js'), 'utf8');
-// The header's JSX (drawn after the page, over its top) and the page's.
-const HEADER_SRC = SCREEN.slice(SCREEN.indexOf('testID="share-preview-header"'), SCREEN.indexOf('{/* The top-lifts list'));
-const PAGE_SRC = SCREEN.slice(SCREEN.indexOf('<GestureDetector gesture={scrollGesture}>\n      <Animated.ScrollView'), SCREEN.indexOf('</Animated.ScrollView>'));
-const FULL_H = 1080; // cardHeight at the preview's width, mocked
-const MINI_H = 112;
-const PAD = 8; // PREVIEW_HEADER_PAD, spacing.sm, above and below the card
-const HEADER_FULL = FULL_H + 2 * PAD;
-const HEADER_MINI = MINI_H + 2 * PAD;
-const headerAt = (y) => Math.max(HEADER_MINI, HEADER_FULL - Math.max(0, y));
 
-// Settles every chain the screen starts: choosing a video awaits its
-// frame, its probe and the frame file, each a promise resolved through the
-// mocks, so several rounds are run, each ending on the macrotask queue.
+const SCREEN = fs.readFileSync(path.join(__dirname, '..', 'ShareCardScreen.js'), 'utf8');
+const PAGE_SRC = SCREEN.slice(SCREEN.indexOf('<GestureDetector gesture={scrollGesture}>'), SCREEN.indexOf('</ScrollView>\n      </GestureDetector>'));
+
 async function flush() {
   for (let round = 0; round < 6; round++) {
     // eslint-disable-next-line no-await-in-loop
@@ -219,19 +152,12 @@ async function flush() {
 function makeNavigation() {
   return { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => () => {}) };
 }
-// The screen, with a way to render it again: on the phone the UI thread
-// redraws the header from the shared value as the finger moves; here a
-// scroll sets the value and the next render reads it.
-const rerenders = new WeakMap();
-const scrollTo = jest.fn();
 async function mount(params) {
   let tree = null;
   const navigation = makeNavigation();
   const render = () => React.createElement(ShareCardScreen, { route: { params, name: 'ShareCard' }, navigation });
-  const createNodeMock = (el) => (el.type === 'Animated.ScrollView' ? { scrollTo } : null);
-  await TestRenderer.act(async () => { tree = TestRenderer.create(render(), { createNodeMock }); });
+  await TestRenderer.act(async () => { tree = TestRenderer.create(render()); });
   await flush();
-  rerenders.set(tree, async () => { await TestRenderer.act(async () => { tree.update(render()); }); await flush(); });
   return tree;
 }
 async function waitFor(predicate, rounds = 40) {
@@ -258,34 +184,20 @@ const CLIP_SET = {
 
 const host = (n) => typeof n.type === 'string';
 const byTestID = (root, id) => root.findAll((n) => host(n) && n.props.testID === id);
-const header = (tree) => byTestID(tree.root, 'share-preview-header')[0];
 const card = (tree) => byTestID(tree.root, 'share-preview-card')[0];
-const page = (tree) => tree.root.findAll((n) => n.type === 'Animated.ScrollView')[0];
+const page = (tree) => tree.root.findAll((n) => n.props && n.props.contentContainerStyle && !n.props.horizontal && /ScrollView/.test(String(n.type && (n.type.displayName || n.type.name || n.type))))[0];
 const headings = (tree) => tree.root.findAll((n) => n.type === SectionLabel).map((n) => n.props.children);
 const byLabel = (root, label) => root.findAll((n) => host(n) && n.props.accessibilityLabel === label);
-// Play's accessible name is its visible label (render audit 2026-10-16,
-// lead ruling 1); Pause keeps "Pause the video", which holds its "Pause".
 const PLAY = 'Play with your look';
 const PAUSE = 'Pause the video';
-const controls = (tree) => byTestID(tree.root, 'share-preview-controls')[0];
 const textOf = (n) => n.findAll((m) => host(m) && m.type === 'Text').map((m) => [].concat(m.props.children).join(''));
-const backButtons = (tree) => byLabel(tree.root, 'Back to the preview');
 const stills = (root) => root.findAll((n) => host(n) && n.type === 'Image' && n.props.resizeMode === 'contain');
 const framers = (root) => root.findAll((n) => n.type && n.type.name === 'SharePhotoFramer');
 const players = (root) => root.findAll((n) => n.type === 'Video');
-const flatStyle = (style) => Object.assign({}, ...[].concat(style).flat(Infinity).filter(Boolean));
-async function scroll(tree, y) {
-  await TestRenderer.act(async () => { page(tree).props.onScroll({ nativeEvent: { contentOffset: { y } } }); });
-  await rerenders.get(tree)();
-}
 async function mountWithVideo() {
   mockGetClip.mockResolvedValue(CLIP_SET);
   const tree = await mount({ ...SESSION, clipId: 'c2' });
   await waitFor(() => framers(card(tree)).length === 1);
-  // Re-pinned 2026-10-16 (audit item 1): Play, Share and Save with a video
-  // now wait for the scrim's tone for the window, read a moment after it
-  // settles, so the video is met here as a person meets it a moment later:
-  // with its tone read and Play ready.
   await TestRenderer.act(async () => { await new Promise((r) => setTimeout(r, 450)); });
   await waitFor(() => byLabel(page(tree), PLAY).length === 1);
   return tree;
@@ -293,188 +205,124 @@ async function mountWithVideo() {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  scrollTo.mockClear();
   mockSkiaState.snapshotOk = true;
   mockSuppress.value = false;
   mockGetClip.mockResolvedValue(null);
-  mockA11y.isReduceMotionEnabled.mockImplementation(() => Promise.resolve(false));
   mockEngine.isAvailable.mockImplementation(() => true);
   mockEngine.exportShareVideo.mockImplementation(() => Promise.resolve({ uri: 'file:///cache/volyume-preview.mp4' }));
-  useAppStore.setState({ user: { id: 'u1' }, accessibility: { ...useAppStore.getState().accessibility, reduceMotion: false } });
+  useAppStore.setState({ user: { id: 'u1' } });
 });
 
-describe('the preview is the header above the page, and it collapses as the page scrolls', () => {
-  test('it is above the scroll, the first thing on the screen, and the page opens on the Format row', async () => {
-    const tree = await mount(SESSION);
-    expect(header(tree)).toBeTruthy();
-    expect(page(tree).findAll((n) => host(n) && n.props.testID === 'share-preview-header')).toHaveLength(0);
-    // It lies over the top of the page, which starts below it at full size.
-    expect(flatStyle(header(tree).props.style)).toMatchObject({ position: 'absolute', top: 0, left: 0, right: 0 });
-    expect(flatStyle(page(tree).props.contentContainerStyle).paddingTop).toBe(HEADER_FULL);
-    expect(headings(tree)[0]).toBe('Format');
-    expect(headings(tree)).not.toContain('Preview');
-    // One preview: the still is drawn once, in the header, not in the page.
-    await waitFor(() => stills(tree.root).length === 1);
-    expect(stills(header(tree))).toHaveLength(1);
-    expect(stills(page(tree))).toHaveLength(0);
+describe('the order: options first, then the preview, then the actions', () => {
+  test('source: Background, Format, Theme, Look, Quote, What to include, THEN the preview, THEN Share and Save', () => {
+    const at = (needle) => { const i = PAGE_SRC.indexOf(needle); expect({ needle, found: i >= 0 }).toEqual({ needle, found: true }); return i; };
+    const order = [
+      at('<SectionLabel>Background</SectionLabel>'),
+      at('<SectionLabel>Format</SectionLabel>'),
+      at('<SectionLabel>Theme</SectionLabel>'),
+      at('<SectionLabel>Look</SectionLabel>'),
+      at('<SectionLabel>Quote or caption</SectionLabel>'),
+      at('<SectionLabel>What to include</SectionLabel>'),
+      at('testID="share-preview-card"'),
+      at('testID="share-play-control"'),
+      at('onPress={handleShareToStories}'),
+      at('onPress={handleSaveToGallery}'),
+      at('title="Post to Community"'),
+    ];
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  test('the header\'s height follows the scroll 1:1: max(small, full - y), its foot on the content\'s top edge, full again at the top', async () => {
-    const tree = await mount(SESSION);
-    await waitFor(() => stills(tree.root).length === 1);
-    const padTop = flatStyle(page(tree).props.contentContainerStyle).paddingTop;
-    expect(padTop).toBe(HEADER_FULL);
-    expect(flatStyle(header(tree).props.style).height).toBe(HEADER_FULL);
-    expect(flatStyle(card(tree).props.style).transform).toEqual([{ translateY: -0 }, { scale: 1 }]);
-    expect(card(tree).props.pointerEvents).toBe('auto');
-    expect(backButtons(tree)).toHaveLength(0);
-
-    // 1:1 at every step: the header's foot is where the content's top edge
-    // now is (padTop - y), until the header is small.
-    for (const y of [1, 100, ((FULL_H - MINI_H) / 2) - 10, FULL_H - MINI_H, 2000]) {
-      // eslint-disable-next-line no-await-in-loop
-      await scroll(tree, y);
-      const h = flatStyle(header(tree).props.style).height;
-      expect({ y, h }).toEqual({ y, h: expect.closeTo(headerAt(y), 5) });
-      if (y <= FULL_H - MINI_H) expect(h).toBeCloseTo(padTop - y, 5);
-      // The card scales with the header.
-      expect(flatStyle(card(tree).props.style).transform[1].scale).toBeCloseTo((h - 2 * PAD) / FULL_H, 5);
+  test('no collapsing header: no reanimated, no header, no mini preview', () => {
+    expect(SCREEN).not.toMatch(/react-native-reanimated/);
+    for (const gone of ['share-preview-header', 'share-mini-preview', 'share-mini-progress', 'previewSmall', 'headerFullH', 'scrollToPreview']) {
+      expect({ gone, present: SCREEN.includes(gone) }).toEqual({ gone, present: false });
     }
-    // Just short of half way it still takes the full-size card's touches.
-    await scroll(tree, ((FULL_H - MINI_H) / 2) - 10);
-    expect(card(tree).props.pointerEvents).toBe('auto');
-    expect(backButtons(tree)).toHaveLength(0);
-
-    // Past the threshold and on: the small size, and it holds.
-    await scroll(tree, 5000);
-    expect(flatStyle(header(tree).props.style).height).toBe(HEADER_MINI);
-    const t = flatStyle(card(tree).props.style).transform;
-    expect(t[1].scale).toBeCloseTo(MINI_H / FULL_H, 5);
-    expect(t[0].translateY).toBeCloseTo(-(FULL_H - MINI_H) / 2, 5);
-    expect(card(tree).props.pointerEvents).toBe('none');
-    expect(card(tree).props.importantForAccessibility).toBe('no-hide-descendants');
-    expect(backButtons(tree)).toHaveLength(1);
-
-    await scroll(tree, 0);
-    expect(flatStyle(header(tree).props.style).height).toBe(HEADER_FULL);
-    expect(flatStyle(card(tree).props.style).transform).toEqual([{ translateY: -0 }, { scale: 1 }]);
-    expect(card(tree).props.pointerEvents).toBe('auto');
-    expect(backButtons(tree)).toHaveLength(0);
   });
 
-  // Audit 2026-10-16, item 3. Written to FAIL against the screen before:
-  // the shared value held y over the OLD range, so after a format change
-  // the header was laid out from a stale fraction (at y = 100, Story to
-  // Full screen left it about 1462 tall, not 1516) until the next scroll.
-  test('scrolled, then a new format: the header is max(small, full - y) for the NEW preview height at once', async () => {
-    const tree = await mount(SESSION);
-    await waitFor(() => stills(tree.root).length === 1);
-    const fullFor = (previewH) => previewH + 2 * PAD;
-    for (const y of [100, 300]) {
-      // eslint-disable-next-line no-await-in-loop
-      await scroll(tree, 0);
-      // eslint-disable-next-line no-await-in-loop
-      await press(byLabel(tree.root, 'Story')[0]);
-      // eslint-disable-next-line no-await-in-loop
-      await scroll(tree, y);
-      expect(flatStyle(header(tree).props.style).height).toBeCloseTo(Math.max(HEADER_MINI, fullFor(1080) - y), 5);
-      // Full screen is 1600 tall at the preview's width here; no scroll.
-      // eslint-disable-next-line no-await-in-loop
-      await press(byLabel(tree.root, 'Full screen')[0]);
-      expect(flatStyle(page(tree).props.contentContainerStyle).paddingTop).toBe(fullFor(1600));
-      const h = flatStyle(header(tree).props.style).height;
-      expect(h).toBeCloseTo(Math.max(HEADER_MINI, fullFor(1600) - y), 5);
-      // The card scales to the same new height, and its foot is still on
-      // the content's top edge.
-      expect(flatStyle(card(tree).props.style).transform[1].scale).toBeCloseTo((h - 2 * PAD) / 1600, 5);
-      // And back to Story at the same scroll position.
-      // eslint-disable-next-line no-await-in-loop
-      await press(byLabel(tree.root, 'Story')[0]);
-      expect(flatStyle(header(tree).props.style).height).toBeCloseTo(Math.max(HEADER_MINI, fullFor(1080) - y), 5);
-    }
-    // Past the small size under one format, the small size under the other.
-    await scroll(tree, 5000);
-    await press(byLabel(tree.root, 'Full screen')[0]);
-    expect(flatStyle(header(tree).props.style).height).toBe(HEADER_MINI);
-    expect(backButtons(tree)).toHaveLength(1);
+  test('rendered: the page headings run Background, Format, Theme, Look, What to include; the preview card is after the options in the one page', async () => {
+    const tree = await mountWithVideo();
+    const h = headings(tree);
+    const idx = (w) => h.indexOf(w);
+    expect(idx('Background')).toBeGreaterThanOrEqual(0);
+    expect(idx('Background')).toBeLessThan(idx('Format'));
+    expect(idx('Format')).toBeLessThan(idx('Theme'));
+    expect(idx('Theme')).toBeLessThan(idx('Look'));
+    expect(idx('Look')).toBeLessThan(idx('What to include'));
+    expect(card(tree)).toBeTruthy();
+    expect(page(tree).findAll((n) => host(n) && n.props.testID === 'share-preview-card')).toHaveLength(1);
+    // The card comes after the last option and before the actions.
+    const flat = page(tree).findAll((n) => host(n));
+    const pos = (pred) => flat.findIndex(pred);
+    const lastOption = pos((n) => n.props.testID === 'share-preview-section');
+    expect(lastOption).toBeGreaterThan(-1);
+    expect(page(tree).findAll((n) => n.type === SectionLabel && n.props.children === 'What to include').length).toBe(1);
   });
 
-  test('a pull past the top (iOS bounce) never makes the header taller than full', async () => {
-    const tree = await mount(SESSION);
-    await scroll(tree, -120);
-    expect(flatStyle(header(tree).props.style).height).toBe(HEADER_FULL);
-    expect(flatStyle(card(tree).props.style).transform).toEqual([{ translateY: -0 }, { scale: 1 }]);
-  });
-
-  test('the header is opaque (the theme\'s surface), so the page scrolling under it never shows through', async () => {
-    const tree = await mount(SESSION);
-    const bg = flatStyle(header(tree).props.style).backgroundColor;
-    expect(typeof bg).toBe('string');
-    expect(bg).toBe(require('../../styles/theme').colors.surface);
-  });
-
-  test('the shrink is driven on the UI thread by the scroll, with one named small height', () => {
-    expect(SCREEN).toContain('const MINI_PREVIEW_H = 112;');
-    // Re-pinned 2026-10-16 (audit item 3): the shared value is the scroll
-    // position itself, and the collapse is worked out from it with the
-    // CURRENT range inside each worklet, so a format change while scrolled
-    // lays the header out again at once (a stored fraction did not).
-    expect(SCREEN).toMatch(/const scrollY = useSharedValue\(0\);/);
-    expect(SCREEN).toMatch(/useAnimatedScrollHandler\(\{\s*onScroll: \(e\) => \{\s*'worklet';\s*scrollY\.value = e\.contentOffset\.y;/);
-    expect(SCREEN).toMatch(/useAnimatedReaction\(\(\) => Math\.min\(1, Math\.max\(0, scrollY\.value \/ collapseRange\)\) > 0\.5,[\s\S]*?\}, \[collapseRange\]\);/);
-    expect(SCREEN).toContain('const collapseRange = Math.max(1, previewH - miniH);');
-    expect(SCREEN).toContain('const headerFullH = previewH + 2 * PREVIEW_HEADER_PAD;');
-    expect(SCREEN).toMatch(/height: interpolate\(collapse, \[0, 1\], \[headerFullH, headerMiniH\], Extrapolation\.CLAMP\)/);
-    expect(SCREEN).not.toMatch(/collapse\.value/);
-    expect(SCREEN).toContain('contentContainerStyle={[styles.content, live.content, { paddingTop: headerFullH }]}');
-    expect(SCREEN).toMatch(/<Animated\.ScrollView\s+ref=\{scrollRef\}[\s\S]*?onScroll=\{scrollHandler\}\s+scrollEventThrottle=\{16\}/);
-    // No JS-thread Animated here (motionFitRules.guard's frozen allowlist).
-    expect(SCREEN).not.toMatch(/import\s*\{[^}]*\bAnimated\b[^}]*\}\s*from\s*['"]react-native['"]/);
-    expect(SCREEN).toMatch(/import Animated, \{[\s\S]*?\} from 'react-native-reanimated';/);
+  test('the header title is "Share" in every state', async () => {
+    const plain = await mount(SESSION);
+    expect(plain.root.findAll((n) => n.type === BackHeader)[0].props.title).toBe('Share');
+    const withVideo = await mountWithVideo();
+    expect(withVideo.root.findAll((n) => n.type === BackHeader)[0].props.title).toBe('Share');
   });
 });
 
-describe('every preview state is in the header and shrinks with it', () => {
-  // Re-pinned 2026-10-16 (render audit, lead ruling 1): Play/Pause and the
-  // "Making your preview" row moved OFF the card into the page; the other
-  // preview states stay in the header.
-  test('source: the player, the framer, the still, the error box and the spinner are in the header, none in the page; Play/Pause and the making row are in the page, none in the header', () => {
-    const headerBlock = HEADER_SRC;
-    const pageBlock = PAGE_SRC;
-    for (const piece of [
-      '<AvVideo', '<SharePhotoFramer', 'data:image/png;base64,${previewB64}', 'Retry building the preview',
-      '<ActivityIndicator color={t.colors.primary} />',
-    ]) {
-      expect({ piece, inHeader: headerBlock.includes(piece) }).toEqual({ piece, inHeader: true });
-    }
-    for (const piece of ['<AvVideo', '<SharePhotoFramer', 'data:image/png;base64,${previewB64}', 'Retry building the preview']) {
-      expect({ piece, inPage: pageBlock.includes(piece) }).toEqual({ piece, inPage: false });
-    }
-    for (const piece of ["'Play with your look'", "'Pause the video'", 'testID="share-play-control"', 'testID="share-making-preview"']) {
-      expect({ piece, inPage: pageBlock.includes(piece), inHeader: headerBlock.includes(piece) }).toEqual({ piece, inPage: true, inHeader: false });
-    }
-    // The trim bar and the hints stay in the page and scroll.
-    expect(pageBlock).toContain('<VideoTrimBar');
-    expect(pageBlock).toContain('Drag to move your photo. Pinch to resize it.');
-    expect(headerBlock).not.toContain('<VideoTrimBar');
+describe('opening the screen never selects a set video', () => {
+  test('source: the default background is None', () => {
+    expect(SCREEN).toMatch(/useState\(BACKGROUND_SOURCES\.NONE\)/);
   });
 
-  test('the still image shrinks with the header', async () => {
+  test('a workout holding a set video opens on None, with no video chosen and no Play', async () => {
+    const { listClipsForWorkout } = require('../../lib/clips/store');
+    listClipsForWorkout.mockResolvedValueOnce([CLIP_SET]);
+    const tree = await mount(SESSION);
+    await flush();
+    expect(byTestID(tree.root, 'share-using-video')).toHaveLength(0);
+    expect(byLabel(tree.root, PLAY)).toHaveLength(0);
+    expect(framers(tree.root)).toHaveLength(0);
+    expect(players(tree.root)).toHaveLength(0);
+    expect(mockGetClip).not.toHaveBeenCalled();
+    await waitFor(() => stills(card(tree)).length === 1);
+  });
+
+  test('a specific video handed in (the summary row, the camera) is still used', async () => {
+    const tree = await mountWithVideo();
+    expect(byTestID(tree.root, 'share-using-video')).toHaveLength(1);
+  });
+});
+
+describe('a video from the camera roll uses the same pipeline as a set video', () => {
+  test('Background > Video > From your gallery opens the picker for videos and hands it to acceptClip', () => {
+    expect(SCREEN).toMatch(/launchImageLibraryAsync\(\{ mediaTypes: \['videos'\] \}\)/);
+    expect(SCREEN).toMatch(/acceptClip\(\{ id: null, uri: asset\.uri, durationMs: Number\(asset\.duration\) \|\| 0, source: 'gallery' \}\)/);
+    expect(SCREEN).toMatch(/title="From your gallery"[^\n]*onPress=\{pickGalleryVideo\}/);
+    // The trim bar is the page's, for any chosen video, set or camera roll.
+    expect(PAGE_SRC).toMatch(/\{clip && !suppress \? \([\s\S]*?<VideoTrimBar/);
+  });
+
+  test('picking a camera-roll video shows the trim bar, the look strip and the preview', async () => {
+    const ImagePicker = require('expo-image-picker');
+    ImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: true });
+    ImagePicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///roll/v.mp4', duration: 20000 }] });
+    const tree = await mount(SESSION);
+    await press(byLabel(tree.root, 'Video, choose a video')[0]);
+    const sheet = tree.root.findAll((n) => n.type === Button && n.props.title === 'From your gallery')[0];
+    await press(sheet);
+    await waitFor(() => framers(card(tree)).length === 1);
+    expect(tree.root.findAll((n) => n.type === 'VideoTrimBar')).toHaveLength(1);
+    expect(headings(tree)).toContain('Look');
+  });
+});
+
+describe('every preview state is the one card, in the page', () => {
+  test('the still image', async () => {
     const tree = await mount(SESSION);
     await waitFor(() => stills(card(tree)).length === 1);
-    await scroll(tree, 5000);
-    expect(stills(card(tree))).toHaveLength(1);
   });
 
-  test('the error box is in the header, its Retry works at full size, and at the small size it takes no touches', async () => {
+  test('the error box and its Retry', async () => {
     mockSkiaState.snapshotOk = false;
     const tree = await mount(SESSION);
     await waitFor(() => byLabel(card(tree), 'Retry building the preview').length > 0);
-    expect(byLabel(page(tree), 'Retry building the preview')).toHaveLength(0);
-    await scroll(tree, 5000);
-    expect(byLabel(card(tree), 'Retry building the preview').length).toBeGreaterThan(0);
-    expect(card(tree).props.pointerEvents).toBe('none');
-    await scroll(tree, 0);
     mockSkiaState.snapshotOk = true;
     const retry = card(tree).findAll((n) => n.props && n.props.accessibilityLabel === 'Retry building the preview' && typeof n.props.onPress === 'function')[0];
     await press(retry);
@@ -482,237 +330,62 @@ describe('every preview state is in the header and shrinks with it', () => {
     expect(stills(card(tree))).toHaveLength(1);
   });
 
-  test('the spinner while the preview is built is the header\'s card', async () => {
-    // Skia absent at render time is not mockable per test; the spinner is the
-    // card's last branch, so its place is pinned in the source.
-    const cardBlock = SCREEN.slice(SCREEN.indexOf('testID="share-preview-card"'), SCREEN.indexOf('{previewSmall ? (\n          <TouchableOpacity'));
+  test('the spinner is the card\'s last branch', () => {
+    const cardBlock = SCREEN.slice(SCREEN.indexOf('testID="share-preview-card"'), SCREEN.indexOf('{makingVideo ? (\n          <Text'));
     expect(cardBlock).toMatch(/\) : \(\s*<View style=\{\[styles\.previewPlaceholder, live\.previewPlaceholder, \{ width: previewW, height: previewH \}\]\}>\s*<ActivityIndicator/);
   });
-});
 
-describe('the framer at full size and at the small size', () => {
-  test('the framer is in the header: it takes touches at full size and none at the small size, and a drag on it blocks the page scroll', async () => {
+  test('the framer is in the card and its drag and pinch block the page scroll', async () => {
     const tree = await mountWithVideo();
     const framer = framers(card(tree))[0];
-    expect(framers(page(tree))).toHaveLength(0);
-    expect(card(tree).props.pointerEvents).toBe('auto');
-    expect(typeof framer.props.onChange).toBe('function');
-    // It blocks the page's scroll gesture (the mocked gestures are one stub,
-    // so which gesture is pinned in the source): the page is the scroll the
-    // gesture system knows, and the framer is not inside it.
     expect(framer.props.blocksGesture).toBeTruthy();
-    const pageDetector = tree.root.findAll((n) => host(n) && n.type === 'GestureDetector'
-      && n.findAll((m) => m.type === 'Animated.ScrollView').length > 0)[0];
-    expect(pageDetector).toBeTruthy();
-    expect(framers(pageDetector)).toHaveLength(0);
-    const headerBlock = HEADER_SRC;
-    expect(headerBlock).toMatch(/<SharePhotoFramer[\s\S]*?blocksGesture=\{scrollGesture\}/);
-    expect(SCREEN).toMatch(/pointerEvents=\{previewSmall \? 'none' : 'auto'\}/);
-
-    await scroll(tree, 5000);
-    expect(framers(card(tree))).toHaveLength(1);
-    expect(card(tree).props.pointerEvents).toBe('none');
-    await scroll(tree, 0);
-    expect(card(tree).props.pointerEvents).toBe('auto');
-  });
-});
-
-// Render audit 2026-10-16, lead ruling 1. Written to FAIL against the screen
-// before, where a round Play sat over the card's bottom-right corner and
-// covered "volyume.app" and the outline in Full screen, Feed and Square.
-describe('Play/Pause is a button under the preview, off the card, in every format', () => {
-  test('in every format Play is in the page, the first thing, above the hint; never in the header', async () => {
-    const tree = await mountWithVideo();
-    for (const fmt of ['Story', 'Full screen', 'Feed', 'Square']) {
-      // eslint-disable-next-line no-await-in-loop
-      await press(byLabel(tree.root, fmt)[0]);
-      // eslint-disable-next-line no-await-in-loop
-      await waitFor(() => byLabel(page(tree), PLAY).length === 1);
-      expect({ fmt, inHeader: byTestID(header(tree), 'share-play-control').length }).toEqual({ fmt, inHeader: 0 });
-      const c = controls(tree);
-      // The page's first child is the controls block: the button, then the hint.
-      const firstHost = (n) => (host(n) ? n : firstHost(n.children[0]));
-      expect(firstHost(page(tree).children[0])).toBe(c);
-      const words = textOf(c);
-      expect(words[0]).toBe('Play with your look');
-      expect(words.indexOf('Play with your look')).toBeLessThan(words.findIndex((w) => w.startsWith('Drag to move your video.')));
-    }
+    expect(PAGE_SRC).toMatch(/<SharePhotoFramer[\s\S]*?blocksGesture=\{scrollGesture\}/);
   });
 
-  test('it reads "Play with your look" with a play icon, and "Pause" with a pause icon while playing; a tap on the playing video still pauses it', async () => {
+  test('Play with your look and the hint sit under the card; a tap on the playing video pauses it', async () => {
     const tree = await mountWithVideo();
     const play = byTestID(page(tree), 'share-play-control')[0];
     expect(textOf(play)).toEqual(['Play with your look']);
-    expect(play.findAll((n) => n.props && n.props.name === 'play').length).toBeGreaterThan(0);
-    expect(flatStyle(play.props.style).position).toBeUndefined();
+    expect(PAGE_SRC.indexOf('testID="share-preview-card"')).toBeLessThan(PAGE_SRC.indexOf('testID="share-preview-controls"'));
     await press(byLabel(page(tree), PLAY)[0]);
     expect(players(card(tree))).toHaveLength(1);
-    const pause = byTestID(page(tree), 'share-play-control')[0];
-    expect(pause.props.accessibilityLabel).toBe(PAUSE);
-    expect(textOf(pause)).toEqual(['Pause']);
-    expect(pause.findAll((n) => n.props && n.props.name === 'pause').length).toBeGreaterThan(0);
-    // The hint goes while it plays; the button stays.
-    expect(textOf(controls(tree)).some((w) => w.startsWith('Drag to move'))).toBe(false);
-    // A tap on the playing video pauses it.
+    expect(byTestID(page(tree), 'share-play-control')[0].props.accessibilityLabel).toBe(PAUSE);
     await press(byTestID(card(tree), 'share-preview-video')[0]);
     expect(players(card(tree))).toHaveLength(0);
-    expect(byLabel(page(tree), PLAY)).toHaveLength(1);
   });
 
-  test('small, the button scrolls with the page (still the page\'s, never the header\'s) and the small preview is one target; a playing video keeps playing small', async () => {
-    const tree = await mountWithVideo();
-    await press(byLabel(page(tree), PLAY)[0]);
-    await scroll(tree, 5000);
-    expect(players(card(tree))).toHaveLength(1);
-    expect(byLabel(page(tree), PAUSE)).toHaveLength(1);
-    expect(byLabel(header(tree), PAUSE)).toHaveLength(0);
-    expect(card(tree).props.pointerEvents).toBe('none');
-    expect(backButtons(tree)).toHaveLength(1);
-    await scroll(tree, 0);
-    expect(byLabel(page(tree), PAUSE)).toHaveLength(1);
-  });
-
-  test('while a preview is made, the making row and its Cancel take the button\'s place, in the page', async () => {
+  test('while a preview is made, the making row and its Cancel take the button\'s place', async () => {
     mockEngine.exportShareVideo.mockImplementation(() => new Promise(() => {}));
     const tree = await mountWithVideo();
     await press(byLabel(page(tree), PLAY)[0]);
     expect(byTestID(page(tree), 'share-making-preview').length).toBeGreaterThan(0);
-    expect(byTestID(header(tree), 'share-making-preview')).toHaveLength(0);
-    expect(byTestID(tree.root, 'share-play-control')).toHaveLength(0);
     expect(byLabel(page(tree), 'Cancel making the preview').length).toBeGreaterThan(0);
   });
 
-  test('waiting for the tone, it keeps its waiting state, now with its label in words', async () => {
+  test('waiting for the tone, Play keeps its waiting state in words', async () => {
     mockGetClip.mockResolvedValue(CLIP_SET);
     const tree = await mount({ ...SESSION, clipId: 'c2' });
     await waitFor(() => framers(card(tree)).length === 1);
     const waiting = byTestID(page(tree), 'share-play-control')[0];
     expect(waiting.props.accessibilityLabel).toBe('Getting your video ready');
     expect(waiting.props.accessibilityState).toEqual({ disabled: false, busy: true });
-    expect(byTestID(waiting, 'share-play-waiting')).toHaveLength(1);
-    expect(textOf(waiting)).toEqual(['Getting your video ready']);
-  });
-});
-
-// Re-pinned 2026-10-16 (render audit, lead ruling 6: one progress
-// indicator per place). The chip is for a PREVIEW being made once its making
-// row, now the first thing in the page, is out of sight under the small
-// header; the share video's making row sits by Share, so it has no chip.
-describe('the small preview says when a preview is being made and its row is out of sight', () => {
-  const chip = (tree) => byTestID(header(tree), 'share-mini-progress');
-  // The controls' place in the page, as the phone lays it out: their top
-  // at the page's top padding (the full header), 60 tall.
-  const layOut = async (tree) => {
-    await TestRenderer.act(async () => { controls(tree).props.onLayout({ nativeEvent: { layout: { x: 0, y: HEADER_FULL, width: 300, height: 60 } } }); });
-    await rerenders.get(tree)();
-  };
-  test('a preview being made: at full size the making row; small with the row still in sight, no chip; scrolled past it, a compact chip with the percentage, no touches, a polite live region', async () => {
-    mockEngine.exportShareVideo.mockImplementation((_o, onProgress) => { onProgress(0.42); return new Promise(() => {}); });
-    const tree = await mountWithVideo();
-    await layOut(tree);
-    await press(byLabel(page(tree), PLAY)[0]);
-    expect(chip(tree)).toHaveLength(0);
-    // Small, but the row's foot (HEADER_FULL + 60) is still below the small
-    // header's foot: the row says it, so no chip.
-    await scroll(tree, HEADER_FULL + 60 - HEADER_MINI - 1);
-    expect(backButtons(tree)).toHaveLength(1);
-    expect(chip(tree)).toHaveLength(0);
-    // Scrolled past it: the chip.
-    await scroll(tree, HEADER_FULL + 60 - HEADER_MINI);
-    expect(chip(tree)).toHaveLength(1);
-    await scroll(tree, 5000);
-    expect(chip(tree)).toHaveLength(1);
-    const c = chip(tree)[0];
-    expect(c.props.accessibilityLabel).toBe('Making your preview, 42%');
-    expect(c.props.accessibilityLiveRegion).toBe('polite');
-    expect(c.findAll((n) => host(n) && n.type === 'ActivityIndicator')).toHaveLength(1);
-    expect(c.findAll((n) => host(n) && n.type === 'Text').map((n) => [].concat(n.props.children).join(''))).toEqual(['42%']);
-    // It takes no touches: the tap is still "Back to the preview".
-    const wrap = header(tree).findAll((n) => host(n) && n.props.pointerEvents === 'none' && n.findAll((m) => m === c).length > 0);
-    expect(wrap.length).toBeGreaterThan(0);
-    expect(backButtons(tree)).toHaveLength(1);
-    // Not scaled with the card: it is outside it.
-    expect(card(tree).findAll((n) => host(n) && n.props.testID === 'share-mini-progress')).toHaveLength(0);
-    await scroll(tree, 0);
-    expect(chip(tree)).toHaveLength(0);
-    expect(byTestID(page(tree), 'share-making-preview').length).toBeGreaterThan(0);
-  });
-
-  test('the share video being made: no chip at any size; its row and Cancel are in the page, and Share and Save show disabled, not their own spinner', async () => {
-    mockEngine.exportShareVideo.mockImplementation((_o, onProgress) => { onProgress(0.3); return new Promise(() => {}); });
-    const tree = await mountWithVideo();
-    await layOut(tree);
-    const share = () => tree.root.findAll((n) => host(n) && n.props.accessibilityLabel === 'Share your video to Instagram or Facebook Story')[0];
-    await press(share());
-    expect(byTestID(page(tree), 'share-making-video').length).toBeGreaterThan(0);
-    expect(chip(tree)).toHaveLength(0);
-    const buttons = tree.root.findAll((n) => n.type === Button && (n.props.title === 'Share video' || n.props.title === 'Save to gallery'));
-    expect(buttons).toHaveLength(2);
-    for (const b of buttons) {
-      expect({ title: b.props.title, loading: b.props.loading, disabled: b.props.disabled }).toEqual({ title: b.props.title, loading: false, disabled: true });
-    }
-    await scroll(tree, 5000);
-    expect(chip(tree)).toHaveLength(0);
-    expect(byTestID(page(tree), 'share-making-video').length).toBeGreaterThan(0);
-  });
-
-  test('nothing being made: no chip at the small size', async () => {
-    const tree = await mountWithVideo();
-    await scroll(tree, 5000);
-    expect(chip(tree)).toHaveLength(0);
-  });
-});
-
-describe('a tap on the small preview goes back to the top, and Reduce Motion', () => {
-  test('the small preview is a button, "Back to the preview", that scrolls to the top, animated', async () => {
-    const tree = await mount(SESSION);
-    await scroll(tree, 5000);
-    const back = backButtons(tree)[0];
-    expect(back.props.accessibilityRole).toBe('button');
-    expect(back.props.accessibilityHint).toBe('Scrolls up to the full-size preview');
-    await press(back);
-    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: true });
-  });
-
-  test('Volyume\'s own Reduce Motion makes the scroll back immediate', async () => {
-    useAppStore.setState({ accessibility: { ...useAppStore.getState().accessibility, reduceMotion: true } });
-    const tree = await mount(SESSION);
-    await scroll(tree, 5000);
-    await press(backButtons(tree)[0]);
-    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
-  });
-
-  test('the phone\'s Reduce Motion does too', async () => {
-    mockA11y.isReduceMotionEnabled.mockImplementation(() => Promise.resolve(true));
-    const tree = await mount(SESSION);
-    await scroll(tree, 5000);
-    await press(backButtons(tree)[0]);
-    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
-  });
-
-  test('source: Reduce Motion is the phone\'s OR Volyume\'s own setting', () => {
-    expect(SCREEN).toContain('const storeReduceMotion = useAppStore((st) => !!st.accessibility?.reduceMotion);');
-    expect(SCREEN).toContain('const reduceMotion = osReduceMotion || storeReduceMotion;');
-    expect(SCREEN).toContain('scrollRef.current?.scrollTo?.({ y: 0, animated: !reduceMotion });');
   });
 });
 
 describe('safety', () => {
-  test('no live Skia view in the header, at either size (Sentry VOLYUME-3M)', async () => {
-    const tree = await mountWithVideo();
-    const skia = (root) => root.findAll((n) => host(n) && /Canvas|SkiaView|RNSkia/i.test(n.type));
-    expect(skia(header(tree))).toHaveLength(0);
-    await scroll(tree, 5000);
-    expect(skia(header(tree))).toHaveLength(0);
-  });
-
-  test('under calm mode or an open flag the header carries no video surface', async () => {
+  test('under calm mode or an open flag there is no video surface and no Play', async () => {
     mockSuppress.value = true;
     mockGetClip.mockResolvedValue(CLIP_SET);
     const tree = await mount({ ...SESSION, clipId: 'c2' });
-    expect(players(header(tree))).toHaveLength(0);
+    expect(players(tree.root)).toHaveLength(0);
     expect(byLabel(tree.root, PLAY)).toHaveLength(0);
     expect(byTestID(tree.root, 'share-play-control')).toHaveLength(0);
     expect(byTestID(tree.root, 'share-making-preview')).toHaveLength(0);
+    expect(byTestID(tree.root, 'share-using-video')).toHaveLength(0);
+  });
+
+  test('the privacy line is still under What to include, before the preview', () => {
+    expect(PAGE_SRC.indexOf('never included.')).toBeGreaterThan(PAGE_SRC.indexOf('<SectionLabel>What to include</SectionLabel>'));
+    expect(PAGE_SRC.indexOf('never included.')).toBeLessThan(PAGE_SRC.indexOf('testID="share-preview-card"'));
   });
 });

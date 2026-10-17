@@ -32,18 +32,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, Platform,
-  useWindowDimensions, Share, AccessibilityInfo,
+  useWindowDimensions, Share,
 } from 'react-native';
 import Text from '../components/Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-// The preview's collapsing header (D229 addendum 5 item 8, as rebuilt in the
-// fresh-eyes review of 2026-10-15 and brought back on the founder's word of
-// 2026-10-16): driven on the UI thread, never by the JS-thread Animated API
-// (a frozen allowlist, motionFitRules.guard).
-import Animated, {
-  useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, useAnimatedReaction, interpolate, Extrapolation, runOnJS,
-} from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily, fontScaleCaps } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
@@ -327,12 +320,6 @@ const WORDMARK_DARK = require('../../assets/volyume-wordmark-dark.png');
 const FONT_FAMILY = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: 'sans-serif' });
 const PREVIEW_RENDER_W = 640; // render crisp, display scaled down
 const PREVIEW_DISPLAY_W = 300;
-// The preview's place (D229 addendum 5 item 8): a header above the page holds
-// the live preview at full size and shrinks it, as the page scrolls, to this
-// height, where it stays under the title bar while the controls are worked.
-const MINI_PREVIEW_H = 112;
-// The header's own space above and below the preview card.
-const PREVIEW_HEADER_PAD = spacing.sm;
 // The photo the positioning view shows: the same pixels the card draws,
 // scaled to at most this edge (enough for a 300dp frame at 4x zoom on a
 // dense screen) and encoded once, so the view and the card cannot disagree
@@ -552,23 +539,6 @@ export default function ShareCardScreen({ navigation, route }) {
   // read them after an await.
   const clipRef = useRef(null);
   clipRef.current = clip;
-  // Reduce Motion: the phone's own setting, read once, OR Volyume's own
-  // (Settings), the one AnimatedEntrance and the camera read (fresh-eyes
-  // review 2026-10-15, should-fix 6). It makes the preview's scroll back to
-  // the top immediate.
-  const [osReduceMotion, setOsReduceMotion] = useState(false);
-  const storeReduceMotion = useAppStore((st) => !!st.accessibility?.reduceMotion);
-  const reduceMotion = osReduceMotion || storeReduceMotion;
-  useEffect(() => {
-    let cancelled = false;
-    try {
-      const read = AccessibilityInfo?.isReduceMotionEnabled?.();
-      if (read && typeof read.then === 'function') {
-        read.then((on) => { if (!cancelled) setOsReduceMotion(!!on); }).catch(() => { /* the store's value stands */ });
-      }
-    } catch (_e) { /* the store's value stands */ }
-    return () => { cancelled = true; };
-  }, []);
   const [backgroundSource, setBackgroundSource] = useState(BACKGROUND_SOURCES.NONE);
   // Where the athlete placed and sized it ({ zoom, cx, cy }, null = centred)
   // and the same pixels as a data URI for the live preview (founder orders
@@ -2264,84 +2234,16 @@ export default function ShareCardScreen({ navigation, route }) {
   const previewW = Math.min(PREVIEW_DISPLAY_W, windowWidth - 2 * spacing.lg);
   const previewH = isSticker ? stickerHeight(previewW) : cardHeight(previewW, isSquare, cardAspect, fullAspect);
 
-  // The preview's place (D229 addendum 5 item 8, as rebuilt by the
-  // fresh-eyes review of 2026-10-15, should-fix 7, and brought back on the
-  // founder's word of 2026-10-16: "Ok yes I want the collapsing preview"): a
-  // header above the page holds the live preview at full size, the first
-  // thing on the screen, and shrinks it on the UI thread as the page scrolls
-  // to a small copy that stays under the title bar while the controls are
-  // worked below. One preview in every state (the still, the framer, the
-  // playing video, the error and the spinner), nothing drawn twice, and
-  // nothing floats over the controls. At the small size the card takes no
-  // touches (the framer's pinch and drag are for the full size only) and a
-  // tap on it scrolls back to the top. Reduce Motion: the shrink follows the
-  // finger (direct manipulation), only the scroll back is unanimated.
-  const scrollRef = useRef(null);
-  const [previewSmall, setPreviewSmall] = useState(false);
-  // The standard collapsing-header layout (lead ruling 2026-10-16: the page
-  // moves 1:1 with the finger). The header lies over the top of the page,
-  // which starts with room for the header at full size; as the page scrolls
-  // by y the header is y shorter, so its foot stays on the content's top
-  // edge, until it is small, and then the page scrolls on under it. A pull
-  // past the top (iOS bounce) never makes it taller than full.
-  const miniH = Math.min(MINI_PREVIEW_H, previewH);
-  const headerFullH = previewH + 2 * PREVIEW_HEADER_PAD;
-  const headerMiniH = miniH + 2 * PREVIEW_HEADER_PAD;
-  const collapseRange = Math.max(1, previewH - miniH);
-  // The page's scroll position, as it is (audit item 3): the collapse is
-  // worked out from it inside each animated style and the reaction, with
-  // the range as it is NOW, so a new format (a new preview height) while
-  // the page is scrolled lays the header out again at once. A stored
-  // fraction of the old range left it out of step until the next scroll.
-  // Each worklet does the clamp itself (a plain helper called from a
-  // worklet is a fatal error on the new architecture: VOLUME-2A).
-  const scrollY = useSharedValue(0);
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (e) => {
-      'worklet';
-
-      scrollY.value = e.contentOffset.y;
-    },
-  });
-  useAnimatedReaction(() => Math.min(1, Math.max(0, scrollY.value / collapseRange)) > 0.5, (small, prev) => {
-    if (small !== prev) runOnJS(setPreviewSmall)(small);
-  }, [collapseRange]);
-  const previewHeaderStyle = useAnimatedStyle(() => {
-    const collapse = Math.min(1, Math.max(0, scrollY.value / collapseRange)); // 0 full, 1 small
-    return { height: interpolate(collapse, [0, 1], [headerFullH, headerMiniH], Extrapolation.CLAMP) };
-  }, [collapseRange, headerFullH, headerMiniH]);
-  // The card scales with the header's height, about its centre, and is
-  // lifted by half what it lost, so it shrinks towards the header's top.
-  const previewCardStyle = useAnimatedStyle(() => {
-    const collapse = Math.min(1, Math.max(0, scrollY.value / collapseRange));
-    const h = interpolate(collapse, [0, 1], [previewH, miniH], Extrapolation.CLAMP);
-    const scale = previewH > 0 ? h / previewH : 1;
-    return { transform: [{ translateY: -(previewH - h) / 2 }, { scale }] };
-  }, [collapseRange, previewH, miniH]);
+  // The preview sits UNDER the options (founder 2026-10-17: "You change the
+  // settings and then see what it looks like"), in the page itself, after
+  // What to include and before Share: one preview in every state (the still,
+  // the framer, the playing video, the error and the spinner), nothing
+  // collapsing and nothing drawn twice.
   // Play and the preview's hint, the first things in the page (lead ruling
   // 1, render audit 2026-10-16): Play (or the making row in its place) with
   // a video under the card, safe to show; the hint while the framer is live.
   const showPlay = !!liveClip && !suppress && !!AvVideo && (livePhoto || playingPreview);
   const showPhotoHint = livePhoto && !playingPreview;
-  // Where the foot of those controls is in the page (their onLayout), so the
-  // small header knows when the "Making your preview" row has scrolled out
-  // of sight under it: the row's foot is above the small header's foot once
-  // scrollY >= foot - headerMiniH. Until it is measured it reads as out of
-  // sight, so a small header never hides the reason Share and Save are grey.
-  const controlsFoot = useSharedValue(0);
-  const [controlsOutOfView, setControlsOutOfView] = useState(false);
-  useAnimatedReaction(() => scrollY.value >= controlsFoot.value - headerMiniH, (out, prev) => {
-    if (out !== prev) runOnJS(setControlsOutOfView)(out);
-  }, [headerMiniH]);
-  // One progress indicator per place (render audit 2026-10-16, lead ruling
-  // 6). The small header's chip is for a PREVIEW being made, and only once
-  // its making row (the first thing in the page) is out of sight; the share
-  // video's making row sits by Share itself, in view where it was tapped,
-  // so it has no chip.
-  const makingLine = makingPreview && previewSmall && controlsOutOfView
-    ? `Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`
-    : null;
-  const makingPct = previewProgress;
   // Under Sticker only what changes the sticker stays on screen (render
   // audit 2026-10-16, lead ruling 4), so nothing there is dead; every value
   // is kept and the rest comes back with any other format. The sticker
@@ -2386,96 +2288,15 @@ export default function ShareCardScreen({ navigation, route }) {
   // Play waits for the tone (item 1): pressed or not, it shows so.
   const playWaiting = !playingPreview && (!toneReady || waitingFor === 'play');
   const lockedA11y = (state) => (locked ? { ...(state || {}), disabled: true } : state);
-  const scrollToPreview = useCallback(() => {
-    scrollRef.current?.scrollTo?.({ y: 0, animated: !reduceMotion });
-  }, [reduceMotion]);
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <BackHeader title={liveClip ? 'Share video' : 'Share image'} />
+      <BackHeader title="Share" />
       <View style={styles.body}>
       <GestureDetector gesture={scrollGesture}>
-      <Animated.ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[styles.content, live.content, { paddingTop: headerFullH }]}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
+      <ScrollView
+        contentContainerStyle={[styles.content, live.content]}
       >
-
-        {/* Under the preview, the first thing in the page (render audit
-            2026-10-16, lead ruling 1): Play with your look, or Pause while
-            it plays, as a clear secondary button OFF the card, so it never
-            covers the card's footer in any format; while a preview is made,
-            the making row and its Cancel take its place. Then the preview's
-            hint. Both scroll away with the page under the small header. */}
-        {makingVideo ? (
-          <Text style={[styles.photoHint, live.photoHint]} testID="share-making-video-top" accessibilityLiveRegion="polite">
-            Making your video… Keep Volyume open.
-          </Text>
-        ) : null}
-        {(showPlay || showPhotoHint) ? (
-          <View
-            style={styles.previewControls}
-            onLayout={(e) => { const l = e.nativeEvent.layout; controlsFoot.value = l.y + l.height; }}
-            testID="share-preview-controls"
-          >
-          {showPlay ? (
-            makingPreview ? (
-              <View style={styles.makingRow} testID="share-making-preview">
-                <ActivityIndicator color={t.colors.primary} />
-                <Text style={[styles.photoHint, live.photoHint, styles.makingText]}>
-                  {`Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`}
-                </Text>
-                <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={cancelVideo} accessibilityLabel="Cancel making the preview" />
-              </View>
-            ) : (
-              // Before the tone for this window is read, Play shows a small
-              // spinner and says so; a press waits and plays by itself once
-              // the tone is here (audit item 1), so no tap is lost. Built on a
-              // TouchableOpacity in Button's secondary dress, because the
-              // waiting state must stay pressable while it reads busy, which
-              // Button's loading state does not allow.
-              <TouchableOpacity
-                onPress={playingPreview ? pausePreview : () => { playPreview().catch((e) => { logError('ShareCardScreen.play', e); }); }}
-                disabled={!playingPreview && makingVideo}
-                accessibilityRole="button"
-                accessibilityLabel={playingPreview ? 'Pause the video' : playWaiting ? 'Getting your video ready' : 'Play with your look'}
-                accessibilityState={playWaiting && !makingVideo ? { disabled: false, busy: true } : { disabled: !playingPreview && makingVideo }}
-                style={[styles.playButton, live.playButton, !playingPreview && makingVideo ? styles.lockedControl : null]}
-                activeOpacity={0.85}
-                testID="share-play-control"
-              >
-                {playWaiting ? (
-                  <ActivityIndicator size="small" color={t.colors.primary} testID="share-play-waiting" />
-                ) : (
-                  <Ionicons name={playingPreview ? 'pause' : 'play'} size={18} color={t.colors.textSecondary} />
-                )}
-                <Text style={[styles.playButtonLabel, live.playButtonLabel]} maxFontSizeMultiplier={fontScaleCaps.chrome}>
-                  {playingPreview ? 'Pause' : playWaiting ? 'Getting your video ready' : 'Play with your look'}
-                </Text>
-              </TouchableOpacity>
-            )
-          ) : null}
-          {showPhotoHint ? (
-            <View style={styles.photoHintRow}>
-              <Text style={[styles.photoHint, live.photoHint]}>{clip ? 'Drag to move your video. Pinch to resize it. Press play to watch it with your look.' : 'Drag to move your photo. Pinch to resize it.'}</Text>
-              {!isCentreCrop(photoCrop) ? (
-                <TouchableOpacity
-                  onPress={() => setPhotoCrop(null)}
-                  disabled={locked}
-                  accessibilityRole="button"
-                  accessibilityLabel={clip ? 'Reset the video to the centre' : 'Reset the photo to the centre'}
-                  accessibilityState={lockedA11y(undefined)}
-                  style={locked ? styles.lockedControl : null}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ) : null}
-          </View>
-        ) : null}
 
         {/* Card type (pillar 5): live template thumbnails when more than one
             card is available for this moment - the picker shows the actual
@@ -2518,92 +2339,6 @@ export default function ShareCardScreen({ navigation, route }) {
             })}
           </ScrollView>
         )}
-
-        {/* Format: story 9:16 first (D109-1), Full screen (the phone's own
-            shape, D229 addendum 6), Feed 4:5 ('portrait' in the code),
-            Square 1:1, and the transparent sticker export - all five for
-            every card type. Five fit across a phone with each icon over its
-            word. */}
-        <View style={styles.section}>
-          <SectionLabel>Format</SectionLabel>
-          <View style={[styles.segmentRow, live.segmentRow]}>
-            <SegmentBtn
-              disabled={locked}
-              label="Story"
-              stacked
-              active={format === 'story'}
-              onPress={() => setFormat('story')}
-              icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
-            />
-            <SegmentBtn
-              disabled={locked}
-              label="Full screen"
-              stacked
-              active={format === 'full'}
-              onPress={() => setFormat('full')}
-              icon={<Ionicons name="expand-outline" size={15} color={format === 'full' ? t.colors.primary : t.colors.textMuted} />}
-            />
-            <SegmentBtn
-              disabled={locked}
-              label="Feed"
-              stacked
-              active={format === 'portrait'}
-              onPress={() => setFormat('portrait')}
-              icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
-            />
-            <SegmentBtn
-              disabled={locked}
-              label="Square"
-              stacked
-              active={format === 'square'}
-              onPress={() => setFormat('square')}
-              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
-            />
-            <SegmentBtn
-              disabled={locked}
-              label="Sticker"
-              stacked
-              active={isSticker}
-              onPress={() => setFormat('sticker')}
-              icon={<Ionicons name="pricetag-outline" size={15} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
-            />
-          </View>
-          {isSticker ? (
-            <Text style={[styles.formatHint, live.formatHint]}>
-              A small transparent panel to place on your own story photo.
-            </Text>
-          ) : null}
-          {isSticker && clip ? (
-            <Text style={[styles.formatHint, live.formatHint]} testID="share-sticker-video-hint">
-              Your video is not used on a sticker. Switch format to bring it back.
-            </Text>
-          ) : null}
-        </View>
-
-        {/* Theme (founder, 2026-09-27: "different share themes (light and
-            dark)"). A card-wide choice like Format, so it sits alongside it.
-            Hidden for the sticker, which draws no card ground of its own. */}
-        {!isSticker ? (
-        <View style={styles.section}>
-          <SectionLabel>Theme</SectionLabel>
-          <View style={[styles.segmentRow, live.segmentRow]}>
-            <SegmentBtn
-              disabled={locked}
-              label="Dark"
-              active={shareTheme === 'dark'}
-              onPress={() => setShareTheme('dark')}
-              icon={<Ionicons name="moon-outline" size={15} color={shareTheme === 'dark' ? t.colors.primary : t.colors.textMuted} />}
-            />
-            <SegmentBtn
-              disabled={locked}
-              label="Light"
-              active={shareTheme === 'light'}
-              onPress={() => setShareTheme('light')}
-              icon={<Ionicons name="sunny-outline" size={15} color={shareTheme === 'light' ? t.colors.primary : t.colors.textMuted} />}
-            />
-          </View>
-        </View>
-        ) : null}
 
         {/* Background: the user's own photo as the canvas (Gallery, a pick
             from the phone's photos, or Photo, the system camera; the
@@ -2783,6 +2518,92 @@ export default function ShareCardScreen({ navigation, route }) {
             </Text>
           ) : null}
         </BottomSheet>
+
+        {/* Format: story 9:16 first (D109-1), Full screen (the phone's own
+            shape, D229 addendum 6), Feed 4:5 ('portrait' in the code),
+            Square 1:1, and the transparent sticker export - all five for
+            every card type. Five fit across a phone with each icon over its
+            word. */}
+        <View style={styles.section}>
+          <SectionLabel>Format</SectionLabel>
+          <View style={[styles.segmentRow, live.segmentRow]}>
+            <SegmentBtn
+              disabled={locked}
+              label="Story"
+              stacked
+              active={format === 'story'}
+              onPress={() => setFormat('story')}
+              icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              disabled={locked}
+              label="Full screen"
+              stacked
+              active={format === 'full'}
+              onPress={() => setFormat('full')}
+              icon={<Ionicons name="expand-outline" size={15} color={format === 'full' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              disabled={locked}
+              label="Feed"
+              stacked
+              active={format === 'portrait'}
+              onPress={() => setFormat('portrait')}
+              icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              disabled={locked}
+              label="Square"
+              stacked
+              active={format === 'square'}
+              onPress={() => setFormat('square')}
+              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              disabled={locked}
+              label="Sticker"
+              stacked
+              active={isSticker}
+              onPress={() => setFormat('sticker')}
+              icon={<Ionicons name="pricetag-outline" size={15} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
+            />
+          </View>
+          {isSticker ? (
+            <Text style={[styles.formatHint, live.formatHint]}>
+              A small transparent panel to place on your own story photo.
+            </Text>
+          ) : null}
+          {isSticker && clip ? (
+            <Text style={[styles.formatHint, live.formatHint]} testID="share-sticker-video-hint">
+              Your video is not used on a sticker. Switch format to bring it back.
+            </Text>
+          ) : null}
+        </View>
+
+        {/* Theme (founder, 2026-09-27: "different share themes (light and
+            dark)"). A card-wide choice like Format, so it sits alongside it.
+            Hidden for the sticker, which draws no card ground of its own. */}
+        {!isSticker ? (
+        <View style={styles.section}>
+          <SectionLabel>Theme</SectionLabel>
+          <View style={[styles.segmentRow, live.segmentRow]}>
+            <SegmentBtn
+              disabled={locked}
+              label="Dark"
+              active={shareTheme === 'dark'}
+              onPress={() => setShareTheme('dark')}
+              icon={<Ionicons name="moon-outline" size={15} color={shareTheme === 'dark' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              disabled={locked}
+              label="Light"
+              active={shareTheme === 'light'}
+              onPress={() => setShareTheme('light')}
+              icon={<Ionicons name="sunny-outline" size={15} color={shareTheme === 'light' ? t.colors.primary : t.colors.textMuted} />}
+            />
+          </View>
+        </View>
+        ) : null}
 
                 {/* Look (founder, 2026-09-27: "a tint or filter to the images
             ... Almost like Instagram filters but a select group of them that
@@ -2978,6 +2799,161 @@ export default function ShareCardScreen({ navigation, route }) {
           </Text>
         </View>
 
+        {/* The preview, UNDER the options (founder 2026-10-17: "The preview
+            should be UNDER THE OPTIONS ... You change the settings and then
+            see what it looks like"): the exact image that gets shared; live
+            with a photo or a video under the card (moved and resized right
+            here). Then Play with your look (OFF the card, so it never covers
+            the card's footer in any format) and the hint. */}
+        <View style={styles.previewSection} testID="share-preview-section">
+        <View
+          style={[styles.previewCard, { width: previewW, height: previewH }]}
+          testID="share-preview-card"
+        >
+          {playingPreview && AvVideo ? (
+            <TouchableOpacity
+              onPress={pausePreview}
+              activeOpacity={1}
+              accessible={false}
+              testID="share-preview-video"
+              style={[styles.previewVideoFrame, live.previewVideoFrame, { width: previewW, height: previewH }]}
+            >
+              <AvVideo
+                source={{ uri: previewVideo.uri }}
+                style={{ width: previewW, height: previewH }}
+                resizeMode={AvResizeMode?.CONTAIN ?? 'contain'}
+                shouldPlay
+                isLooping
+                isMuted
+                useNativeControls={false}
+                onError={previewPlayFailed}
+              />
+            </TouchableOpacity>
+          ) : livePhoto ? (
+            <SharePhotoFramer
+              photoUri={framerPhoto.uri}
+              photoWidth={framerSize.width}
+              photoHeight={framerSize.height}
+              frameWidth={previewW}
+              frameHeight={previewH}
+              crop={photoCrop}
+              overlayUri={framerOverlay}
+              onChange={setPhotoCrop}
+              blocksGesture={scrollGesture}
+              subject={liveClip ? 'video' : 'photo'}
+              disabled={locked}
+            />
+          ) : previewStatus === 'ready' && previewB64 ? (
+            <Image
+              source={{ uri: `data:image/png;base64,${previewB64}` }}
+              style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
+              resizeMode="contain"
+            />
+          ) : previewStatus === 'error' ? (
+            <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
+              <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
+              <Text style={[styles.previewErrorText, live.previewErrorText]}>Could not build the preview.</Text>
+              <Button
+                title="Retry"
+                onPress={renderPreview}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={styles.retryButton}
+                accessibilityLabel="Retry building the preview"
+              />
+            </View>
+          ) : (
+            <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: previewW, height: previewH }]}>
+              <ActivityIndicator color={t.colors.primary} />
+            </View>
+          )}
+          {/* A video's frame on its way (the first frame of a newly chosen
+              video, or the still at a new start): the preview says so and
+              the rest of the screen keeps working. */}
+          {frameLoading ? (
+            <View
+              style={[styles.previewBusy, live.previewBusy]}
+              pointerEvents="none"
+              accessible
+              accessibilityLabel={FRAME_BUSY_LABEL[frameLoading] || FRAME_BUSY_LABEL.open}
+              accessibilityLiveRegion="polite"
+              testID="share-preview-busy"
+            >
+              <ActivityIndicator color={t.colors.primary} />
+            </View>
+          ) : null}
+        </View>
+        </View>
+        {makingVideo ? (
+          <Text style={[styles.photoHint, live.photoHint]} testID="share-making-video-top" accessibilityLiveRegion="polite">
+            Making your video… Keep Volyume open.
+          </Text>
+        ) : null}
+        {(showPlay || showPhotoHint) ? (
+          <View
+            style={styles.previewControls}
+            testID="share-preview-controls"
+          >
+          {showPlay ? (
+            makingPreview ? (
+              <View style={styles.makingRow} testID="share-making-preview">
+                <ActivityIndicator color={t.colors.primary} />
+                <Text style={[styles.photoHint, live.photoHint, styles.makingText]}>
+                  {`Making your preview, ${Math.round(Math.max(0, Math.min(1, previewProgress)) * 100)}%`}
+                </Text>
+                <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={cancelVideo} accessibilityLabel="Cancel making the preview" />
+              </View>
+            ) : (
+              // Before the tone for this window is read, Play shows a small
+              // spinner and says so; a press waits and plays by itself once
+              // the tone is here (audit item 1), so no tap is lost. Built on a
+              // TouchableOpacity in Button's secondary dress, because the
+              // waiting state must stay pressable while it reads busy, which
+              // Button's loading state does not allow.
+              <TouchableOpacity
+                onPress={playingPreview ? pausePreview : () => { playPreview().catch((e) => { logError('ShareCardScreen.play', e); }); }}
+                disabled={!playingPreview && makingVideo}
+                accessibilityRole="button"
+                accessibilityLabel={playingPreview ? 'Pause the video' : playWaiting ? 'Getting your video ready' : 'Play with your look'}
+                accessibilityState={playWaiting && !makingVideo ? { disabled: false, busy: true } : { disabled: !playingPreview && makingVideo }}
+                style={[styles.playButton, live.playButton, !playingPreview && makingVideo ? styles.lockedControl : null]}
+                activeOpacity={0.85}
+                testID="share-play-control"
+              >
+                {playWaiting ? (
+                  <ActivityIndicator size="small" color={t.colors.primary} testID="share-play-waiting" />
+                ) : (
+                  <Ionicons name={playingPreview ? 'pause' : 'play'} size={18} color={t.colors.textSecondary} />
+                )}
+                <Text style={[styles.playButtonLabel, live.playButtonLabel]} maxFontSizeMultiplier={fontScaleCaps.chrome}>
+                  {playingPreview ? 'Pause' : playWaiting ? 'Getting your video ready' : 'Play with your look'}
+                </Text>
+              </TouchableOpacity>
+            )
+          ) : null}
+          {showPhotoHint ? (
+            <View style={styles.photoHintRow}>
+              <Text style={[styles.photoHint, live.photoHint]}>{clip ? 'Drag to move your video. Pinch to resize it. Press play to watch it with your look.' : 'Drag to move your photo. Pinch to resize it.'}</Text>
+              {!isCentreCrop(photoCrop) ? (
+                <TouchableOpacity
+                  onPress={() => setPhotoCrop(null)}
+                  disabled={locked}
+                  accessibilityRole="button"
+                  accessibilityLabel={clip ? 'Reset the video to the centre' : 'Reset the photo to the centre'}
+                  accessibilityState={lockedA11y(undefined)}
+                  style={locked ? styles.lockedControl : null}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+          </View>
+        ) : null}
+
+
         {/* Share: the ONE amber action on the screen (D229 addendum 5 item
             7), Save to gallery and Post to Community beneath it. It opens the
             system share sheet with the image, carrying the Instagram and
@@ -3072,132 +3048,8 @@ export default function ShareCardScreen({ navigation, route }) {
             style={styles.secondaryAction}
           />
         ) : null}
-      </Animated.ScrollView>
+      </ScrollView>
       </GestureDetector>
-      {/* The preview's header: the exact image that gets shared, scaled
-          down; live with a photo or a video under the card (moved and
-          resized right here); it shrinks as the page scrolls and stays small
-          under the title bar. It lies over the top of the page (drawn after
-          it), outside the scroll, so a drag on the photo never scrolls. */}
-      <Animated.View
-        style={[styles.previewHeader, live.previewHeader, previewHeaderStyle]}
-        pointerEvents="box-none"
-        testID="share-preview-header"
-      >
-        <Animated.View
-          style={[styles.previewCard, { width: previewW, height: previewH }, previewCardStyle]}
-          pointerEvents={previewSmall ? 'none' : 'auto'}
-          accessibilityElementsHidden={previewSmall}
-          importantForAccessibility={previewSmall ? 'no-hide-descendants' : 'auto'}
-          testID="share-preview-card"
-        >
-          {playingPreview && AvVideo ? (
-            <TouchableOpacity
-              onPress={pausePreview}
-              activeOpacity={1}
-              accessible={false}
-              testID="share-preview-video"
-              style={[styles.previewVideoFrame, live.previewVideoFrame, { width: previewW, height: previewH }]}
-            >
-              <AvVideo
-                source={{ uri: previewVideo.uri }}
-                style={{ width: previewW, height: previewH }}
-                resizeMode={AvResizeMode?.CONTAIN ?? 'contain'}
-                shouldPlay
-                isLooping
-                isMuted
-                useNativeControls={false}
-                onError={previewPlayFailed}
-              />
-            </TouchableOpacity>
-          ) : livePhoto ? (
-            <SharePhotoFramer
-              photoUri={framerPhoto.uri}
-              photoWidth={framerSize.width}
-              photoHeight={framerSize.height}
-              frameWidth={previewW}
-              frameHeight={previewH}
-              crop={photoCrop}
-              overlayUri={framerOverlay}
-              onChange={setPhotoCrop}
-              blocksGesture={scrollGesture}
-              subject={liveClip ? 'video' : 'photo'}
-              disabled={locked}
-            />
-          ) : previewStatus === 'ready' && previewB64 ? (
-            <Image
-              source={{ uri: `data:image/png;base64,${previewB64}` }}
-              style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
-              resizeMode="contain"
-            />
-          ) : previewStatus === 'error' ? (
-            <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
-              <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
-              <Text style={[styles.previewErrorText, live.previewErrorText]}>Could not build the preview.</Text>
-              <Button
-                title="Retry"
-                onPress={renderPreview}
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                style={styles.retryButton}
-                accessibilityLabel="Retry building the preview"
-              />
-            </View>
-          ) : (
-            <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: previewW, height: previewH }]}>
-              <ActivityIndicator color={t.colors.primary} />
-            </View>
-          )}
-          {/* A video's frame on its way (the first frame of a newly chosen
-              video, or the still at a new start): the preview says so and
-              the rest of the screen keeps working. */}
-          {frameLoading ? (
-            <View
-              style={[styles.previewBusy, live.previewBusy]}
-              pointerEvents="none"
-              accessible
-              accessibilityLabel={FRAME_BUSY_LABEL[frameLoading] || FRAME_BUSY_LABEL.open}
-              accessibilityLiveRegion="polite"
-              testID="share-preview-busy"
-            >
-              <ActivityIndicator color={t.colors.primary} />
-            </View>
-          ) : null}
-        </Animated.View>
-        {previewSmall ? (
-          <TouchableOpacity
-            style={styles.previewBack}
-            onPress={scrollToPreview}
-            accessibilityRole="button"
-            accessibilityLabel="Back to the preview"
-            accessibilityHint="Scrolls up to the full-size preview"
-            activeOpacity={0.85}
-            testID="share-mini-preview"
-          />
-        ) : null}
-        {/* The small preview's progress: while a preview is made and its
-            making row has scrolled out of sight, a compact chip over the
-            small card, not scaled with it and taking no touches (the tap is
-            still "Back to the preview"). In sight, the making row with its
-            Cancel says it instead; the share video's row is by Share. */}
-        {makingLine ? (
-          <View style={styles.previewMiniProgressWrap} pointerEvents="none">
-            <View
-              style={[styles.previewMiniProgress, live.previewMiniProgress]}
-              accessible
-              accessibilityLabel={makingLine}
-              accessibilityLiveRegion="polite"
-              testID="share-mini-progress"
-            >
-              <ActivityIndicator size="small" color={t.colors.primary} />
-              <Text style={[styles.previewMiniProgressText, live.previewMiniProgressText]}>
-                {`${Math.round(Math.max(0, Math.min(1, makingPct)) * 100)}%`}
-              </Text>
-            </View>
-          </View>
-        ) : null}
-      </Animated.View>
       </View>
 
       {/* The top-lifts list: every lift from the session with its best set,
@@ -3433,21 +3285,8 @@ const styles = StyleSheet.create({
   // The preview's header: the live preview at full size, shrinking to the
   // small size as the page scrolls; the card scales towards the top, and
   // the back target covers the small preview.
-  previewHeader: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    alignItems: 'center', overflow: 'hidden', paddingVertical: PREVIEW_HEADER_PAD,
-    backgroundColor: colors.surface,
-  },
+  previewSection: { alignItems: 'center' },
   previewCard: { alignSelf: 'center' },
-  previewBack: { ...StyleSheet.absoluteFillObject },
-  // The small preview's progress chip, centred over the small card.
-  previewMiniProgressWrap: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  previewMiniProgress: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.md,
-    backgroundColor: withAlpha(colors.surface, 0.9),
-  },
-  previewMiniProgressText: { ...type.captionTight, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   section: { gap: spacing.md },
   // Template strip (Campaign 30 pillar 5): live card thumbnails as the
@@ -3614,9 +3453,6 @@ function buildLiveStyles(t) {
     playButtonLabel: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
     previewBusy: { backgroundColor: withAlpha(t.colors.surface, alpha.half) },
     thumbBusy: { backgroundColor: withAlpha(t.colors.surface, alpha.half) },
-    previewHeader: { backgroundColor: t.colors.surface },
-    previewMiniProgress: { backgroundColor: withAlpha(t.colors.surface, 0.9) },
-    previewMiniProgressText: { ...t.type.captionTight, color: t.colors.textPrimary },
     sheetRowText: { ...t.type.body, color: t.colors.textPrimary },
     sheetRowMeta: { ...t.type.num('label'), color: t.colors.textMuted },
     content: { paddingHorizontal: t.screenPadding },
