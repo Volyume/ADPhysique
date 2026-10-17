@@ -10,7 +10,6 @@ import useTheme from '../hooks/useTheme';
 import { VolyumeMark } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
-import { ONBOARDING_QUIZ_FIRST } from '../lib/onboarding/quizFlow';
 import { touchTarget } from '../styles/layout';
 import AuthSheet from '../components/auth/AuthSheet';
 
@@ -70,12 +69,6 @@ export default function WelcomeScreen({ navigation, route }) {
   }, []);
 
   function getStarted() {
-    // COMP-030: when quiz-first is on, the CTA opens the pre-account quiz
-    // (the plan takes shape before the account wall). Founder-flagged.
-    if (ONBOARDING_QUIZ_FIRST) {
-      navigation.navigate('QuizTraining');
-      return;
-    }
     // E-1 (D96): the sheet opens in create-account mode; "Sign in" below
     // opens it in sign-in mode.
     setSheet('signup');

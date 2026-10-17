@@ -786,22 +786,6 @@ export default function ProOnboardingScreen({ navigation }) {
     bodyFat, bfSource, daysPerWeek, proteinApproach, experience, user?.id,
   ]);
 
-  // COMP-030: prefill the training + goal steps from the pre-account quiz slice
-  // (Variant B), so a quiz-first user confirms rather than re-answers. One-shot
-  // on mount; no-op when the quiz wasn't run (flag off / Free path).
-  const onboardingQuiz = useAppStore(s => s.onboardingQuiz);
-  useEffect(() => {
-    const q = onboardingQuiz;
-    if (!q) return;
-    if (q.experience) setExperience(q.experience);
-    if (Number.isFinite(q.sessionLengthMinutes)) setSessionLengthMinutes(q.sessionLengthMinutes);
-    if (Number.isFinite(q.daysPerWeek)) setDaysPerWeek(q.daysPerWeek);
-    if (q.equipment) setEquipment(q.equipment);
-    if (q.trainingGoal) setTrainingGoal(q.trainingGoal);
-    if (q.trainingPhase) setTrainingPhase(q.trainingPhase);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Changing division re-scopes the weak-point options, so drop any selected
   // muscle that the new division does not offer.
   function changeGoal(nextGoal) {

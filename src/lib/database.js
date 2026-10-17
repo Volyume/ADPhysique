@@ -200,6 +200,43 @@ export function initDatabase() {
   return _initPromise;
 }
 
+// Reset and restore (founder answer 2026-10-17): forget the cached init state
+// so the next initDatabase() opens the file afresh after the RootNavigator
+// reset has deleted it. A published handle is closed first (a checkpoint
+// that fails on a damaged file falls back to a plain close).
+// A HUNG open's own handle cannot be closed from here: it is local to
+// _doInit until that open settles. If a discarded open settles later and
+// publishes its handle, the hook below unpublishes and closes it, which
+// narrows that window to a few microtasks but does not close it, and a
+// discarded open that rejects late still runs initDatabase's own catch.
+// (The reset releases expo-sqlite's cached native connection itself, which
+// can make an open stuck on that connection settle; one stuck elsewhere,
+// such as a key read, may not. See localDbReset.releaseCachedConnections.)
+export async function discardDatabaseInitState() {
+  const handle = _db;
+  const pending = _initPromise;
+  _db = null;
+  _initPromise = null;
+  _initDeferredAt = null;
+  if (pending) {
+    pending.then((late) => {
+      if (late && _db === late) _db = null;
+      // Best-effort: a superseded handle on a deleted file.
+      if (late) Promise.resolve().then(() => late.closeAsync?.()).catch(() => {});
+    }).catch(() => { /* the discarded open failed: nothing was published */ });
+  }
+  if (handle) {
+    try {
+      await closeDatabaseHandle(handle);
+    } catch (_) {
+      try { await handle.closeAsync(); } catch (__) { /* best-effort: the file is deleted next */ }
+    }
+  }
+  // Wrapped, not returned bare: an async function would otherwise wait on a
+  // hung open here. The caller bounds its own wait (src/lib/localDbReset.js).
+  return { pending };
+}
+
 async function _doInit() {
   // A process may have died between the two atomic renames of snapshot
   // promotion. Repair from the durable restore journal before any SQLite open
@@ -7588,24 +7625,33 @@ export async function rebuildPlanKeepingBlockV2(userId, spec) {
 
 // ─── Nutrition Targets ────────────────────────────────────
 
+// Push to cloud after the local write completes so a fresh device sign-in
+// restores the same target row. Fire-and-forget; if the user isn't signed in
+// this is a no-op.
+function _pushNutritionTargetsToCloud(userId) {
+  try {
+    // eslint-disable-next-line global-require
+    const { syncNutritionTargets } = require('./sync');
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../store/useAppStore').default;
+    const sessionUserId = useAppStore.getState().session?.user?.id;
+    if (sessionUserId) {
+      syncNutritionTargets(sessionUserId, userId).catch(() => {});
+    }
+  } catch (_) { /* offline / module load fail: best-effort only */ }
+}
+
 export async function saveNutritionTargets(userId, targets) {
   const d = await db();
+  const id = await saveNutritionTargetsInTx(d, userId, targets);
+  _pushNutritionTargetsToCloud(userId);
+  return id;
+}
+
+// The local write alone, on a caller's handle, so it can share one
+// transaction with the coach receipt (applyCoachCalorieAdjustmentAtomically).
+async function saveNutritionTargetsInTx(d, userId, targets) {
   const now = Date.now();
-  // Push to cloud after the local write completes so a fresh device
-  // sign-in restores the same target row. Fire-and-forget; if the
-  // user isn't signed in this is a no-op.
-  const pushToCloud = () => {
-    try {
-      // eslint-disable-next-line global-require
-      const { syncNutritionTargets } = require('./sync');
-      // eslint-disable-next-line global-require
-      const useAppStore = require('../store/useAppStore').default;
-      const sessionUserId = useAppStore.getState().session?.user?.id;
-      if (sessionUserId) {
-        syncNutritionTargets(sessionUserId, userId).catch(() => {});
-      }
-    } catch (_) { /* offline / module load fail: best-effort only */ }
-  };
   const existing = await d.getFirstAsync(
     'SELECT id FROM nutrition_targets WHERE user_id = ? LIMIT 1',
     [userId],
@@ -7628,7 +7674,6 @@ export async function saveNutritionTargets(userId, targets) {
         now, userId,
       ],
     );
-    pushToCloud();
     return existing.id;
   }
   const id = uid();
@@ -7649,7 +7694,6 @@ export async function saveNutritionTargets(userId, targets) {
       targets.goal ?? null, targets.proteinApproach ?? null, now, now,
     ],
   );
-  pushToCloud();
   return id;
 }
 
@@ -11018,6 +11062,34 @@ export async function applyCoachTrainingAdjustmentWithDb(d, {
     }
     return saveCoachOutputInTx(d, userId, coachOutput);
   });
+}
+
+/**
+ * C3 (final audit 2026-10-17): a coach CALORIE apply (the weekly calorie step
+ * or a diet break) and its applied receipt are one commit, like the training
+ * apply above. Written as two separate writes, an app killed between them
+ * left the target moved with no receipt, so the row offered Apply again and a
+ * second tap could stack another step onto an already-moved target. Either
+ * both land or neither does. The targets arrive already computed and
+ * floor-clamped by the caller (coachApply); nothing here computes or relaxes
+ * a calorie value.
+ */
+export async function applyCoachCalorieAdjustmentWithDb(d, { userId, targets, coachOutput }) {
+  if (!userId || !targets || !Number.isFinite(coachOutput?.weekStart)) {
+    throw new Error('Coach calorie apply identity is invalid.');
+  }
+  return runInTransaction(d, async () => {
+    await saveNutritionTargetsInTx(d, userId, targets);
+    return saveCoachOutputInTx(d, userId, coachOutput);
+  });
+}
+
+export async function applyCoachCalorieAdjustmentAtomically(args) {
+  const d = await db();
+  const receiptId = await applyCoachCalorieAdjustmentWithDb(d, args);
+  _pushNutritionTargetsToCloud(args.userId);
+  _scheduleSync();
+  return receiptId;
 }
 
 export async function applyCoachTrainingAdjustmentAtomically(args) {

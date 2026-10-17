@@ -114,13 +114,20 @@ const _inFlight = new Map();
 // (VOLYUME-1N, iOS build 40). Chunks now ride the app-wide
 // runInTransaction queue so only one transaction is ever in flight.
 
+// The per-snapshot "already imported" flags. Exported (Reset and restore,
+// founder answer 2026-10-17) so the local-database reset can remove them
+// after deleting the database file: a surviving flag would skip the import
+// into the new, empty database and leave food search with no foods.
+export const OFF_SNAPSHOT_FLAG_KEY = '@volyume_off_snapshot_loaded_v1';
+export const COFID_SNAPSHOT_FLAG_KEY = '@volyume_cofid_snapshot_loaded_v1';
+
 /**
  * OFF UK snapshot importer (branded products, ~100k+ rows).
  */
 export function importOffSnapshotIfNeeded() {
   return _importIfNeeded({
     scopeKey: 'off',
-    flagKey: '@volyume_off_snapshot_loaded_v1',
+    flagKey: OFF_SNAPSHOT_FLAG_KEY,
     expectedVersion: OFF_SNAPSHOT_VERSION,
     sourceLabel: 'off',
     loadModule: () => require('../../../assets/seed/off_uk_snapshot.dat'),
@@ -133,7 +140,7 @@ export function importOffSnapshotIfNeeded() {
 export function importCofidSnapshotIfNeeded() {
   return _importIfNeeded({
     scopeKey: 'cofid',
-    flagKey: '@volyume_cofid_snapshot_loaded_v1',
+    flagKey: COFID_SNAPSHOT_FLAG_KEY,
     expectedVersion: COFID_SNAPSHOT_VERSION,
     sourceLabel: 'cofid',
     loadModule: () => require('../../../assets/seed/cofid_uk.dat'),

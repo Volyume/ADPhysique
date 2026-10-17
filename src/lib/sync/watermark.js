@@ -141,3 +141,22 @@ export async function clearWatermarksForUser(userId) {
   if (mine.length > 0) await AsyncStorage.multiRemove(mine);
   return mine.length;
 }
+
+/**
+ * Reset and restore (founder answer 2026-10-17): remove every pull and push
+ * watermark on this phone, for every user.
+ *
+ * Used only when the local database file has been deleted and no signed-in
+ * user is known, so there is no single user to scope the clear to. Any
+ * surviving cursor would make the next pull incremental over an EMPTY
+ * database, so every key under the two watermark prefixes goes; no other
+ * key is touched. Throws on a storage failure so the caller can decide.
+ *
+ * @returns {Promise<number>} how many keys were removed
+ */
+export async function clearAllWatermarks() {
+  const keys = await AsyncStorage.getAllKeys();
+  const all = (keys ?? []).filter((k) => typeof k === 'string' && (k.startsWith(PULL_WM_PREFIX) || k.startsWith(PUSH_WM_PREFIX)));
+  if (all.length > 0) await AsyncStorage.multiRemove(all);
+  return all.length;
+}

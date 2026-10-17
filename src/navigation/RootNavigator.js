@@ -5,7 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 import { safeGetStateFromPath } from './safeGetStateFromPath';
 export const navigationRef = createNavigationContainerRef();
-import { View, StyleSheet, AppState } from 'react-native';
+import { View, ScrollView, StyleSheet, AppState } from 'react-native';
 import Text from '../components/Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../components/Button';
@@ -41,6 +41,7 @@ import { classifyAuthBoot, classifyFreshInstall, classifySessionRead } from '../
 import { readHealthConsentStatus } from '../lib/consent/healthConsentRead';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { runExerciseSeedChain } from '../lib/seedExercises';
+import { DB_RESET_COPY, shouldOfferDbReset, runDbResetAndReopen } from '../lib/localDbReset';
 import * as haptics from '../lib/haptics';
 import {
   configureNotificationHandler,
@@ -83,8 +84,6 @@ function lazyScreen(load) {
 // Auth screens
 const LoginScreen = lazyScreen(() => require('../screens/LoginScreen').default);
 const WelcomeScreen = lazyScreen(() => require('../screens/WelcomeScreen').default);
-const QuizScreen = lazyScreen(() => require('../screens/QuizScreen').default);
-const PlanPreviewScreen = lazyScreen(() => require('../screens/PlanPreviewScreen').default);
 
 // Main screens (Pro-gated screens are defined with their guard in the
 // "Pro-only screens" block further down, so each appears exactly once).
@@ -837,10 +836,6 @@ function WelcomeStack() {
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
-      {/* COMP-030: quiz-first pre-account screens. Registered always (harmless);
-          only reached when ONBOARDING_QUIZ_FIRST is on and the user picks Pro. */}
-      <Stack.Screen name="QuizTraining" component={QuizScreen} />
-      <Stack.Screen name="PlanPreview" component={PlanPreviewScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       {/* D145: the account step links to the policy in-app, so the pre-
           account stack carries the same screen the consent gate does. */}
@@ -1162,6 +1157,16 @@ export default function RootNavigator() {
   // actually fixed, not disappear on the next unrelated re-render.
   const [dbInitFailed, setDbInitFailed] = useState(false);
   const [dbRetrying, setDbRetrying] = useState(false);
+  // Reset and restore (founder answer 2026-10-17): how many opens have failed
+  // in this launch (a deferred open is not a failure and is not counted); the
+  // reset is offered from the second (src/lib/localDbReset.js). dbResetting
+  // drives the button label; dbResetFailed shows the calm line when a step of
+  // the reset itself failed. dbOpenFailedRef marks that a later successful
+  // open must run the restore sync (runRestoreSyncAfterReopen).
+  const [dbFailCount, setDbFailCount] = useState(0);
+  const [dbResetting, setDbResetting] = useState(false);
+  const [dbResetFailed, setDbResetFailed] = useState(false);
+  const dbOpenFailedRef = useRef(false);
   // CP-10 stage 2: drives the NavigationContainer theme prop below live (was
   // the static resolvedTheme/colors imports, class 3 per the CP-10 plan --
   // already inline JSX, so it only needed RootNavigator itself to re-render
@@ -1277,6 +1282,29 @@ export default function RootNavigator() {
     try { dbDeferredSubRef.current?.remove?.(); } catch (_) { /* best-effort */ }
     dbDeferredSubRef.current = null;
   }, []);
+  // Reset and restore (founder answer 2026-10-17, lead ruling D33): the
+  // launch's sign-in restore ran while the database could not open, so on a
+  // successful reopen after a failure (a reset, a plain Try again, or a late
+  // completion) run the existing runner exactly as
+  // retryUnresolvedHealthConsent does. After a reset the watermarks are gone,
+  // so this is a full pull. Only for a signed-in, non-local user with Article 9
+  // consent affirmatively granted; the runner re-checks consent itself.
+  const runRestoreSyncAfterReopen = useCallback(() => {
+    try {
+      const st = useAppStore.getState();
+      const uid = st.user?.id ?? null;
+      if (!uid || st.user?.isLocal) return;
+      if (st.healthConsent !== true) return;
+      // eslint-disable-next-line global-require
+      const { syncAll } = require('../lib/sync');
+      st.markCloudSyncing();
+      syncAll({ userId: uid, localUserId: uid, triggeredBy: 'manual' })
+        .then(() => useAppStore.getState().markCloudSyncComplete())
+        .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
+    } catch (e) {
+      _bootLog('warn', 'RootNavigator.dbReopen.restoreSync', e);
+    }
+  }, []);
   const attemptDbInit = useCallback(async () => {
     try {
       const initPromise = initDatabase();
@@ -1331,6 +1359,10 @@ export default function RootNavigator() {
       require('../lib/food/libraryDelta').pullFoodLibraryDelta()
         .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta.failed', res.reason); })
         .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta', err));
+      if (dbOpenFailedRef.current) {
+        dbOpenFailedRef.current = false;
+        runRestoreSyncAfterReopen();
+      }
       setDbInitFailed(false);
       return true;
     } catch (e) {
@@ -1351,10 +1383,12 @@ export default function RootNavigator() {
       // (no plan, no history, can't start a workout) with no error and no
       // way to recover short of the OS-level "reset app data", on every
       // launch, forever. Surfacing it as recoverable state instead.
+      dbOpenFailedRef.current = true;
+      setDbFailCount((n) => n + 1);
       setDbInitFailed(true);
       return false;
     }
-  }, [armDbDeferredRetry]);
+  }, [armDbDeferredRetry, runRestoreSyncAfterReopen]);
   // The late-completion hook above needs the latest attemptDbInit without
   // a self-reference inside useCallback.
   const attemptDbInitRef = useRef(null);
@@ -1362,12 +1396,49 @@ export default function RootNavigator() {
 
   const handleDbRetry = useCallback(async () => {
     setDbRetrying(true);
+    setDbResetFailed(false);
     try {
       await attemptDbInit();
     } finally {
       setDbRetrying(false);
     }
   }, [attemptDbInit]);
+
+  // Reset and restore (founder answer 2026-10-17): remove this phone's copy
+  // and open again through the same attemptDbInit "Try again" uses; the
+  // restore sync above brings the account's data back. dbRetrying is held
+  // too, so both buttons are disabled while it runs. A failed reset step
+  // keeps this screen and shows the calm line (logged in localDbReset).
+  const runDbReset = useCallback(async () => {
+    setDbResetFailed(false);
+    setDbResetting(true);
+    setDbRetrying(true);
+    try {
+      const st = useAppStore.getState();
+      const userId = st.user && !st.user.isLocal ? (st.user.id ?? null) : null;
+      const result = await runDbResetAndReopen({ userId, reopen: attemptDbInit });
+      if (!result.ok) setDbResetFailed(true);
+    } finally {
+      setDbResetting(false);
+      setDbRetrying(false);
+    }
+  }, [attemptDbInit]);
+
+  const handleDbReset = useCallback(() => {
+    try {
+      // eslint-disable-next-line global-require
+      require('../components/AppAlert').appAlert(
+        DB_RESET_COPY.confirmTitle,
+        DB_RESET_COPY.confirmBody,
+        [
+          { text: DB_RESET_COPY.cancel, style: 'cancel' },
+          { text: DB_RESET_COPY.confirm, style: 'destructive', onPress: () => { runDbReset(); } },
+        ],
+      );
+    } catch (e) {
+      _bootLog('warn', 'RootNavigator.dbReset.confirm', e);
+    }
+  }, [runDbReset]);
 
   // Campaign 24 Wave E: explicit retry from the auth give-up state. A
   // successful getSession answer (either way) is a GENUINE resolution:
@@ -2380,7 +2451,7 @@ export default function RootNavigator() {
   // the rest of the tree until the athlete retries and it actually opens.
   if (dbInitFailed) {
     return (
-      <View style={dbErrorStyles.container}>
+      <ScrollView style={dbErrorStyles.scroll} contentContainerStyle={dbErrorStyles.scrollContent}>
         <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
         <Text style={dbErrorStyles.title}>Could not open your data</Text>
         <Text style={dbErrorStyles.body}>
@@ -2388,14 +2459,28 @@ export default function RootNavigator() {
           this phone just now. Please try again. If it keeps happening, we
           have already been told about it.
         </Text>
+        {dbResetFailed ? (
+          <Text style={dbErrorStyles.body} accessibilityLiveRegion="polite">{DB_RESET_COPY.failedLine}</Text>
+        ) : null}
         <Button
-          title={dbRetrying ? 'Trying again...' : 'Try again'}
+          title={dbRetrying && !dbResetting ? 'Trying again...' : 'Try again'}
           onPress={handleDbRetry}
           disabled={dbRetrying}
           fullWidth={false}
           style={dbErrorStyles.retry}
         />
-      </View>
+        {/* Reset and restore (founder answer 2026-10-17): offered only once
+            the open has failed twice in this launch. */}
+        {shouldOfferDbReset(dbFailCount) ? (
+          <Button
+            title={dbResetting ? DB_RESET_COPY.resettingButton : DB_RESET_COPY.offerButton}
+            variant="tertiary"
+            onPress={handleDbReset}
+            disabled={dbRetrying}
+            fullWidth={false}
+          />
+        ) : null}
+      </ScrollView>
     );
   }
 
@@ -2533,6 +2618,18 @@ function SplashScreen() {
 // screen renders when the database itself failed to open, so it must be the
 // most robust screen in the tree: no dependency that could itself fail.
 const dbErrorStyles = StyleSheet.create({
+  // The DB-failed screen scrolls so both buttons stay reachable at the
+  // largest accessibility text size (D104-3).
+  scroll: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

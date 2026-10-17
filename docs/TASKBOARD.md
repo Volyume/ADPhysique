@@ -286,8 +286,7 @@ the decision rounds and every landed section were retired to
   defect" purely from the fingerprint count, before reading how invites
   actually work; that framing was wrong.
 
-- **OPEN (2026-08-18) - DELETE THE iOS PROVISIONING PROFILE. One click,
-  blocks every iOS build.** Build iOS (EAS) #146 failed at signing:
+- **OPEN, NOW REQUIRED BEFORE THE NEXT iOS BUILD (2026-10-17: `ios.associatedDomains` is back in app.json on the founder's answer "You set them up") - DELETE THE iOS PROVISIONING PROFILE. One click; without it the next iOS build fails signing exactly as #146 did. (Original entry, 2026-08-18:)** Build iOS (EAS) #146 failed at signing:
   `Provisioning profile "*[expo] app.volyume AppStore
   2026-06-10T11:35:55.490Z" doesn't support the Associated Domains
   capability`. `ios.associatedDomains` was added on 2026-08-11 (fc08bd1e)

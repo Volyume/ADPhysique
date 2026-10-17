@@ -28,8 +28,8 @@ import { getSupabaseClient, withClockSkewRetry } from '../supabase';
 import { logInfo, logWarn, logError } from '../errorLog';
 import { microSqlColumns, microSqlPlaceholders, microSqlUpsertExcluded, microValuesFromRow } from './micronutrients';
 
-const CURSOR_KEY = '@volyume_food_library_pull_cursor_v1';
-const THROTTLE_KEY = '@volyume_food_library_pull_last_ms_v1';
+export const CURSOR_KEY = '@volyume_food_library_pull_cursor_v1';
+export const THROTTLE_KEY = '@volyume_food_library_pull_last_ms_v1';
 const THROTTLE_MS = 6 * 60 * 60 * 1000;   // pull at most every 6 hours
 const PAGE_SIZE = 5000;                    // matches the RPC LIMIT
 const MAX_PAGES_PER_RUN = 5;               // 25k rows max per app foreground

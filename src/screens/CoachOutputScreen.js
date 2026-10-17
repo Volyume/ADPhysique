@@ -32,7 +32,7 @@ import {
   getWeeklyPRCount,
   getBestLiftThisWeek,
   getNutritionTargets,
-  saveNutritionTargets,
+  applyCoachCalorieAdjustmentAtomically,
   getUserBodyProfile,
   getBodyMetricLog,
   saveCoachOutput,
@@ -1229,17 +1229,6 @@ export default function CoachOutputScreen({ navigation, route }) {
         }));
         return;
       }
-      await saveNutritionTargets(user.id, computed.targets);
-      // ATOMICITY (P1, adversarial audit 2026-08-26). The authoritative write
-      // has landed, so reflect it NOW, before the receipt. Previously
-      // setCurrentTargets ran after saveCoachOutput, so a receipt failure left
-      // the consent preview showing the pre-change base while the real target
-      // had already moved: the row still offered Apply, and the coach's own
-      // record said not-applied for a change the athlete had actually taken.
-      setCurrentTargets(computed.targets);
-      await AsyncStorage.setItem(
-        '@volyume_nutrition_targets', JSON.stringify(computed.targets),
-      ).catch(() => {});
       // The requested step and the step that actually landed can differ at
       // the calorie floor. Everything downstream must follow the latter or
       // the accepted-intervention record and meal plan will disagree with the
@@ -1271,28 +1260,24 @@ export default function CoachOutputScreen({ navigation, route }) {
           maintenanceAuthority: output?.effectiveMaintenance?.authority ?? null,
         }),
       });
-      // The receipt is a SECOND write and can fail on its own. When it does,
-      // the calorie change has still happened, so the screen must say so
-      // rather than silently re-offering Apply, which would let a second tap
-      // stack another step onto an already-moved target.
-      let receiptOk = true;
-      try {
-        await saveCoachOutput(user.id, { weekStart, ...updated });
-      } catch (e) {
-        receiptOk = false;
-        logError('CoachOutputScreen.applyCalories.receipt', e, { userId: user?.id });
-      }
+      // C3 (final audit 2026-10-17): the new target and its applied receipt
+      // are ONE commit (applyCoachCalorieAdjustmentAtomically). As two writes,
+      // an app killed between them left the target moved with no receipt, so
+      // Apply was offered again and a second tap could stack another step on
+      // an already-moved target. Now either both land or neither does: a
+      // throw here reaches the outer catch with nothing changed.
+      await applyCoachCalorieAdjustmentAtomically({
+        userId: user.id,
+        targets: computed.targets,
+        coachOutput: { weekStart, ...updated },
+      });
+      setCurrentTargets(computed.targets);
+      await AsyncStorage.setItem(
+        '@volyume_nutrition_targets', JSON.stringify(computed.targets),
+      ).catch(() => {});
       setOutput(updated);
       setApplySettling(s => ({ ...s, calories: true }));
-      // Activation funnel: the write has landed regardless of the receipt
-      // outcome above, so the acceptance is real either way.
       trackEngineEvent(user.id, 'coach_recommendation_accepted', { kind: 'calories' }).catch(() => {});
-      if (!receiptOk) {
-        setApplyNotice(n => ({
-          ...n,
-          calories: 'Applied. We could not save the record of it, so it may be offered again next time.',
-        }));
-      }
 
       // If the user is on a generated meal plan, pull the same calorie
       // change THROUGH the plan at the food level and show the coach
@@ -1325,6 +1310,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       }
     } catch (e) {
       logError('CoachOutputScreen.handleApplyCalories', e, { userId: user?.id });
+      // Nothing was written (the apply is one commit), so say so plainly.
+      setApplyNotice(n => ({ ...n, calories: 'That did not apply, so nothing has changed. Please try again.' }));
     } finally {
       setApplyingKey(null);
       applyingRef.current = false;
@@ -1604,44 +1591,31 @@ export default function CoachOutputScreen({ navigation, route }) {
         }));
         return;
       }
-      await saveNutritionTargets(user.id, computed.targets);
-      // ATOMICITY (P1, adversarial audit 2026-08-26). The authoritative write
-      // has landed, so reflect it NOW, before the receipt. Previously
-      // setCurrentTargets ran after saveCoachOutput, so a receipt failure left
-      // the consent preview showing the pre-change base while the real target
-      // had already moved: the row still offered Apply, and the coach's own
-      // record said not-applied for a change the athlete had actually taken.
-      setCurrentTargets(computed.targets);
-      await AsyncStorage.setItem(
-        '@volyume_nutrition_targets', JSON.stringify(computed.targets),
-      ).catch(() => {});
       const updated = markApplied(output, 'dietBreak', {
         newKcal: computed.newKcal,
         maintenanceAuthority: effectiveMaintenanceReceipt(freshAuthority.resolved),
       });
-      // Same second-write reasoning as the calorie row above.
-      let receiptOk = true;
-      try {
-        await saveCoachOutput(user.id, { weekStart, ...updated });
-      } catch (e) {
-        receiptOk = false;
-        logError('CoachOutputScreen.applyDietBreak.receipt', e, { userId: user?.id });
-      }
+      // C3: target and receipt in one commit, as the calorie row above.
+      await applyCoachCalorieAdjustmentAtomically({
+        userId: user.id,
+        targets: computed.targets,
+        coachOutput: { weekStart, ...updated },
+      });
+      setCurrentTargets(computed.targets);
+      await AsyncStorage.setItem(
+        '@volyume_nutrition_targets', JSON.stringify(computed.targets),
+      ).catch(() => {});
       setOutput(updated);
       setApplySettling(s => ({ ...s, dietBreak: true }));
       // kind: 'other' -- dietBreak is not one of the calories/volume/deload
       // buckets and stays out of the small enum rather than growing it.
       trackEngineEvent(user.id, 'coach_recommendation_accepted', { kind: 'other' }).catch(() => {});
-      if (!receiptOk) {
-        setApplyNotice(n => ({
-          ...n,
-          dietBreak: 'Applied. We could not save the record of it, so it may be offered again next time.',
-        }));
-      }
       setLiveMaintenanceAuthority(freshAuthority.resolved);
       setDietBreakPreviewChanged(false);
     } catch (e) {
       logError('CoachOutputScreen.handleApplyDietBreak', e, { userId: user?.id });
+      // Nothing was written (the apply is one commit), so say so plainly.
+      setApplyNotice(n => ({ ...n, dietBreak: 'That did not apply, so nothing has changed. Please try again.' }));
     } finally {
       setApplyingKey(null);
       applyingRef.current = false;

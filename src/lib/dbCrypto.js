@@ -24,6 +24,12 @@ import { logError, logInfo } from './errorLog';
 
 const KEY_ID = 'volyume_db_key_v1';
 const DB_NAME = 'volyume.db';
+// The plaintext-to-encrypted swap's two working files, beside volyume.db.
+// Exported (Reset and restore, founder answer 2026-10-17) so the local
+// database reset removes them too: a surviving plaintext backup would be
+// promoted back over the deleted database by the recovery step below.
+export const PLAIN_BACKUP_DB_NAME = 'volyume-plain-backup.db';
+export const ENCRYPT_SWAP_DB_NAME = 'volyume-enc.db';
 
 // The DB key must be reachable whenever the app runs, including a background
 // launch while the device is still locked (background fetch, a notification tap
@@ -284,8 +290,8 @@ export async function openEncryptedDb(SQLite) {
   const FileSystem = require('expo-file-system/legacy');
   const dir = `${FileSystem.documentDirectory}SQLite/`;
   const path = (n) => `${dir}${n}`;
-  const backup = path('volyume-plain-backup.db');
-  const encPath = path('volyume-enc.db');
+  const backup = path(PLAIN_BACKUP_DB_NAME);
+  const encPath = path(ENCRYPT_SWAP_DB_NAME);
 
   // 0. Recover an interrupted prior swap: if a plaintext backup is present and
   //    the live DB isn't usable, restore the backup before doing anything else.
@@ -413,7 +419,7 @@ export async function openEncryptedDb(SQLite) {
     }
 
     // Verify the encrypted copy reads with the key BEFORE touching the original.
-    const { db: verify, applied: verifyKeyApplied } = await keyed(SQLite, key, 'volyume-enc.db');
+    const { db: verify, applied: verifyKeyApplied } = await keyed(SQLite, key, ENCRYPT_SWAP_DB_NAME);
     const ok = verifyKeyApplied && await readable(verify);
     if (!(await closeQuietly(verify, 'verify_encrypted_copy'))) {
       throw new Error('verified encrypted candidate would not close');

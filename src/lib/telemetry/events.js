@@ -194,14 +194,6 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // allow-list entry is a migration decision, not a client one, and the
   // historical rows stay readable.
 
-  // COMP-030: one consolidated event emitted on account_created carrying the
-  // pre-account quiz step timings + variant flag (pre-account events cannot
-  // reach the server — the RPC requires auth.uid()). Deferred until quiz-first
-  // is enabled (ONBOARDING_QUIZ_FIRST) and the emitter is wired at
-  // account_created; a server allow-list migration lands with that wiring.
-  { name: 'onboarding_quiz_completed',       deferred: true,  panel: 1,
-    deferralReason: 'emitted at account_created only when ONBOARDING_QUIZ_FIRST is on; wiring + server allow-list land together' },
-
   // E7.2: the activation + conversion funnel baseline. The events not listed
   // here already ride existing rails (trial start = cascade_started, subscribe
   // = paid_converted, gate outcomes = churn_at_gate/cascade_skipped_ahead,

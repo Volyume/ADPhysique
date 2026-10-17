@@ -14,16 +14,16 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { logWarn } from './errorLog';
 
-const SQLITE_DIR = `${FileSystem.documentDirectory}SQLite/`;
+export const SQLITE_DIR = `${FileSystem.documentDirectory}SQLite/`;
 // expo-sqlite's fixed location for openDatabaseAsync('volyume.db').
-const DB_PATH = `${SQLITE_DIR}volyume.db`;
+export const DB_PATH = `${SQLITE_DIR}volyume.db`;
 // Exported for verifyUserWipeClean (database.js), which checks this
 // directory directly during the sign-out wipe-verify pass.
 export const SNAP_DIR = `${FileSystem.documentDirectory}snapshots/`;
 const KEEP = 3; // rolling-N retention (a full DB copy is larger than a delta)
-const RESTORE_STAGE = `${SQLITE_DIR}volyume-restore-stage.db`;
-const RESTORE_ROLLBACK = `${SQLITE_DIR}volyume-restore-rollback.db`;
-const RESTORE_STATE = `${SQLITE_DIR}volyume-restore-state.json`;
+export const RESTORE_STAGE = `${SQLITE_DIR}volyume-restore-stage.db`;
+export const RESTORE_ROLLBACK = `${SQLITE_DIR}volyume-restore-rollback.db`;
+export const RESTORE_STATE = `${SQLITE_DIR}volyume-restore-state.json`;
 
 // ── Pure helpers (unit-tested; no FS) ────────────────────────────────────────
 
@@ -286,7 +286,10 @@ async function fileExists(uri) {
   return (await FileSystem.getInfoAsync(uri).catch(() => ({ exists: false })))?.exists === true;
 }
 
-async function deleteDatabaseFamily(uri) {
+// Exported unchanged (Reset and restore, founder answer 2026-10-17): the
+// local-database reset reuses it, then checks every file is gone itself,
+// because this helper deliberately swallows each delete's error.
+export async function deleteDatabaseFamily(uri) {
   for (const suffix of ['', '-wal', '-shm']) {
     await FileSystem.deleteAsync(`${uri}${suffix}`, { idempotent: true }).catch(() => {});
   }
