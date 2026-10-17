@@ -56,8 +56,12 @@ describe('C7 release-config laws', () => {
   // The AASA file stays served from public/.well-known/ and is still
   // asserted below, so restoring the entitlement is a one-line app.json
   // change the moment a provisioning profile carrying it exists.
-  test('iOS Universal Links entitlement stays off until the profile carries it', () => {
-    expect(expo.ios.associatedDomains).toBeUndefined();
+  // RESTORED 2026-10-17 on the founder's answer "You set them up" (iOS links
+  // open the app). The provisioning profile must be deleted once in expo.dev
+  // before the next iOS build (TASKBOARD section 3), so EAS mints one that
+  // carries the capability; otherwise that build fails exactly as #146 did.
+  test('iOS Universal Links entitlement claims volyume.app, matching the served AASA', () => {
+    expect(expo.ios.associatedDomains).toEqual(['applinks:volyume.app']);
     const aasa = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'public', '.well-known', 'apple-app-site-association'), 'utf8'));
     expect(aasa.applinks.details[0].appID.endsWith('app.volyume')).toBe(true);
   });

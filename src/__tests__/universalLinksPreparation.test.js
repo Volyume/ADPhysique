@@ -54,8 +54,11 @@ describe('Universal Links migration preparation', () => {
     expect(security.parseConfirmRequest(base.replace('type=signup', 'type=invite')).ok).toBe(false);
   });
 
-  test('Associated Domains remains off until the signed profile carries it', () => {
+  // Founder answer 2026-10-17 ("You set them up"): Universal Links are on.
+  // The next iOS build needs the stored provisioning profile deleted first
+  // (TASKBOARD section 3, D111-3), or it fails signing as run #146 did.
+  test('Associated Domains claims exactly volyume.app', () => {
     const app = JSON.parse(fs.readFileSync(path.join(ROOT, 'app.json'), 'utf8'));
-    expect(app.expo.ios.associatedDomains).toBeUndefined();
+    expect(app.expo.ios.associatedDomains).toEqual(['applinks:volyume.app']);
   });
 });
