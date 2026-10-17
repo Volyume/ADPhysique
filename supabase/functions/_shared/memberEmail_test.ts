@@ -173,7 +173,8 @@ Deno.test("question validation accepts the house shape and refuses the rest", ()
   assert(validateQuestions(QUESTIONS).ok, "valid questions pass");
   const bad: [unknown, string][] = [
     [[], "bad_question_count"],
-    [Array.from({ length: 21 }, (_, i) => ({ id: `q${i + 1}`, type: "text", prompt: "p", required: false })), "bad_question_count"],
+    // Founder decision 2026-10-17: no policy limit; 200 is the technical bound.
+    [Array.from({ length: 201 }, (_, i) => ({ id: `q${i + 1}`, type: "text", prompt: "p", required: false })), "bad_question_count"],
     [[{ id: "x1", type: "text", prompt: "p", required: false }], "bad_question_id"],
     [[{ id: "q1", type: "text", prompt: "p", required: false }, { id: "q1", type: "text", prompt: "p", required: false }], "duplicate_question_id"],
     [[{ id: "q1", type: "scale", prompt: "p", required: false }], "bad_question_type"],

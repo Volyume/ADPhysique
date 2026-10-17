@@ -30,6 +30,27 @@
 // opt-out row, the preference off with source 'email' and one event;
 // idempotent. A GET never unsubscribes (link scanners follow GETs).
 //
+// The email preferences page (https://volyume.app/email/preferences/?t=),
+// member email v2 (PLAN-V2 M2, migrate_199). `t` is the `prefs` token every
+// email's footer carries; the unsubscribe page's `unsub` token is accepted
+// too (the same person, the same power). All POST JSON, so no token sits in
+// a GET query string; none of them returns the address.
+//   POST { action: 'get_preferences', t }
+//        -> { ok, subscribed, topics: { product_news, surveys,
+//             weekly_summary, community_events } }   (or { ok, gone: true })
+//   POST { action: 'set_preferences', t, topics: { <topic>: boolean, ... } }
+//        -> { ok, subscribed, topics }   unknown topics -> 400 bad_topics
+//   POST { action: 'turn_all_off', t }   -> { ok, subscribed: false, topics }
+//        (the same as unsubscribe: opt-out row, preference off, one event)
+//   POST { action: 'turn_all_on', t }    -> { ok, subscribed: true, topics }
+//        (a fresh, explicit yes: clears this person's opt-out, a bounce or
+//        complaint suppression and a sunset; an admin exclusion stays)
+//   POST { action: 'unsubscribe_reason', t, reason }
+//        reason one of too_many, not_relevant, not_expected, other
+//        -> { ok }  (optional; at most one a day is kept; no free text)
+// Surveys honour the v2 close date (`closes_at`) and the anonymous option
+// (an anonymous survey never binds a member, whatever the link carries).
+//
 // CORS: https://volyume.app only. Logging: ids, counts and codes only, never
 // an address, a token or an answer.
 //
@@ -42,6 +63,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { readBoundedJson, RequestBodyError } from '../_shared/boundedJson.ts'
 import {
   corsHeaders,
+  isTopic,
   jsonResponse as baseJson,
   readBoundedText,
   type SurveyQuestion,
@@ -82,9 +104,66 @@ async function linkSecret(admin: SupabaseClient): Promise<string> {
 async function openSurvey(admin: SupabaseClient, id: unknown) {
   if (typeof id !== 'string' || !UUID_RE.test(id)) return null
   const { data, error } = await admin.from('member_surveys')
-    .select('id, title, intro, questions, status').eq('id', id).eq('status', 'open').maybeSingle()
+    .select('id, title, intro, questions, status, closes_at, anonymous').eq('id', id).eq('status', 'open').maybeSingle()
   if (error) throw new Error('survey read failed')
+  if (!data) return null
+  // A survey past its close date answers as closed.
+  if (typeof data.closes_at === 'string' && Date.parse(data.closes_at) <= Date.now()) return null
   return data
+}
+
+const PREF_REASONS = ['too_many', 'not_relevant', 'not_expected', 'other']
+
+// The member a preferences link names: a prefs token, or an unsub token.
+async function prefsMember(admin: SupabaseClient, token: unknown): Promise<string | null> {
+  const secret = await linkSecret(admin)
+  const payload = await verifyToken(token, secret, 'prefs') ?? await verifyToken(token, secret, 'unsub')
+  return payload && typeof payload.u === 'string' ? payload.u : null
+}
+
+function prefsReply(data: unknown): Response {
+  const d = (data ?? {}) as Record<string, unknown>
+  if (d.gone === true) return json({ ok: true, gone: true }, 200)
+  return json({ ok: true, subscribed: d.subscribed === true, topics: d.topics ?? {} }, 200)
+}
+
+async function preferencesAction(admin: SupabaseClient, action: string, body: Record<string, unknown>): Promise<Response> {
+  const userId = await prefsMember(admin, body.t)
+  if (!userId) return fail('invalid_link', 400)
+  if (action === 'get_preferences') {
+    const { data, error } = await admin.rpc('member_email_get_prefs', { _user_id: userId })
+    if (error) throw new Error(`prefs read failed ${error.code ?? ''}`)
+    return prefsReply(data)
+  }
+  if (action === 'set_preferences') {
+    const topics = body.topics
+    if (!topics || typeof topics !== 'object' || Array.isArray(topics)) return fail('bad_topics', 400)
+    const entries = Object.entries(topics as Record<string, unknown>)
+    if (entries.length === 0 || entries.some(([k, v]) => !isTopic(k) || typeof v !== 'boolean')) return fail('bad_topics', 400)
+    const { data, error } = await admin.rpc('member_email_set_prefs', { _user_id: userId, _topics: topics })
+    if (error) throw new Error(`prefs write failed ${error.code ?? ''}`)
+    console.log('[member-email-public] topics changed', { count: entries.length })
+    return prefsReply(data)
+  }
+  if (action === 'turn_all_off') {
+    const { error } = await admin.rpc('member_email_unsubscribe', { _user_id: userId })
+    if (error) throw new Error(`unsubscribe failed ${error.code ?? ''}`)
+    const { data, error: rErr } = await admin.rpc('member_email_get_prefs', { _user_id: userId })
+    if (rErr) throw new Error(`prefs read failed ${rErr.code ?? ''}`)
+    console.log('[member-email-public] unsubscribe recorded')
+    return prefsReply(data)
+  }
+  if (action === 'turn_all_on') {
+    const { data, error } = await admin.rpc('member_email_resubscribe', { _user_id: userId })
+    if (error) throw new Error(`resubscribe failed ${error.code ?? ''}`)
+    console.log('[member-email-public] turned back on')
+    return prefsReply(data)
+  }
+  // unsubscribe_reason
+  if (typeof body.reason !== 'string' || !PREF_REASONS.includes(body.reason)) return fail('bad_reason', 400)
+  const { error } = await admin.rpc('member_email_unsub_reason', { _user_id: userId, _reason: body.reason })
+  if (error) throw new Error(`reason write failed ${error.code ?? ''}`)
+  return json({ ok: true }, 200)
 }
 
 // True when the unsubscribe was recorded (or the account no longer exists);
@@ -105,7 +184,8 @@ async function submitSurvey(admin: SupabaseClient, body: Record<string, unknown>
   if (!checked.ok) return fail(checked.error, 400, checked.question ? { question: checked.question } : {})
 
   let userId: string | null = null
-  if (body.t != null && body.t !== '') {
+  // An anonymous survey never binds a member, whatever the link carries.
+  if (survey.anonymous !== true && body.t != null && body.t !== '') {
     const payload = await verifyToken(body.t, await linkSecret(admin), 'survey')
     if (payload && payload.s === survey.id && typeof payload.u === 'string') userId = payload.u
   }
@@ -173,6 +253,10 @@ serve(async (req: Request) => {
       return (await unsubscribe(admin, body.t)) ? json({ ok: true }, 200) : fail('invalid_link', 400)
     }
     if (body.action === 'submit_survey') return await submitSurvey(admin, body)
+    if (typeof body.action === 'string' && ['get_preferences', 'set_preferences', 'turn_all_off', 'turn_all_on',
+      'unsubscribe_reason'].includes(body.action)) {
+      return await preferencesAction(admin, body.action, body)
+    }
     return fail('unknown_action', 400)
   } catch (e) {
     // The message is one of this file's own fixed strings plus a code.

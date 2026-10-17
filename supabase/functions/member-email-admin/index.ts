@@ -21,21 +21,110 @@
 //   overview         {}                              -> { ok, audience, members, excluded,
 //                                                         turned_off, paused, unconfirmed,
 //                                                         opted_out, campaigns, surveys }
-//   save_campaign    { id?, subject, preheader, body, button_label, button_url, survey_id }
-//                                                    -> { ok, campaign, lint }   (drafts only)
 //   delete_campaign  { id }                          -> { ok }                   (drafts only)
-//   preview          { id }                          -> { ok, subject, html, text, lint }
-//   send_test        { id }                          -> { ok, sent_to: 'you' }
-//   send_campaign    { id, expected_recipients }     -> { ok, status, sent, failed,
-//                                                         total_sent, total_failed, recipients }
+//   (save_campaign, preview, send_test and send_campaign moved to v2.ts, below:
+//   Send now QUEUES the email behind the undo window and the runner sends it.)
 //   save_survey      { id?, title, intro, questions } -> { ok, survey }
 //   set_survey_status { id, status }                 -> { ok, survey }
 //   survey_results   { id }                          -> { ok, survey, total, questions }
 //   export_survey    { id }                          -> { ok, filename, csv }
 //   list_members     { query?, offset?, limit? }     -> { ok, total, members }
+//     (each member row is passed through from the RPC as is, including the
+//     information-only last_seen_day, app_version, platform, workouts_7d,
+//     workouts_30d and last_workout_at; none of them decides who is emailed)
 //   exclude          { user_id?, email?, note? }     -> { ok, exclusion, already }
 //   include          { id }                          -> { ok, removed }
 //   list_exclusions  {}                              -> { ok, exclusions }
+//
+// Member email v2 (PLAN-V2, migrate_199), in ./v2.ts. Every input below is
+// optional unless marked *; ids are uuids; times are ISO strings (UTC).
+//   home            {}  -> { quota, kill_switch, last_30_days, delivery_health
+//                         { level green|amber|red, bounce_rate, complaint_rate },
+//                         campaigns_active, automations_on, alerts, resend_configured,
+//                         webhook_configured }
+//   insights        { days=30 }  -> { insights: { sent, failed, delivered,
+//                         opened_unique, clicked_unique, bounced, complained, delayed,
+//                         suppressed, unsubscribed, app_returned_7d, app_return_measured,
+//                         opens_inflated, audience_now, unsubscribe_reasons,
+//                         survey_answers, daily[{ day, sent }], quota } }
+//   list_campaigns  { status, offset }  -> { campaigns }  (50 a page)
+//   get_campaign    { id* }  -> { campaign, lint, count }
+//   save_campaign   { id, subject*, preheader, blocks | (body, button_label,
+//                     button_url, survey_id), topic=product_news, segment_id,
+//                     ab_subject_b, ab_test_percent=20, ab_wait_hours=4,
+//                     holdout_percent=0 }  -> { campaign, lint }   (drafts only)
+//   duplicate_campaign { id* }  -> { campaign }   (a new draft)
+//   preview         { id*, dark, below_latest, first_name, variant a|b }
+//                     -> { subject, html, text, lint }
+//   send_test       { id*, below_latest }  -> { sent, sent_to: 'you' }  (both
+//                     subjects when A/B; counts against the daily cap)
+//   send_seed       { id* }  -> { sent, sent_to: 'seed list' }
+//   campaign_count  { id* }  -> { count: { will_receive, holdout, already_sent,
+//                     daily_cap, days_needed } }
+//   send_campaign   { id*, expected_recipients*, checklist* }  -> { status:
+//                     'queued', undo_until, recipients, days_needed }
+//   schedule_campaign { id*, scheduled_at*, expected_recipients*, checklist* }
+//                     -> { status: 'scheduled', scheduled_at, recipients }
+//     checklist = { audience_confirmed, topic_confirmed, test_sent,
+//     links_checked } all true; a test or seed copy of THIS version must have
+//     been sent; the lint must pass; a survey must be open.
+//   cancel_campaign / undo_send { id* }  -> { status: 'draft' } before sending,
+//                     { status: 'cancelled' } once started
+//   pause_campaign  { id* }  -> { status: 'paused' }
+//   resume_campaign { id*, confirm_alarm (required after an alarm) }
+//                     -> { status: 'sending' }
+//   schedule_resend { id*, subject*, after_days* 1..14, checklist* }  -> { campaign }
+//   campaign_stats  { id* }  -> { stats: { ...insights counts, small_sample,
+//                     links[{ url, clicks, unique }], variants{ a, b }, ab{ phase,
+//                     winner, reason }, holdout{ members, app_returned_7d,
+//                     measured }, survey_answers } }
+//   list_segments   {}  -> { segments[{ ..., count{ matching, will_receive } }] }
+//   save_segment    { id, name*, rules* }  -> { segment, count }
+//   delete_segment  { id* }  -> { removed }   (409 segment_in_use)
+//   segment_count   { id | rules, topic }  -> { matching, will_receive }
+//     rules: AND-ed [{ field, op, value }]: joined before|after 'YYYY-MM-DD';
+//     last_used within|over days; app_version below|at_least 'x.y.z' (unknown
+//     counts as below); platform is|is_not ios|android|other|unknown;
+//     workouts_30d at_least|at_most n; last_workout within|over days;
+//     community is|is_not; email_received|email_opened|email_clicked yes|no
+//     <campaign id>; topic on|off <topic>.
+//   list_templates  {}  -> { templates }
+//   save_template   { id, name*, subject*, preheader, blocks* }  -> { template, lint }
+//   delete_template { id* }  -> { removed }
+//   list_automations {}  -> { automations[{ ..., lint, stats_30d }] }
+//   save_automation { key*, subject*, preheader, blocks*, topic, params }
+//                     -> { automation, lint }  (a lint failure turns it off)
+//   set_automation  { key*, enabled* }  -> { automation }
+//   automation_stats { key*, days=30 }  -> { stats }
+//   preview_automation { key*, sample, dark, first_name, below_latest }
+//                     -> { subject, html, text, lint }
+//   test_automation { key*, sample }  -> { sent_to: 'you' }
+//     keys: welcome_1, welcome_2, welcome_3, win_back, update_nudge,
+//     weekly_summary, anniversary, review_ask, re_permission
+//   member_detail   { user_id* }  -> { member }   (status word only, never a reason)
+//   export_member   { user_id* }  -> { filename, json }
+//   get_settings    {}  -> { settings, quota, seeds, sender, timezone,
+//                     resend_configured, webhook_configured, webhook_url }
+//   save_settings   { settings*: { daily_cap, provider_daily_limit,
+//                     weekly_member_cap, quiet_hours_start, quiet_hours_end,
+//                     latest_app_version, alarm_complaint_rate, alarm_bounce_rate,
+//                     retention_months, undo_minutes, sunset_days,
+//                     review_ask_workouts } }  -> as get_settings
+//   set_kill_switch { on*, reason }  -> { kill_switch }
+//   add_seed / remove_seed { email* }  -> { ok } / { removed }
+//   domain_status   {}  -> { domains[{ name, status, records, open_tracking,
+//                     click_tracking, dmarc{ status, policy } }] }
+//   set_domain_tracking { domain*, open*, click* }  -> { ok }
+//   audit_log       { offset, limit<=100, filter_action }  -> { entries }
+//   export_records  { kind*: audit|pref_events|suppressions|unsub_reasons }
+//                     -> { filename, csv }
+//   upload_asset    POST ?action=upload_asset { content_type*, data_base64* }
+//                     -> { path, url }  (PNG, JPEG, GIF, WebP; 2 MB)
+//   list_assets     {}  -> { assets[{ path, url, bytes, created_at }] }
+//   delete_asset    { path* }  -> { ok }
+//   set_survey_options { id*, closes_at, anonymous }  -> { survey }
+// Every authenticated action is written to member_email_audit_log (who,
+// what, target id, status), and a sign-in too.
 // Errors: { ok: false, error: <code> } with 400, 401, 404, 409, 413, 500 or
 // 503.
 //
@@ -51,33 +140,23 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { readBoundedJson, RequestBodyError } from '../_shared/boundedJson.ts'
+import { audit, logDelivery } from '../_shared/memberEmailServer.ts'
+import { handleV2, V2_ACTIONS } from './v2.ts'
 import {
   adminLoginUrl,
   type AnswerRow,
   FROM_ADDRESS,
   LOGIN_NONCE_MINUTES,
   MAX_OPEN_LOGINS,
-  RESEND_BATCH_MAX,
   corsHeaders,
   jsonResponse as baseJson,
-  lintCampaign,
   makeAdminSession,
-  makeSurveyToken,
-  makeUnsubscribeToken,
-  oneClickUnsubscribeUrl,
-  type OutgoingEmail,
   randomHex,
-  renderEmail,
-  safeHttpsUrl,
-  sendBatch,
   sendOne,
   sha256Hex,
   type SurveyQuestion,
   surveyCsv,
   surveyResults,
-  surveyUrl,
-  unsubscribeHeaders,
-  unsubscribePageUrl,
   UUID_RE,
   validateQuestions,
   validateSurveyMeta,
@@ -86,14 +165,12 @@ import {
 
 const CORS = corsHeaders('POST, OPTIONS')
 const MAX_BODY_BYTES = 256 * 1024
+// upload_asset only, chosen from the query string before the body is read:
+// a 2 MB image is about 2.8 MB as base64.
+const UPLOAD_BODY_BYTES = 3 * 1024 * 1024
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}$/
 const LOGIN_RE = /^[0-9a-f]{64}$/
-const STALE_SENDING_MS = 15 * 60 * 1000
-const SEND_BUDGET_MS = 120 * 1000
 const REQUEST_LOGIN_MIN_MS = 1200
-// The test unsubscribe link names no account: the RPC answers "gone" and
-// writes nothing, so the founder can try the page safely.
-const NO_ACCOUNT = '00000000-0000-0000-0000-000000000000'
 
 function json(body: unknown, status: number): Response {
   return baseJson(body, status, CORS)
@@ -107,23 +184,6 @@ interface AdminBody {
   action?: string
   session?: string
   [key: string]: unknown
-}
-
-interface CampaignRow {
-  id: string
-  subject: string
-  preheader: string | null
-  body: string
-  button_label: string | null
-  button_url: string | null
-  survey_id: string | null
-  status: string
-  recipient_count: number | null
-  sent_count: number
-  failed_count: number
-  created_at: string
-  updated_at: string
-  sent_at: string | null
 }
 
 let cachedSecret: string | null = null
@@ -159,11 +219,6 @@ function optionalText(raw: unknown, max: number): { ok: true; value: string | nu
   const value = raw.trim()
   if (value.length > max) return { ok: false }
   return { ok: true, value: value || null }
-}
-
-function replyTo(): Record<string, string> {
-  const raw = (Deno.env.get('MEMBER_EMAIL_REPLY_TO') ?? '').trim()
-  return raw && EMAIL_RE.test(raw) ? { reply_to: raw } : {}
 }
 
 async function padTo(startedMs: number, minMs: number): Promise<void> {
@@ -215,6 +270,9 @@ async function requestLogin(admin: SupabaseClient, body: AdminBody): Promise<Res
               html: `<p>Use this link to sign in to the Volyume members page. It works once, for ${LOGIN_NONCE_MINUTES} minutes.</p><p><a href="${link}">Sign in</a></p><p>If you did not ask for it, you can ignore this email.</p>`,
             })
             if (!result.ok) console.error('[member-email-admin] sign-in email failed', result.code)
+            // The sign-in link counts in the quota ledger (never refused by it).
+            await logDelivery(admin, 'login', null, null, result.ok ? (result.ids[0] || null) : null,
+              result.ok ? 'sent' : 'failed', result.ok ? null : result.code).catch(() => {})
           }
         }
       }
@@ -245,6 +303,7 @@ async function exchange(admin: SupabaseClient, body: AdminBody): Promise<Respons
   if (!row || typeof row.email !== 'string') return fail('invalid_login', 401)
   if (!await isAdmin(admin, row.email)) return fail('invalid_login', 401)
   const { session, expires_at } = await makeAdminSession(row.email, await linkSecret(admin))
+  await audit(admin, row.email, 'sign_in', null, 200).catch(() => {})
   return json({ ok: true, session, email: row.email, expires_at }, 200)
 }
 
@@ -297,60 +356,6 @@ async function overview(admin: SupabaseClient): Promise<Response> {
 
 // ─── Campaigns ────────────────────────────────────────────────────────
 
-async function loadCampaign(admin: SupabaseClient, id: unknown): Promise<CampaignRow | null> {
-  if (typeof id !== 'string' || !UUID_RE.test(id)) return null
-  const { data, error } = await admin.from('member_email_campaigns').select('*').eq('id', id).maybeSingle()
-  if (error) throw new Error('campaign read failed')
-  return (data as CampaignRow | null) ?? null
-}
-
-async function saveCampaign(admin: SupabaseClient, adminEmail: string, body: AdminBody): Promise<Response> {
-  const subject = typeof body.subject === 'string' ? body.subject.trim() : ''
-  const text = typeof body.body === 'string' ? body.body.replace(/\r\n?/g, '\n').trim() : ''
-  if (subject.length < 1 || subject.length > 150) return fail('bad_subject', 400)
-  if (text.length < 1 || text.length > 20000) return fail('bad_body', 400)
-  const preheader = optionalText(body.preheader, 200)
-  if (!preheader.ok) return fail('bad_preheader', 400)
-  const buttonLabel = optionalText(body.button_label, 40)
-  if (!buttonLabel.ok) return fail('bad_button_label', 400)
-  const buttonUrlRaw = optionalText(body.button_url, 2000)
-  if (!buttonUrlRaw.ok) return fail('bad_button_url', 400)
-  const buttonUrl = buttonUrlRaw.value ? safeHttpsUrl(buttonUrlRaw.value) : null
-  if (buttonUrlRaw.value && !buttonUrl) return fail('button_url_not_https', 400)
-  let surveyId: string | null = null
-  if (body.survey_id != null && body.survey_id !== '') {
-    if (typeof body.survey_id !== 'string' || !UUID_RE.test(body.survey_id)) return fail('bad_survey_id', 400)
-    const { data: s, error: sErr } = await admin.from('member_surveys').select('id').eq('id', body.survey_id).maybeSingle()
-    if (sErr) throw new Error('survey read failed')
-    if (!s) return fail('survey_not_found', 404)
-    surveyId = body.survey_id
-  }
-  const fields = {
-    subject,
-    preheader: preheader.value,
-    body: text,
-    button_label: buttonLabel.value,
-    button_url: buttonUrl,
-    survey_id: surveyId,
-    updated_at: new Date().toISOString(),
-  }
-  let row: CampaignRow | null = null
-  if (body.id != null) {
-    if (typeof body.id !== 'string' || !UUID_RE.test(body.id)) return fail('bad_id', 400)
-    const { data, error } = await admin.from('member_email_campaigns')
-      .update(fields).eq('id', body.id).eq('status', 'draft').select('*')
-    if (error) throw new Error('campaign update failed')
-    row = Array.isArray(data) && data[0] ? data[0] as CampaignRow : null
-    if (!row) return fail('not_a_draft', 409)
-  } else {
-    const { data, error } = await admin.from('member_email_campaigns')
-      .insert({ ...fields, status: 'draft', created_by: adminEmail }).select('*').single()
-    if (error) throw new Error('campaign insert failed')
-    row = data as CampaignRow
-  }
-  return json({ ok: true, campaign: row, lint: lintCampaign(row) }, 200)
-}
-
 async function deleteCampaign(admin: SupabaseClient, body: AdminBody): Promise<Response> {
   if (typeof body.id !== 'string' || !UUID_RE.test(body.id)) return fail('bad_id', 400)
   const { data, error } = await admin.from('member_email_campaigns')
@@ -358,164 +363,6 @@ async function deleteCampaign(admin: SupabaseClient, body: AdminBody): Promise<R
   if (error) throw new Error('campaign delete failed')
   if (!Array.isArray(data) || data.length === 0) return fail('not_a_draft', 409)
   return json({ ok: true }, 200)
-}
-
-async function preview(admin: SupabaseClient, body: AdminBody): Promise<Response> {
-  const c = await loadCampaign(admin, body.id)
-  if (!c) return fail('not_found', 404)
-  const rendered = renderEmail(c, {
-    unsubscribeUrl: unsubscribePageUrl('preview'),
-    surveyUrl: c.survey_id ? surveyUrl(c.survey_id, null) : null,
-  })
-  return json({ ok: true, subject: rendered.subject, html: rendered.html, text: rendered.text, lint: lintCampaign(c) }, 200)
-}
-
-async function sendTest(admin: SupabaseClient, adminEmail: string, body: AdminBody, supabaseUrl: string): Promise<Response> {
-  const c = await loadCampaign(admin, body.id)
-  if (!c) return fail('not_found', 404)
-  const lint = lintCampaign(c)
-  if (lint.length > 0) return fail('lint_failed', 409, { lint })
-  const apiKey = Deno.env.get('RESEND_API_KEY') ?? ''
-  if (!apiKey) return fail('email_not_configured', 503)
-  const secret = await linkSecret(admin)
-  const unsub = await makeUnsubscribeToken(NO_ACCOUNT, secret)
-  const rendered = renderEmail(c, {
-    unsubscribeUrl: unsubscribePageUrl(unsub),
-    surveyUrl: c.survey_id ? surveyUrl(c.survey_id, null) : null,
-  })
-  // To the signed-in admin's own address only: never an address from the
-  // request.
-  const result = await sendOne(apiKey, {
-    from: FROM_ADDRESS,
-    to: [adminEmail],
-    subject: `Test: ${rendered.subject}`,
-    html: rendered.html,
-    text: rendered.text,
-    headers: unsubscribeHeaders(oneClickUnsubscribeUrl(supabaseUrl, unsub)),
-    ...replyTo(),
-  })
-  if (!result.ok) {
-    console.error('[member-email-admin] test send failed', { campaign_id: c.id, code: result.code })
-    return fail('send_failed', 502, { code: result.code })
-  }
-  return json({ ok: true, sent_to: 'you' }, 200)
-}
-
-// The whole send. Refuses unless the LIVE audience count equals the number
-// the founder confirmed on the page. Sends only to audience members with no
-// 'sent' row for this campaign, so a second call on a 'partial' campaign
-// finishes the job and never sends anyone the same campaign twice (the
-// sends table's primary key is (campaign_id, user_id)).
-async function sendCampaign(admin: SupabaseClient, body: AdminBody, supabaseUrl: string): Promise<Response> {
-  const started = Date.now()
-  const c = await loadCampaign(admin, body.id)
-  if (!c) return fail('not_found', 404)
-  if (c.status === 'sent') return fail('already_sent', 409)
-  const lint = lintCampaign(c)
-  if (lint.length > 0) return fail('lint_failed', 409, { lint })
-  const apiKey = Deno.env.get('RESEND_API_KEY') ?? ''
-  if (!apiKey) return fail('email_not_configured', 503)
-  const expected = body.expected_recipients
-  if (typeof expected !== 'number' || !Number.isSafeInteger(expected) || expected < 0) {
-    return fail('bad_expected_recipients', 400)
-  }
-  if (c.survey_id) {
-    const { data: s, error: sErr } = await admin.from('member_surveys').select('status').eq('id', c.survey_id).maybeSingle()
-    if (sErr) throw new Error('survey read failed')
-    if (!s || s.status !== 'open') return fail('survey_not_open', 409)
-  }
-
-  const list = await audience(admin)
-  if (list.length !== expected) {
-    return fail('audience_changed', 409, { audience: list.length })
-  }
-
-  // Claim the campaign. A 'sending' campaign is only taken over once it has
-  // been idle for 15 minutes (a run that died part way).
-  const staleIso = new Date(Date.now() - STALE_SENDING_MS).toISOString()
-  const { data: claimed, error: claimErr } = await admin.from('member_email_campaigns')
-    .update({ status: 'sending', recipient_count: list.length, updated_at: new Date().toISOString() })
-    .eq('id', c.id)
-    .or(`status.in.(draft,partial),and(status.eq.sending,updated_at.lt."${staleIso}")`)
-    .select('id')
-  if (claimErr) throw new Error('campaign claim failed')
-  if (!Array.isArray(claimed) || claimed.length === 0) return fail('already_sending', 409)
-
-  const { data: done, error: doneErr } = await admin.from('member_email_sends')
-    .select('user_id').eq('campaign_id', c.id).eq('status', 'sent')
-  if (doneErr) throw new Error('sends read failed')
-  const alreadySent = new Set((done ?? []).map((r: { user_id: string }) => r.user_id))
-  const pending = list.filter((m) => !alreadySent.has(m.user_id))
-
-  const secret = await linkSecret(admin)
-  let sentNow = 0
-  let failedNow = 0
-  let stopped = false
-  for (let i = 0; i < pending.length && !stopped; i += RESEND_BATCH_MAX) {
-    if (Date.now() - started > SEND_BUDGET_MS) {
-      stopped = true
-      break
-    }
-    const chunk = pending.slice(i, i + RESEND_BATCH_MAX)
-    const emails: OutgoingEmail[] = []
-    for (const m of chunk) {
-      // eslint-disable-next-line no-await-in-loop
-      const unsub = await makeUnsubscribeToken(m.user_id, secret)
-      // eslint-disable-next-line no-await-in-loop
-      const surveyToken = c.survey_id ? await makeSurveyToken(m.user_id, c.survey_id, secret) : null
-      const rendered = renderEmail(c, {
-        unsubscribeUrl: unsubscribePageUrl(unsub),
-        surveyUrl: c.survey_id ? surveyUrl(c.survey_id, surveyToken) : null,
-      })
-      emails.push({
-        from: FROM_ADDRESS,
-        to: [m.email],
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-        headers: unsubscribeHeaders(oneClickUnsubscribeUrl(supabaseUrl, unsub)),
-        ...replyTo(),
-      })
-    }
-    // eslint-disable-next-line no-await-in-loop
-    const result = await sendBatch(apiKey, emails)
-    const nowIso = new Date().toISOString()
-    const rows = chunk.map((m, k) => result.ok
-      ? { campaign_id: c.id, user_id: m.user_id, status: 'sent', provider_id: result.ids[k] || null, error: null, sent_at: nowIso }
-      : { campaign_id: c.id, user_id: m.user_id, status: 'failed', provider_id: null, error: result.code, sent_at: null })
-    // eslint-disable-next-line no-await-in-loop
-    const { error: rowErr } = await admin.from('member_email_sends').upsert(rows, { onConflict: 'campaign_id,user_id' })
-    if (rowErr) console.error('[member-email-admin] send rows write failed', { campaign_id: c.id, count: rows.length, code: rowErr.code })
-    if (result.ok) {
-      sentNow += chunk.length
-    } else {
-      failedNow += chunk.length
-      console.error('[member-email-admin] batch failed', { campaign_id: c.id, count: chunk.length, code: result.code })
-      // Rate limited: stop here; the rest have no row and go on the next call.
-      if (result.status === 429) stopped = true
-    }
-  }
-
-  const { count: totalSent } = await admin.from('member_email_sends')
-    .select('user_id', { count: 'exact', head: true }).eq('campaign_id', c.id).eq('status', 'sent')
-  const { count: totalFailed } = await admin.from('member_email_sends')
-    .select('user_id', { count: 'exact', head: true }).eq('campaign_id', c.id).eq('status', 'failed')
-  const sentTotal = totalSent ?? 0
-  const failedTotal = totalFailed ?? 0
-  const complete = failedNow === 0 && !stopped && sentNow === pending.length
-  const status = complete ? 'sent' : 'partial'
-  await admin.from('member_email_campaigns').update({
-    status,
-    sent_count: sentTotal,
-    failed_count: failedTotal,
-    updated_at: new Date().toISOString(),
-    ...(sentTotal > 0 && !c.sent_at ? { sent_at: new Date().toISOString() } : {}),
-  }).eq('id', c.id)
-  console.log('[member-email-admin] campaign send', { campaign_id: c.id, status, sent: sentNow, failed: failedNow, recipients: list.length })
-  return json({
-    ok: true, status, sent: sentNow, failed: failedNow,
-    total_sent: sentTotal, total_failed: failedTotal, recipients: list.length,
-  }, 200)
 }
 
 // ─── Surveys ──────────────────────────────────────────────────────────
@@ -681,14 +528,18 @@ serve(async (req: Request) => {
     return fail('server_misconfigured', 500)
   }
 
+  const upload = new URL(req.url).searchParams.get('action') === 'upload_asset'
+  const bodyCap = upload ? UPLOAD_BODY_BYTES : MAX_BODY_BYTES
   let body: AdminBody
   try {
-    body = await readBoundedJson<AdminBody>(req, MAX_BODY_BYTES)
+    body = await readBoundedJson<AdminBody>(req, bodyCap)
   } catch (error) {
     if (error instanceof RequestBodyError && error.status === 413) return fail('payload_too_large', 413)
     return fail('bad_json', 400)
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) return fail('bad_json', 400)
+  // The large cap is for an image upload and nothing else.
+  if (upload && body.action !== 'upload_asset') return fail('bad_json', 400)
 
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -703,26 +554,38 @@ serve(async (req: Request) => {
     const adminEmail = await requireAdmin(admin, body.session)
     if (!adminEmail) return fail('unauthorised', 401)
 
-    switch (action) {
-      case 'overview': return await overview(admin)
-      case 'save_campaign': return await saveCampaign(admin, adminEmail, body)
-      case 'delete_campaign': return await deleteCampaign(admin, body)
-      case 'preview': return await preview(admin, body)
-      case 'send_test': return await sendTest(admin, adminEmail, body, supabaseUrl)
-      case 'send_campaign': return await sendCampaign(admin, body, supabaseUrl)
-      case 'save_survey': return await saveSurvey(admin, body)
-      case 'set_survey_status': return await setSurveyStatus(admin, body)
-      case 'survey_results': return await surveyResultsAction(admin, body)
-      case 'export_survey': return await exportSurvey(admin, body)
-      case 'list_members': return await listMembers(admin, body)
-      case 'exclude': return await exclude(admin, adminEmail, body)
-      case 'include': return await include(admin, body)
-      case 'list_exclusions': return await listExclusions(admin)
-      default: return fail('unknown_action', 400)
-    }
+    const res = await route(admin, adminEmail, action, body, supabaseUrl)
+    // Who, what, when: ids only (the target id the request named).
+    const target = [body.id, body.user_id, body.key, body.path].find((v) => typeof v === 'string' && v.length <= 100)
+    await audit(admin, adminEmail, action.slice(0, 60) || 'none', (target as string | undefined) ?? null, res.status)
+      .catch(() => console.error('[member-email-admin] audit write failed'))
+    return res
   } catch (e) {
     // The message is one of this file's own fixed strings; never a value.
     console.error('[member-email-admin] action failed', { action, reason: e instanceof Error ? e.message : 'unknown' })
     return fail('server_error', 500)
   }
 })
+
+async function route(
+  admin: SupabaseClient, adminEmail: string, action: string, body: AdminBody, supabaseUrl: string,
+): Promise<Response> {
+  if ((V2_ACTIONS as readonly string[]).includes(action)) {
+    const res = await handleV2(action, { db: admin, adminEmail, body, supabaseUrl })
+    if (res) return res
+  }
+  switch (action) {
+    case 'overview': return await overview(admin)
+    case 'delete_campaign': return await deleteCampaign(admin, body)
+    case 'save_survey': return await saveSurvey(admin, body)
+    case 'set_survey_status': return await setSurveyStatus(admin, body)
+    case 'survey_results': return await surveyResultsAction(admin, body)
+    case 'export_survey': return await exportSurvey(admin, body)
+    case 'list_members': return await listMembers(admin, body)
+    case 'exclude': return await exclude(admin, adminEmail, body)
+    case 'include': return await include(admin, body)
+    case 'list_exclusions': return await listExclusions(admin)
+    default: return fail('unknown_action', 400)
+  }
+}
+

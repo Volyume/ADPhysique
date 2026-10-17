@@ -74,6 +74,13 @@ const CLIENT_RPCS = [
   'record_partner_consent',
   'record_rpc_fallback_deletion',
   'redeem_partner_invite',
+  // Member email (migrate_198/199): SECURITY DEFINER, pinned search_path,
+  // auth.uid() only, granted to `authenticated` only.
+  'member_app_seen',
+  'member_email_get_subscribed',
+  'member_email_set_subscribed',
+  'member_email_get_topics',
+  'member_email_set_topic',
   // Community (migrate_160, SD-14). Every one is SECURITY DEFINER with
   // `search_path = public, pg_temp`, derives its user from auth.uid(), and is
   // granted to `authenticated` only; the `_community_*` helpers beneath them

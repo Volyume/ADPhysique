@@ -17,6 +17,17 @@
 //   * Copy lint: the house voice rule (no em dash) plus the field limits.
 //   * Surveys: question validation (the shape migrate_198 stores) and answer
 //     validation against the questions, the results tally and the CSV.
+//
+// Member email v2 (docs/member-email-2026-10-17/PLAN-V2.md, migrate_199) adds,
+// below the phase 1 code: the `prefs` token (the preferences page); the
+// block renderer (escaped, https-only links, alt text required, dark-mode
+// safe inline styles, a plain-text part) with personalisation tokens and
+// fallbacks and the update-prompt block (only for members below the latest
+// version); the server claims lint built from marketing/hq/CLAIMS-STANDARDS.md;
+// the weekly summary copy (counts only, calm voice); Svix webhook signature
+// checks; segment rule validation; UK quiet hours; the A/B winner; image
+// type sniffing; and the Resend domain API. Still pure: no logging, no
+// database, and the one outside call is `resendRequest`.
 
 // ─── Constants ────────────────────────────────────────────────────────
 
@@ -26,10 +37,14 @@ export const WORDMARK_URL = 'https://volyume.app/volyume-wordmark.png'
 export const RESEND_EMAILS_URL = 'https://api.resend.com/emails'
 export const RESEND_BATCH_URL = 'https://api.resend.com/emails/batch'
 export const RESEND_BATCH_MAX = 100
+export const RESEND_DOMAINS_URL = 'https://api.resend.com/domains'
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.volyume'
+export const APP_STORE_URL = 'https://apps.apple.com/gb/app/volyume/id6777083702'
 
 export const ADMIN_SESSION_SECONDS = 12 * 60 * 60
 export const UNSUBSCRIBE_TOKEN_SECONDS = 5 * 365 * 24 * 60 * 60
 export const SURVEY_TOKEN_SECONDS = 90 * 24 * 60 * 60
+export const PREFS_TOKEN_SECONDS = 5 * 365 * 24 * 60 * 60
 export const LOGIN_NONCE_MINUTES = 15
 export const MAX_OPEN_LOGINS = 5
 
@@ -83,7 +98,7 @@ export function base64UrlDecode(text: string): Uint8Array | null {
 
 // ─── Tokens ───────────────────────────────────────────────────────────
 
-export type TokenPurpose = 'admin' | 'unsub' | 'survey'
+export type TokenPurpose = 'admin' | 'unsub' | 'survey' | 'prefs'
 
 export interface TokenPayload {
   p: TokenPurpose
@@ -137,7 +152,7 @@ export async function verifyToken(
   if (p.p !== purpose) return null
   if (typeof p.x !== 'number' || !Number.isFinite(p.x) || p.x * 1000 <= nowMs) return null
   if (purpose === 'admin' && (typeof p.e !== 'string' || p.e.length === 0 || p.e.length > 320)) return null
-  if (purpose === 'unsub' && (typeof p.u !== 'string' || !UUID_RE.test(p.u))) return null
+  if ((purpose === 'unsub' || purpose === 'prefs') && (typeof p.u !== 'string' || !UUID_RE.test(p.u))) return null
   if (purpose === 'survey' && (typeof p.u !== 'string' || !UUID_RE.test(p.u)
       || typeof p.s !== 'string' || !UUID_RE.test(p.s))) return null
   return p as unknown as TokenPayload
@@ -161,6 +176,10 @@ export async function makeSurveyToken(userId: string, surveyId: string, secret: 
   return await signToken({ p: 'survey', u: userId, s: surveyId, x: expiry(nowMs, SURVEY_TOKEN_SECONDS) }, secret)
 }
 
+export async function makePrefsToken(userId: string, secret: string, nowMs: number = Date.now()) {
+  return await signToken({ p: 'prefs', u: userId, x: expiry(nowMs, PREFS_TOKEN_SECONDS) }, secret)
+}
+
 export function randomHex(bytes: number): string {
   const b = crypto.getRandomValues(new Uint8Array(bytes))
   return Array.from(b, (v) => v.toString(16).padStart(2, '0')).join('')
@@ -179,6 +198,10 @@ export function unsubscribePageUrl(token: string): string {
 
 export function oneClickUnsubscribeUrl(supabaseUrl: string, token: string): string {
   return `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/member-email-public?action=unsubscribe&t=${encodeURIComponent(token)}`
+}
+
+export function preferencesPageUrl(token: string): string {
+  return `${SITE_ORIGIN}/email/preferences/?t=${encodeURIComponent(token)}`
 }
 
 export function surveyUrl(surveyId: string, token: string | null): string {
@@ -383,7 +406,9 @@ export function lintCampaign(c: Partial<CampaignContent>): LintProblem[] {
 
 // ─── Surveys ──────────────────────────────────────────────────────────
 
-export type QuestionType = 'single' | 'multi' | 'text'
+// 'nps' is the 0 to 10 likelihood question; 'rating' is 1 to 5. Neither
+// carries options: the scale is fixed, and answers are stored as the digit.
+export type QuestionType = 'single' | 'multi' | 'text' | 'nps' | 'rating'
 
 export interface SurveyQuestion {
   id: string
@@ -395,8 +420,18 @@ export interface SurveyQuestion {
 
 export type Validated<T> = { ok: true; value: T } | { ok: false; error: string; question?: string }
 
-const QUESTION_ID_RE = /^q[1-9][0-9]?$/
-export const MAX_QUESTIONS = 20
+const QUESTION_ID_RE = /^q[1-9][0-9]{0,2}$/
+export const NPS_SCALE = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+export const RATING_SCALE = ['1', '2', '3', '4', '5']
+
+export function scaleOf(q: SurveyQuestion): string[] {
+  if (q.type === 'nps') return NPS_SCALE
+  if (q.type === 'rating') return RATING_SCALE
+  return q.options ?? []
+}
+// Founder decision 2026-10-17: no policy limit on survey questions. This is
+// a technical bound only (migrate_199 widens the database check to match).
+export const MAX_QUESTIONS = 200
 export const MAX_OPTIONS = 10
 export const MAX_TEXT_ANSWER = 2000
 
@@ -420,14 +455,16 @@ export function validateQuestions(raw: unknown): Validated<SurveyQuestion[]> {
     if (typeof id !== 'string' || !QUESTION_ID_RE.test(id)) return { ok: false, error: 'bad_question_id' }
     if (seen.has(id)) return { ok: false, error: 'duplicate_question_id', question: id }
     seen.add(id)
-    if (q.type !== 'single' && q.type !== 'multi' && q.type !== 'text') return { ok: false, error: 'bad_question_type', question: id }
+    if (q.type !== 'single' && q.type !== 'multi' && q.type !== 'text' && q.type !== 'nps' && q.type !== 'rating') {
+      return { ok: false, error: 'bad_question_type', question: id }
+    }
     if (typeof q.prompt !== 'string' || q.prompt.trim().length < 1 || q.prompt.trim().length > 300) {
       return { ok: false, error: 'bad_prompt', question: id }
     }
     if (q.prompt.includes(EM_DASH)) return { ok: false, error: 'em_dash', question: id }
     if (typeof q.required !== 'boolean') return { ok: false, error: 'bad_required', question: id }
     const question: SurveyQuestion = { id, type: q.type, prompt: q.prompt.trim(), required: q.required }
-    if (q.type === 'text') {
+    if (q.type === 'text' || q.type === 'nps' || q.type === 'rating') {
       if (q.options != null && !(Array.isArray(q.options) && q.options.length === 0)) {
         return { ok: false, error: 'text_question_has_options', question: id }
       }
@@ -470,11 +507,12 @@ export function validateAnswers(questions: SurveyQuestion[], raw: unknown): Vali
     let answered = false
     if (value === undefined || value === null) {
       answered = false
-    } else if (q.type === 'single') {
-      if (typeof value !== 'string') return { ok: false, error: 'bad_type', question: q.id }
-      if (value !== '') {
-        if (!(q.options ?? []).includes(value)) return { ok: false, error: 'bad_option', question: q.id }
-        out[q.id] = value
+    } else if (q.type === 'single' || q.type === 'nps' || q.type === 'rating') {
+      const v = typeof value === 'number' && Number.isInteger(value) ? String(value) : value
+      if (typeof v !== 'string') return { ok: false, error: 'bad_type', question: q.id }
+      if (v !== '') {
+        if (!scaleOf(q).includes(v)) return { ok: false, error: 'bad_option', question: q.id }
+        out[q.id] = v
         answered = true
       }
     } else if (q.type === 'multi') {
@@ -523,7 +561,8 @@ export function surveyResults(questions: SurveyQuestion[], rows: AnswerRow[]) {
         return { id: q.id, type: q.type, prompt: q.prompt, answered: answers.length, answers }
       }
       const counts: Record<string, number> = {}
-      for (const o of q.options ?? []) counts[o] = 0
+      const scale = scaleOf(q)
+      for (const o of scale) counts[o] = 0
       let answered = 0
       for (const r of rows) {
         const v = r.answers?.[q.id]
@@ -531,9 +570,43 @@ export function surveyResults(questions: SurveyQuestion[], rows: AnswerRow[]) {
         if (picked.length > 0) answered += 1
         for (const p of picked) if (p in counts) counts[p] += 1
       }
-      return { id: q.id, type: q.type, prompt: q.prompt, options: q.options ?? [], answered, counts }
+      const base = { id: q.id, type: q.type, prompt: q.prompt, options: scale, answered, counts }
+      if (q.type === 'nps') return { ...base, nps: npsScore(counts) }
+      if (q.type === 'rating') return { ...base, average: ratingAverage(counts) }
+      return base
     }),
   }
+}
+
+/**
+ * The standard Net Promoter Score: percent promoters (9 and 10) minus
+ * percent detractors (0 to 6), rounded; null with no answers.
+ */
+export function npsScore(counts: Record<string, number>) {
+  let promoters = 0
+  let passives = 0
+  let detractors = 0
+  for (const [k, n] of Object.entries(counts)) {
+    const v = Number(k)
+    if (v >= 9) promoters += n
+    else if (v >= 7) passives += n
+    else detractors += n
+  }
+  const total = promoters + passives + detractors
+  return {
+    promoters, passives, detractors,
+    score: total === 0 ? null : Math.round(((promoters - detractors) / total) * 100),
+  }
+}
+
+export function ratingAverage(counts: Record<string, number>): number | null {
+  let sum = 0
+  let n = 0
+  for (const [k, c] of Object.entries(counts)) {
+    sum += Number(k) * c
+    n += c
+  }
+  return n === 0 ? null : Math.round((sum / n) * 10) / 10
 }
 
 /** One CSV cell: quoted, quotes doubled, and a leading formula character neutralised. */
@@ -605,6 +678,7 @@ export interface OutgoingEmail {
   text: string
   reply_to?: string
   headers?: Record<string, string>
+  tags?: { name: string; value: string }[]
 }
 
 export function unsubscribeHeaders(oneClickUrl: string): Record<string, string> {
@@ -626,15 +700,23 @@ function providerErrorCode(status: number, body: unknown): string {
 
 export type SendResult = { ok: true; ids: string[] } | { ok: false; status: number; code: string }
 
-async function postResend(apiKey: string, url: string, payload: unknown): Promise<{ status: number; body: unknown }> {
+/** The one outside call in member email: Resend's API, and nothing else. */
+export async function resendRequest(
+  apiKey: string, method: 'GET' | 'POST' | 'PATCH', url: string, payload?: unknown,
+): Promise<{ status: number; body: unknown }> {
+  if (!url.startsWith('https://api.resend.com/')) throw new Error('not a Resend url')
   const res = await fetch(url, {
-    method: 'POST',
+    method,
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
   })
   let body: unknown = null
   try { body = await res.json() } catch (_) { body = null }
   return { status: res.status, body }
+}
+
+async function postResend(apiKey: string, url: string, payload: unknown): Promise<{ status: number; body: unknown }> {
+  return await resendRequest(apiKey, 'POST', url, payload)
 }
 
 export async function sendOne(apiKey: string, email: OutgoingEmail): Promise<SendResult> {
@@ -667,5 +749,905 @@ export async function sendBatch(apiKey: string, emails: OutgoingEmail[]): Promis
     return { ok: false, status, code: providerErrorCode(status, body) }
   } catch (_) {
     return { ok: false, status: 0, code: 'network_error' }
+  }
+}
+
+// ═══ Member email v2 (PLAN-V2, migrate_199) ═══════════════════════════
+
+export const TOPICS = ['product_news', 'surveys', 'weekly_summary', 'community_events'] as const
+export type Topic = typeof TOPICS[number]
+export function isTopic(v: unknown): v is Topic {
+  return typeof v === 'string' && (TOPICS as readonly string[]).includes(v)
+}
+
+export const PREFERENCES_LINK_TEXT = 'Choose which emails you get'
+export const UPDATE_PROMPT_TEXT = 'A new version of Volyume is ready. Update the app to get the latest changes.'
+export const UPDATE_PROMPT_BUTTON = 'Update Volyume'
+export const SHARE_TEXT = 'If you know someone who would like Volyume, you can send them the store page.'
+
+// ─── Blocks ───────────────────────────────────────────────────────────
+
+export type Block =
+  | { type: 'heading'; text: string; level: 1 | 2 }
+  | { type: 'paragraph'; text: string }
+  | { type: 'image'; url: string; alt: string; width?: number; link?: string | null }
+  | { type: 'button'; label: string; url: string }
+  | { type: 'divider' }
+  | { type: 'spacer'; size: 'small' | 'medium' | 'large' }
+  | { type: 'survey'; survey_id: string; label?: string | null }
+  | { type: 'update_prompt' }
+  | { type: 'share' }
+  | { type: 'preferences' }
+
+export const MAX_BLOCKS = 60
+const BLOCK_KEYS: Record<string, string[]> = {
+  heading: ['type', 'text', 'level'],
+  paragraph: ['type', 'text'],
+  image: ['type', 'url', 'alt', 'width', 'link'],
+  button: ['type', 'label', 'url'],
+  divider: ['type'],
+  spacer: ['type', 'size'],
+  survey: ['type', 'survey_id', 'label'],
+  update_prompt: ['type'],
+  share: ['type'],
+  preferences: ['type'],
+}
+
+function plainLine(v: unknown, max: number): string | null {
+  if (typeof v !== 'string') return null
+  const t = v.trim()
+  if (t.length < 1 || t.length > max || /[\r\n]/.test(t)) return null
+  return t
+}
+
+/**
+ * The blocks, normalised, when every block is a known type with only its own
+ * keys, every text within its limit, every link an https link, and every
+ * image carries alt text (M4: alt text is required, never optional).
+ */
+export function validateBlocks(raw: unknown): Validated<Block[]> {
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > MAX_BLOCKS) return { ok: false, error: 'bad_block_count' }
+  const out: Block[] = []
+  for (let i = 0; i < raw.length; i += 1) {
+    const b = raw[i]
+    const where = `blocks[${i}]`
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return { ok: false, error: 'bad_block', question: where }
+    const r = b as Record<string, unknown>
+    const type = r.type
+    if (typeof type !== 'string' || !(type in BLOCK_KEYS)) return { ok: false, error: 'bad_block_type', question: where }
+    for (const k of Object.keys(r)) if (!BLOCK_KEYS[type].includes(k)) return { ok: false, error: 'bad_block_key', question: where }
+    if (type === 'heading') {
+      const text = plainLine(r.text, 150)
+      if (!text) return { ok: false, error: 'bad_heading', question: where }
+      if (r.level !== 1 && r.level !== 2) return { ok: false, error: 'bad_heading_level', question: where }
+      out.push({ type, text, level: r.level })
+    } else if (type === 'paragraph') {
+      if (typeof r.text !== 'string') return { ok: false, error: 'bad_paragraph', question: where }
+      const text = r.text.replace(/\r\n?/g, '\n').trim()
+      if (text.length < 1 || text.length > 5000) return { ok: false, error: 'bad_paragraph', question: where }
+      if (unsafeBodyLinks(text).length > 0) return { ok: false, error: 'link_not_https', question: where }
+      out.push({ type, text })
+    } else if (type === 'image') {
+      const url = safeHttpsUrl(r.url)
+      if (!url) return { ok: false, error: 'image_url_not_https', question: where }
+      const alt = plainLine(r.alt, 200)
+      if (!alt) return { ok: false, error: 'image_alt_required', question: where }
+      let width: number | undefined
+      if (r.width != null) {
+        if (typeof r.width !== 'number' || !Number.isInteger(r.width) || r.width < 40 || r.width > 560) {
+          return { ok: false, error: 'bad_image_width', question: where }
+        }
+        width = r.width
+      }
+      let link: string | null = null
+      if (r.link != null && r.link !== '') {
+        link = safeHttpsUrl(r.link)
+        if (!link) return { ok: false, error: 'link_not_https', question: where }
+      }
+      out.push({ type, url, alt, ...(width ? { width } : {}), link })
+    } else if (type === 'button') {
+      const label = plainLine(r.label, 40)
+      const url = safeHttpsUrl(r.url)
+      if (!label) return { ok: false, error: 'bad_button_label', question: where }
+      if (!url) return { ok: false, error: 'link_not_https', question: where }
+      out.push({ type, label, url })
+    } else if (type === 'spacer') {
+      if (r.size !== 'small' && r.size !== 'medium' && r.size !== 'large') return { ok: false, error: 'bad_spacer', question: where }
+      out.push({ type, size: r.size })
+    } else if (type === 'survey') {
+      if (typeof r.survey_id !== 'string' || !UUID_RE.test(r.survey_id)) return { ok: false, error: 'bad_survey_id', question: where }
+      let label: string | null = null
+      if (r.label != null && r.label !== '') {
+        label = plainLine(r.label, 40)
+        if (!label) return { ok: false, error: 'bad_button_label', question: where }
+      }
+      out.push({ type, survey_id: r.survey_id.toLowerCase(), label })
+    } else {
+      out.push({ type } as Block)
+    }
+  }
+  if (out.filter((b) => b.type === 'survey').length > 1) return { ok: false, error: 'one_survey_per_email' }
+  return { ok: true, value: out }
+}
+
+export function blocksSurveyId(blocks: Block[] | null | undefined): string | null {
+  const s = (blocks ?? []).find((b) => b.type === 'survey') as { survey_id?: string } | undefined
+  return s?.survey_id ?? null
+}
+
+// ─── Personalisation ──────────────────────────────────────────────────
+
+// The strict allow-list of merge fields (Article 9 guard: no health value
+// can ever be merged into an email; `years` is the account anniversary).
+export const MERGE_FIELDS = ['first_name', 'app_version', 'years'] as const
+const TOKEN_RE = /\{\{\s*([a-zA-Z_]+)\s*(?:\|([^{}|]{0,40}))?\s*\}\}/g
+
+export interface MemberContext {
+  firstName?: string | null
+  appVersion?: string | null
+  belowLatest?: boolean
+  platform?: string | null
+  years?: number | null
+}
+
+/** A first name fit for a greeting, or null (then the fallback is used). */
+export function cleanFirstName(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const t = raw.replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim()
+  if (t.length < 1 || t.length > 40) return null
+  if (/[@<>{}[\]]|:\/\/|www\./i.test(t)) return null
+  return t
+}
+
+export function tokensIn(text: string): { name: string; fallback: string | null }[] {
+  const out: { name: string; fallback: string | null }[] = []
+  for (const m of text.matchAll(TOKEN_RE)) out.push({ name: m[1], fallback: m[2] === undefined ? null : m[2].trim() })
+  return out
+}
+
+/** Replaces every merge field with the member's value or its fallback. */
+export function applyTokens(text: string, ctx: MemberContext): string {
+  return text.replace(TOKEN_RE, (_all, name: string, fallback?: string) => {
+    const fb = (fallback ?? '').trim()
+    if (name === 'first_name') return cleanFirstName(ctx.firstName) ?? fb
+    if (name === 'app_version') {
+      return typeof ctx.appVersion === 'string' && /^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$/.test(ctx.appVersion) ? ctx.appVersion : fb
+    }
+    if (name === 'years') {
+      const y = ctx.years
+      if (typeof y === 'number' && Number.isInteger(y) && y >= 1 && y <= 100) return y === 1 ? 'a year' : `${y} years`
+      return fb
+    }
+    return fb
+  })
+}
+
+// ─── Rendering (blocks) ───────────────────────────────────────────────
+
+const LIGHT = { bg: '#f4f5f4', card: '#ffffff', text: '#1b1f1d', muted: '#5b625e', link: '#1f5f4a', rule: '#e3e6e4' }
+const DARK = { bg: '#101412', card: '#1a201d', text: '#e8ece9', muted: '#aab3ae', link: '#8fd3b6', rule: '#2c3430' }
+const BRAND = '#1f5f4a'
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+
+export interface SurveyLink {
+  id: string
+  /** The member's signed survey link (or the unsigned one for a preview). */
+  url: string
+  /** The first question; a single, NPS or rating question gets one-click answer links. */
+  first?: SurveyQuestion | null
+}
+
+export interface RenderLinksV2 {
+  unsubscribeUrl: string
+  preferencesUrl: string
+  survey?: SurveyLink | null
+}
+
+export interface BlocksContent {
+  subject: string
+  preheader?: string | null
+  blocks: Block[]
+}
+
+function inlineHtmlWith(parts: Inline[], ctx: MemberContext, linkColour: string): string {
+  return parts.map((p) => {
+    if (p.kind === 'bold') return `<strong>${escapeHtml(applyTokens(p.text, ctx))}</strong>`
+    if (p.kind === 'link') {
+      return `<a class="ve-link" href="${escapeHtml(p.url)}" style="color:${linkColour};text-decoration:underline;">${escapeHtml(applyTokens(p.text, ctx))}</a>`
+    }
+    return escapeHtml(applyTokens(p.text, ctx)).replace(/\n/g, '<br>')
+  }).join('')
+}
+
+function inlineTextWith(parts: Inline[], ctx: MemberContext): string {
+  return parts.map((p) => {
+    if (p.kind === 'link') return `${applyTokens(p.text, ctx)} (${p.url})`
+    return applyTokens(p.text, ctx)
+  }).join('')
+}
+
+function buttonRow(label: string, url: string): string {
+  // Brand green with white text keeps 4.5 to 1 contrast in light and dark,
+  // and survives a client's forced colour inversion; 48px tall tap target.
+  return `<tr><td style="padding:8px 0 24px 0;"><a href="${escapeHtml(url)}" style="display:inline-block;background:${BRAND};color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;line-height:20px;padding:14px 22px;border-radius:10px;mso-padding-alt:0;">${escapeHtml(label)}</a></td></tr>`
+}
+
+function surveyAnswerUrl(base: string, questionId: string, value: string): string {
+  return `${base}${base.includes('?') ? '&' : '?'}${encodeURIComponent(questionId)}=${encodeURIComponent(value)}`
+}
+
+/**
+ * HTML and plain text for a blocks email. Everything is escaped; only https
+ * links render as links; merge fields are filled from the member (with
+ * fallbacks) inside text only, never inside a link. The update-prompt block
+ * renders only when the member is below the latest version. The footer (the
+ * unsubscribe link and the preferences link) is always present.
+ */
+export function renderBlocksEmail(
+  c: BlocksContent, ctx: MemberContext, links: RenderLinksV2, opts: { forceDark?: boolean } = {},
+): { subject: string; html: string; text: string } {
+  const unsubscribe = safeHttpsUrl(links.unsubscribeUrl)
+  const prefs = safeHttpsUrl(links.preferencesUrl)
+  if (!unsubscribe) throw new Error('unsubscribe link missing')
+  if (!prefs) throw new Error('preferences link missing')
+  const pal = opts.forceDark ? DARK : LIGHT
+  const subject = applyTokens(c.subject, ctx).replace(/[\r\n]+/g, ' ').trim()
+  const preheader = applyTokens(c.preheader ?? '', ctx).trim()
+  const rows: string[] = []
+  const text: string[] = []
+  // The wordmark sits on its own white pill so a dark client never hides it.
+  rows.push(`<tr><td style="padding:0 0 24px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#ffffff;border-radius:8px;padding:6px 10px;"><img src="${escapeHtml(WORDMARK_URL)}" alt="Volyume" width="120" style="display:block;border:0;height:auto;max-width:120px;"></td></tr></table></td></tr>`)
+  for (const b of c.blocks) {
+    if (b.type === 'heading') {
+      const t = applyTokens(b.text, ctx)
+      const size = b.level === 1 ? 24 : 20
+      rows.push(`<tr><td style="padding:0 0 12px 0;"><h${b.level} class="ve-text" style="margin:0;font-size:${size}px;line-height:${size + 8}px;font-weight:700;color:${pal.text};">${escapeHtml(t)}</h${b.level}></td></tr>`)
+      text.push(t)
+    } else if (b.type === 'paragraph') {
+      for (const para of splitParagraphs(b.text)) {
+        const parts = parseInline(para)
+        rows.push(`<tr><td class="ve-text" style="padding:0 0 16px 0;font-size:16px;line-height:24px;color:${pal.text};">${inlineHtmlWith(parts, ctx, pal.link)}</td></tr>`)
+        text.push(inlineTextWith(parts, ctx))
+      }
+    } else if (b.type === 'image') {
+      const w = b.width ?? 512
+      const img = `<img src="${escapeHtml(b.url)}" alt="${escapeHtml(b.alt)}" width="${w}" style="display:block;border:0;height:auto;width:100%;max-width:${w}px;border-radius:10px;">`
+      rows.push(`<tr><td style="padding:0 0 16px 0;">${b.link ? `<a href="${escapeHtml(b.link)}">${img}</a>` : img}</td></tr>`)
+      text.push(b.link ? `[${b.alt}] (${b.link})` : `[${b.alt}]`)
+    } else if (b.type === 'button') {
+      const label = applyTokens(b.label, ctx)
+      rows.push(buttonRow(label, b.url))
+      text.push(`${label}: ${b.url}`)
+    } else if (b.type === 'divider') {
+      rows.push(`<tr><td style="padding:8px 0 24px 0;"><div style="border-top:1px solid ${pal.rule};height:1px;line-height:1px;font-size:1px;">&nbsp;</div></td></tr>`)
+      text.push('----')
+    } else if (b.type === 'spacer') {
+      const h = b.size === 'small' ? 8 : b.size === 'medium' ? 16 : 32
+      rows.push(`<tr><td style="height:${h}px;line-height:${h}px;font-size:1px;">&nbsp;</td></tr>`)
+    } else if (b.type === 'survey') {
+      const s = links.survey && links.survey.id === b.survey_id ? links.survey : null
+      const url = s ? safeHttpsUrl(s.url) : null
+      if (!url) continue
+      const first = s?.first ?? null
+      if (first && (first.type === 'single' || first.type === 'nps' || first.type === 'rating')) {
+        const options = scaleOf(first)
+        rows.push(`<tr><td class="ve-text" style="padding:0 0 8px 0;font-size:16px;line-height:24px;font-weight:600;color:${pal.text};">${escapeHtml(first.prompt)}</td></tr>`)
+        const cells = options.map((o) => `<a href="${escapeHtml(surveyAnswerUrl(url, first.id, o))}" style="display:inline-block;margin:0 6px 8px 0;min-width:44px;text-align:center;background:${BRAND};color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;line-height:20px;padding:12px 10px;border-radius:10px;">${escapeHtml(o)}</a>`).join('')
+        rows.push(`<tr><td style="padding:0 0 16px 0;">${cells}</td></tr>`)
+        if (first.type === 'nps') {
+          rows.push(`<tr><td class="ve-muted" style="padding:0 0 16px 0;font-size:14px;line-height:20px;color:${pal.muted};">0 is not at all likely, 10 is extremely likely.</td></tr>`)
+        }
+        text.push(first.prompt, ...options.map((o) => `${o}: ${surveyAnswerUrl(url, first.id, o)}`))
+      } else {
+        const label = b.label ?? SURVEY_BUTTON_LABEL
+        rows.push(buttonRow(label, url))
+        text.push(`${label}: ${url}`)
+      }
+    } else if (b.type === 'update_prompt') {
+      if (!ctx.belowLatest) continue
+      const store = ctx.platform === 'ios' ? APP_STORE_URL : PLAY_STORE_URL
+      rows.push(`<tr><td class="ve-text" style="padding:0 0 12px 0;font-size:16px;line-height:24px;color:${pal.text};">${escapeHtml(UPDATE_PROMPT_TEXT)}</td></tr>`)
+      if (ctx.platform === 'ios' || ctx.platform === 'android') {
+        rows.push(buttonRow(UPDATE_PROMPT_BUTTON, store))
+        text.push(UPDATE_PROMPT_TEXT, `${UPDATE_PROMPT_BUTTON}: ${store}`)
+      } else {
+        rows.push(buttonRow('Google Play', PLAY_STORE_URL), buttonRow('App Store', APP_STORE_URL))
+        text.push(UPDATE_PROMPT_TEXT, `Google Play: ${PLAY_STORE_URL}`, `App Store: ${APP_STORE_URL}`)
+      }
+    } else if (b.type === 'share') {
+      rows.push(`<tr><td class="ve-text" style="padding:0 0 12px 0;font-size:16px;line-height:24px;color:${pal.text};">${escapeHtml(SHARE_TEXT)}</td></tr>`)
+      rows.push(buttonRow('Google Play', PLAY_STORE_URL), buttonRow('App Store', APP_STORE_URL))
+      text.push(SHARE_TEXT, `Google Play: ${PLAY_STORE_URL}`, `App Store: ${APP_STORE_URL}`)
+    } else if (b.type === 'preferences') {
+      rows.push(buttonRow(PREFERENCES_LINK_TEXT, prefs))
+      text.push(`${PREFERENCES_LINK_TEXT}: ${prefs}`)
+    }
+  }
+  rows.push(`<tr><td class="ve-muted" style="padding:24px 0 0 0;border-top:1px solid ${pal.rule};font-size:14px;line-height:20px;color:${pal.muted};">${escapeHtml(FOOTER_TEXT_BEFORE_LINK)}<a class="ve-link" href="${escapeHtml(unsubscribe)}" style="color:${pal.muted};text-decoration:underline;">${escapeHtml(FOOTER_LINK_TEXT)}</a>. <a class="ve-link" href="${escapeHtml(prefs)}" style="color:${pal.muted};text-decoration:underline;">${escapeHtml(PREFERENCES_LINK_TEXT)}</a>.</td></tr>`)
+  text.push(`${FOOTER_TEXT_BEFORE_LINK}${FOOTER_LINK_TEXT}: ${unsubscribe}`, `${PREFERENCES_LINK_TEXT}: ${prefs}`)
+
+  const darkCss = '@media (prefers-color-scheme: dark){'
+    + `.ve-bg{background:${DARK.bg} !important}.ve-card{background:${DARK.card} !important}`
+    + `.ve-text{color:${DARK.text} !important}.ve-muted{color:${DARK.muted} !important}.ve-link{color:${DARK.link} !important}}`
+  const html = [
+    '<!doctype html>',
+    '<html lang="en-GB" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
+    '<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">',
+    `<title>${escapeHtml(subject)}</title><style>${darkCss}</style></head>`,
+    `<body class="ve-bg" style="margin:0;padding:0;background:${pal.bg};">`,
+    preheader
+      ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(preheader)}</div>`
+      : '',
+    `<table class="ve-bg" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${pal.bg};"><tr><td align="center" style="padding:24px 16px;">`,
+    `<table class="ve-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${pal.card};border-radius:14px;"><tr><td lang="en-GB" dir="ltr" style="padding:28px 24px;font-family:${FONT};">`,
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">',
+    rows.join(''),
+    '</table></td></tr></table></td></tr></table></body></html>',
+  ].join('')
+  return { subject, html, text: text.join('\n\n') }
+}
+
+/** A phase 1 campaign (plain body) as blocks, so one renderer serves both. */
+export function legacyToBlocks(c: CampaignContent): Block[] {
+  const blocks: Block[] = [{ type: 'paragraph', text: c.body }]
+  const url = safeHttpsUrl(c.button_url ?? null)
+  const label = (c.button_label ?? '').trim()
+  if (url && label) blocks.push({ type: 'button', label, url })
+  if (c.survey_id) blocks.push({ type: 'survey', survey_id: c.survey_id })
+  return blocks
+}
+
+/** The plain text of a set of blocks with merge fields left in (for listing and search). */
+export function blocksPlainText(blocks: Block[]): string {
+  const out: string[] = []
+  for (const b of blocks) {
+    if (b.type === 'heading' || b.type === 'paragraph') out.push(b.text)
+    else if (b.type === 'button') out.push(b.label)
+    else if (b.type === 'image') out.push(`[${b.alt}]`)
+  }
+  const t = out.join('\n\n').trim()
+  return (t || '(no text)').slice(0, 20000)
+}
+
+// ─── Claims lint (server side; marketing/hq/CLAIMS-STANDARDS.md) ───────
+
+export interface ClaimsLint {
+  errors: LintProblem[]
+  warnings: LintProblem[]
+  /** The rules no lint can check; they are the founder's send checklist. */
+  manual_checks: string[]
+}
+
+interface ClaimRule {
+  code: string
+  re: RegExp
+  level: 'error' | 'warning'
+  message: string
+  /** Skip lines that are honest disclaimers ("not medical advice"), as r2Wording.js isExemptMarketingLine does. */
+  negationExempt?: boolean
+  /** Match against the original case (for "Pro"). */
+  caseSensitive?: boolean
+}
+
+// The R2 medical-device-boundary list, copied from
+// src/lib/observability/r2Wording.js (R2_FUNCTION_TERMS,
+// R2_CONDITION_NAME_TERMS, POPULATION_CLAIM_TERMS); a jest guard keeps the
+// two lists identical, because the edge runtime cannot import app source.
+export const R2_FUNCTION_TERMS_TS: RegExp[] = [
+  /\brehabilitat\w*\b/i, /\brehab\b/i, /\bprehab\b/i,
+  /\binjury management\b/i, /\bflare(-| )?ups?\b/i, /\bflare\b/i,
+  /\bphysio(therap\w*)?\b/i,
+  /\btreat(s|ment|ing)?\b/i, /\btherap(y|eutic|ies)\b/i,
+  /\bdiagnos\w+\b/i, /\bscreening\b/i, /\btriage\b/i, /\bsymptom\w*\b/i,
+  /\bheal(s|ing|ed)?\b/i, /\bcures?\b/i, /\bcounteracts?\b/i,
+  /\breduce[sd]? pain\b/i, /\bpain[- ]free\b/i,
+  /\bsafe for\b/i, /\bprotects? against\b/i, /\bprevents? injur\w*\b/i,
+  /\bclinically proven\b/i, /\bclinical trials?\b/i, /\bmedical\w*\b/i,
+]
+export const R2_CONDITION_NAME_TERMS_TS: RegExp[] = [
+  /\bspinal cord\b/i, /\bmultiple sclerosis\b/i, /\barthritis\b/i,
+  /\bfrozen shoulder\b/i, /\bsciatica\b/i, /\bhypermobil\w*\b/i,
+  /\bscoliosis\b/i, /\btendinitis\b/i, /\btendinopathy\b/i, /\bimpingement\b/i,
+]
+export const POPULATION_CLAIM_TERMS_TS: RegExp[] = [
+  /\bwheelchair\b/i, /\bdisabilit\w*\b/i, /\bdisabled\b/i,
+  /\badaptive (athlete|training|lifter)s?\b/i,
+  /\bamputees?\b/i, /\bparaplegi\w*\b/i, /\bquadriplegi\w*\b/i,
+  /\bone[- ]arm(ed)?\b/i, /\bone[- ]leg(ged)?\b/i,
+]
+
+function words(list: string[]): RegExp {
+  return new RegExp(`\\b(?:${list.join('|')})\\b`, 'i')
+}
+
+const CLAIM_RULES: ClaimRule[] = [
+  // CLAIMS section 8 (Tone) and 9.1: no em dashes in public copy. The en
+  // dash too (docs/COACHING_VOICE_SYNTHESIS_LOCKED.md: "Em and en dashes
+  // stay banned everywhere").
+  { code: 'em_dash', re: /[\u2014\u2013]/, level: 'error', message: 'Remove the dash. Use a full stop, comma or colon.' },
+  // Section 8 and 9.13: no exclamation marks.
+  { code: 'exclamation', re: /!/, level: 'error', message: 'Remove the exclamation mark.' },
+  // Section 9.15: no emoji in email.
+  { code: 'emoji', re: /\p{Extended_Pictographic}/u, level: 'error', message: 'Remove the emoji.' },
+  // Section 9.6: empty intensifiers and hype adjectives.
+  { code: 'hype_word', re: words(['game[- ]changer\\w*', 'seamless\\w*', 'effortless\\w*', 'unlock\\w*', 'elevat\\w+',
+    'supercharg\\w+', 'dive in', 'delv\\w+', 'robust', 'comprehensive', 'cutting[- ]edge', 'revolution\\w*']),
+    level: 'error', message: 'A hype word (CLAIMS 9.6). Describe the concrete thing instead.' },
+  // Section 9.7: scene-setting and false-confiding openers.
+  { code: 'scene_setting', re: /\b(in today'?s (fast[- ]paced )?world|let'?s face it|let us face it|here'?s the thing)\b/i,
+    level: 'error', message: 'A scene-setting opener (CLAIMS 9.7).' },
+  // Section 9.12: summary sign-offs.
+  { code: 'summary_signoff', re: /\b(in conclusion|at the end of the day|the bottom line|ultimately)\b/i,
+    level: 'error', message: 'A summary sign-off (CLAIMS 9.12). End on a concrete point.' },
+  // Section 9.5: audience-sweep openers.
+  { code: 'audience_sweep', re: /\bwhether you(?:'re| are)\b[^.?]{0,80}\bor\b/i, level: 'error',
+    message: 'An audience-sweep opener (CLAIMS 9.5).' },
+  // Section 9.3: "It's not just X, it's Y" and the negation pivots.
+  { code: 'negation_pivot', re: /\b(?:it'?s|it is|this is|this isn'?t|it isn'?t) not just\b|\bnot just an?\b[^.]{0,40}\bit'?s\b|\bmore than (?:just )?an? (?:tracker|app|diary)\b|\bnot (?:just )?another (?:fitness |training )?app\b|\bisn'?t about\b[^.]{0,60}\.\s*it'?s about\b/i,
+    level: 'error', message: 'A negation pivot (CLAIMS 9.3). Say what it does.' },
+  // Section 9.2: the "X, forever." / "Every time." dramatic fragment.
+  { code: 'dramatic_fragment', re: /\b\w+, forever\.|(?:^|[.?]\s+)every time\./i, level: 'error',
+    message: 'A dramatic fragment (CLAIMS 9.2).' },
+  // Section 9.14: American spellings and vocabulary (a fixed list).
+  { code: 'american_spelling', re: words(['color\\w*', 'favorite\\w*', 'optimiz\\w*', 'personaliz\\w*', 'gotten', 'math',
+    'center(?:s|ed)?', 'behavior\\w*', 'organiz\\w*', 'realiz\\w*', 'analyz\\w*', 'recogniz\\w*', 'prioritiz\\w*',
+    'customiz\\w*', 'minimiz\\w*', 'maximiz\\w*', 'flavor\\w*', 'honor\\w*', 'labor\\w*', 'catalog', 'traveled',
+    'traveling', 'canceled', 'canceling', 'fulfill', 'enroll', 'apologiz\\w*', 'summariz\\w*', 'utiliz\\w*']),
+    level: 'error', message: 'An American spelling (CLAIMS 9.14). Use British English.' },
+  { code: 'american_program', re: /\bprograms?\b/i, level: 'warning',
+    message: 'CLAIMS 9.14 prefers "training plan" to "program".' },
+  // Section 5: guaranteed outcomes and timeline promises.
+  { code: 'outcome_promise', re: /\b(guarantee[ds]?|transform(?:s|ed|ation|ations|ing)?|get (?:shredded|ripped)|results? in \d+\s*(?:days?|weeks?)|(?:lose|drop|shed|burn) \d+)\b/i,
+    level: 'error', message: 'An outcome or timeline promise (CLAIMS 5).' },
+  { code: 'timeline', re: /\bin (?:just |only )?\d+ (?:days|weeks)\b/i, level: 'warning',
+    message: 'A timeline. Check it promises no result (CLAIMS 5).' },
+  // Section 5: before and after.
+  { code: 'before_after', re: /\bbefore[- ](?:and[- ])?after\b|\bbefore\/after\b/i, level: 'error',
+    message: 'Before and after framing is banned (CLAIMS 5).' },
+  // Section 5 (founder ED-safety rule 2026-07-12) and PLAN-V2 M12: no body
+  // or weight framing.
+  { code: 'body_weight', re: words(['weight loss', 'lose weight', 'losing weight', 'weigh[- ]?ins?', 'weigh yourself',
+    'bodyweight', 'body weight', 'body fat', 'fat loss', 'burn fat', 'fat burn\\w*', 'slim\\w*', 'skinny', 'toned',
+    'beach body', 'bikini body', 'summer body', 'dream body', 'flat stomach', 'belly fat', 'bmi', 'scales?']),
+    level: 'error', message: 'Body or weight framing is banned in member email (CLAIMS 5, ED-safety).' },
+  { code: 'weight_word', re: /\bweight\b(?! training| room| plates?| class)/i, level: 'warning',
+    message: 'The word "weight". Leave weight out unless it is lifting (CLAIMS 5).' },
+  { code: 'food_word', re: words(['calories?', 'kcal', 'macros?', 'diet\\w*', 'eat less', 'cut(?:ting)? phase', 'deficit']),
+    level: 'warning', message: 'Food or calorie framing. Check it is a product fact and not a hook (CLAIMS 5).' },
+  { code: 'physique', re: /\bphysique\b/i, level: 'warning',
+    message: 'Progress Photos may be named as a feature, never as transformation (CLAIMS 5).' },
+  // Section 5: superiority without a published basis.
+  { code: 'superiority', re: /\b(the best|best app|number one|no\.? ?1|#1|most accurate|world'?s (?:best|first|leading)|(?:market|industry)[- ]leading|unbeatable|unrivalled|unmatched)\b|#1/i,
+    level: 'error', message: 'A superiority claim (CLAIMS 5).' },
+  { code: 'best_word', re: /\bbest\b/i, level: 'warning', message: 'The word "best". Check it is not a superiority claim (CLAIMS 5).' },
+  // Section 5 and 2.3: invented counts, ratings, testimonials.
+  { code: 'unverified_number', re: /\b\d[\d,.]*\s*k?\+?\s+(?:users|members|lifters|people|downloads|athletes|customers)\b|\b(?:thousands|millions|hundreds) of (?:users|members|lifters|people)\b|\brated \d|\b\d(?:\.\d)?\s*stars?\b|★/i,
+    level: 'error', message: 'A user count or rating that PRODUCT-FACTS cannot back (CLAIMS 2.3, 5).' },
+  // Section 5 and 6: never a replacement for a human coach.
+  { code: 'coach_replacement', re: /\breplaces? (?:your |a )?(?:personal )?(?:trainer|coach|pt)\b|\bbetter than (?:a |any |your )?(?:human |personal )?(?:coach|trainer)\b|\b(?:your|a) (?:personal|virtual|ai) (?:coach|trainer)\b/i,
+    level: 'error', message: 'Volyume never replaces a human coach (CLAIMS 5, 6).' },
+  // Section 6: deterministic coaching, never AI framing.
+  { code: 'ai_framing', re: /\b(learns you|learns about you|adapts to you|machine learning|artificial intelligence|ai[- ]powered|powered by ai)\b/i,
+    level: 'error', message: 'AI framing (CLAIMS 6). Describe deterministic coaching.' },
+  { code: 'ai_word', re: /\bAI\b/, level: 'warning', caseSensitive: true,
+    message: 'An unqualified "AI" (CLAIMS 6: avoid the bare "no AI" slogan).' },
+  // Section 6: privacy as the specific posture, never an absolute.
+  { code: 'privacy_absolute', re: /\b(completely private|100% private|totally private|we never see your data)\b/i, level: 'error',
+    message: 'A privacy absolute (CLAIMS 6). State the specific posture.' },
+  // CLAUDE.md D137 (fully free) and PLAN-V2 M12: no price, trial or offer.
+  // Founder 2026-10-17: "offers" dropped everywhere.
+  { code: 'price_or_trial', re: /[£$€]\s?\d|\b(prices?|pricing|free trial|trials?|subscriptions?|subscribe now|upgrade(?! the app| volyume)|premium|discounts?|coupons?|promo codes?|sale|per month|per year|offers?|deals?)\b|\d+\s?% off/i,
+    level: 'error', message: 'Price, trial or offer wording (Volyume is fully free; offers are dropped).' },
+  { code: 'pro_tier', re: /\bPro\b/, level: 'error', caseSensitive: true, message: 'There is no Pro tier (D137).' },
+  // Section 8 and the voice catalogue: no fake urgency.
+  { code: 'urgency', re: /\b(act now|don'?t miss out|do not miss out|last chance|hurry|limited time|only today|ends tonight|before it'?s too late|while stocks last)\b/i,
+    level: 'error', message: 'Fake urgency (CLAIMS 8).' },
+  // Section 5 and 8, and docs/COACHING_VOICE_SYNTHESIS_LOCKED.md section 6:
+  // no shame, no guilt, no "you missed", no absence length.
+  { code: 'shame', re: /\b(you missed|we miss you|we'?ve missed you|missed you|streaks? (?:broken|lost|ended|reset)|you'?ve been away|you have been away|it'?s been \d+ days|it has been \d+ days|no excuses|lazy|fell off|falling behind|get back on track|back on the wagon|you failed|let yourself down|guilt\w*|beast mode|crush (?:it|this|your)|shred(?:ded)?)\b/i,
+    level: 'error', message: 'Shame, guilt or pressure (CLAIMS 5, 8; coaching voice section 6).' },
+  { code: 'filler', re: /\b(great job|amazing|fantastic|you'?re doing great|you are doing great|well done)\b/i, level: 'warning',
+    message: 'Motivational filler without a number behind it (coaching voice section 6).' },
+  { code: 'controlling', re: /\b(you should|you must|you need to)\b/i, level: 'warning',
+    message: 'Controlling wording (coaching voice section 6).' },
+  // Section 9A.1: the R2 medical wording list (disclaimers exempt).
+  ...R2_FUNCTION_TERMS_TS.map((re) => ({ code: 'medical_term', re, level: 'error' as const, negationExempt: true,
+    message: 'A medical-purpose term (CLAIMS 5, 7, 9A.1, the R2 list).' })),
+  ...R2_CONDITION_NAME_TERMS_TS.map((re) => ({ code: 'condition_name', re, level: 'error' as const, negationExempt: true,
+    message: 'A named condition (CLAIMS 9A.1, the R2 list).' })),
+  // Section 9A.2: population claims while the readiness matrix is all NO.
+  ...POPULATION_CLAIM_TERMS_TS.map((re) => ({ code: 'population_claim', re, level: 'error' as const,
+    message: 'A population claim (CLAIMS 9A.2: every matrix row is NO).' })),
+]
+
+// What no lint can check; each is a tick on the founder's send checklist
+// (CLAIMS 2, 9.4, 9.9, 9.10, 9.11, section 5 imagery, section 7).
+export const MANUAL_CHECKS = [
+  'Every claim is true of the shipped app today and traceable to PRODUCT-FACTS (CLAIMS 2).',
+  'No decorative list of three and no repeated parallel sentences (CLAIMS 9.4, 9.9).',
+  'Every line passes the say-it-out-loud test and assumes no product vocabulary (CLAIMS 9.10, 9.11).',
+  'No image shows a body as the point, and none is before and after (CLAIMS 5).',
+  'Nothing is aimed at under-18s (CLAIMS 7).',
+]
+
+const NEGATION_LINE = /not medical|no medical|never medical|isn'?t medical|not a medical/i
+const ALLOWED_LINK_HOSTS = ['volyume.app', 'www.volyume.app', 'play.google.com', 'apps.apple.com']
+
+/** The visible text of an inline-formatted string: links reduced to their text. */
+function visibleText(text: string): string {
+  return text.replace(/\[([^\]\n]{1,200})\]\(([^)\s]{1,2000})\)/g, '$1').replace(/\*\*/g, '')
+}
+
+function linksOf(text: string): string[] {
+  return [...text.matchAll(/\[[^\]\n]{1,200}\]\(([^)\s]{1,2000})\)/g)].map((m) => m[1])
+}
+
+/**
+ * The server-side claims lint over every word a member will read: the
+ * subject, the preview line, every block (or the phase 1 body and button).
+ * Errors block Save to send; warnings are shown. Merge fields are checked
+ * against the allow-list and must carry a fallback.
+ */
+export function claimsLint(input: {
+  subject?: unknown; preheader?: unknown; blocks?: Block[] | null; body?: unknown; button_label?: unknown; button_url?: unknown
+}): ClaimsLint {
+  const errors: LintProblem[] = []
+  const warnings: LintProblem[] = []
+  const texts: { field: string; text: string }[] = []
+  const urls: { field: string; url: string }[] = []
+  const subject = typeof input.subject === 'string' ? input.subject : ''
+  if (!subject.trim()) errors.push({ field: 'subject', code: 'required', message: 'The subject is empty.' })
+  texts.push({ field: 'subject', text: subject })
+  if (typeof input.preheader === 'string' && input.preheader.trim()) texts.push({ field: 'preheader', text: input.preheader })
+  else warnings.push({ field: 'preheader', code: 'no_preheader', message: 'Add a preview line; without one, mail apps show the first words.' })
+  if (subject.length > 78) warnings.push({ field: 'subject', code: 'long_subject', message: 'Subjects over about 78 characters are cut off on phones.' })
+
+  const blocks = input.blocks ?? null
+  if (blocks) {
+    let h1 = 0
+    let seenH1 = false
+    blocks.forEach((b, i) => {
+      const f = `blocks[${i}]`
+      if (b.type === 'heading') {
+        texts.push({ field: f, text: b.text })
+        if (b.level === 1) { h1 += 1; seenH1 = true }
+        if (b.level === 2 && !seenH1) warnings.push({ field: f, code: 'heading_order', message: 'A smaller heading comes before the main heading.' })
+      } else if (b.type === 'paragraph') {
+        texts.push({ field: f, text: b.text })
+        for (const u of linksOf(b.text)) urls.push({ field: f, url: u })
+      } else if (b.type === 'button') {
+        texts.push({ field: f, text: b.label })
+        urls.push({ field: f, url: b.url })
+      } else if (b.type === 'image') {
+        texts.push({ field: f, text: b.alt })
+        if (!b.alt.trim()) errors.push({ field: f, code: 'image_alt_required', message: 'Every image needs alt text.' })
+        if (b.link) urls.push({ field: f, url: b.link })
+      } else if (b.type === 'survey' && b.label) {
+        texts.push({ field: f, text: b.label })
+      }
+    })
+    if (h1 > 1) warnings.push({ field: 'blocks', code: 'heading_order', message: 'More than one main heading.' })
+    if (!blocks.some((b) => b.type === 'heading' || b.type === 'paragraph')) {
+      errors.push({ field: 'blocks', code: 'required', message: 'The email has no text.' })
+    }
+  } else {
+    const body = typeof input.body === 'string' ? input.body : ''
+    if (!body.trim()) errors.push({ field: 'body', code: 'required', message: 'The message is empty.' })
+    texts.push({ field: 'body', text: body })
+    for (const u of linksOf(body)) urls.push({ field: 'body', url: u })
+    if (typeof input.button_label === 'string' && input.button_label) texts.push({ field: 'button_label', text: input.button_label })
+    if (typeof input.button_url === 'string' && input.button_url) urls.push({ field: 'button_url', url: input.button_url })
+  }
+
+  for (const { field, text } of texts) {
+    for (const tok of tokensIn(text)) {
+      if (!(MERGE_FIELDS as readonly string[]).includes(tok.name)) {
+        errors.push({ field, code: 'unknown_merge_field', message: `{{${tok.name}}} is not a merge field. Use first_name, app_version or years.` })
+      } else if (tok.fallback === null || tok.fallback === '') {
+        errors.push({ field, code: 'merge_field_fallback', message: `{{${tok.name}}} needs a fallback, for example {{${tok.name}|there}}.` })
+      }
+    }
+    const visible = visibleText(text).replace(TOKEN_RE, (_a, _n, fb) => (fb ?? ''))
+    for (const line of visible.split(/\n/)) {
+      for (const rule of CLAIM_RULES) {
+        if (rule.negationExempt && NEGATION_LINE.test(line)) continue
+        const m = line.match(rule.re)
+        if (!m) continue
+        const problem = { field, code: rule.code, message: `${rule.message} Found: "${m[0]}".` }
+        const list = rule.level === 'error' ? errors : warnings
+        if (!list.some((p) => p.field === field && p.code === rule.code)) list.push(problem)
+      }
+    }
+    // Section 9.8: a rhetorical question opener answered in the next line.
+    if (/^\s*[^.?!\n]{3,120}\?\s+\S/.test(visible) && field !== 'subject') {
+      warnings.push({ field, code: 'rhetorical_question', message: 'Opens with a question answered straight after (CLAIMS 9.8).' })
+    }
+  }
+  for (const { field, url } of urls) {
+    const safe = safeHttpsUrl(url)
+    if (!safe) {
+      errors.push({ field, code: 'link_not_https', message: 'Every link must start with https://.' })
+      continue
+    }
+    const host = new URL(safe).hostname.toLowerCase()
+    if (!ALLOWED_LINK_HOSTS.includes(host) && !host.endsWith('.supabase.co')) {
+      warnings.push({ field, code: 'outside_link', message: `A link goes outside volyume.app and the store pages (${host}). Check it.` })
+    }
+  }
+  return { errors, warnings, manual_checks: MANUAL_CHECKS }
+}
+
+// ─── The send checklist (M12) ─────────────────────────────────────────
+
+export const CHECKLIST_ITEMS = ['audience_confirmed', 'topic_confirmed', 'test_sent', 'links_checked'] as const
+
+/** The founder's ticks, when every one is set (the server stores them with the send). */
+export function validateChecklist(raw: unknown): Validated<Record<string, true>> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, error: 'checklist_required' }
+  const r = raw as Record<string, unknown>
+  const out: Record<string, true> = {}
+  for (const k of CHECKLIST_ITEMS) {
+    if (r[k] !== true) return { ok: false, error: 'checklist_incomplete', question: k }
+    out[k] = true
+  }
+  return { ok: true, value: out }
+}
+
+// ─── The weekly training summary (M6) ─────────────────────────────────
+
+export interface WeeklyFacts {
+  sessions_last_week: number
+  sessions_4w: number
+  streak_weeks: number
+}
+
+function count(n: unknown, max: number): number {
+  return typeof n === 'number' && Number.isFinite(n) ? Math.min(Math.max(Math.floor(n), 0), max) : 0
+}
+
+/**
+ * The weekly summary, from counts only (sessions last week, sessions over
+ * four weeks, weeks in a row with a session). Calm voice
+ * (docs/COACHING_VOICE_SYNTHESIS_LOCKED.md): numbers before narrative,
+ * mirror the log and never infer a state, no shame, never "you missed",
+ * never a broken streak, nothing about weight, food or body. A quiet week is
+ * simply not sent (the candidate query needs at least one session).
+ */
+export function buildWeeklySummary(f: WeeklyFacts): BlocksContent {
+  const last = count(f.sessions_last_week, 99)
+  const four = Math.max(count(f.sessions_4w, 400), last)
+  const streak = count(f.streak_weeks, 52)
+  const s = (n: number) => (n === 1 ? 'session' : 'sessions')
+  const blocks: Block[] = [
+    { type: 'heading', level: 1, text: 'Your week in Volyume' },
+    { type: 'paragraph', text: `Hi {{first_name|there}}, you logged ${last} ${s(last)} last week.` },
+  ]
+  if (four > last) blocks.push({ type: 'paragraph', text: `That makes ${four} ${s(four)} over the last four weeks.` })
+  if (streak >= 2) blocks.push({ type: 'paragraph', text: `You have logged a session in each of the last ${streak} weeks.` })
+  blocks.push(
+    { type: 'paragraph', text: 'Open Volyume whenever you are ready for your next one.' },
+    { type: 'divider' },
+    { type: 'paragraph', text: 'This summary counts your logged sessions and nothing else. You can turn it off in the app, in Settings, or with the link below.' },
+  )
+  return { subject: `Your week in Volyume: ${last} ${s(last)}`, preheader: 'Your training last week, in numbers', blocks }
+}
+
+// ─── Svix webhook signatures (Resend) ─────────────────────────────────
+
+export const SVIX_TOLERANCE_SECONDS = 5 * 60
+
+function base64Decode(text: string): Uint8Array | null {
+  try {
+    const binary = atob(text)
+    const out = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i)
+    return out
+  } catch (_) {
+    return null
+  }
+}
+
+/**
+ * True when one of the `v1,` signatures in `svix-signature` is the
+ * HMAC-SHA256 of `${id}.${timestamp}.${body}` under the endpoint secret
+ * (`whsec_` plus base64), and the timestamp is within five minutes of now.
+ * Web Crypto only (no Svix library); the comparison is crypto.subtle.verify.
+ */
+export async function verifySvixSignature(
+  secret: string, id: string | null, timestamp: string | null, signatureHeader: string | null,
+  body: string, nowMs: number = Date.now(),
+): Promise<boolean> {
+  if (!secret || !id || !timestamp || !signatureHeader) return false
+  if (id.length > 100 || !/^[0-9]{1,12}$/.test(timestamp)) return false
+  if (Math.abs(nowMs / 1000 - Number(timestamp)) > SVIX_TOLERANCE_SECONDS) return false
+  const keyBytes = base64Decode(secret.startsWith('whsec_') ? secret.slice(6) : secret)
+  if (!keyBytes || keyBytes.length < 16) return false
+  const key = await crypto.subtle.importKey('raw', keyBytes.buffer as ArrayBuffer, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify'])
+  const data = new TextEncoder().encode(`${id}.${timestamp}.${body}`)
+  for (const part of signatureHeader.split(' ').slice(0, 10)) {
+    const [version, sig] = part.split(',', 2)
+    if (version !== 'v1' || !sig) continue
+    const bytes = base64Decode(sig)
+    if (!bytes || bytes.length !== 32) continue
+    // eslint-disable-next-line no-await-in-loop
+    if (await crypto.subtle.verify('HMAC', key, bytes.buffer as ArrayBuffer, data)) return true
+  }
+  return false
+}
+
+/** Resend's event type to the stored one, or null for a type that is not stored. */
+export function webhookEventType(type: unknown): string | null {
+  const map: Record<string, string> = {
+    'email.sent': 'sent', 'email.delivered': 'delivered', 'email.delivery_delayed': 'delivery_delayed',
+    'email.opened': 'opened', 'email.clicked': 'clicked', 'email.bounced': 'bounced',
+    'email.complained': 'complained', 'email.failed': 'failed', 'email.suppressed': 'suppressed',
+  }
+  return typeof type === 'string' && type in map ? map[type] : null
+}
+
+// ─── Segment rules (mirrors member_email_rules_error in migrate_199) ───
+
+export interface SegmentRule { field: string; op: string; value?: unknown }
+
+const RULE_SHAPES: Record<string, { ops: string[]; value: (v: unknown) => boolean }> = {
+  joined: { ops: ['before', 'after'], value: (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) },
+  last_used: { ops: ['within', 'over'], value: (v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 3650 },
+  last_workout: { ops: ['within', 'over'], value: (v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 3650 },
+  app_version: { ops: ['below', 'at_least'], value: (v) => typeof v === 'string' && /^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$/.test(v) },
+  platform: { ops: ['is', 'is_not'], value: (v) => v === 'ios' || v === 'android' || v === 'other' || v === 'unknown' },
+  workouts_30d: { ops: ['at_least', 'at_most'], value: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 1000 },
+  community: { ops: ['is', 'is_not'], value: (v) => v === undefined || v === null },
+  email_received: { ops: ['yes', 'no'], value: (v) => typeof v === 'string' && UUID_RE.test(v) },
+  email_opened: { ops: ['yes', 'no'], value: (v) => typeof v === 'string' && UUID_RE.test(v) },
+  email_clicked: { ops: ['yes', 'no'], value: (v) => typeof v === 'string' && UUID_RE.test(v) },
+  topic: { ops: ['on', 'off'], value: (v) => isTopic(v) },
+}
+
+export const SEGMENT_FIELDS = Object.keys(RULE_SHAPES)
+
+export function validateSegmentRules(raw: unknown): Validated<SegmentRule[]> {
+  if (!Array.isArray(raw)) return { ok: false, error: 'rules_not_array' }
+  if (raw.length > 20) return { ok: false, error: 'too_many_rules' }
+  const out: SegmentRule[] = []
+  for (const r of raw) {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return { ok: false, error: 'rule_not_object' }
+    const rule = r as Record<string, unknown>
+    if (Object.keys(rule).some((k) => k !== 'field' && k !== 'op' && k !== 'value')) return { ok: false, error: 'rule_unknown_key' }
+    const shape = typeof rule.field === 'string' ? RULE_SHAPES[rule.field] : undefined
+    if (!shape) return { ok: false, error: 'unknown_field' }
+    if (typeof rule.op !== 'string' || !shape.ops.includes(rule.op) || !shape.value(rule.value)) {
+      return { ok: false, error: `bad_${rule.field}` }
+    }
+    const value = typeof rule.value === 'string' && UUID_RE.test(rule.value) ? rule.value.toLowerCase() : rule.value
+    out.push(rule.field === 'community' ? { field: rule.field, op: rule.op } : { field: rule.field as string, op: rule.op, value })
+  }
+  return { ok: true, value: out }
+}
+
+// ─── UK time, quiet hours ─────────────────────────────────────────────
+
+export interface LondonParts { year: number; month: number; day: number; hour: number; minute: number; isoDow: number }
+
+export function londonParts(nowMs: number): LondonParts {
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
+  })
+  const parts: Record<string, string> = {}
+  for (const p of fmt.formatToParts(new Date(nowMs))) parts[p.type] = p.value
+  const dow = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(parts.weekday) + 1
+  return {
+    year: Number(parts.year), month: Number(parts.month), day: Number(parts.day),
+    hour: Number(parts.hour), minute: Number(parts.minute), isoDow: dow,
+  }
+}
+
+const HHMM_RE = /^([01][0-9]|2[0-3]):([0-5][0-9])$/
+export function isHhMm(v: unknown): v is string {
+  return typeof v === 'string' && HHMM_RE.test(v)
+}
+
+/** True inside quiet hours (UK time); the window may cross midnight. A bad setting counts as quiet. */
+export function inQuietHours(nowMs: number, start: string, end: string): boolean {
+  if (!isHhMm(start) || !isHhMm(end)) return true
+  const p = londonParts(nowMs)
+  const now = p.hour * 60 + p.minute
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const s = sh * 60 + sm
+  const e = eh * 60 + em
+  if (s === e) return false
+  return s < e ? now >= s && now < e : now >= s || now < e
+}
+
+// ─── A/B winner ───────────────────────────────────────────────────────
+
+/** More unique opens wins, then more unique clicks, then subject A. */
+export function abWinner(a: { opened: number; clicked: number }, b: { opened: number; clicked: number }):
+  { winner: 'a' | 'b'; reason: 'opens' | 'clicks' | 'tie' } {
+  if (a.opened !== b.opened) return { winner: a.opened > b.opened ? 'a' : 'b', reason: 'opens' }
+  if (a.clicked !== b.clicked) return { winner: a.clicked > b.clicked ? 'a' : 'b', reason: 'clicks' }
+  return { winner: 'a', reason: 'tie' }
+}
+
+// ─── Images ───────────────────────────────────────────────────────────
+
+export const ASSET_MAX_BYTES = 2 * 1024 * 1024
+export const ASSET_TYPES: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }
+
+/** The image type from its first bytes (never the name or the claimed type), or null. */
+export function sniffImageType(b: Uint8Array): string | null {
+  if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a) return 'image/png'
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg'
+  if (b.length >= 6 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 && (b[4] === 0x37 || b[4] === 0x39) && b[5] === 0x61) return 'image/gif'
+  if (b.length >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp'
+  return null
+}
+
+export function decodeBase64Bounded(text: unknown, maxBytes: number): Uint8Array | null {
+  if (typeof text !== 'string' || text.length === 0 || text.length > Math.ceil(maxBytes / 3) * 4 + 4) return null
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(text)) return null
+  const bytes = base64Decode(text)
+  if (!bytes || bytes.length > maxBytes) return null
+  return bytes
+}
+
+// ─── Resend domain API (M9 Settings checks) ───────────────────────────
+
+export interface DomainCheck {
+  name: string
+  status: string
+  records: { record: string; type: string; name: string; status: string }[]
+  open_tracking: boolean | null
+  click_tracking: boolean | null
+}
+
+function str(v: unknown): string {
+  return typeof v === 'string' ? v.slice(0, 200) : ''
+}
+
+/** The sending domains and their SPF and DKIM record status, read through Resend's domain API. */
+export async function resendDomains(apiKey: string): Promise<{ ok: true; domains: DomainCheck[] } | { ok: false; status: number; code: string }> {
+  try {
+    const list = await resendRequest(apiKey, 'GET', RESEND_DOMAINS_URL)
+    if (list.status < 200 || list.status >= 300) return { ok: false, status: list.status, code: providerErrorCode(list.status, list.body) }
+    const data = (list.body as Record<string, unknown> | null)?.data
+    const out: DomainCheck[] = []
+    for (const d of Array.isArray(data) ? data.slice(0, 10) : []) {
+      const id = str((d as Record<string, unknown>)?.id)
+      if (!/^[A-Za-z0-9-]{1,100}$/.test(id)) continue
+      // eslint-disable-next-line no-await-in-loop
+      const one = await resendRequest(apiKey, 'GET', `${RESEND_DOMAINS_URL}/${id}`)
+      const b = (one.body ?? {}) as Record<string, unknown>
+      const records = Array.isArray(b.records) ? b.records : []
+      out.push({
+        name: str(b.name), status: str(b.status),
+        records: records.slice(0, 20).map((r) => {
+          const x = (r ?? {}) as Record<string, unknown>
+          return { record: str(x.record), type: str(x.type), name: str(x.name), status: str(x.status) }
+        }),
+        open_tracking: typeof b.open_tracking === 'boolean' ? b.open_tracking : null,
+        click_tracking: typeof b.click_tracking === 'boolean' ? b.click_tracking : null,
+      })
+    }
+    return { ok: true, domains: out }
+  } catch (_) {
+    return { ok: false, status: 0, code: 'network_error' }
+  }
+}
+
+/** Turns Resend's open and click tracking on or off for one domain. */
+export async function setResendTracking(apiKey: string, domainName: string, open: boolean, click: boolean) {
+  try {
+    const list = await resendRequest(apiKey, 'GET', RESEND_DOMAINS_URL)
+    const data = (list.body as Record<string, unknown> | null)?.data
+    const match = (Array.isArray(data) ? data : []).find((d) => str((d as Record<string, unknown>)?.name) === domainName)
+    const id = match ? str((match as Record<string, unknown>).id) : ''
+    if (!/^[A-Za-z0-9-]{1,100}$/.test(id)) return { ok: false as const, status: 404, code: 'domain_not_found' }
+    const res = await resendRequest(apiKey, 'PATCH', `${RESEND_DOMAINS_URL}/${id}`, { open_tracking: open, click_tracking: click })
+    if (res.status >= 200 && res.status < 300) return { ok: true as const }
+    return { ok: false as const, status: res.status, code: providerErrorCode(res.status, res.body) }
+  } catch (_) {
+    return { ok: false as const, status: 0, code: 'network_error' }
   }
 }
