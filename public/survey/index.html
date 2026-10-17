@@ -207,11 +207,12 @@
 
     var data = new FormData(form);
     var body = {
-      q1_overall: data.get("q1_overall") || null,
-      q2_keeper: (data.get("q2_keeper") || "").trim() || null,
-      q3_confusing: (data.get("q3_confusing") || "").trim() || null,
-      q4_missing: (data.get("q4_missing") || "").trim() || null,
-      q5_other: (data.get("q5_other") || "").trim() || null
+      // Column names as the table has them (migrate_123): q_overall ... q_more.
+      q_overall: data.get("q1_overall") || null,
+      q_keeper: (data.get("q2_keeper") || "").trim() || null,
+      q_confusing: (data.get("q3_confusing") || "").trim() || null,
+      q_missing: (data.get("q4_missing") || "").trim() || null,
+      q_more: (data.get("q5_other") || "").trim() || null
     };
 
     var userId = param("u");
@@ -231,7 +232,7 @@
     }).then(function(res){
       if (!res.ok) throw new Error("Request failed: " + res.status);
       form.classList.add("hidden");
-      showResult("Thank you. Your answers genuinely shape what gets built next. Your free week code is on its way by email.");
+      showResult("Thank you. Your answers shape what gets built next.");
     }).catch(function(){
       submitBtn.disabled = false;
       submitBtn.textContent = "Send my answers";
