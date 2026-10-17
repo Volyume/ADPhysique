@@ -120,7 +120,7 @@ function buildPendingCoachCopy(readiness) {
   if (!readiness.firstWeightAt) {
     return {
       title: 'First check-in starts after your first morning weight',
-      body: "Log your first morning weight on the Today tab. Your coach won't change your targets until there are enough weigh-ins to go on.",
+      body: "Log your first morning weight on the Today tab. Your coach will not change your targets until there are enough weigh-ins to go on.",
     };
   }
   const rows = readiness.ledger?.rows || [];
@@ -350,7 +350,7 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="warning-outline" size={18} color={t.colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh Coach</Text>
+              <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Could not refresh Coach</Text>
               <Text style={[styles.loadErrorBody, live.loadErrorBody]}>Your saved profile stays unchanged. Tap to try again.</Text>
             </View>
             <Ionicons name="refresh-outline" size={18} color={t.colors.textMuted} />
@@ -523,7 +523,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="nutrition-outline"
             label="Nutrition targets"
-            sub="Your daily calories, protein, carbs and fat, and why they're set where they are."
+            sub="Your daily calories, protein, carbs and fat, and why they are set where they are."
             onPress={() => navigation.navigate('NutritionTargets')}
           />
           <NavRow

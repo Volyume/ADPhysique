@@ -36,6 +36,11 @@
  */
 import { create, act } from 'react-test-renderer';
 
+// C6 (audit 2026-10-17): the screen reloads on focus; outside a navigator the
+// focus hook runs its effect once on mount.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb) => { require('react').useEffect(() => cb(), [cb]); },
+}));
 jest.mock('../../components/VolyumeChart', () => 'VolyumeChart');
 jest.mock('../../components/WindowChips', () => 'WindowChips');
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: 'SkeletonCard' }));
@@ -189,7 +194,7 @@ describe('F-5: an exercise with no library row but logged sets still opens', () 
     expect(text).toContain('Personal records');
     expect(text).toContain(calculate1RM(62.5, 8).toFixed(1));
     // Not the not-found card.
-    expect(text).not.toContain("Couldn't load exercise details");
+    expect(text).not.toContain('Could not load exercise details');
   });
 
   test('hides the goal, similar-exercises, edit and delete affordances, and never reads a goal or substitutes for it', async () => {
@@ -231,7 +236,7 @@ describe('F-5: an exercise with no library row but logged sets still opens', () 
   test('only with no sets either does the existing not-found card show', async () => {
     const tree = await mount({ exercise: null, sets: [], routeId: 'ex-ghost' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load exercise details");
+    expect(text).toContain('Could not load exercise details');
     expect(text).not.toContain('This exercise is not in your library on this device.');
   });
 });
@@ -347,7 +352,7 @@ describe('F-14: goal auto-achievement runs only on the gated best', () => {
       goal: goal(80),
     });
     expect(markGoalAchieved).not.toHaveBeenCalled();
-    expect(flattenText(tree.toJSON())).not.toContain("You've hit your target");
+    expect(flattenText(tree.toJSON())).not.toContain('You have hit your target');
   });
 
   test('a genuine best that reaches the target still marks it achieved', async () => {

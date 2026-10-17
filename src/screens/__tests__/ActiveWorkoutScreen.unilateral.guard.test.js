@@ -111,7 +111,7 @@ describe('D9 amendment 2: rest-class behaviour is derived, never user-set (uncha
   test('R4 (D64): the between-sides banner names the rest-class difference (compound rest vs isolation switch prompt)', () => {
     // D220 review: the control is the row's check, so the copy names it.
     expect(ACTIVE_WORKOUT).toContain("? 'Rest, switch sides, then tap the check to log the other side.'");
-    expect(ACTIVE_WORKOUT).toContain(': "Switch sides when you\'re ready, then tap the check to log the other side."');
+    expect(ACTIVE_WORKOUT).toContain(": 'Switch sides when you are ready, then tap the check to log the other side.'");
   });
 });
 

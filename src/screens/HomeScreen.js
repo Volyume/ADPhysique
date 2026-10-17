@@ -187,7 +187,7 @@ const READINESS_ROWS = [
 // copy (planShortfallNote), a different reason class entirely.
 function capabilityBlockedNote(n) {
   return n === 1
-    ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
+    ? "1 movement clashed with an injury or limitation you have set, so your plan works without it."
     : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
@@ -529,6 +529,10 @@ export default function HomeScreen({ navigation, route }) {
     AsyncStorage.setItem('@volyume_seen_coaching_nudge', 'true').catch(() => {});
   }
 
+  // A5 refs (see the dataPulledVersion effect below).
+  const pulledFirstRunRef = useRef(true);
+  const homeFocusedRef = useRef(false);
+  const pulledWhileAwayRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
       // Reset starting flag when screen regains focus (prevents "Session in Progress"
@@ -539,8 +543,12 @@ export default function HomeScreen({ navigation, route }) {
           seedRoutinesIfNeeded(user.id).catch((e) => logWarn('HomeScreen.seedRoutines', e?.message));
           setSeeded(true);
         }
+        // This focus reload also covers any pull that landed while Home was away.
+        pulledWhileAwayRef.current = false;
         loadData();
       }
+      homeFocusedRef.current = true;
+      return () => { homeFocusedRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]),
   );
@@ -557,10 +565,15 @@ export default function HomeScreen({ navigation, route }) {
 
   // A background or foreground sync pull finished: re-read what it may have
   // written (a weigh-in from another phone) without the user leaving Home.
+  // A5: the first run (mount, with a version already above zero) is skipped,
+  // the focus reload above already loads; and while Home is unfocused the pull
+  // is only marked, so the next focus reload covers it instead of loading in
+  // the background.
   useEffect(() => {
-    if (dataPulledVersion > 0 && user?.id) {
-      loadDataRef.current?.().catch(() => { /* best-effort */ });
-    }
+    if (pulledFirstRunRef.current) { pulledFirstRunRef.current = false; return; }
+    if (!(dataPulledVersion > 0 && user?.id)) return;
+    if (!homeFocusedRef.current) { pulledWhileAwayRef.current = true; return; }
+    loadDataRef.current?.().catch(() => { /* best-effort */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataPulledVersion]);
 
@@ -1120,7 +1133,7 @@ export default function HomeScreen({ navigation, route }) {
     // D214 addendum 4: the form's own floor (BODY_WEIGHT_MIN_KG), not just "above zero".
     if (!weightKg || isNaN(weightKg) || weightKg < BODY_WEIGHT_MIN_KG || weightKg > BODY_WEIGHT_MAX_KG) {
       // Said, never swallowed: the same words TodayStrip uses for its range.
-      appAlert('Check that weight', BODY_WEIGHT_RANGE_MESSAGE);
+      appAlert('Is that weight right?', BODY_WEIGHT_RANGE_MESSAGE);
       return;
     }
     // Optimistic: show the logged weight immediately. SQLite write happens in
@@ -1133,8 +1146,11 @@ export default function HomeScreen({ navigation, route }) {
       // Every figure that depends on the weight re-reads now (the strip's
       // recent weights, "ever weighed in", this week's weigh-in count), and the
       // fresh request id drops any slower load still in flight from before.
-      await loadTodayWeight();
-      await loadFirstReviewFacts();
+      // A4: ONE request id for both reads. Each call bumping loadReqRef on its
+      // own made the second invalidate the first's results mid-flight.
+      const weighReqId = ++loadReqRef.current;
+      await loadTodayWeight(weighReqId);
+      await loadFirstReviewFacts(weighReqId);
       toast.show('Weight saved.', { variant: 'success' });
       // Activation funnel: a deliberate weigh-in from Today, once per user,
       // count only, never the value (same event BodyMetricsScreen emits on
@@ -1148,7 +1164,7 @@ export default function HomeScreen({ navigation, route }) {
       // Revert the optimistic update and surface the failure.
       setTodayWeight(previousTodayWeight);
       logError('HomeScreen.handleLogWeight', e, { userId: user?.id, weightKg });
-      toast.show("Couldn't save weight, try again", { variant: 'error' });
+      toast.show('Could not save your weight. Please try again.', { variant: 'error' });
     }
     setSavingWeight(false);
   }
@@ -1552,7 +1568,7 @@ export default function HomeScreen({ navigation, route }) {
             await loadBlockProgress();
           } catch (e) {
             logError('HomeScreen.handleSkipThisWorkout', e, { userId: user?.id });
-            toast.show("Couldn't skip that workout, try again", { variant: 'error' });
+            toast.show('Could not skip that workout. Please try again.', { variant: 'error' });
           }
         },
       },
@@ -1643,7 +1659,7 @@ export default function HomeScreen({ navigation, route }) {
         // again, and says nothing extra: the choice was the athlete's.
         if (prep.reason === 'dry_run_failed') {
           logError('HomeScreen.startWithPlanPreview', new Error(prep.error ?? 'plan_generation_failed'), { userId: user?.id });
-          toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+          toast.show('Could not start your plan. Please try again.', { variant: 'error', duration: 5000 });
         }
         return;
       }
@@ -1666,7 +1682,7 @@ export default function HomeScreen({ navigation, route }) {
       const prep = await prepareStartWithPlanOption(user.id, planPreview.chosenProfile ?? userProfile, option, { mode: 'first' });
       if (!prep.ok) {
         logError('HomeScreen.planOption', new Error(prep.error ?? prep.reason ?? 'plan_generation_failed'), { userId: user?.id });
-        toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+        toast.show('Could not start your plan. Please try again.', { variant: 'error', duration: 5000 });
         return;
       }
       setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount, chosenProfile: prep.profile });
@@ -1704,7 +1720,7 @@ export default function HomeScreen({ navigation, route }) {
       }
     } else {
       logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
-      toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+      toast.show('Could not start your plan. Please try again.', { variant: 'error', duration: 5000 });
     }
   }
 
@@ -1786,7 +1802,7 @@ export default function HomeScreen({ navigation, route }) {
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.handleStartNextWorkout', e, { userId: user?.id, routineId: target?.routine?.id });
-      toast.show("Couldn't load workout, try again", { variant: 'error' });
+      toast.show('Could not load that workout. Please try again.', { variant: 'error' });
     } finally {
       startFlowRef.current = false;
     }
@@ -1824,7 +1840,7 @@ export default function HomeScreen({ navigation, route }) {
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.confirmStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
-      toast.show("Couldn't start workout, try again", { variant: 'error' });
+      toast.show('Could not start that workout. Please try again.', { variant: 'error' });
     }
     pendingStartRef.current = null;
   }
@@ -1845,7 +1861,7 @@ export default function HomeScreen({ navigation, route }) {
       navigation.navigate('ActiveWorkout');
     } catch (e) {
       logError('HomeScreen.startBlankSession', e, { userId: user?.id });
-      toast.show("Couldn't start workout, try again", { variant: 'error' });
+      toast.show('Could not start that workout. Please try again.', { variant: 'error' });
     }
   }
 
@@ -1970,7 +1986,7 @@ export default function HomeScreen({ navigation, route }) {
       setShowIntentPrompt(true);
     } catch (e) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
-      toast.show("Couldn't load last session, try again", { variant: 'error' });
+      toast.show('Could not load your last session. Please try again.', { variant: 'error' });
     } finally {
       startFlowRef.current = false;
     }
@@ -2232,7 +2248,7 @@ export default function HomeScreen({ navigation, route }) {
   // state exactly (never invented new phrasing for the same state).
   const awaitingConstraintLine = awaitingConstraint
     ? (awaitingConstraint.subject
-      ? `You thought you'd be back to ${awaitingConstraint.subject} by about now. Still need it?`
+      ? `You thought you would be back to ${awaitingConstraint.subject} by about now. Still need it?`
       : 'You thought this would be done by about now. Still need it?')
     : null;
 
@@ -2787,7 +2803,7 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.startWorkoutRow}>
               <View style={styles.startBtnSplit}>
                 <Button
-                  title="Choose what's next"
+                  title="Choose what comes next"
                   onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'Plans'); }}
                   accessibilityLabel="Choose what comes after this block"
                   style={[styles.primaryBtn, { marginTop: 0 }]}
@@ -3027,7 +3043,7 @@ export default function HomeScreen({ navigation, route }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
-                <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You don't need a plan to start, and next time Volyume will start you at the weights you log today.</Text>
+                <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You do not need a plan to start, and next time Volyume will start you at the weights you log today.</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </PressableCard>
@@ -3458,11 +3474,11 @@ export default function HomeScreen({ navigation, route }) {
             confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
           }}
           accessibilityRole="button"
-          accessibilityLabel="Don't ask before each session"
+          accessibilityLabel="Do not ask before each session"
         >
-          <Text style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
+          <Text style={[styles.intentOptOutText, live.intentOptOutText]}>Do not ask before each session</Text>
           <Text style={[styles.intentOptOutSub, live.intentOptOutSub]}>
-            Without it, sessions are not adjusted to how you're feeling, and your next block's set targets stay where they are rather than moving based on what this block showed. Turn it back on any time in Settings, Coaching.
+            Without it, sessions are not adjusted to how you are feeling, and your next block's set targets stay where they are rather than moving based on what this block showed. Turn it back on any time in Settings, Coaching.
           </Text>
         </TouchableOpacity>
       </BottomSheet>

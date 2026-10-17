@@ -1,5 +1,10 @@
 import { create, act } from 'react-test-renderer';
 
+// C6 (audit 2026-10-17): the screen reloads on focus; outside a navigator the
+// focus hook runs its effect once on mount.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb) => { require('react').useEffect(() => cb(), [cb]); },
+}));
 jest.mock('../../components/VolyumeChart', () => 'VolyumeChart');
 jest.mock('../../components/WindowChips', () => 'WindowChips');
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: 'SkeletonCard' }));
@@ -105,8 +110,8 @@ describe('ExerciseDetailScreen load states', () => {
     await flush();
 
     let text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load exercise details");
-    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).toContain('Could not load exercise details');
+    expect(text).toContain('Could not load this on your device. Try again.');
     expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
 
@@ -119,7 +124,7 @@ describe('ExerciseDetailScreen load states', () => {
 
     expect(getExerciseById).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load exercise details");
+    expect(text).toContain('Could not load exercise details');
   });
 });
 

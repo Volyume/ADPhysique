@@ -133,7 +133,7 @@ export default function TodayStrip({
     // D214 addendum 4: the form's own 20 kg floor, not just "above zero".
     if (!kg || isNaN(kg) || kg < BODY_WEIGHT_MIN_KG || kg > BODY_WEIGHT_MAX_KG) {
       // Said, never swallowed: the form's own words for its range (review S10).
-      appAlert('Check that weight', BODY_WEIGHT_RANGE_MESSAGE);
+      appAlert('Is that weight right?', BODY_WEIGHT_RANGE_MESSAGE);
       return;
     }
     const commit = () => {

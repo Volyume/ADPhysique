@@ -26,7 +26,7 @@ describe('HomeScreen plan-generation failure toast never shows raw engine detail
 
   test('the failure is logged and the toast shows calm, stable copy', () => {
     expect(src).toMatch(
-      /logError\('HomeScreen\.startWithPlan', new Error\(result\.error \?\? 'plan_generation_failed'\), \{ userId: user\?\.id \}\);\s*\n\s*toast\.show\("Couldn't start your plan, try again", \{ variant: 'error', duration: 5000 \}\);/,
+      /logError\('HomeScreen\.startWithPlan', new Error\(result\.error \?\? 'plan_generation_failed'\), \{ userId: user\?\.id \}\);\s*\n\s*toast\.show\('Could not start your plan\. Please try again\.', \{ variant: 'error', duration: 5000 \}\);/,
     );
   });
 });

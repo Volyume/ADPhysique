@@ -69,8 +69,8 @@ export default function ExerciseConflictSheet({
   const reasonCaption = (c) => {
     const r = String(c?.reason ?? '');
     if (r === 'capability_clinician') return 'You told Volyume a clinician asked you to leave this one out';
-    if (r === 'capability_declared') return "Clashes with an injury or limitation you've set";
-    if (r === 'capability_unknown') return "Volyume couldn't check this against your limitations yet";
+    if (r === 'capability_declared') return "Clashes with an injury or limitation you have set";
+    if (r === 'capability_unknown') return "Volyume could not check this against your limitations yet";
     return null; // the intent lane keeps its existing wording below
   };
 

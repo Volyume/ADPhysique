@@ -81,8 +81,11 @@ describe('finish prompts (items 1 and 2)', () => {
   test('Finish anyway closes as ended early WITHOUT the ended-early confirm; an unlogged entry still gets a confirm', () => {
     const fn = between('async function handleFinishWorkout()', 'let pendingSessionResolution = null;');
     expect(fn).toContain('const skipEndedEarlyConfirm = skipEndedEarlyConfirmRef.current;');
-    // read and cleared before any early return, so it can never leak to a later tap
-    expect(fn.indexOf('skipEndedEarlyConfirmRef.current = false;')).toBeLessThan(fn.indexOf('if (!activeWorkout)'));
+    // Audit A3 (2026-10-17): read and cleared only AFTER the saving and
+    // finishing guards, so a call they drop cannot use up the confirmation; it
+    // is still cleared before any work, so it can never leak to a later tap.
+    expect(fn.indexOf('skipEndedEarlyConfirmRef.current = false;')).toBeGreaterThan(fn.indexOf('if (finishingRef.current) return;'));
+    expect(fn.indexOf('skipEndedEarlyConfirmRef.current = false;')).toBeLessThan(fn.indexOf('await flushPendingDeletes()'));
     const skip = between('if (isEndedEarly && skipEndedEarlyConfirm && !hasInProgressSetEntry()) {', 'const missedAtFinish');
     expect(skip).toContain("resolution: 'ended_early'");
     expect(skip).not.toContain('appAlert(');
@@ -176,17 +179,17 @@ describe('Delete set with Undo (item 7)', () => {
     expect(fn).toContain("toast.show('Set deleted.', {");
     expect(fn).toContain("variant: 'undo',");
     expect(fn).toContain("action: { label: 'Undo', onPress: () => undoDeleteSet(target.id) },");
-    expect(fn).toContain('onTimeout: () => { commitPendingDelete(target.id); },');
+    expect(fn).toContain('onTimeout: () => { commitPendingDelete(target.id, true); },');
   });
 
   test('Undo is local state only: it never touches the database or the cloud', () => {
-    const fn = between('function undoDeleteSet(setId)', 'async function commitPendingDelete(setId)');
+    const fn = between('function undoDeleteSet(setId)', 'async function commitPendingDelete(setId, fromToast = false)');
     expect(fn).toContain('restoreRemovedSet(p);');
     expect(fn).not.toMatch(/deleteWorkoutSet|renumberWorkoutSets|deleteWorkoutSetFromCloud|enqueueSyncOp|updateWorkoutSet/);
   });
 
   test('the real delete keeps the hard local delete, the cloud delete and the queued tombstone, then renumbers', () => {
-    const fn = between('async function commitPendingDelete(setId)', 'function flushPendingDeletes()');
+    const fn = between('async function commitPendingDelete(setId, fromToast = false)', 'function flushPendingDeletes()');
     expect(fn).toContain('await deleteWorkoutSet(p.userId, setId);');
     expect(fn).toContain('deleteWorkoutSetFromCloud(p.supabaseUserId, setId)');
     expect(fn).toContain("enqueueSyncOp('workout_set_delete', setId, p.supabaseUserId)");

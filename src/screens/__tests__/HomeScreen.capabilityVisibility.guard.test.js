@@ -61,7 +61,7 @@ describe('T1-14/T2-31: standalone constraint line', () => {
 describe('T1-15/T2-24: the AWAITING prompt reaches Today', () => {
   test('awaitingConstraintLine matches HowYouTrainScreen\'s own two-branch wording, never invented phrasing', () => {
     expect(HOME).toMatch(
-      /awaitingConstraint\.subject\s*\n\s*\? `You thought you'd be back to \$\{awaitingConstraint\.subject\} by about now\. Still need it\?`\s*\n\s*: 'You thought this would be done by about now\. Still need it\?'/,
+      /awaitingConstraint\.subject\s*\n\s*\? `You thought you would be back to \$\{awaitingConstraint\.subject\} by about now\. Still need it\?`\s*\n\s*: 'You thought this would be done by about now\. Still need it\?'/,
     );
   });
 
@@ -116,12 +116,12 @@ describe('T1-12: quick-generate reveals capability-blocked slots', () => {
     expect(block).toMatch(/capabilityBlockedNote\(result\.capabilityBlockedCount\)/);
     // The pinned failure copy (HomeScreen.planGenErrorCopy.guard.test.js)
     // is untouched by this addition.
-    expect(block).toMatch(/toast\.show\("Couldn't start your plan, try again", \{ variant: 'error', duration: 5000 \}\);/);
+    expect(block).toMatch(/toast\.show\('Could not start your plan\. Please try again\.', \{ variant: 'error', duration: 5000 \}\);/);
   });
 
   test('capabilityBlockedNote is a local pure helper with the exact singular/plural copy', () => {
     expect(HOME).toMatch(
-      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? "1 movement clashed with an injury or limitation you've set, so your plan works without it\."\s*\n\s*: `\$\{n\} movements clashed with your injuries or limitations, so your plan works without them\.`;\s*\n\s*\}/,
+      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? "1 movement clashed with an injury or limitation you have set, so your plan works without it\."\s*\n\s*: `\$\{n\} movements clashed with your injuries or limitations, so your plan works without them\.`;\s*\n\s*\}/,
     );
   });
 });

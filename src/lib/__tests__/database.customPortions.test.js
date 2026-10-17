@@ -61,7 +61,7 @@ test('is its own additive schema version with the header note the schema rules r
   const previous = src.indexOf("'ALTER TABLE food_entries ADD COLUMN note TEXT',");
   expect(previous).toBeGreaterThan(-1);
   const header = src.slice(previous, src.indexOf(op));
-  for (const word of ['Purpose', 'Applied locally', 'Applied remotely', 'Safe to re-run', 'Rollback', 'migrate_195', 'HELD']) {
+  for (const word of ['Purpose', 'Applied locally', 'Applied remotely', 'Safe to re-run', 'Rollback', 'migrate_195', 'APPLIED']) {
     expect(header).toContain(word);
   }
 });

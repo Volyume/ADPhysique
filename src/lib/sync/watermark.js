@@ -118,3 +118,26 @@ export async function setPushWatermark(userId, table, ms) {
     await AsyncStorage.setItem(pushKey(userId, table), String(ms));
   } catch { /* tolerate */ }
 }
+
+/**
+ * B4: remove every pull and push watermark for one user (all tables).
+ *
+ * Sign-out wipes SQLite and then AsyncStorage. If the SQLite wipe lands and
+ * the AsyncStorage clear fails, the surviving pull watermarks make the next
+ * pull incremental over an EMPTY database (only rows newer than the cursor
+ * come back). Sign-out removes these first, so any failure after this point
+ * leaves a cursor-less user, whose next pull is full. Throws on a storage
+ * failure so the caller can decide; scoped to this user's keys only.
+ *
+ * @param {string} userId
+ * @returns {Promise<number>} how many keys were removed
+ */
+export async function clearWatermarksForUser(userId) {
+  if (!userId) return 0;
+  const pull = `${PULL_WM_PREFIX}${userId}_`;
+  const push = `${PUSH_WM_PREFIX}${userId}_`;
+  const keys = await AsyncStorage.getAllKeys();
+  const mine = (keys ?? []).filter((k) => typeof k === 'string' && (k.startsWith(pull) || k.startsWith(push)));
+  if (mine.length > 0) await AsyncStorage.multiRemove(mine);
+  return mine.length;
+}

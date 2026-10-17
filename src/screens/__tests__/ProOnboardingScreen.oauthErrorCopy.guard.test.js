@@ -29,7 +29,7 @@ describe('ProOnboardingScreen OAuth error copy (FR-2)', () => {
   });
 
   test('shows the calm fallback sentence, matching LoginScreen\'s fix', () => {
-    expect(src).toMatch(/appAlert\(\s*['"]Sign-in failed['"]\s*,\s*"That didn't go through\. Try again\."\s*\)/);
+    expect(src).toMatch(/appAlert\(\s*['"]Sign-in failed['"]\s*,\s*"That did not go through\. Please try again\."\s*\)/);
   });
 
   test('logError still captures the real provider error, unchanged', () => {
@@ -40,7 +40,7 @@ describe('ProOnboardingScreen OAuth error copy (FR-2)', () => {
 describe('ProOnboardingScreen OAuth thrown-exception copy (EP-18/UI-07)', () => {
   test('the thrown-exception catch shows the same calm fallback alert, not just a log', () => {
     expect(src).toMatch(
-      /logError\('ProOnboarding\.oauth\.threw', e, \{ provider \}\);\s*\n[\s\S]{0,400}?appAlert\(\s*['"]Sign-in failed['"]\s*,\s*"That didn't go through\. Try again\."\s*\);/,
+      /logError\('ProOnboarding\.oauth\.threw', e, \{ provider \}\);\s*\n[\s\S]{0,400}?appAlert\(\s*['"]Sign-in failed['"]\s*,\s*"That did not go through\. Please try again\."\s*\);/,
     );
   });
 

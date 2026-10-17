@@ -2304,10 +2304,10 @@ const SCHEMA_MIGRATIONS = [
   // positive signal whatever the scope.
   //
   // Applied: LOCALLY via this user_version bump. Cloud counterpart is
-  // supabase/migrate_137_exercise_swap_scope.sql - written, NOT applied,
-  // founder-gated. The push tolerates the column's absence in the cloud
-  // (the row still carries every other field), so a build can ship before
-  // that migration runs without losing swap history.
+  // supabase/migrate_137_exercise_swap_scope.sql, APPLIED (live, verified
+  // 2026-08-18; supabase/README). The push still tolerates the column's
+  // absence in the cloud (the row carries every other field), which is how
+  // builds shipped before that migration ran without losing swap history.
   // Additive: yes (one nullable column). Safe to re-run: yes (the runner
   // treats a duplicate-column error as benign). Rollback: the column can be
   // left in place and ignored; readers treat NULL as unknown.
@@ -2485,11 +2485,10 @@ const SCHEMA_MIGRATIONS = [
   // vocabulary mealSwap and the exclusion list already speak.
   //
   // Applied: LOCALLY via this user_version bump. Cloud counterpart is
-  // supabase/migrate_138_food_swaps.sql - written, NOT applied, founder-gated
-  // (the founder applies cloud migrations by hand; the app never runs them).
-  // Until it is applied the table is device-local, which degrades to exactly
-  // the pre-17A behaviour on a second device: no remembered replacements, no
-  // wrong ones either.
+  // supabase/migrate_138_food_swaps.sql, APPLIED (live, verified 2026-08-18;
+  // supabase/README). Before it was applied the table was device-local,
+  // which degraded to exactly the pre-17A behaviour on a second device: no
+  // remembered replacements, no wrong ones either.
   // Additive: yes (a new table plus its index; nothing existing is touched).
   // Safe to re-run: yes (IF NOT EXISTS throughout). Rollback: drop the table;
   // every reader treats an absent row as "no intent recorded", which is the
@@ -2680,8 +2679,8 @@ const SCHEMA_MIGRATIONS = [
   // for existing users: an upgraded device gets empty tables and identical
   // behaviour (rollback = tables stay empty). session_constraint_effects
   // is schema-only foundation here; its writers arrive in CC29.
-  // Cloud counterparts: supabase/migrate_145 + migrate_146 (written, NOT
-  // applied; founder-gated).
+  // Cloud counterparts: supabase/migrate_145 + migrate_146 (both
+  // APPLIED 2026-08-21; supabase/README).
   [
     `CREATE TABLE IF NOT EXISTS capability_constraints (
       id TEXT PRIMARY KEY,
@@ -2727,8 +2726,8 @@ const SCHEMA_MIGRATIONS = [
   // behaviour never depends on a runtime regex - section 8.3) and leaves
   // custom rows NULL by design. updated_at is NOT touched: derivation is
   // not a user edit (F5 honest timestamps). Cloud counterpart:
-  // supabase/migrate_148_exercise_demands.sql (written, NOT applied;
-  // founder-gated).
+  // supabase/migrate_148_exercise_demands.sql (APPLIED 2026-08-21;
+  // supabase/README).
   [
     "ALTER TABLE exercises ADD COLUMN position TEXT CHECK (position IN ('standing','seated','lying','kneeling','mixed'))",
     'ALTER TABLE exercises ADD COLUMN floor_access INTEGER',
@@ -2807,12 +2806,11 @@ const SCHEMA_MIGRATIONS = [
   // has not yet run this migration, or a cloud row missing the column,
   // degrades to the pre-campaign behaviour rather than crashing.
   // Cloud counterparts: supabase/migrate_158_routine_exercise_groups.sql and
-  // supabase/migrate_159_workout_set_evidence_class.sql (both written, NOT
-  // applied - founder-gated per CLAUDE.md; supabase/README status block
-  // records them WRITTEN, NOT APPLIED). Until applied, the push omits all
-  // three columns while CIRCUIT_SYNC_COLUMNS_ENABLED
-  // (src/lib/sync/featureFlags.js) is false; every pull applier already
-  // reads these fields via `?? null`, so an absent cloud column degrades to
+  // supabase/migrate_159_workout_set_evidence_class.sql (both APPLIED AND
+  // VERIFIED 2026-09-05; supabase/README status block). The push sends all
+  // three columns now that CIRCUIT_SYNC_COLUMNS_ENABLED
+  // (src/lib/sync/featureFlags.js) is true; every pull applier still reads
+  // these fields via `?? null`, so a row from an older build degrades to
   // null with no crash.
   // Additive: yes (ALTER TABLE ADD COLUMN only). Safe to re-run: yes (the
   // benign-duplicate-column skip above covers a second run).
@@ -2980,12 +2978,11 @@ const SCHEMA_MIGRATIONS = [
   //   Applied locally: yes, on every device that reaches this migration index;
   //             ALTER TABLE ADD COLUMN only, no default and no backfill, so
   //             every existing row reads NULL.
-  //   Applied remotely: NO. The cloud counterpart is
-  //             supabase/migrate_194_food_entries_note.sql, WRITTEN, HELD (the
-  //             founder's phrase is the only trigger). Until it is applied the
-  //             push omits the column (FOOD_ENTRY_NOTE_PUSH in
-  //             src/lib/sync/featureFlags.js is false); the pull reads the
-  //             field defensively.
+  //   Applied remotely: yes. The cloud counterpart,
+  //             supabase/migrate_194_food_entries_note.sql, was APPLIED
+  //             2026-10-16 21:01 UTC, so FOOD_ENTRY_NOTE_PUSH
+  //             (src/lib/sync/featureFlags.js) is on: the push sends the
+  //             column; the pull still reads the field defensively.
   //   Safe to re-run: yes. The benign-duplicate-column skip
   //             (isProvenBenignMigrationError) covers a second run. The
   //             original CREATE TABLE is left untouched (as for weight_state and
@@ -3009,12 +3006,11 @@ const SCHEMA_MIGRATIONS = [
   //   Applied locally: yes, on every device that reaches this migration index;
   //             ALTER TABLE ADD COLUMN only, no default and no backfill, so
   //             every existing row reads NULL.
-  //   Applied remotely: NO. The cloud counterpart is
-  //             supabase/migrate_195_custom_foods_portions.sql, WRITTEN, HELD
-  //             (the founder's phrase is the only trigger). Until it is applied
-  //             the push omits the column (CUSTOM_FOOD_PORTIONS_PUSH in
-  //             src/lib/sync/featureFlags.js is false); the pull reads the
-  //             field defensively.
+  //   Applied remotely: yes. The cloud counterpart,
+  //             supabase/migrate_195_custom_foods_portions.sql, was APPLIED
+  //             2026-10-16 21:05 UTC, so CUSTOM_FOOD_PORTIONS_PUSH
+  //             (src/lib/sync/featureFlags.js) is on: the push sends the
+  //             column; the pull still reads the field defensively.
   //   Safe to re-run: yes. The benign-duplicate-column skip
   //             (isProvenBenignMigrationError) covers a second run. The
   //             original CREATE TABLE is left untouched (as for weight_state and
@@ -11031,12 +11027,24 @@ export async function applyCoachTrainingAdjustmentAtomically(args) {
   return receiptId;
 }
 
-export async function getLatestCoachOutput(userId) {
+// C2 (final audit 2026-10-17): `beforeWeekStart` (optional, additive) bounds
+// the read to rows with week_start strictly BEFORE it. The weekly coach run
+// needs the PREVIOUS week's output: unbounded, a same-week reopen read this
+// week's own saved row back as "last output" and recomputed the engine's
+// carried counters from itself. Every existing caller passes no option and
+// reads exactly as before.
+export async function getLatestCoachOutput(userId, { beforeWeekStart } = {}) {
   const d = await db();
-  const row = await d.getFirstAsync(
-    'SELECT * FROM coach_outputs WHERE user_id = ? ORDER BY week_start DESC LIMIT 1',
-    [userId],
-  );
+  const bounded = Number.isFinite(beforeWeekStart);
+  const row = bounded
+    ? await d.getFirstAsync(
+      'SELECT * FROM coach_outputs WHERE user_id = ? AND week_start < ? ORDER BY week_start DESC LIMIT 1',
+      [userId, beforeWeekStart],
+    )
+    : await d.getFirstAsync(
+      'SELECT * FROM coach_outputs WHERE user_id = ? ORDER BY week_start DESC LIMIT 1',
+      [userId],
+    );
   if (!row) return null;
   try { return JSON.parse(row.output_json); } catch { return rowToCamel(row); }
 }

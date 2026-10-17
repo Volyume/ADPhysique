@@ -49,6 +49,6 @@ describe('ExerciseDetailScreen — EL-18 custom exercise delete', () => {
 
   test('a failed delete logs the error and shows a calm error toast, never a crash', () => {
     expect(source).toMatch(/logError\('ExerciseDetailScreen\.deleteExercise', e, \{ exerciseId: exercise\.id \}\)/);
-    expect(source).toMatch(/Couldn't delete that exercise\. Try again\./);
+    expect(source).toMatch(/Could not delete that exercise\. Please try again\./);
   });
 });

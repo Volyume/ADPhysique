@@ -11,8 +11,8 @@
  *
  * - Feed: scope chips (Following, My gym, My groups, Everyone) and a sort
  *   control, the compose well, then `PostRow`s. A scope the server cannot
- *   serve yet (migration 190 unapplied, `fallback === 'scope'`) is a disabled
- *   chip, never an explanation.
+ *   serve yet (migration 190 unapplied, `fallback === 'scope'`) is left out of
+ *   the sheet until it can.
  * - People: search, Find people, Requests, then the gym, discipline and area
  *   rows from `community_hub_summary` (the age group is a Find people filter
  *   now, not a Hub row).
@@ -1134,7 +1134,7 @@ export default function CommunityHubScreen({ navigation, route }) {
           big
           icon="people-outline"
           title="Find people"
-          subtitle="Train like you, same gym, near you, same discipline"
+          subtitle="People who train like you, at your gym, near you or in your discipline"
           onPress={() => navigation.navigate('CommunityFindPeople')}
         />
         <EntryRow
@@ -1427,30 +1427,27 @@ export default function CommunityHubScreen({ navigation, route }) {
         onClose={() => setSortOpen(false)}
         title="What you see"
         rows={[
-          ...SCOPES.map((x) => {
-            const unavailable = scopeUnavailable && (x.key === 'gym' || x.key === 'groups');
-            return {
+          // A scope or sort the server cannot serve yet is left out of the
+          // sheet, not shown disabled (no dead rows). It returns by itself
+          // the moment the server can serve it (`scopeUnavailable` and
+          // `sortUnavailable` clear).
+          ...SCOPES
+            .filter((x) => !(scopeUnavailable && (x.key === 'gym' || x.key === 'groups')))
+            .map((x) => ({
               icon: x.key === 'following' ? 'people-outline' : x.key === 'gym' ? 'location-outline' : x.key === 'groups' ? 'people-circle-outline' : 'globe-outline',
               label: x.label,
-              sub: unavailable ? 'Not available yet' : (scope === x.key ? 'Showing now' : undefined),
-              accessibilityLabel: unavailable ? `${x.label}, not available yet` : undefined,
-              disabled: unavailable,
-              onPress: unavailable ? () => {} : () => { setSortOpen(false); selectScope(x.key); },
-            };
-          }),
+              sub: scope === x.key ? 'Showing now' : undefined,
+              onPress: () => { setSortOpen(false); selectScope(x.key); },
+            })),
           {
             icon: 'time-outline', label: 'Newest', sub: 'The latest posts first', onPress: () => selectSort('newest'),
           },
-          // F7: never silently removed. Until the server can serve it, the row
-          // stays, says why, and does nothing.
-          {
+          ...(sortUnavailable ? [] : [{
             icon: 'heart-outline',
             label: 'Most respected',
-            sub: sortUnavailable ? 'Not available yet' : 'The last two weeks, most Respect first',
-            accessibilityLabel: sortUnavailable ? 'Most respected, not available yet' : undefined,
-            disabled: sortUnavailable,
-            onPress: sortUnavailable ? () => {} : () => selectSort('respected'),
-          },
+            sub: 'The last two weeks, most Respect first',
+            onPress: () => selectSort('respected'),
+          }]),
         ]}
       />
       <MenuSheet

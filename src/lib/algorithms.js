@@ -393,7 +393,7 @@ export function calculateExcludedWeeklyVolume(sets, exerciseMap = {}) {
 // (A2-038: colours used to be hardcoded hex here and bypassed the palette.)
 export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
   const landmarks = customLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-  if (!landmarks) return { status: 'unknown', label: 'No data', landmarks: null };
+  if (!landmarks) return { status: 'unknown', label: 'Not enough data yet', landmarks: null };
 
   const { mev, mav, mrv } = landmarks;
 
@@ -1815,8 +1815,8 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
     // It still invites a look rather than prescribing, and carries no
     // guilt language: nothing here says stuck, failing, behind or should.
     message: consecutiveStalls >= 3
-      ? `Your best set here hasn't moved in about ${durationWeeks} weeks. Worth a look: a different exercise for this muscle for 4-6 weeks is a solid reset.`
-      : `Your best set here hasn't moved in about ${durationWeeks} weeks. Worth a look: a higher rep range (15-20) for a few weeks can restart progress.`,
+      ? `Your best set here has not moved in about ${durationWeeks} weeks. Worth a look: a different exercise for this muscle for 4-6 weeks is a solid reset.`
+      : `Your best set here has not moved in about ${durationWeeks} weeks. Worth a look: a higher rep range (15-20) for a few weeks can restart progress.`,
   };
 }
 

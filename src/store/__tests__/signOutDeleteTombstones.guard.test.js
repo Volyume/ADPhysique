@@ -61,3 +61,29 @@ describe('AC-04: sign-out ships delete tombstones before wiping the queue', () =
     expect(wipeIdx).toBeGreaterThan(drainIdx);
   });
 });
+
+
+describe('B3 / B4 (audit 2026-10-17): sign-out delete ops and watermark order', () => {
+  test('B3: delete ops are made due again and drained in a bounded loop before the count', () => {
+    const reset = SRC.indexOf('sq.resetDeleteOpsForRetry(prevUid)');
+    const drain = SRC.indexOf('drainSyncQueue(sbClient, prevUid)');
+    const count = SRC.indexOf('const deletes = await sq.getPendingDeleteOpCount(prevUid)');
+    expect(reset).toBeGreaterThan(-1);
+    expect(reset).toBeLessThan(drain);
+    expect(drain).toBeLessThan(count);
+    expect(SRC).toMatch(/for \(let pass = 0; pass < 3; pass \+= 1\)/);
+  });
+
+  test('B3: a refused sign-out names the deletions that are waiting', () => {
+    expect(SRC).toMatch(/reason: 'unsynced', pendingDeletes: deletes\.count/);
+  });
+
+  test('B4: the sync watermarks are cleared BEFORE the SQLite wipe', () => {
+    const wm = SRC.indexOf("require('../lib/sync/watermark').clearWatermarksForUser(prevUid)");
+    const wipe = SRC.indexOf('await wipeAllUserDataWithRetry(prevUid)');
+    const storage = SRC.indexOf('await wipeAsyncStorageWithRetry()');
+    expect(wm).toBeGreaterThan(-1);
+    expect(wm).toBeLessThan(wipe);
+    expect(wipe).toBeLessThan(storage);
+  });
+});

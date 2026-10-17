@@ -38,7 +38,7 @@ describe('T2-11: the "I can\'t do this" sheet actually captures', () => {
   // answer, digest pattern 5; the competitive teardown's sharpest
   // complaint was a GOWOD review asking for exactly that option). The
   // BEHAVIOUR this file pins is unchanged - only the anchors move.
-  const site = SHEETS.indexOf("accessibilityLabel={exercise?.name ? `I can't do ${exercise.name} today`");
+  const site = SHEETS.indexOf("accessibilityLabel={exercise?.name ? `I cannot do ${exercise.name} today`");
   const alertSite = SHEETS.lastIndexOf('appAlert(', site);
   const block = SHEETS.slice(alertSite, site);
 

@@ -66,7 +66,7 @@ describe('BeforeAfterShareSheet preview error state (EP-17/UI-05)', () => {
   test('a permanent decode/render failure (Skia unavailable) shows a labelled Retry, not an endless spinner', async () => {
     const tree = await mount();
     const text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't build the preview");
+    expect(text).toContain("Could not build the preview");
 
     const retryButtons = tree.root.findAll(
       (n) => n.props && n.props.accessibilityLabel === 'Retry building the preview',
@@ -89,6 +89,6 @@ describe('BeforeAfterShareSheet preview error state (EP-17/UI-05)', () => {
     // Skia is still unavailable, so the error state persists (not a crash,
     // not a stuck spinner with no way to try again).
     const text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't build the preview");
+    expect(text).toContain("Could not build the preview");
   });
 });

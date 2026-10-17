@@ -14,14 +14,14 @@ describe('formatRelativeTime', () => {
   });
 
   test('minutes floor, never rounding up into hours', () => {
-    expect(formatRelativeTime(now - 60 * 1000, now)).toBe('1 min ago');
-    expect(formatRelativeTime(now - 31 * 60 * 1000, now)).toBe('31 min ago');
-    expect(formatRelativeTime(now - 59 * 60 * 1000, now)).toBe('59 min ago');
+    expect(formatRelativeTime(now - 60 * 1000, now)).toBe('1 minute ago');
+    expect(formatRelativeTime(now - 31 * 60 * 1000, now)).toBe('31 minutes ago');
+    expect(formatRelativeTime(now - 59 * 60 * 1000, now)).toBe('59 minutes ago');
   });
 
   test('hours', () => {
-    expect(formatRelativeTime(now - 60 * 60 * 1000, now)).toBe('1 h ago');
-    expect(formatRelativeTime(now - 23 * 60 * 60 * 1000, now)).toBe('23 h ago');
+    expect(formatRelativeTime(now - 60 * 60 * 1000, now)).toBe('1 hour ago');
+    expect(formatRelativeTime(now - 23 * 60 * 60 * 1000, now)).toBe('23 hours ago');
   });
 
   test('days, singular and plural', () => {
@@ -37,21 +37,21 @@ describe('formatRelativeTime', () => {
 describe('formatLastSynced', () => {
   const now = 1_700_000_000_000;
 
-  test('no snapshot / never run reads as not synced yet', () => {
-    expect(formatLastSynced(null, now)).toBe('Not synced yet.');
-    expect(formatLastSynced({ last_run_at: 0, queue_depth: 0 }, now)).toBe('Not synced yet.');
+  test('no snapshot / never run reads as not saved online yet', () => {
+    expect(formatLastSynced(null, now)).toBe('Not saved online yet.');
+    expect(formatLastSynced({ last_run_at: 0, queue_depth: 0 }, now)).toBe('Not saved online yet.');
   });
 
   test('synced with an empty queue shows only the time', () => {
     expect(formatLastSynced({ last_run_at: now - 5000, queue_depth: 0 }, now))
-      .toBe('Last synced just now.');
+      .toBe('Last saved online just now.');
   });
 
   test('a backing-up queue is surfaced quietly, with correct pluralisation', () => {
     expect(formatLastSynced({ last_run_at: now - 120 * 1000, queue_depth: 1 }, now))
-      .toBe('Last synced 2 min ago. 1 change waiting to upload.');
+      .toBe('Last saved online 2 minutes ago. 1 change waiting to be saved online.');
     expect(formatLastSynced({ last_run_at: now - 120 * 1000, queue_depth: 3 }, now))
-      .toBe('Last synced 2 min ago. 3 changes waiting to upload.');
+      .toBe('Last saved online 2 minutes ago. 3 changes waiting to be saved online.');
   });
 
   test('an error status with no pending writes does NOT alarm (lock § 1)', () => {
@@ -59,7 +59,7 @@ describe('formatLastSynced', () => {
     // normal last-synced line, no red, no "error" word. This is the exact
     // case the founder pulled the header badge over.
     const out = formatLastSynced({ status: 'error', last_run_at: now - 5000, queue_depth: 0 }, now);
-    expect(out).toBe('Last synced just now.');
+    expect(out).toBe('Last saved online just now.');
     expect(out).not.toMatch(/error/i);
   });
 
@@ -68,23 +68,23 @@ describe('formatLastSynced', () => {
   // alarming.
   test('parked/failed ops are stated plainly alongside a normal last-synced line', () => {
     expect(formatLastSynced({ last_run_at: now - 120 * 1000, queue_depth: 0, failed: 1 }, now))
-      .toBe("Last synced 2 min ago. 1 change couldn't sync.");
+      .toBe("Last saved online 2 minutes ago. 1 change could not be saved online.");
     expect(formatLastSynced({ last_run_at: now - 120 * 1000, queue_depth: 0, failed: 3 }, now))
-      .toBe("Last synced 2 min ago. 3 changes couldn't sync.");
+      .toBe("Last saved online 2 minutes ago. 3 changes could not be saved online.");
   });
 
   test('a pending queue AND parked ops both surface, in order', () => {
     expect(formatLastSynced({ last_run_at: now - 120 * 1000, queue_depth: 2, failed: 3 }, now))
-      .toBe("Last synced 2 min ago. 2 changes waiting to upload. 3 changes couldn't sync.");
+      .toBe("Last saved online 2 minutes ago. 2 changes waiting to be saved online. 3 changes could not be saved online.");
   });
 
   test('never synced but something is parked still says so', () => {
     expect(formatLastSynced({ last_run_at: 0, queue_depth: 0, failed: 2 }, now))
-      .toBe("Not synced yet. 2 changes couldn't sync.");
+      .toBe("Not saved online yet. 2 changes could not be saved online.");
   });
 
   test('no failed field at all behaves exactly as before (back-compat)', () => {
     expect(formatLastSynced({ last_run_at: now - 5000, queue_depth: 0 }, now))
-      .toBe('Last synced just now.');
+      .toBe('Last saved online just now.');
   });
 });

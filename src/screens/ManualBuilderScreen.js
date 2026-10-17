@@ -404,7 +404,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       } catch (e) {
         if (cancelled) return;
         logError('ManualBuilderScreen.loadExistingPlan', e, { planId });
-        toast.show("Couldn't load this plan, try again", { variant: 'error' });
+        toast.show("Could not load this plan. Please try again.", { variant: 'error' });
         navigation.goBack();
       } finally {
         if (!cancelled) setLoadingExisting(false);
@@ -462,7 +462,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       return;
     }
     if (!user?.id) {
-      toast.show('Setting up your profile, try again in a second', { variant: 'info' });
+      toast.show('Your profile is still being set up. Please try again in a moment.', { variant: 'info' });
       return;
     }
     setEditableName(planName.trim());
@@ -662,7 +662,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   function handleGroupSuperset(dayIndex) {
     const selected = supersetSelection[dayIndex];
     if (!selected || selected.size < 2) {
-      toast.show('Select at least two exercises to superset', { variant: 'warning' });
+      toast.show('Choose at least two exercises to link as a superset.', { variant: 'warning' });
       return;
     }
     haptics.selection();
@@ -729,7 +729,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   function handleGroupCircuit(dayIndex) {
     const selected = supersetSelection[dayIndex];
     if (!selected || selected.size < 2) {
-      toast.show('Select at least two exercises to make a circuit', { variant: 'warning' });
+      toast.show('Choose at least two exercises to link as a circuit.', { variant: 'warning' });
       return;
     }
     haptics.selection();
@@ -1026,7 +1026,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       setSuccessModal(true);
     } catch (e) {
       logError('ManualBuilderScreen.handleSaveAndActivate', e);
-      toast.show("Couldn't save your plan, try again", { variant: 'error' });
+      toast.show("Could not save your plan. Please try again.", { variant: 'error' });
     } finally {
       setSaving(false);
       activatingRef.current = false;
@@ -1054,7 +1054,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       navigation.popToTop();
     } catch (e) {
       logError('ManualBuilderScreen.handleSaveDraft', e);
-      toast.show("Couldn't save your draft, try again", { variant: 'error' });
+      toast.show("Could not save your draft. Please try again.", { variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -1094,7 +1094,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       navigation.goBack();
     } catch (e) {
       logError('ManualBuilderScreen.handleSaveEdit', e);
-      toast.show("Couldn't save your changes, try again", { variant: 'error' });
+      toast.show("Could not save your changes. Please try again.", { variant: 'error' });
     } finally {
       setSaving(false);
     }

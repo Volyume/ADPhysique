@@ -97,7 +97,7 @@ describe('LoginScreen OAuth feedback (A7)', () => {
     await act(async () => { await google.props.onPress(); });
     await flush();
 
-    expect(mockToastShow).toHaveBeenCalledWith("That didn't go through. Try again.", expect.objectContaining({ variant: 'error' }));
+    expect(mockToastShow).toHaveBeenCalledWith("That did not go through. Please try again.", expect.objectContaining({ variant: 'error' }));
   });
 
   test('a genuine success shows neither toast (still driven by onAuthStateChange)', async () => {
@@ -119,7 +119,7 @@ describe('LoginScreen OAuth feedback (A7)', () => {
     await act(async () => { await google.props.onPress(); });
     await flush();
 
-    expect(mockToastShow).toHaveBeenCalledWith("That didn't go through. Try again.", expect.objectContaining({ variant: 'error' }));
+    expect(mockToastShow).toHaveBeenCalledWith("That did not go through. Please try again.", expect.objectContaining({ variant: 'error' }));
     // The button returns to idle rather than being left dimmed with no
     // explanation (the waiting caption, gated on the same loading state,
     // is gone once the catch's finally re-enables the buttons).

@@ -103,7 +103,7 @@ export default function ImportScreen({ navigation }) {
       if (picked?.canceled) return;
       const uri = picked?.assets?.[0]?.uri || picked?.uri;
       if (!uri) {
-        setError('Could not read that file. Try again.');
+        setError('Could not read that file. Please try again.');
         return;
       }
 
@@ -125,7 +125,7 @@ export default function ImportScreen({ navigation }) {
       if (fmt === 'unknown') {
         setStage('idle');
         setError(
-          "This doesn't look like a Hevy or Strong export. Make sure you picked the workout-history CSV, not a backup or summary file.",
+          "This does not look like a Hevy or Strong export. Make sure you picked the workout-history CSV, not a backup or summary file.",
         );
         return;
       }
@@ -143,7 +143,7 @@ export default function ImportScreen({ navigation }) {
     } catch (e) {
       setStage('idle');
       logError('ImportScreen.handlePickFile', e);
-      setError('Could not read that file. Try again.');
+      setError('Could not read that file. Please try again.');
     }
   }
 
@@ -172,7 +172,7 @@ export default function ImportScreen({ navigation }) {
       setStage('preview');
       appAlert(
         'Import failed',
-        'Something went wrong writing the data. Nothing was saved.',
+        'Could not save your import. Nothing was changed, so you can safely try again.',
       );
     }
   }

@@ -260,7 +260,7 @@ function SessionSheets({
                 <Text style={[styles.supTip, live.supTip]}>
                   {headsUpIsCircuit
                     ? 'Tip: if a station is taken, carry on with the next one and come back to it. To change the circuit, edit it in your plan.'
-                    : "Tip: if you can't grab every station right now, unlink and do them as normal sets."}
+                    : "Tip: if you cannot grab every station right now, unlink and do them as normal sets."}
                 </Text>
 
                 <Button
@@ -374,7 +374,7 @@ function SessionSheets({
                     <Text style={[styles.supStepText, live.supStepText]}>
                       {isCompound
                         ? 'Half your normal rest, then do the same reps on your other side.'
-                        : 'Switch sides when you\'re ready, no forced timer, then do the same reps.'}
+                        : 'Switch sides when you are ready, with no forced timer, then do the same reps.'}
                     </Text>
                   </View>
                   <View style={styles.supStep}>
@@ -661,7 +661,7 @@ function SessionSheets({
                   // translate a modification themselves. "Work around
                   // this" was our internal vocabulary on a user's button.
                   appAlert(
-                    exercise?.name ? `Can't do ${exercise.name}?` : "Can't do this exercise?",
+                    exercise?.name ? `Cannot do ${exercise.name}?` : "Cannot do this exercise?",
                     'Volyume will swap it for another exercise that works the same muscle group. Choose whether that is just for today, or from now on.',
                     [
                       { text: 'Cancel', style: 'cancel' },
@@ -686,11 +686,11 @@ function SessionSheets({
                   );
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={exercise?.name ? `I can't do ${exercise.name} today` : "I can't do this exercise today"}
+                accessibilityLabel={exercise?.name ? `I cannot do ${exercise.name} today` : "I cannot do this exercise today"}
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="body-outline" size={18} color={t.colors.textSecondary} />
-                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{"I can't do this"}</Text>
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{"I cannot do this"}</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1260,7 +1260,7 @@ function SessionSheets({
                   )}
                   <Text style={[styles.swapEmptyText, live.swapEmptyText]}>
                     {swapUnavailable
-                      ? 'Swaps aren\'t available right now. Try again in a moment.'
+                      ? 'Swaps are not available right now. Try again in a moment.'
                       : (swapClosedList ? 'This plan lists no other exercise for this one here.' : 'Search the full library instead.')}
                   </Text>
                 </View>

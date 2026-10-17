@@ -115,8 +115,8 @@ function capabilityPlanCaption(capState, exercise, serveOutcome = null) {
       if (serveOutcome === 'omitted') return 'Left out of sessions while your change lasts, with nothing forced in its place.';
       return 'Clashes with your temporary change.';
     }
-    if (kind === 'baseline') return "Clashes with an injury or limitation you've set.";
-    if (kind === 'unknown') return "Volyume couldn't check this against your limitations yet.";
+    if (kind === 'baseline') return "Clashes with an injury or limitation you have set.";
+    if (kind === 'unknown') return "Volyume could not check this against your limitations yet.";
     return null;
   } catch (_e) {
     return null;
@@ -432,7 +432,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       all = await getAllExercises();
     } catch (e) {
       logError('RoutineDetailScreen.loadRoutine', e, { routineId });
-      toast.show("Couldn't load this workout, try again", { variant: 'error' });
+      toast.show("Could not load this workout. Please try again.", { variant: 'error' });
       return;
     }
     // D219 (design 4.9: one number everywhere; review finding 3): the stored
@@ -928,7 +928,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           onPress: () => handleExcludeExercise(routineExercise, exercise, EXERCISE_INTENT.AVOIDED_BLOCK),
         },
         {
-          text: "Don't suggest it",
+          text: "Do not suggest it",
           onPress: () => handleExcludeExercise(routineExercise, exercise, EXERCISE_INTENT.EXCLUDED),
         },
         {
@@ -947,7 +947,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
   function openPatternAvoidSheet(exercise) {
     const family = movementFamilyOf(exercise);
     if (!family) {
-      toast.show("Volyume can't place this exercise in a movement pattern to avoid.", { variant: 'warning' });
+      toast.show("This exercise does not belong to a movement group, so there is nothing to avoid.", { variant: 'warning' });
       return;
     }
     const label = familyLabel(family) ?? family;
@@ -1264,7 +1264,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('RoutineDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId });
-      toast.show("Couldn't start workout, try again", { variant: 'error' });
+      toast.show("Could not start your workout. Please try again.", { variant: 'error' });
     }
   }
 
@@ -1388,7 +1388,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             <View style={styles.exerciseInfo}>
               <View style={styles.exerciseTitleRow}>
                 <Text style={[styles.exerciseName, live.exerciseName, exercise.unresolved && [styles.exerciseNameUnresolved, live.exerciseNameUnresolved]]}>
-                  {exercise.name || "Exercise (couldn't restore)"}
+                  {exercise.name || "Exercise (could not restore)"}
                 </Text>
                 {exercise.unresolved && (
                   <View style={[styles.relinkChip, live.relinkChip]}>
@@ -1871,7 +1871,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             }}
             ListEmptyComponent={swapUnavailable ? (
               <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
-                Swaps aren't available right now. Try again in a moment.
+                Swaps are not available right now. Please try again in a moment.
               </Text>
             ) : (
               <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>

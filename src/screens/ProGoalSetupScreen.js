@@ -115,7 +115,7 @@ const NUTRITION_KEY = '@volyume_nutrition_targets';
 // preview (the model), which is the source of the exact copy this pins.
 function capabilityBlockedNote(n) {
   return n === 1
-    ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
+    ? "1 movement clashed with an injury or limitation you have set, so your plan works without it."
     : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
@@ -123,7 +123,7 @@ function capabilityBlockedNote(n) {
 // finish. Nothing was written (the install runs before any save), so the
 // athlete's answers are still on the form and the plan is as it was.
 function kitInstallFailedLine(kit) {
-  return `Couldn't add the ${libraryKitWord(kit)} plan, so nothing was changed. Try again, or choose a ${libraryKitWord(kit)} plan in the Plan Library.`;
+  return `Could not add the ${libraryKitWord(kit)} plan, so nothing was changed. Please try again, or choose a ${libraryKitWord(kit)} plan in the Plan Library.`;
 }
 
 export default function ProGoalSetupScreen({ navigation }) {
@@ -611,7 +611,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       // so they know targets weren't updated this time. The incomplete-
       // biology skip above already showed its own specific message.
       if (!_e?._handled) {
-        toast.show("Goal saved, but targets didn't recalculate. Open Nutrition targets to refresh", { variant: 'warning', duration: 5000 });
+        toast.show("Goal saved, but targets did not recalculate. Open Nutrition targets to refresh them.", { variant: 'warning', duration: 5000 });
       }
     }
 
@@ -631,7 +631,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       try {
         await setPeakWeekShowDate(user.id, trimmedShowDate || null);
       } catch (_) {
-        toast.show('Goal saved, but the show date could not be stored. Try again from this screen', { variant: 'warning' });
+        toast.show('Goal saved, but the show date could not be stored. Please try again from this screen.', { variant: 'warning' });
       }
     }
 
@@ -781,7 +781,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             muscles their category is judged on. */}
         <SectionLabel style={styles.sectionLabel}>Competing in a category? (optional)</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
+          Only matters if you are chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
 
         <Dropdown
@@ -853,7 +853,7 @@ export default function ProGoalSetupScreen({ navigation }) {
           value={selectedPhase}
           options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
           onChange={setSelectedPhase}
-          placeholder="Select your focus"
+          placeholder="Choose your focus"
         />
 
         {/* F-16 REVISED point 3: saving this screen rebuilds the active
@@ -887,7 +887,7 @@ export default function ProGoalSetupScreen({ navigation }) {
           value={experience}
           options={EXPERIENCE_OPTIONS}
           onChange={setExperience}
-          placeholder="Select your experience"
+          placeholder="Choose your experience"
         />
 
         {/* ── Training schedule ── */}
@@ -919,7 +919,7 @@ export default function ProGoalSetupScreen({ navigation }) {
           value={equipment}
           options={EQUIPMENT_OPTIONS}
           onChange={setEquipment}
-          placeholder="Select your equipment"
+          placeholder="Choose your equipment"
         />
         {/* F-16 REVISED: said as soon as a kit answer is chosen, because the
             copy on this screen and the button below otherwise promise a
@@ -931,13 +931,13 @@ export default function ProGoalSetupScreen({ navigation }) {
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          How well you're recovering between sessions. This sets how much volume your plan includes, so it can protect your recovery.
+          How well you are recovering between sessions. This sets how much volume your plan includes, so it can protect your recovery.
         </Text>
         <Dropdown
           value={recoveryRating}
           options={RECOVERY_OPTIONS}
           onChange={setRecoveryRating}
-          placeholder="Select your recovery"
+          placeholder="Choose your recovery"
         />
 
         {/* F-15 (evidence A3): the circuit grouping is not carried across a

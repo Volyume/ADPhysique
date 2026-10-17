@@ -216,13 +216,13 @@ export default function SettingsDataScreen({ navigation }) {
       await refreshSyncSnapshot();
       const stats = await getQueueStats(user?.id);
       toast.show(
-        (stats?.pending ?? 0) > 0 ? 'Backing up a few recent changes.' : 'Everything\'s backed up and safe.',
+        (stats?.pending ?? 0) > 0 ? 'Backing up a few recent changes.' : 'Everything is backed up and safe.',
         { variant: 'success' },
       );
     } catch (e) {
       logError('SettingsScreen.syncNow', e);
       refreshSyncSnapshot();
-      toast.show("Couldn't sync. It retries automatically.", { variant: 'error' });
+      toast.show("Could not sync. It retries automatically.", { variant: 'error' });
     } finally {
       setSyncingNow(false);
     }
@@ -237,7 +237,7 @@ export default function SettingsDataScreen({ navigation }) {
     try {
       const result = await retryFailedOps(user.id);
       if (!result?.ok) {
-        toast.show("Couldn't retry those changes, try again", { variant: 'error' });
+        toast.show("Could not retry those changes. Please try again.", { variant: 'error' });
         return;
       }
       // The reset only makes the ops eligible for the drain again; push one
@@ -257,7 +257,7 @@ export default function SettingsDataScreen({ navigation }) {
       );
     } catch (e) {
       logError('SettingsDataScreen.retryFailedOps', e, { userId: user.id });
-      toast.show("Couldn't retry those changes, try again", { variant: 'error' });
+      toast.show("Could not retry those changes. Please try again.", { variant: 'error' });
     } finally {
       setRetryingFailed(false);
     }
@@ -279,11 +279,11 @@ export default function SettingsDataScreen({ navigation }) {
           { variant: 'success' },
         );
       } else {
-        toast.show("Couldn't refresh the food library. Try again later.", { variant: 'error' });
+        toast.show("Could not refresh the food library. Please try again later.", { variant: 'error' });
       }
     } catch (e) {
       logError('SettingsScreen.refreshFoodLibrary', e);
-      toast.show("Couldn't refresh the food library. Try again later.", { variant: 'error' });
+      toast.show("Could not refresh the food library. Please try again later.", { variant: 'error' });
     } finally {
       setRefreshingFood(false);
     }
@@ -314,7 +314,7 @@ export default function SettingsDataScreen({ navigation }) {
       }
     } catch (e) {
       logError('SettingsScreen.exportData', e, { userId: user?.id });
-      toast.show('Could not export your data, try again', { variant: 'error' });
+      toast.show('Could not export your data. Please try again.', { variant: 'error' });
     }
   }
 
@@ -343,7 +343,7 @@ export default function SettingsDataScreen({ navigation }) {
       haptics.selection();
     } catch (e) {
       logError('SettingsScreen.exportCoachReport', e);
-      toast.show('Could not build the report, try again', { variant: 'error' });
+      toast.show('Could not build the report. Please try again.', { variant: 'error' });
     } finally {
       setBuildingReport(false);
     }
@@ -355,7 +355,7 @@ export default function SettingsDataScreen({ navigation }) {
       const { bytes } = await exportBackup(user.id);
       appAlert(
         'Backup created',
-        `Your Volyume app-data backup (${(bytes / 1024).toFixed(0)} KB) was exported. It includes database records such as workouts, nutrition logs, body metrics, progress photo metadata and progress photo analysis metadata. Private photo image files are not bundled. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
+        `Your Volyume app-data backup (${(bytes / 1024).toFixed(0)} KB) was exported. It includes your workouts, food logs, body measurements, and the details and analysis of your progress photos. Your private photo image files are not included. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
       );
     } catch (e) {
       logError('SettingsScreen.handleFullBackup', e);
@@ -366,7 +366,7 @@ export default function SettingsDataScreen({ navigation }) {
   function handleRestoreBackup() {
     appAlert(
       'Restore from backup?',
-      'This replaces ALL current app database records (workouts, routines, plans, nutrition logs, body metrics, progress metadata and settings) with the contents of the backup file you choose. Private photo image files are not restored from this JSON file. This cannot be undone.',
+      'This replaces everything in the app: workouts, routines, plans, food logs, body measurements, progress photo details and settings. What is on this phone is replaced with the contents of the backup file you choose, and this cannot be undone. Your private photo image files are not restored from this file.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -408,7 +408,7 @@ export default function SettingsDataScreen({ navigation }) {
               toast.show('Workout history cleared', { variant: 'success' });
             } catch (e) {
               logError('SettingsScreen.handleClearHistory', e, { userId: user.id });
-              appAlert('Couldn\'t clear history', 'Try again.');
+              appAlert('Could not clear history', 'Please try again.');
             }
           },
         },
@@ -459,7 +459,7 @@ export default function SettingsDataScreen({ navigation }) {
           <SettingRow
             icon="alert-circle-outline"
             label={retryingFailed ? 'Retrying...' : 'Retry now'}
-            sub={`${syncSnapshot.failed} ${syncSnapshot.failed === 1 ? 'change' : 'changes'} couldn't sync`}
+            sub={`${syncSnapshot.failed} ${syncSnapshot.failed === 1 ? 'change' : 'changes'} could not sync`}
             onPress={retryingFailed ? null : handleRetryFailedOps}
             showArrow={!retryingFailed}
           />

@@ -59,7 +59,7 @@ describe('a submitted check-in can never be reported as late (founder 2026-08-03
     // The prefill path and its banner survive: on the scheduled day the
     // ladder still opens the form with the saved answers loaded.
     expect(SRC).toContain('Re-entry: prefill');
-    expect(SRC).toContain("You've checked in this week. Your answers are loaded, edit and resubmit to update.");
+    expect(SRC).toContain('You have checked in this week. Your answers are loaded. Edit them and resubmit to update.');
   });
 
   test('the genuinely-missed day_late gate still exists for users who did miss it', () => {

@@ -198,10 +198,10 @@ export function validateSetEntryValue({
   if (!Number.isFinite(actualReps) || actualReps < 1) {
     return {
       ok: false,
-      title: isTimed ? 'Enter time' : 'Enter reps',
+      title: isTimed ? 'Time needed' : 'Reps needed',
       message: isTimed
-        ? 'Please enter the duration for this set.'
-        : 'Please enter the number of reps completed.',
+        ? 'Add how long the set lasted, then log the set.'
+        : 'Add the number of reps you did, then log the set.',
     };
   }
 
@@ -213,14 +213,14 @@ export function validateSetEntryValue({
     if (exerciseType === 'distance') {
       return {
         ok: false,
-        title: 'Enter distance',
-        message: `Enter the distance covered before ${weightAction}.`,
+        title: 'Distance needed',
+        message: `Add the distance you covered before ${weightAction}.`,
       };
     }
     return {
       ok: false,
-      title: 'Enter weight',
-      message: `Enter the weight used (in ${units}) before ${weightAction}.`,
+      title: 'Weight needed',
+      message: `Add the weight you used (in ${units}) before ${weightAction}.`,
     };
   }
 

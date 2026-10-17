@@ -181,7 +181,7 @@ describe('C6 R-4 (D97-22): a recovery week is only claimed live when it was earn
     expect(advice.action).toBe('in_recovery');
     expect(advice.headline).toBe('Recovery week on the calendar');
     expect(advice.body).not.toMatch(/last few weeks of work/);
-    expect(advice.body).toMatch(/haven't trained recently/);
+    expect(advice.body).toMatch(/have not trained recently/);
   });
 
   test('trained inside 14 days: the live recovery card is unchanged', async () => {

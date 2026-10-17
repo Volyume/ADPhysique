@@ -55,6 +55,6 @@ describe('HomeScreen pre-workout readiness sheet scrolls within a bounded height
     expect(win).toContain("label: 'Average'");
     expect(win).toContain("label: 'Below par'");
     expect(win).toContain('accessibilityLabel="Skip and start without answering"');
-    expect(win).toContain("accessibilityLabel=\"Don't ask before each session\"");
+    expect(win).toContain("accessibilityLabel=\"Do not ask before each session\"");
   });
 });

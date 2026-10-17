@@ -424,7 +424,7 @@ export default function FoodInsightsScreen({ navigation }) {
           <EmptyState
             icon="warning-outline"
             title="Your trends did not load"
-            text="Something went wrong. Try again in a moment."
+            text="That did not work. Please try again in a moment."
             actionLabel="Try again"
             onAction={load}
           />

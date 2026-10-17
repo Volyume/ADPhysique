@@ -390,7 +390,7 @@ export default function BeforeAfterShareSheet({
     if (confirmed) { next(); return; }
     appAlert(
       'Create an image to share',
-      "You're making an image from your photos. It stays on your device until you choose to share or save it.",
+      "You are making an image from your photos. It stays on your device until you choose to share or save it.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -411,14 +411,14 @@ export default function BeforeAfterShareSheet({
     if (!Skia || !FileSystem || !typefaces) {
       // P-16: a missing native module reads as "this device can't do this",
       // never as "you're on an incomplete build".
-      toast.show("Progress image sharing isn't available on your device.", { variant: 'error', duration: 5000 });
+      toast.show("Progress image sharing is not available on this phone.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!pairReady) { toast.show('Choose two photos first', { variant: 'info' }); return; }
     if (!beforeImg || !afterImg) {
       // S2 guard 1: a deleted/corrupt/unreadable photo must not composite a
       // blank cell or throw into the share sheet.
-      toast.show("That photo couldn't be opened. Try another.", { variant: 'error' });
+      toast.show("That photo could not be opened. Try another.", { variant: 'error' });
       return;
     }
     let uri = null;
@@ -427,7 +427,7 @@ export default function BeforeAfterShareSheet({
     } catch (e) {
       logError('ProgressCard.export', e, { aspect });
     }
-    if (!uri) { toast.show("Couldn't generate the image, try again", { variant: 'error' }); return; }
+    if (!uri) { toast.show("Could not generate the image. Please try again.", { variant: 'error' }); return; }
     await consume(uri);
   }, [suppressed, typefaces, pairReady, beforeImg, afterImg, renderCardToFile, aspect, toast]);
 
@@ -435,13 +435,13 @@ export default function BeforeAfterShareSheet({
     ensureConfirmed(() => withGeneratedFile(async (uri) => {
       setSharing(true);
       try {
-        if (!Sharing) { toast.show("Sharing isn't available on your device.", { variant: 'error', duration: 5000 }); return; }
+        if (!Sharing) { toast.show("Sharing is not available on this phone.", { variant: 'error', duration: 5000 }); return; }
         const canShare = await Sharing.isAvailableAsync();
         if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
         // ONE composited file, never a multi-attach (S2 §1).
         await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share progress image' });
       } catch (_e) {
-        toast.show("Couldn't open the share sheet, try again", { variant: 'error' });
+        toast.show("Could not open the share sheet. Please try again.", { variant: 'error' });
       } finally {
         setSharing(false);
       }
@@ -450,7 +450,7 @@ export default function BeforeAfterShareSheet({
 
   const onSaveToGallery = useCallback(() => {
     ensureConfirmed(() => withGeneratedFile(async (uri) => {
-      if (!MediaLibrary) { toast.show("Saving to your gallery isn't available on your device.", { variant: 'error', duration: 5000 }); return; }
+      if (!MediaLibrary) { toast.show("Saving to your gallery is not available on this phone.", { variant: 'error', duration: 5000 }); return; }
       setSavingToGallery(true);
       try {
         // Write-only: saving needs permission to add, never to read the
@@ -460,7 +460,7 @@ export default function BeforeAfterShareSheet({
         await MediaLibrary.saveToLibraryAsync(uri);
         toast.show('Saved to your gallery', { variant: 'success' });
       } catch (_e) {
-        toast.show("Couldn't save the image, try again", { variant: 'error' });
+        toast.show("Could not save the image. Please try again.", { variant: 'error' });
       } finally {
         setSavingToGallery(false);
       }
@@ -581,7 +581,7 @@ export default function BeforeAfterShareSheet({
               <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
                 <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
                 <Text style={[styles.previewErrorText, live.previewErrorText]}>
-                  Couldn't build the preview. Try again, or choose a different photo above.
+                  Could not build the preview. Try again, or choose a different photo above.
                 </Text>
                 <Button
                   title="Retry"

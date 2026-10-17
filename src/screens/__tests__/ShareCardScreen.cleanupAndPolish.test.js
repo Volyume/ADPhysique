@@ -424,7 +424,7 @@ describe('E4: a denied library permission still tries the picker', () => {
     mockPicker.launchImageLibraryAsync.mockRejectedValueOnce(new Error('boom'));
     const { tree } = await mount(SESSION);
     await press(byLabel(tree, 'Gallery, choose a photo')[0]);
-    expect(mockToastShow).toHaveBeenCalledWith("Couldn't open your photos, try again", { variant: 'error' });
+    expect(mockToastShow).toHaveBeenCalledWith("Could not open your photos. Please try again.", { variant: 'error' });
   });
 });
 

@@ -9,8 +9,8 @@
  *   - the header: exactly three glyphs for a member (search, activity,
  *     messages), none of the old avatar or privacy shield;
  *   - the Feed: the right scope read for a member and a reader without a
- *     profile, each scope's empty line, the disabled scope with the hint
- *     "Not available yet" when the server lacks migration 190, optimistic
+ *     profile, each scope's empty line, a scope or sort the server
+ *     cannot serve is left out of the sheet when the server lacks migration 190, optimistic
  *     Respect reaching `reactToPost` with the author id, the non-member's
  *     read-only Everyone feed routing Respect to Join;
  *   - People, Groups and You content, the invite Accept and Decline;
@@ -385,36 +385,32 @@ describe('Feed: a member', () => {
     expect(ids).toEqual(['pa', 'pb', 'pc']);
   });
 
-  test('Most respected stays in the sort sheet, disabled with the hint, when the server lacks it (F7)', async () => {
+  test('Most respected is left out of the sort sheet, not shown disabled, when the server lacks it (E3)', async () => {
     asMember();
     loadHub.mockImplementation(async (scope, opts) => emptyHub(opts?.sort === 'respected' ? { fallback: 'sort' } : {}));
     const view = await render();
     await press(view, 'Showing Following, newest first. Change what you see');
     const sheet0 = view.tree.root.findAll((n) => n.props?.title === 'What you see' && Array.isArray(n.props.rows))[0];
+    expect(sheet0.props.rows.find((r) => r.label === 'Most respected')).toBeTruthy();
     await act(async () => { sheet0.props.rows.find((r) => r.label === 'Most respected').onPress(); });
     await flush();
     const sheet = view.tree.root.findAll((n) => n.props?.title === 'What you see' && Array.isArray(n.props.rows))[0];
-    const row = sheet.props.rows.find((r) => r.label === 'Most respected');
-    expect(row).toBeTruthy();
-    expect(row.sub).toBe('Not available yet');
-    // D221 lane 2B: the row carries the menu's `disabled` option, so it is
-    // dimmed, does nothing and reports the disabled state.
-    expect(row.disabled).toBe(true);
+    expect(sheet.props.rows.find((r) => r.label === 'Most respected')).toBeUndefined();
+    expect(JSON.stringify(sheet.props.rows.map((r) => r.sub))).not.toContain('Not available yet');
     const live = sheet.props.rows.find((r) => r.label === 'Newest');
     expect(live.disabled).toBeFalsy();
   });
 
-  test('a scope the server cannot serve is a disabled sheet row saying "Not available yet"', async () => {
+  test('a scope the server cannot serve is left out of the sheet (E3)', async () => {
     asMember();
     loadHub.mockImplementation(async (scope) => emptyHub(scope === 'gym' ? { fallback: 'scope' } : {}));
     const view = await render();
     await chooseInSheet(view, 'My gym');
     const sheet = view.tree.root.findAll((n) => n.props?.title === 'What you see' && Array.isArray(n.props.rows))[0];
     for (const label of ['My gym', 'My groups']) {
-      const row = sheet.props.rows.find((r) => r.label === label);
-      expect(row.sub).toBe('Not available yet');
-      expect(row.disabled).toBe(true);
+      expect(sheet.props.rows.find((r) => r.label === label)).toBeUndefined();
     }
+    expect(sheet.props.rows.some((r) => r.disabled)).toBe(false);
   });
 
   test('Respect on a post calls reactToPost with the post id, the new state and the author id', async () => {

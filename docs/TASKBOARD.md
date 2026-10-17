@@ -49,6 +49,8 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
+**FINAL PRE-BUILD AUDIT (founder 2026-10-17: "run a final hard adversarial audit ... solidify completely before build", "No dead features linked up", "check through sentry"; register: Final pre-build audit, 2026-10-17) - on `audit/final-2026-10-17`, merged to main at the gate.** Five read-only audits, then fix lanes: auth and consent (B1, B2, B6), coach (C1, C2a, C2c, C5), logger, Home, Community, history and sign-out (A1 to A6, B3, B4, C4, C5, C6, E2, E3), stale database.js migration comments (A7), and three whole-app copy passes. All six unresolved Sentry issues resolved with reasons. Version stays 2.20.0 (no build since). Open for the founder (asked in chat): the database-open failure dead end, the quiz-first onboarding code, iOS universal links, C3 (atomic calorie apply). Recovery path: every lane is committed on the branch; nothing is left in flight.
+
 **FOOD AUDIT LANDING (founder rulings "Cancel the bank", "Today onwards only", "Add cooked weight"; register D230 food audit landing) - 2.19.0 LANDED ON MAIN 2026-10-16 (gate: lint clean, 30,791 tests passed). migrate_196 APPLIED 2026-10-16 23:04:58 UTC under "run against production 196".**
 
 **FOOD WAVE 4: NOTES, PORTIONS, HISTORY IMPORT, AND A LIVE SYNC DAY-MOVE DEFECT FIXED (founder 2026-10-16 "finish off food now"; register D230 Wave 4 landing) — ON `food/wave4-2026-10-16`, merged to main at the gate.** FOUNDER-SIDE: apply 194 then 195 by the phrase; then a build turns on FOOD_ENTRY_NOTE_PUSH and CUSTOM_FOOD_PORTIONS_PUSH. A sample MyFitnessPal export would confirm its parser.

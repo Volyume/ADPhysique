@@ -655,13 +655,13 @@ export default function DiaryScreen({ navigation, route }) {
         return `${friendlyDate(dayKey)}: ${detail}`.trim();
       });
       appAlert(
-        'Your week, adjusted',
+        'Your week has been adjusted',
         [headline, bankPlanLine(bigLabel), '', lines.join('\n\n'), '', 'Change anything you like.']
           .filter((x) => x !== null && x !== undefined).join('\n'),
         [{ text: 'OK' }],
       );
     } else if (headline) {
-      appAlert('Your week, adjusted', headline, [{ text: 'OK' }]);
+      appAlert('Your week has been adjusted', headline, [{ text: 'OK' }]);
     } else {
       toast.show('Higher-calorie day planned. Your weekly total stays the same.', { variant: 'success' });
     }
@@ -1790,7 +1790,7 @@ export default function DiaryScreen({ navigation, route }) {
     }
     appAlert(
       `Copy ${yEntries.length} ${yEntries.length === 1 ? 'entry' : 'entries'} from yesterday?`,
-      'They\'ll land in this day\'s diary under the same meals.',
+      'They will land in this day\'s diary under the same meals.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Copy', onPress: () => copyFromDate(yesterday) },

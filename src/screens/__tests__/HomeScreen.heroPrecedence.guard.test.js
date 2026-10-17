@@ -111,7 +111,7 @@ describe('B-3 — a finished block is the decision, not a workout', () => {
     const branch = withoutComments(home.slice(start, end));
     expect(branch).toContain('Block complete');
     expect(branch).toContain('Every week of this block is done');
-    expect(branch).toContain("Choose what's next");
+    expect(branch).toContain('Choose what comes next');
     // The same destination the Today line's rank-2 occupant already opens.
     expect(branch).toContain("navigateCrossTab(navigation, 'PlansTab', 'Plans')");
     // Training during the wait stays available, never as the primary.

@@ -233,7 +233,7 @@ function NumericField({ fieldStyle, inputStyle, ...props }) {
   );
 }
 
-function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor }) {
+function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor, energyUnit = 'kcal' }) {
   // CP-10 batch E (2026-07-10): sibling function-component scope, own
   // useTheme() call and shared buildLiveStyles(t). `barColor` itself already
   // arrives live from the caller (t.colors.macroProtein/macroCarb/macroFat,
@@ -271,7 +271,7 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
       {/* Descriptive %-of-calories this macro contributes (grams × its Atwater
           factor ÷ target kcal). Factual readout, not a judgement. */}
       {kcalPercent != null ? (
-        <Text style={[styles.macroPercent, live.macroPercent]}>{`~${kcalPercent}% of kcal`}</Text>
+        <Text style={[styles.macroPercent, live.macroPercent]}>{`~${kcalPercent}% of ${energyUnitLabel(energyUnit)}`}</Text>
       ) : null}
     </Card>
   );
@@ -678,7 +678,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
       } catch (e) {
         // eslint-disable-next-line global-require
         try { require('../lib/errorLog').logError('NutritionTargets.save', e, { userId: user.id }); } catch (_) {}
-        toast.show('Your choice is saved on this device, but the full save didn\'t finish. Try again.', { variant: 'warning', duration: 6000 });
+        toast.show('Your choice is saved on this device, but the full save did not finish. Please try again.', { variant: 'warning', duration: 6000 });
       }
     }
   }
@@ -708,7 +708,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
       } catch (e) {
         // eslint-disable-next-line global-require
         try { require('../lib/errorLog').logError('NutritionTargets.choice', e); } catch (_) {}
-        toast.show('Could not save your choice, try again', { variant: 'error' });
+        toast.show('Could not save your choice. Please try again.', { variant: 'error' });
       }
     });
   }
@@ -735,7 +735,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
       await setTrainingStatus(next);
     } catch (_) {
       setTrainingStatusState(prev);
-      toast.show('Could not save that on this phone, try again', { variant: 'error' });
+      toast.show('Could not save that on this phone. Please try again.', { variant: 'error' });
     }
   }, [trainingStatus, toast]);
 
@@ -911,7 +911,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
     } catch (e) {
       // eslint-disable-next-line global-require
       try { require('../lib/errorLog').logError('NutritionTargets.calculate', e, { userId: user?.id }); } catch (_) {}
-      toast.show('Could not calculate your targets, try again', { variant: 'error' });
+      toast.show('Could not calculate your targets. Please try again.', { variant: 'error' });
     } finally {
       setCalculating(false);
     }
@@ -934,7 +934,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
       if (planReview.action === CONTINUITY_ACTION.REBUILD) {
         const res = await regenerateActiveMealPlan(user.id, userProfile);
         if (res?.error) {
-          toast.show("Couldn't rebuild your meals. Open your meal plan and try again.", { variant: 'error' });
+          toast.show('Could not rebuild your meals. Open your meal plan and try again.', { variant: 'error' });
           return;
         }
         toast.show('Your meals have been rebuilt around your new target.', { variant: 'success' });
@@ -944,7 +944,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
       }
       setPlanReview(null);
     } catch (_) {
-      toast.show("Couldn't update your meals. Try again.", { variant: 'error' });
+      toast.show('Could not update your meals. Please try again.', { variant: 'error' });
     } finally {
       setPlanUpdating(false);
     }
@@ -1514,9 +1514,10 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       basis={results.proteinBasis}
                       kcalPercent={pct(results.proteinG, 4)}
                       barColor={t.colors.macroProtein}
+                      energyUnit={energyUnit}
                     />
-                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} barColor={t.colors.macroCarb} />
-                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)}   barColor={t.colors.macroFat} />
+                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} barColor={t.colors.macroCarb} energyUnit={energyUnit} />
+                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)}   barColor={t.colors.macroFat} energyUnit={energyUnit} />
                   </View>
                 );
               })()}
@@ -1741,7 +1742,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       const lbmLine = `You have ${estimatedLabel} ${lbmKg} kg of muscle and bone. At ${results.proteinGPerKgLbm} g per kg of that muscle mass, ${results.proteinG}g is based on ${approachLabel}. `;
                       const scalingLine = results.confidence === 'low'
                         ? `Because this uses a best estimate, treat it as a sensible starting point rather than an exact measurement. `
-                        : `Your coach scales to muscle mass rather than total weight because fat tissue doesn't need protein to maintain itself. This gives a more precise target regardless of your body fat level. `;
+                        : `Your coach scales to muscle mass rather than total weight because fat tissue does not need protein to maintain itself. This gives a more precise target regardless of your body fat level. `;
                       const purposeLine = isGain
                         ? `Protein is the raw material your muscles rebuild with after every session. Your target is above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
@@ -1757,7 +1758,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                         : `Your target of ${results.proteinG}g is based on ${approachLabel}. `;
                       const tipLine = `Tip: entering a body-fat estimate or measured figure lets your coach scale closer to your lean mass instead of total weight. A measured source is stronger, but even a good estimate can improve the starting point. `;
                       const purposeLine = isGain
-                        ? `Protein is the raw material muscles rebuild with after every session. At this target you're above the threshold where muscle repair and growth is fully supported.`
+                        ? `Protein is the raw material muscles rebuild with after every session. At this target you are above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
                         ? `When you are trying to hold muscle while losing fat, high protein provides the amino acids needed for muscle repair while telling your body to use fat as fuel instead.`
                         : isMaintain
@@ -1771,10 +1772,10 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 const carbWhy = isGain
                   ? `Carbs are your main training fuel. Glycogen (the carbohydrate stored in muscle) powers you through your sets. By the fourth or fifth set it is almost exclusively glycogen being used. Your ${results.carbsG}g gives you plenty to top up between sessions and arrive at every workout ready to push hard. Better-fuelled sessions mean better training, which means more muscle growth.`
                   : isCut
-                  ? `After protein and fat are set, carbs fill the remaining ${carbKcal} kcal. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that's a sign to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
+                  ? `After protein and fat are set, carbs fill the remaining ${formatEnergy(carbKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that is a sign to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
                   : isMaintain
-                  ? `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. At maintenance there's no need to restrict them. Your ${results.carbsG}g keeps glycogen full so every session has the fuel to push hard. Timing the bulk of them around training is the only nuance worth bothering with.`
-                  : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
+                  ? `Carbs fill the remaining ${formatEnergy(carbKcal, energyUnit)} ${energyUnitLabel(energyUnit)} after protein and fat are set. At maintenance there is no need to restrict them. Your ${results.carbsG}g keeps glycogen full so every session has the fuel to push hard. Timing the bulk of them around training is the only nuance worth bothering with.`
+                  : `Carbs fill the remaining ${formatEnergy(carbKcal, energyUnit)} ${energyUnitLabel(energyUnit)} after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
 
                 return (
                   <View style={[styles.whyGroup, live.whyGroup]}>
@@ -1945,14 +1946,14 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                     <Text style={[styles.calcValue, live.calcValue]}>
                       {Number(results.maintenanceKcal) > 0
                         ? `${formatEnergy(results.maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}`
-                        : 'Unavailable'}
+                        : 'Not worked out yet'}
                     </Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={[styles.calcKey, live.calcKey]}>Maintenance source</Text>
                     <Text style={[styles.calcValue, live.calcValue]}>
                       {!(Number(results.maintenanceKcal) > 0)
-                        ? 'Unavailable: complete your profile to recalculate'
+                        ? 'Finish your profile and this will be worked out for you'
                         : results.maintenanceAuthority?.source === 'athlete_history'
                         ? 'Your logged intake and weight trend'
                         : results.maintenanceAuthority?.source === 'held_athlete_history'
@@ -1970,7 +1971,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       {results.targetRateKgPerWeek != null && results.targetRateKgPerWeek !== ''
                         && Number.isFinite(Number(results.targetRateKgPerWeek))
                         ? formatBodyWeightRate(results.targetRateKgPerWeek, bodyWeightUnits)
-                        : 'Unavailable'}
+                        : 'Not worked out yet'}
                     </Text>
                   </View>
                   <View style={[styles.calcRow, { marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: t.colors.border }]}>
@@ -1986,7 +1987,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={[styles.calcKey, live.calcKey]}>Fat</Text>
-                    <Text style={[styles.calcValue, live.calcValue]}>Per phase (0.7 to 1.0 g/kg BW) · min 0.5 g/kg</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>Depends on your phase: 0.7 to 1.0 g per kg of body weight, never below 0.5 g</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={[styles.calcKey, live.calcKey]}>Carbs</Text>

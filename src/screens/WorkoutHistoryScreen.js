@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
 import { View, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import Text from '../components/Text';
@@ -191,12 +192,20 @@ export default function WorkoutHistoryScreen({ navigation }) {
   // JOIN in database.js, so no new database read is needed here.
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    loadWorkouts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  // C6: reload on every focus (a session finished, edited or deleted elsewhere
+  // shows when the person comes back), as AnalyticsScreen does. Only the first
+  // load shows the spinner; a later one is quiet and leaves the list in place
+  // if it fails.
+  const loadedOnceRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkouts({ quiet: loadedOnceRef.current });
+      loadedOnceRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id]),
+  );
 
-  async function loadWorkouts() {
+  async function loadWorkouts({ quiet = false } = {}) {
     const requestId = loadRequestRef.current + 1;
     loadRequestRef.current = requestId;
     const isCurrentRequest = () => loadRequestRef.current === requestId;
@@ -204,8 +213,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setLoadError(false);
+    if (!quiet) {
+      setLoading(true);
+      setLoadError(false);
+    }
     try {
       // LB-7: the list renders only the most recent 50 completed sessions, so
       // the database query and set fan-out are both bounded to that page.
@@ -234,7 +245,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
     } catch (e) {
       if (!isCurrentRequest()) return;
       logError('WorkoutHistoryScreen.loadWorkouts', e, { userId: user?.id });
-      setLoadError(true);
+      if (!quiet) setLoadError(true);
     } finally {
       if (isCurrentRequest()) setLoading(false);
     }
@@ -276,7 +287,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       setWorkouts(prev => [...prev, ...nextRows]);
     } catch (e) {
       logError('WorkoutHistoryScreen.handleShowMore', e, { userId: user?.id });
-      toast.show("Couldn't load more sessions. Try again.", { variant: 'error' });
+      toast.show('Could not load more sessions. Please try again.', { variant: 'error' });
     } finally {
       if (loadRequestRef.current === requestId) setLoadingMore(false);
     }
@@ -398,7 +409,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       logError('WorkoutHistoryScreen.handleRepeatAsIs', e, {
         userId: user?.id, workoutId: workout?.id, routineId: workout?.routineId,
       });
-      toast.show('Couldn\'t repeat workout. Try again.', { variant: 'error' });
+      toast.show('Could not repeat that workout. Please try again.', { variant: 'error' });
     }
   }
 
@@ -433,7 +444,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           onPress: async () => {
             try {
               const ok = await deleteWorkoutAndSets(user.id, workout.id);
-              if (!ok) { toast.show("Couldn't delete that workout. Try again.", { variant: 'error' }); return; }
+              if (!ok) { toast.show('Could not delete that workout. Please try again.', { variant: 'error' }); return; }
               const supabaseUserId = session?.user?.id;
               if (supabaseUserId) {
                 // eslint-disable-next-line global-require
@@ -462,7 +473,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               setMonthReloadKey(k => k + 1);
             } catch (e) {
               logError('WorkoutHistory.delete', e, { workoutId: workout.id });
-              toast.show("Couldn't delete that workout. Try again.", { variant: 'error' });
+              toast.show('Could not delete that workout. Please try again.', { variant: 'error' });
             }
           },
         },
@@ -1078,8 +1089,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
           ) : loadError ? (
             <EmptyState
               icon="alert-circle-outline"
-              title="Couldn't load workout history"
-              text="Couldn't load this on your device. Try again. Your saved sessions have not been changed."
+              title="Could not load workout history"
+              text="Could not load this on your device. Try again. Your saved sessions have not been changed."
               actionLabel="Try again"
               onAction={loadWorkouts}
               actionAccessibilityLabel="Try loading workout history again"

@@ -283,7 +283,7 @@ export default function HowYouTrainAddScreen() {
       else await loadBaselinePlan(createdIds, subject);
     } catch (e) {
       logError('HowYouTrainAdd.save', e, {});
-      toast.show('That did not save. Nothing was changed - you can try again.', { variant: 'error' });
+      toast.show('That did not save. Nothing was changed, so you can try again.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -307,7 +307,7 @@ export default function HowYouTrainAddScreen() {
     let ok = false;
     try { ok = await grantCapabilityConsent(userId, {}); } catch (e) { logError('HowYouTrainAdd.consent', e, {}); ok = false; }
     setBusy(false);
-    if (!ok) { toast.show('That did not save - you can try again.', { variant: 'error' }); return; }
+    if (!ok) { toast.show('That did not save. You can try again.', { variant: 'error' }); return; }
     setConsented(true);
     await save();
   };
@@ -454,7 +454,7 @@ export default function HowYouTrainAddScreen() {
         finishPlan(anyApplied ? (allowed > 0 ? 'mixed' : 'applied') : 'declined');
       } catch (e) {
         logError('HowYouTrainAdd.commitLines', e, {});
-        toast.show('That did not save. Try again.', { variant: 'error' });
+        toast.show('That did not save. Please try again.', { variant: 'error' });
       }
     };
     if (keepsClinicianLine(plan.lines, plan.clinicianIds)) {
@@ -482,7 +482,7 @@ export default function HowYouTrainAddScreen() {
       finishPlan(res.applied > 0 ? 'applied' : 'declined');
     } catch (e) {
       logError('HowYouTrainAdd.applyRewrite', e, {});
-      toast.show('That did not save. Try again.', { variant: 'error' });
+      toast.show('That did not save. Please try again.', { variant: 'error' });
     } finally { setBusy(false); }
   };
 
@@ -859,7 +859,7 @@ function planSentence(plan) {
 function rewriteSentence(plan) {
   const n = plan.total; const k = plan.substitutable; const u = plan.unsolvable;
   const plural = (c) => (c === 1 ? '' : 's');
-  const clashes = n === 1 ? "clashes with an injury or limitation you've set" : 'clash with your injuries or limitations';
+  const clashes = n === 1 ? "clashes with an injury or limitation you have set" : 'clash with your injuries or limitations';
   if (k === 0) return `${n} exercise${plural(n)} in your current plan ${clashes}, and no close match fits right now. ${n === 1 ? 'It stays' : 'They stay'} in place with a quiet note, and you can swap ${n === 1 ? 'it' : 'them'} any time.`;
   if (u === 0) return `${n} exercise${plural(n)} in your current plan ${clashes}. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit.`;
   return `${n} exercises in your current plan clash with your injuries or limitations. Volyume can swap ${k} for movements that fit; ${u === 1 ? '1 has no close match and stays' : `${u} have no close match and stay`} in place with a quiet note.`;

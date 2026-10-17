@@ -256,9 +256,9 @@ const IS_JEST = typeof process !== 'undefined'
 const SET_TYPE_OPTIONS = [
   { value: 'straight', label: 'Working', description: 'Counts towards your weekly volume and progress tracking.' },
   { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work. Not counted in your weekly volume.' },
-  { value: 'dropset', label: 'Drop set', description: "Reduce the weight once you can't do any more reps, then keep going. Counts towards weekly volume, but not towards your planned number of sets." },
+  { value: 'dropset', label: 'Drop set', description: "Reduce the weight once you cannot do any more reps, then keep going. Counts towards weekly volume, but not towards your planned number of sets." },
   { value: 'myo_reps', label: 'Myo-reps', description: 'A heavy activation set, then short mini-sets with a few breaths between. Counts towards volume and progress.' },
-  { value: 'rest_pause', label: 'Rest-pause', description: "Go until you can't do any more reps, rest 10 to 20 seconds, then squeeze out more reps. Counts towards volume and progress." },
+  { value: 'rest_pause', label: 'Rest-pause', description: "Go until you cannot do any more reps, rest 10 to 20 seconds, then squeeze out more reps. Counts towards volume and progress." },
   { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible, usually the last set. Counts towards volume and progress.' },
 ];
 
@@ -1171,7 +1171,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // would deny a change Volyume made) and no definite baseline
     // conflict (the actionable truth outranks a rule driving nothing).
     if (kind === 'held') {
-      return { kind: 'held', copy: "You're holding your plan as-is for this. Volyume changes nothing until you say so." };
+      return { kind: 'held', copy: 'You are holding your plan as it is for this. Volyume changes nothing until you say so.' };
     }
     if (kind === 'episode') {
       // Natural coach-language order (2026-08-21): name what the conflict
@@ -1192,11 +1192,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           .map(c => (sidedUnionShape(c, capForPhrase) ? { ...c, laterality: null } : c)), {});
         // Round 6 (R6-4): state the conflict, offer the action - a
         // workaround-in-progress claim was false on the dominant path.
-        if (named) return { kind: 'episode', copy: `This one involves ${named}, which sits outside your temporary change. Swap it when you're ready.` };
+        if (named) return { kind: 'episode', copy: `This one involves ${named}, which sits outside your temporary change. Swap it when you are ready.` };
       } catch (_e) { /* fall through to the generic line */ }
       // Round 5 (Q-1): the generic line asserts no adaptation - the app
       // is adapting nothing further on a row showing this notice.
-      return { kind: 'episode', copy: "This one sits outside your temporary change. Swap it when you're ready." };
+      return { kind: 'episode', copy: "This one sits outside your temporary change. Swap it when you are ready." };
     }
     if (kind === 'baseline') {
       try {
@@ -1208,9 +1208,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const named = subjectPhrase(definiteBaseline
           .filter(c => c.ruleKind !== 'exercise')
           .map(c => (sidedUnionShape(c, capForPhrase) ? { ...c, laterality: null } : c)), {});
-        if (named) return { kind: 'baseline', copy: `This one involves ${named}, which clashes with an injury or limitation you've set. Swap it when you're ready.` };
+        if (named) return { kind: 'baseline', copy: `This one involves ${named}, which clashes with an injury or limitation you have set. Swap it when you are ready.` };
       } catch (_e) { /* fall through to the generic line */ }
-      return { kind: 'baseline', copy: "This one clashes with an injury or limitation you've set. Swap it when you're ready." };
+      return { kind: 'baseline', copy: "This one clashes with an injury or limitation you have set. Swap it when you are ready." };
     }
     if (kind === 'unknown') {
       try {
@@ -1225,9 +1225,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const named = subjectPhrase(unknowns
           .filter(c => c.ruleKind !== 'exercise')
           .map(c => (unionShape(c, capUnk) ? { ...c, laterality: null } : c)), {});
-        if (named) return { kind: 'unknown', copy: `Volyume doesn't know yet whether this involves ${named}, so it stays as planned.` };
+        if (named) return { kind: 'unknown', copy: `Volyume does not know yet whether this involves ${named}, so it stays as planned.` };
       } catch (_e) { /* fall through to the generic line */ }
-      return { kind: 'unknown', copy: "Volyume couldn't check this against your limitations yet, so it stays as planned." };
+      return { kind: 'unknown', copy: 'Volyume could not check this against your limitations yet, so it stays as planned.' };
     }
     return null;
   })();
@@ -1526,7 +1526,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       await updateWorkout(activeWorkout.id, { notes: next || null });
     } catch (e) {
       logError('ActiveWorkoutScreen.saveSessionNote', e, { workoutId: activeWorkout.id });
-      toast.show('Could not save your note yet. Try again.', { variant: 'error' });
+      toast.show('Could not save your note yet. Please try again.', { variant: 'error' });
     }
   }
 
@@ -2377,7 +2377,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       navigation.goBack();
     } catch (e) {
       logError(errorSource, e, { workoutId: discardId });
-      toast.show("Couldn't discard this workout, try again", { variant: 'error' });
+      toast.show('Could not discard this workout. Please try again.', { variant: 'error' });
     } finally {
       clearTimeout(timer);
     }
@@ -2408,7 +2408,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // at the 13 dp label role, which the founder could barely read (2026-10-09,
   // D220 addendum 26). Shared by the X and the stale-session sheet.
   function confirmDiscard(source) {
-    appAlert('Discard workout?', 'This will delete the current workout session. Your plan will not advance.', [
+    appAlert('Discard workout?', 'This workout will be deleted. Your plan will not move on.', [
       { text: 'Keep training', style: 'cancel' },
       { text: 'Discard workout', style: 'destructive', onPress: () => discardWorkout(source) },
     ]);
@@ -3362,6 +3362,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       });
 
       setPersisted = true;
+      // A1: a delete still inside its Undo window is hidden on screen but
+      // stored. Commit it now the new set is stored (never before the save:
+      // nothing may be awaited between the tap and createWorkoutSet), so an
+      // Undo can no longer bring back a set whose number this one now uses.
+      await flushPendingDeletes();
       const setData = {
         id: savedSet.id,
         exerciseId: exercise.id,
@@ -3997,7 +4002,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setId: editingSet?.id,
       });
       appAlert(
-        'Couldn\'t save changes',
+        'Could not save changes',
         'Your edit was not saved. Tap Save to retry. If this keeps happening, tell us from Settings > Help.',
       );
       return false;
@@ -4084,10 +4089,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     try { AccessibilityInfo.announceForAccessibility('Set restored'); } catch (_) { /* best-effort */ }
   }
 
-  async function commitPendingDelete(setId) {
+  async function commitPendingDelete(setId, fromToast = false) {
     const p = pendingDeletesRef.current.get(setId);
     if (!p) return;
     pendingDeletesRef.current.delete(setId);
+    // A6: when something other than the toast running out commits this
+    // delete (a finish, the screen flush, another set action), the Undo
+    // toast must not stay up offering a restore that no longer exists.
+    if (!fromToast) { try { toast.hide?.(`set-delete-${setId}`); } catch (_) { /* best-effort */ } }
     try {
       // false = the row is already gone from this device, which is what was
       // asked; the cloud delete below still runs so it cannot be resurrected.
@@ -4155,9 +4164,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // Spoken like a log and an edit are (audit P5).
     try { AccessibilityInfo.announceForAccessibility('Set deleted'); } catch (_) { /* best-effort */ }
     toast.show('Set deleted.', {
+      key: `set-delete-${target.id}`,
       variant: 'undo',
       action: { label: 'Undo', onPress: () => undoDeleteSet(target.id) },
-      onTimeout: () => { commitPendingDelete(target.id); },
+      onTimeout: () => { commitPendingDelete(target.id, true); },
     });
   }
 
@@ -4171,6 +4181,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // that becomes one is checked against the history without itself.
   async function handleChangeLoggedSetType(target, newType) {
     if (!target?.id || !newType) return;
+    // A1: a delete still inside its Undo window is hidden on screen but
+    // stored; commit it first so the renumber below sees the same sets the
+    // person sees.
+    await flushPendingDeletes();
     const oldType = target.setType ?? target.set_type ?? 'straight';
     if (oldType === newType) return;
     const newEvidenceClass = newType === 'warmup' ? null : currentEvidenceClass;
@@ -4245,13 +4259,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function startCluster() {
     const activationReps = parseInt(currentSet.reps, 10);
     if (!Number.isFinite(activationReps) || activationReps < 1) {
-      appAlert('Enter reps', 'Enter your activation set reps first.');
+      appAlert('Reps needed', 'Add the number of reps you did for your activation set before starting the cluster.');
       return;
     }
     const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
     const weightNum = parseDecimalInput(currentSet.weight);
     if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
-      appAlert('Enter weight', `Enter the weight used (in ${units}) before starting the cluster.`);
+      appAlert('Weight needed', `Add the weight you used (in ${units}) before starting the cluster.`);
       return;
     }
     setCluster({
@@ -4304,7 +4318,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function addMiniSet() {
     const n = parseInt(clusterReps, 10);
     if (!Number.isFinite(n) || n <= 0) {
-      appAlert('Enter reps', 'Enter the mini-set reps.');
+      appAlert('Reps needed', 'Add the number of reps you did for this mini-set.');
       return;
     }
     setCluster((c) => (c ? { ...c, reps: [...c.reps, n] } : c));
@@ -4365,13 +4379,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function startPerSide() {
     const reps = parseInt(currentSet.reps, 10);
     if (!Number.isFinite(reps) || reps < 1) {
-      appAlert('Enter reps', 'Enter the reps to do on each side.');
+      appAlert('Reps needed', 'Add the number of reps to do on each side before you start.');
       return;
     }
     const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
     const weightNum = parseDecimalInput(currentSet.weight);
     if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
-      appAlert('Enter weight', `Enter the weight used (in ${units}) before starting your first side.`);
+      appAlert('Weight needed', `Add the weight you used (in ${units}) before starting your first side.`);
       return;
     }
     // R4 (D64): pressing "Log set" IS side one's confirmation - the user
@@ -4611,16 +4625,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
 
   async function handleFinishWorkout() {
-    // A "Finish anyway" has already been confirmed once; read the flag and
-    // clear it at once so it can never carry over to a later Finish tap.
-    const skipEndedEarlyConfirm = skipEndedEarlyConfirmRef.current;
-    skipEndedEarlyConfirmRef.current = false;
     if (!activeWorkout) { navigation.goBack(); return; }
     // A set save in flight has not reached the database yet: finishing now
     // would total the workout without it. Do nothing; the button works again
     // a moment later, when the save ends.
     if (saving) return;
     if (finishingRef.current) return; // double-tap guard
+    // A "Finish anyway" has already been confirmed once; read the flag and
+    // clear it only now that this call is really going ahead (A3: a call the
+    // guards above drop must not use up the confirmation), so it can never
+    // carry over to a later Finish tap that does run.
+    const skipEndedEarlyConfirm = skipEndedEarlyConfirmRef.current;
+    skipEndedEarlyConfirmRef.current = false;
     setFinishingFlag(true);
     // A set deleted a moment ago is still inside its Undo window: delete it
     // for real first, so the finish counts (and the cloud holds) exactly the
@@ -4977,7 +4993,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // already navigated away from this screen.
         setFinishingFlag(false);
         appAlert(
-          'Couldn\'t finish workout',
+          'Could not finish workout',
           'Your sets are still saved, but the workout did not close on your device, so tap Finish workout again.',
         );
       } finally {
@@ -5131,7 +5147,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const setWord = confirmReport.setCount === 1 ? 'set' : 'sets';
     const exerciseWord = confirmReport.exerciseCount === 1 ? 'exercise' : 'exercises';
     const confirmCountLine = confirmReport.setCount > 0
-      ? `You've logged ${confirmReport.setCount} ${setWord} across ${confirmReport.exerciseCount} ${exerciseWord}.`
+      ? `You have logged ${confirmReport.setCount} ${setWord} across ${confirmReport.exerciseCount} ${exerciseWord}.`
       : 'The sets for this workout could not be counted just now.';
     appAlert(
       'Finish workout?',
@@ -5255,9 +5271,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // line opens the set-type picker (it replaced SetEntry's card-foot row).
   const orientationLabel = (() => {
     if (currentSet.setType === 'warmup') {
-      return `Warm-up - Set W${loggedSets.filter(s => s.setType === 'warmup').length + 1}`;
+      return `Warm-up set ${loggedSets.filter(s => s.setType === 'warmup').length + 1}`;
     }
-    if (isDeloadWeek) return `Light set ${workingLogged + 1} - Easy`;
+    if (isDeloadWeek) return `Light set ${workingLogged + 1}: Easy`;
     // F-13 (evidence A5): on a circuit station this line said "Set 3 of 3 -
     // Superset" while the chip directly above it said "Circuit · Round 3 of
     // 3". A circuit counts rounds, and the round is the circuit's own (see
@@ -5266,7 +5282,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const pos = circuitRound.targetRounds
         ? `Round ${circuitRound.round} of ${circuitRound.targetRounds}`
         : `Round ${circuitRound.round}`;
-      return `${pos} - Circuit`;
+      return `${pos}: Circuit`;
     }
     // Past the target with no extra set armed there is no "set 4 of 3"
     // (audit D10): the line says the target is met.
@@ -5277,7 +5293,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const mode = (currentSGI != null && pairedExerciseName)
       ? 'Superset'
       : (SET_TYPE_OPTIONS.find(o => o.value === currentSet.setType)?.label ?? 'Working');
-    return `${pos} - ${mode}`;
+    return `${pos}: ${mode}`;
   })();
   // Stage A (D220): the rest sheet's "next set" line is the position line the
   // Now card used to carry, with the entry's weight and reps when it holds
@@ -5977,8 +5993,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? groupFocusMessage
     : isWarmupEntry
       ? (warmupHintSeenRef.current
-        ? 'Warm-up - not counted in your totals.'
-        : "Warm-up - not counted in your totals. Light weight, easy reps; tap the check when you're ready to work.")
+        ? 'Warm-up. Not counted in your totals.'
+        : 'Warm-up. Not counted in your totals. Use light weight and easy reps, then tap the check when you are ready to work.')
       : null;
   const firstTimeLine = (!isWarmupEntry && workingLogged === 0 && prevWorkingSets.length === 0 && setTableKind === 'weight_reps')
     ? (() => {
@@ -6264,7 +6280,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
                     <Ionicons name="link" size={iconSize.sm} color={t.colors.textSecondary} />
                     <Text style={[styles.supersetChipText, live.supersetChipText]}>
-                      Superset - alternates with {partnerNamesText}
+                      Superset: alternates with {partnerNamesText}
                     </Text>
                   </View>
                 ),
@@ -6531,12 +6547,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 Side one logged
               </Text>
               <Text style={[styles.clusterReps, live.clusterReps]}>
-                {`${perSide.reps} reps${perSide.weight ? ` @ ${perSide.weight}${units}` : ''} - same on your other side`}
+                {`${perSide.reps} reps${perSide.weight ? ` @ ${perSide.weight}${units}` : ''}. Same on your other side`}
               </Text>
               <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
                 {exercise?.compoundIsolation === 'compound'
                   ? 'Rest, switch sides, then tap the check to log the other side.'
-                  : "Switch sides when you're ready, then tap the check to log the other side."}
+                  : 'Switch sides when you are ready, then tap the check to log the other side.'}
               </Text>
               <TouchableOpacity
                 onPress={cancelPerSide}

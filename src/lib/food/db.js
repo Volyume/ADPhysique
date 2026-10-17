@@ -3285,7 +3285,7 @@ export async function applyRecipeFromCloud(userId, row) {
   const localMs = await _localUpdatedMs(d, 'recipes', row.id, userId);
   if (localMs != null && localMs >= updatedAt) return;
   // cooked_weight_g is read ONLY while this build pushes it
-  // (RECIPE_COOKED_WEIGHT_PUSH, ships false until migrate_196 is applied) and
+  // (RECIPE_COOKED_WEIGHT_PUSH, on since migrate_196 was applied 2026-10-16) and
   // the cloud row carries the key; otherwise the local value stands (the
   // custom_foods portions_json pattern). ON CONFLICT DO UPDATE rather than
   // INSERT OR REPLACE, so a column this applier does not write is kept.

@@ -88,7 +88,7 @@ describe('a refused automatic post is said plainly', () => {
     expect(refused).toBeGreaterThan(-1);
     expect(invite).toBeGreaterThan(refused);
     expect(strip).toContain("title: 'Not shared to Community',");
-    expect(strip).toContain("Your Community sharing settings didn't allow this session, so it wasn't posted.");
+    expect(strip).toContain('Your Community sharing settings did not allow this session, so it was not posted.');
     expect(SUMMARY).toContain("if (out?.sessionRefused === 'not_allowed') refreshMe(user.id).catch(() => {});");
   });
 });

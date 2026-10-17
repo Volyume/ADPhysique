@@ -230,8 +230,8 @@ describe('the goal and phase screen treats a kit answer exactly as first run and
   test('a failed install says so calmly, with the reason logged, and names the route that can add the plan', () => {
     expect(kitBlock).toMatch(/logError\('ProGoalSetupScreen\.installKitPlan', e, \{ userId: user\?\.id \}\);/);
     expect(kitBlock).toMatch(/logWarn\('ProGoalSetupScreen\.installKitPlan', install\.error \?\? 'unknown', \{ userId: user\?\.id \}\);/);
-    expect(goalSetup).toMatch(/function kitInstallFailedLine\(kit\) \{\s*\n\s*return `Couldn't add the \$\{libraryKitWord\(kit\)\} plan, so nothing was changed\. Try again, or choose a \$\{libraryKitWord\(kit\)\} plan in the Plan Library\.`;/);
-    expect(goalSetup).not.toMatch(/Couldn't add the [^`]*—/);
+    expect(goalSetup).toMatch(/function kitInstallFailedLine\(kit\) \{\s*\n\s*return `Could not add the \$\{libraryKitWord\(kit\)\} plan, so nothing was changed\. Please try again, or choose a \$\{libraryKitWord\(kit\)\} plan in the Plan Library\.`;/);
+    expect(goalSetup).not.toMatch(/Could not add the [^`]*—/);
   });
 
   test('an installed plan reaches the plan slot as done: nothing to preview, nothing to generate', () => {

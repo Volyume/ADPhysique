@@ -37,7 +37,7 @@ describe('FF-002: plan rebuild is a transaction', () => {
     expect(rebuildIdx).toBeLessThan(saveIdx);
     // A failed rebuild bails (no save, no navigate-away).
     expect(PLAN_UPDATE).toMatch(/if \(!planResult\.ok\) \{[\s\S]*?return;[\s\S]*?\}/);
-    expect(PLAN_UPDATE).toMatch(/Your training setup wasn't changed/);
+    expect(PLAN_UPDATE).toMatch(/Your training setup has not changed/);
   });
 });
 
@@ -45,7 +45,7 @@ describe('FF-004: plan library distinguishes error from empty', () => {
   test('source guard: tracks a load error and offers a retry', () => {
     expect(LIBRARY).toMatch(/setLoadError\(true\)/);
     expect(LIBRARY).toMatch(/loadError \?/);
-    expect(LIBRARY).toMatch(/Couldn't load plans/);
+    expect(LIBRARY).toMatch(/Could not load plans/);
     expect(LIBRARY).toMatch(/const handleRetry/);
   });
 });

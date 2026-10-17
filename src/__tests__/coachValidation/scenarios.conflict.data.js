@@ -342,7 +342,7 @@ export const SCENARIOS = [
     must: [
       { kind: 'absent', path: 'adjustments.calories' },
       { kind: 'equals', path: 'heldDecisions[0].type', equals: 'calories' },
-      { kind: 'equals', path: 'heldDecisions[0].reason', equals: "Calories stay where they are. Food wasn't tracked this week, so any change would be a guess." },
+      { kind: 'equals', path: 'heldDecisions[0].reason', equals: 'Your calories stay where they are. Food was not tracked this week, so any change would be a guess.' },
     ],
   },
 

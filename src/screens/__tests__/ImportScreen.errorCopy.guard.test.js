@@ -23,13 +23,13 @@ describe('ImportScreen never shows a raw exception message to the user', () => {
 
   test('handlePickFile shows calm, stable copy after logging the cause', () => {
     expect(src).toMatch(
-      /logError\('ImportScreen\.handlePickFile', e\);\s*\n\s*setError\('Could not read that file\. Try again\.'\);/,
+      /logError\('ImportScreen\.handlePickFile', e\);\s*\n\s*setError\('Could not read that file\. Please try again\.'\);/,
     );
   });
 
   test('handleConfirmImport shows calm, stable copy after logging the cause', () => {
     expect(src).toMatch(
-      /logError\('ImportScreen\.runImport', e\);\s*\n\s*setStage\('preview'\);\s*\n\s*appAlert\(\s*\n\s*'Import failed',\s*\n\s*'Something went wrong writing the data\. Nothing was saved\.',/,
+      /logError\('ImportScreen\.runImport', e\);\s*\n\s*setStage\('preview'\);\s*\n\s*appAlert\(\s*\n\s*'Import failed',\s*\n\s*'Could not save your import\. Nothing was changed, so you can safely try again\.',/,
     );
   });
 });

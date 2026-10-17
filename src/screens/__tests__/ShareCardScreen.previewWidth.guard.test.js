@@ -54,9 +54,9 @@ describe('ShareCardScreen EP-11/UI-03 responsive preview width guard', () => {
 
 describe('ShareCardScreen P-16 device-specific unavailable copy guard', () => {
   test('missing-native-module copy reads as a device limitation, not an incomplete build', () => {
-    expect(SRC).toMatch(/Photo backgrounds aren't available on your device\./);
-    expect(SRC).toMatch(/Saving to your gallery isn't available on your device\./);
-    expect(SRC).toMatch(/Story sharing isn't available on your device\./);
+    expect(SRC).toMatch(/Photo backgrounds are not available on this phone\./);
+    expect(SRC).toMatch(/Saving to your gallery is not available on this phone\./);
+    expect(SRC).toMatch(/Story sharing is not available on this phone\./);
     expect(SRC).not.toMatch(/isn't available in this version/);
     expect(SRC).not.toMatch(/aren't available in this version/);
   });

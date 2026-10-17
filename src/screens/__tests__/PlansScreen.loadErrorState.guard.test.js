@@ -60,7 +60,7 @@ describe('PlansScreen EP-09/P-06 load-failure guard', () => {
     expect(idxError).toBeGreaterThan(-1);
     expect(idxActivePlan).toBeGreaterThan(idxError);
     const errorBlock = SRC.slice(idxError, idxActivePlan);
-    expect(errorBlock).toMatch(/Couldn't load your plans/);
+    expect(errorBlock).toMatch(/Could not load your plans/);
     // DD8 (design-consistency-audit-2026-08-06): this bespoke Card+Button
     // scaffolding was replaced with the shared EmptyState primitive, so the
     // retry action now shows up as actionLabel/onAction rather than a raw

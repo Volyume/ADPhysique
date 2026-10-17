@@ -5,10 +5,15 @@ const ROOT = fs.readFileSync(path.resolve(__dirname, '../RootNavigator.js'), 'ut
 
 describe('RootNavigator account admission is a single publication boundary', () => {
   test('cold-start getSession preflights before publishing user or session', () => {
+    // RE-ANCHORED (final audit 2026-10-17, B1): the cold-start read now keeps
+    // getSession's error (classifySessionRead), so the old destructure this
+    // slice started at is gone; the slice starts at the session it publishes.
+    // The admission-before-publication order pinned below is unchanged.
     const coldStart = ROOT.slice(
-      ROOT.indexOf("const { data: { session } } = await client.auth.getSession()"),
+      ROOT.indexOf('const session = sessionResult?.data?.session ?? null;'),
       ROOT.indexOf('// No cloud session.'),
     );
+    expect(coldStart.length).toBeGreaterThan(0);
     expect(coldStart).toMatch(
       /preflightIncomingSession\(client, session\)[\s\S]*if \(!admission\.ok\) return;[\s\S]*setSession\(session\)[\s\S]*setUser\(session\.user\)/,
     );

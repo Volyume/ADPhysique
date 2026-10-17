@@ -29,6 +29,11 @@
  *
  * Each test is written to fail against the filtered-library code it replaces.
  */
+// C6 (audit 2026-10-17): the screen reloads on focus; outside a navigator the
+// focus hook runs its effect once on mount.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb) => { require('react').useEffect(() => cb(), [cb]); },
+}));
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
 const mockPeekOpen = jest.fn();
 jest.mock('../../components/PeekMenu', () => {
@@ -502,7 +507,7 @@ describe('F-2: "Repeat as-is" with no routine keeps what resolves and says what 
     await openRepeatAsIs(tree);
     expect(mockStartWorkout).not.toHaveBeenCalled();
     expect(mockToastShow).toHaveBeenCalledTimes(1);
-    expect(mockToastShow).toHaveBeenCalledWith("Couldn't repeat workout. Try again.", { variant: 'error' });
+    expect(mockToastShow).toHaveBeenCalledWith('Could not repeat that workout. Please try again.', { variant: 'error' });
   });
 
   test('nothing left out: no toast, and a retired id and its survivor are ONE entry with every working set counted', async () => {

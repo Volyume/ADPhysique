@@ -53,19 +53,19 @@ describe('ManualBuilderScreen never shows a raw exception message to the user', 
 
   test('handleSaveAndActivate logs the cause and shows calm, stable copy', () => {
     expect(src).toMatch(
-      /logError\('ManualBuilderScreen\.handleSaveAndActivate', e\);\s*\n\s*toast\.show\("Couldn't save your plan, try again", \{ variant: 'error' \}\);/,
+      /logError\('ManualBuilderScreen\.handleSaveAndActivate', e\);\s*\n\s*toast\.show\("Could not save your plan. Please try again.", \{ variant: 'error' \}\);/,
     );
   });
 
   test('handleSaveDraft logs the cause and shows calm, stable copy', () => {
     expect(src).toMatch(
-      /logError\('ManualBuilderScreen\.handleSaveDraft', e\);\s*\n\s*toast\.show\("Couldn't save your draft, try again", \{ variant: 'error' \}\);/,
+      /logError\('ManualBuilderScreen\.handleSaveDraft', e\);\s*\n\s*toast\.show\("Could not save your draft. Please try again.", \{ variant: 'error' \}\);/,
     );
   });
 
   test('handleSaveEdit logs the cause and shows calm, stable copy', () => {
     expect(src).toMatch(
-      /logError\('ManualBuilderScreen\.handleSaveEdit', e\);\s*\n\s*toast\.show\("Couldn't save your changes, try again", \{ variant: 'error' \}\);/,
+      /logError\('ManualBuilderScreen\.handleSaveEdit', e\);\s*\n\s*toast\.show\("Could not save your changes. Please try again.", \{ variant: 'error' \}\);/,
     );
   });
 });

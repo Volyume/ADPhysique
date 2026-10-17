@@ -94,7 +94,16 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
 
   const [title, setTitle] = useState(route?.params?.name ?? 'Group chat');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessagesState] = useState([]);
+  // A2: the thread, mirrored in a ref and written through setMessages below, so
+  // a merge is computed from the live thread OUTSIDE any React state updater
+  // (an updater must be pure; these also wrote the cursor ref and state).
+  const messagesRef = useRef([]);
+  const setMessages = useCallback((next) => {
+    const value = typeof next === 'function' ? next(messagesRef.current) : next;
+    messagesRef.current = value;
+    setMessagesState(value);
+  }, []);
   const [cursor, setCursor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorCode, setErrorCode] = useState(null);
@@ -127,12 +136,10 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
       if (group?.name) setTitle(group.name);
       setIsAdmin(group?.myRole === 'admin');
       if (quiet) {
-        setMessages((prev) => {
-          const merged = mergeNewestPage(prev, cursorRef.current, page);
-          cursorRef.current = merged.cursor;
-          setCursor(merged.cursor);
-          return merged.messages;
-        });
+        const merged = mergeNewestPage(messagesRef.current, cursorRef.current, page);
+        cursorRef.current = merged.cursor;
+        setMessages(merged.messages);
+        setCursor(merged.cursor);
       } else {
         setMessages(page.messages);
         setCursor(page.cursor);
@@ -146,7 +153,7 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, [groupId, clearUnread]);
+  }, [groupId, clearUnread, setMessages]);
 
   /** The quiet re-read: no spinner, and what is on screen stays if it fails. */
   const poll = useCallback(async () => {
@@ -154,12 +161,10 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
     if (!activeRef.current) return;
     try {
       const page = await loadGroupMessages(groupId, { limit: GROUP_CHAT_PAGE_SIZE });
-      setMessages((prev) => {
-        const merged = mergeNewestPage(prev, cursorRef.current, page);
-        cursorRef.current = merged.cursor;
-        setCursor(merged.cursor);
-        return merged.messages;
-      });
+      const merged = mergeNewestPage(messagesRef.current, cursorRef.current, page);
+      cursorRef.current = merged.cursor;
+      setMessages(merged.messages);
+      setCursor(merged.cursor);
       clearUnread(page.messages);
     } catch (e) {
       // A removed member must see the removed state, not stale messages
@@ -167,7 +172,7 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
       // transient: what is on screen stays.
       if (REMOVED_CODES.includes(e?.code)) setErrorCode(e.code);
     }
-  }, [groupId, clearUnread]);
+  }, [groupId, clearUnread, setMessages]);
 
   const focusedOnceRef = useRef(false);
   useFocusEffect(useCallback(() => {
@@ -199,7 +204,7 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
     } finally {
       olderBusyRef.current = false;
     }
-  }, [cursor, groupId, toast]);
+  }, [cursor, groupId, toast, setMessages]);
 
   async function handleSend(body) {
     try {
@@ -271,7 +276,7 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
           <View style={[styles.centre, { paddingHorizontal: t.screenPadding }]}>
             <EmptyState
               icon="cloud-offline-outline"
-              title="Not available"
+              title="This is not available right now"
               text={groupChatErrorLine(errorCode)}
               actionLabel="Try again"
               onAction={load}

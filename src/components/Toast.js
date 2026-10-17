@@ -42,7 +42,7 @@ import useTheme from '../hooks/useTheme';
 // safe-area inset instead of a guessed constant.
 const TAB_BAR_CONTENT_HEIGHT = 49;
 
-const ToastContext = createContext({ show: () => {} });
+const ToastContext = createContext({ show: () => {}, hide: () => {} });
 
 export function useToast() {
   return useContext(ToastContext);
@@ -127,6 +127,10 @@ export function ToastProvider({ children }) {
       // For undo-style flows the caller registers the destructive commit
       // here (e.g. actually delete the row from SQLite + cloud).
       onTimeout: options.onTimeout || null,
+      // Optional key so the caller can take this toast away again with
+      // hide(key), for example an Undo toast whose change was committed by
+      // something other than the toast running out (audit A6).
+      key: options.key || null,
     };
     setQueue(q => [...q, next]);
     // DEFAULTS only changes reference when the theme actually flips (see the
@@ -217,10 +221,23 @@ export function ToastProvider({ children }) {
     clearFallback.current = setTimeout(finish, reduceMotion ? 0 : 240);
   }
 
+  // hide(key): remove a toast shown with { key }, queued or on screen, WITHOUT
+  // running its onTimeout (the caller already did what onTimeout would do).
+  // Refs keep it stable for the app's life, like `show`.
+  const currentRef = useRef(null);
+  currentRef.current = current;
+  const dismissRef = useRef(null);
+  dismissRef.current = dismiss;
+  const hide = useCallback((key) => {
+    if (!key) return;
+    setQueue((q) => q.filter((t) => t.key !== key));
+    if (currentRef.current?.key === key) dismissRef.current({ skipTimeout: true });
+  }, []);
+
   // F7 (audit UI): a fresh `{ show }` object every provider render re-rendered
   // EVERY useToast consumer on each toast show/dismiss/animation tick. `show`
   // is stable (useCallback []), so this value never changes for the app's life.
-  const contextValue = useMemo(() => ({ show }), [show]);
+  const contextValue = useMemo(() => ({ show, hide }), [show, hide]);
   const dismissLabel = current?.variant === 'undo'
     ? `Dismiss undo message and keep change: ${current.message}`
     : `Dismiss notification: ${current?.message ?? ''}`;

@@ -67,7 +67,7 @@ function buildNarrative(data, units) {
     // WAVE-A-FINDINGS.md UNIT_DEFECT (:66): hard-coded 'kg' regardless of
     // the store's units; `units` is now threaded in from the render below,
     // matching the correct PR-value pattern already in this file (:309).
-    lines.push(`That's ${totalSets.toLocaleString('en-GB')} sets, not counting warm-ups, and ${tonnage.toLocaleString('en-GB')} ${units} lifted in total.`);
+    lines.push(`That is ${totalSets.toLocaleString('en-GB')} sets, not counting warm-ups, and ${tonnage.toLocaleString('en-GB')} ${units} lifted in total.`);
   }
 
   if (avgDuration > 0) {
@@ -222,7 +222,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
         {!loading && loadError && (
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load block summary"
+            title="Could not load block summary"
             text="Your sessions are safe. This is a loading problem, not lost data."
             actionLabel="Try again"
             onAction={loadData}
@@ -233,8 +233,8 @@ export default function BlockReflectionScreen({ navigation, route }) {
         {!loading && !loadError && !data && (
           <EmptyState
             icon="calendar-outline"
-            title="No data found"
-            text="This block doesn't have any logged sessions yet."
+            title="Nothing to show yet"
+            text="This block does not have any logged sessions yet."
             // FB-18 (D96): MesocycleBuilder cannot start a block; the Train
             // tab's block card is the only place that decision lives.
             actionLabel="Choose your next block"
@@ -363,7 +363,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
                 The decision lives on the Train tab's block card, which is
                 where the Home block sheet already sends it. */}
             <View style={[styles.nextSection, live.nextSection]}>
-              <Text style={[styles.nextTitle, live.nextTitle]} accessibilityRole="header">What's next</Text>
+              <Text style={[styles.nextTitle, live.nextTitle]} accessibilityRole="header">What is next</Text>
               <Text style={[styles.nextBody, live.nextBody]}>
                 Your recovery week is done, so the next step is choosing your next block. Nothing starts on its own.
               </Text>

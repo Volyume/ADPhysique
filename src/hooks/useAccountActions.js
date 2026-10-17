@@ -14,6 +14,8 @@ import {
 } from '../lib/deletionRetry';
 import { audit } from '../lib/observability';
 import { clearTrainingStatus } from '../lib/trainingStatus';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { healthConsentCacheKey } from '../lib/consent/healthConsentRead';
 
 // The account-level destructive flows (sign-out, delete account, withdraw
 // health-data consent) live here, in one hook, rather than being duplicated
@@ -470,6 +472,20 @@ export default function useAccountActions() {
                     audit('consent.article9.withdraw.tap');
                     setWithdrawing(true);
                     try {
+                      // B6 (final audit 2026-10-17): drop the local
+                      // "consented" cache FIRST, before the audit RPC and
+                      // the delete. If either fails offline, a cache still
+                      // reading 'true' would restore consent on the next
+                      // sign-in for a person who has withdrawn it. Removal
+                      // failing is logged, never blocking: the withdrawal
+                      // itself must still go ahead.
+                      if (user?.id) {
+                        try {
+                          await AsyncStorage.removeItem(healthConsentCacheKey(user.id));
+                        } catch (cacheErr) {
+                          logError('SettingsScreen.withdrawConsent.cache', cacheErr, { uid: user?.id });
+                        }
+                      }
                       // Record the withdrawal in consent_log before we
                       // tear the account down. The Edge Function's
                       // delete sequence wipes consent_log via FK

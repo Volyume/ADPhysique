@@ -176,10 +176,10 @@ export default function ProgressPhotoPrompt({ milestoneId, onAddPhoto }) {
         <View style={styles.headerText}>
           <Text style={[styles.title, live.title]}>Mark the moment</Text>
           <Text style={[styles.body, live.body]}>
-            You've just hit a milestone. If you'd like, add a photo.
+            You have just hit a milestone. If you would like, add a photo.
             Your own pace, always private to this phone.
           </Text>
-          <Text style={[styles.body, live.body]}>The scale can't tell muscle from water. Photos can.</Text>
+          <Text style={[styles.body, live.body]}>The scale cannot tell muscle from water. Photos can.</Text>
         </View>
       </View>
       <View style={styles.actions}>
@@ -204,11 +204,11 @@ export default function ProgressPhotoPrompt({ milestoneId, onAddPhoto }) {
         onPress={handleOptOut}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel="Don't ask again"
+        accessibilityLabel="Do not ask again"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Ionicons name="notifications-off-outline" size={14} color={t.colors.textMuted} />
-        <Text style={[styles.optOutText, live.optOutText]}>Don&apos;t ask again</Text>
+        <Text style={[styles.optOutText, live.optOutText]}>Do not ask again</Text>
       </TouchableOpacity>
     </Card>
   );

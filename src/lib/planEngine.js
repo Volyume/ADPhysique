@@ -2834,7 +2834,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // experience
   const expMap = {
-    beginner:     `When you're starting out, your body responds well to almost any consistent training. Volume is kept lower here so you can build good technique and work capacity before adding more sets.`,
+    beginner:     `When you are starting out, your body responds well to almost any consistent training. Volume is kept lower here so you can build good technique and work capacity before adding more sets.`,
     intermediate: `At this stage, your muscles need more total weekly sets to keep improving than they did early on. This plan does enough to keep you progressing without piling up more fatigue than you can recover from between sessions.`,
     advanced:     `Progress comes more slowly now, so the plan is more specific. Set counts are higher here because your body has adapted to handle more work, and lower set counts would not be enough to keep you moving forward.`,
     competitive:  `Your muscles have adapted to high training volumes and need a lot of weekly work to keep changing. This plan uses the highest set counts, balanced carefully against recovery so you can sustain quality across the full block.`,

@@ -305,8 +305,8 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
       coached: true,
       headline: 'Go again: same plan',
       body: finished
-        ? "Pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block."
-        : "Your recovery week does its job, then you pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block.",
+        ? "Pick up where you left off. Same exercises, same structure. You will come back a little stronger each block."
+        : "Your recovery week does its job, then you pick up where you left off. Same exercises, same structure. You will come back a little stronger each block.",
       // FB-32 (D96): this branch suggests a TRUE repeat -- the next block is
       // seeded with the finished block's own observed start and planned peak,
       // discarding every ledger proposal (blockSeed.js's intent ===
@@ -343,8 +343,8 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
     coached: true,
     headline: 'Might be worth a fresh look',
     body: finished
-      ? "Fatigue ran consistently high this block. It's worth reviewing whether the plan's volume or choice of exercises still fits where you are. Your coach can help rebuild it."
-      : "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the plan's volume or choice of exercises still fits where you are. Your coach can help rebuild it.",
+      ? "Fatigue ran consistently high this block. It is worth reviewing whether the plan's volume or choice of exercises still fits where you are. Your coach can help rebuild it."
+      : "Fatigue has been consistently high this block. After your recovery week, it is worth reviewing whether the plan's volume or choice of exercises still fits where you are. Your coach can help rebuild it.",
     // D93 (Campaign 2, Phase 12) required this card's primary button not to
     // share 'Continue this plan' with the card that recommends continuing,
     // and settled on 'Repeat this plan anyway'. FQ-2 (D96) supersedes the
@@ -873,7 +873,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
         action: 'in_recovery',
         reviewHeadsUp,
         headline: 'Recovery week on the calendar',
-        body: `This block's recovery week has arrived, but you haven't trained recently, so there's nothing to recover from yet. Pick up whenever suits you, and the next-block choice opens when this week ends.`,
+        body: `This block's recovery week has arrived, but you have not trained recently, so there is nothing to recover from yet. Pick up whenever suits you, and the next-block choice opens when this week ends.`,
         signals,
         nextBlock,
         blockStatus,
@@ -932,8 +932,8 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
       // lapse law bans both; the honest line states the fact and the next
       // step, at any age, with no pressure and no readiness claim.
       body: overdueWeeks > 0
-        ? `Your recovery week has been and gone. Whenever you're ready, the next step is choosing your next block.`
-        : `You've finished this block, recovery week included. The next step is choosing your next block.`,
+        ? `Your recovery week has been and gone. Whenever you are ready, the next step is choosing your next block.`
+        : `You have finished this block, recovery week included. The next step is choosing your next block.`,
       signals,
       nextBlock,
       blockStatus,
@@ -1032,10 +1032,10 @@ function buildEarlyDeloadBody(signals, latestCheckin, blockStatus) {
 
   const weeksIn = blockStatus?.currentWeek ?? null;
   const timing = weeksIn
-    ? `You're in week ${weeksIn}. `
+    ? `You are in week ${weeksIn}. `
     : '';
 
-  return `${signalText}${timing}This is a picture of how you've been recovering, not an instruction. Your plan sets your sessions.`;
+  return `${signalText}${timing}This is a picture of how you have been recovering, not an instruction. Your plan sets your sessions.`;
 }
 
 function buildHeadsUpBody(signals, blockStatus) {

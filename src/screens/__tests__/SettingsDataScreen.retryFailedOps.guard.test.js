@@ -35,7 +35,7 @@ describe('SettingsDataScreen surfaces parked (failed) sync ops and lets the user
   test('a "Retry now" row renders only when something is actually parked', () => {
     expect(src).toMatch(/\{\(syncSnapshot\?\.failed \?\? 0\) > 0 \? \(/);
     expect(src).toMatch(/label=\{retryingFailed \? 'Retrying\.\.\.' : 'Retry now'\}/);
-    expect(src).toMatch(/couldn't sync`/);
+    expect(src).toMatch(/could not sync`/);
   });
 
   test('the retry handler calls retryFailedOps for the signed-in user, then refreshes the snapshot', () => {
@@ -53,6 +53,6 @@ describe('SettingsDataScreen surfaces parked (failed) sync ops and lets the user
   test('never shows a raw exception message for the retry action', () => {
     const at = src.indexOf('async function handleRetryFailedOps');
     const body = src.slice(at, src.indexOf('async function handleRefreshFoodLibrary'));
-    expect(body).toMatch(/toast\.show\("Couldn't retry those changes, try again", \{ variant: 'error' \}\)/);
+    expect(body).toMatch(/toast\.show\("Could not retry those changes\. Please try again\.", \{ variant: 'error' \}\)/);
   });
 });

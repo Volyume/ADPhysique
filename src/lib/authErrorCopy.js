@@ -30,7 +30,11 @@ export const AUTH_COPY = Object.freeze({
   duplicate: 'That email already has an account. Try signing in instead.',
   unconfirmed: 'Check your email to confirm your account, then sign in. If it is not in your inbox, look in your spam or junk folder.',
   weakPassword: 'Use a password of at least 6 characters.',
-  fallback: "That didn't go through. Try again.",
+  // Sentry VOLYUME-2Z (2026-10-17): the provider's "Unable to validate email
+  // address: invalid format" reached people as the fallback and Sentry as an
+  // error. It is a typing slip, so it says what to check.
+  invalidEmail: 'That email address does not look right. Check it and try again.',
+  fallback: "That did not go through. Please try again.",
 });
 
 /**
@@ -43,6 +47,18 @@ export const AUTH_COPY = Object.freeze({
  * @param {unknown} error an Error, a Supabase error object, or a string.
  * @returns {boolean}
  */
+/**
+ * Is this the provider refusing an email address's format (Sentry
+ * VOLYUME-2Z)? A typing slip, never an application defect, so AuthSheet logs
+ * it at info and the person sees AUTH_COPY.invalidEmail.
+ * @param {unknown} error an Error, a Supabase error object, or a string.
+ * @returns {boolean}
+ */
+export function isInvalidEmailError(error) {
+  const raw = String((error && typeof error === 'object' ? error.message : error) || '');
+  return /unable to validate email|invalid format|invalid email/i.test(raw);
+}
+
 export function isNetworkFailure(error) {
   const raw = String((error && typeof error === 'object' ? error.message : error) || '');
   return NETWORK_RE.test(raw);
@@ -61,6 +77,7 @@ export function authErrorMessage(error) {
   if (/already registered|already been registered|user already exists/i.test(raw)) return AUTH_COPY.duplicate;
   if (/email not confirmed|confirm/i.test(raw)) return AUTH_COPY.unconfirmed;
   if (/password.*(6|characters|short)/i.test(raw)) return AUTH_COPY.weakPassword;
+  if (isInvalidEmailError(raw)) return AUTH_COPY.invalidEmail;
   return AUTH_COPY.fallback;
 }
 

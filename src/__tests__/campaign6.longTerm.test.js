@@ -302,7 +302,7 @@ describe('PHASES 25-31: return and history laws (D97-22)', () => {
     const src = stripComments(read('lib/blockAdvisor.js'));
     expect(src).not.toMatch(/body's ready|body is ready/i);
     expect(src).not.toMatch(/sooner you start/i);
-    expect(src).toContain("Whenever you're ready, the next step is choosing your next block.");
+    expect(src).toContain("Whenever you are ready, the next step is choosing your next block.");
   });
 });
 

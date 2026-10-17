@@ -87,7 +87,7 @@ const RECOVERY_OPTIONS = [
 // error code or exception produced it, so no raw technical text ever reaches
 // the user here. The real reason is always logged via errorLog just before
 // this is shown, so the diagnostic survives, it is just never displayed.
-const REBUILD_FAILED_MESSAGE = "Couldn't rebuild your plan. Your training setup wasn't changed, try again.";
+const REBUILD_FAILED_MESSAGE = "Could not rebuild your plan. Your training setup has not changed. Please try again.";
 
 // Training-only plan update for the Train tab. Changes training parameters and
 // rebuilds the plan around them. It deliberately does NOT touch calories or
@@ -547,7 +547,7 @@ export default function PlanUpdateScreen({ navigation }) {
         {/* ── Physique category (optional) ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Competing in a category? (optional)</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          Only matters if you're training for a physique competition. It shifts more of your plan's work to the muscles that category is judged on.
+          Only matters if you are training for a physique competition. It shifts more of your plan's work to the muscles that category is judged on.
         </Text>
 
         <Dropdown
@@ -588,7 +588,7 @@ export default function PlanUpdateScreen({ navigation }) {
           value={experience}
           options={EXPERIENCE_OPTIONS}
           onChange={setExperience}
-          placeholder="Select your experience"
+          placeholder="Choose your experience"
         />
 
         {/* ── Training schedule ── */}
@@ -621,7 +621,7 @@ export default function PlanUpdateScreen({ navigation }) {
           value={equipment}
           options={EQUIPMENT_OPTIONS}
           onChange={setEquipment}
-          placeholder="Select your equipment"
+          placeholder="Choose your equipment"
         />
         </View>
         {/* F-16 REVISED: said as soon as a kit answer is chosen, because the
@@ -634,13 +634,13 @@ export default function PlanUpdateScreen({ navigation }) {
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          How well you're recovering between sessions. This sets how cautious your coach is with your training volume.
+          How well you are recovering between sessions. This sets how cautious your coach is with your training volume.
         </Text>
         <Dropdown
           value={recoveryRating}
           options={RECOVERY_OPTIONS}
           onChange={setRecoveryRating}
-          placeholder="Select your recovery"
+          placeholder="Choose your recovery"
         />
 
         {/* F-15 (evidence A3): the circuit grouping is not carried across a

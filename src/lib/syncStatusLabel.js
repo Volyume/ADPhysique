@@ -26,9 +26,9 @@ export function formatRelativeTime(thenMs, nowMs) {
   const sec = Math.max(0, Math.floor((nowMs - thenMs) / 1000));
   if (sec < 60) return 'just now';
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} min ago`;
+  if (min < 60) return `${min} minute${min === 1 ? '' : 's'} ago`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} h ago`;
+  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
   const day = Math.floor(hr / 24);
   return `${day} day${day === 1 ? '' : 's'} ago`;
 }
@@ -39,18 +39,18 @@ export function formatLastSynced(snapshot, nowMs = Date.now()) {
   const failed = snapshot?.failed ?? 0;
   if (!lastRunAt) {
     return failed > 0
-      ? `Not synced yet. ${failed} ${failed === 1 ? 'change' : 'changes'} couldn't sync.`
-      : 'Not synced yet.';
+      ? `Not saved online yet. ${failed} ${failed === 1 ? 'change' : 'changes'} could not be saved online.`
+      : 'Not saved online yet.';
   }
   const rel = formatRelativeTime(lastRunAt, nowMs);
-  const parts = [`Last synced ${rel}.`];
+  const parts = [`Last saved online ${rel}.`];
   if (queueDepth > 0) {
     const noun = queueDepth === 1 ? 'change' : 'changes';
-    parts.push(`${queueDepth} ${noun} waiting to upload.`);
+    parts.push(`${queueDepth} ${noun} waiting to be saved online.`);
   }
   if (failed > 0) {
     const noun = failed === 1 ? 'change' : 'changes';
-    parts.push(`${failed} ${noun} couldn't sync.`);
+    parts.push(`${failed} ${noun} could not be saved online.`);
   }
   return parts.join(' ');
 }

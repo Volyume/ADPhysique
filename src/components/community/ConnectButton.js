@@ -68,10 +68,10 @@ const REFUSALS = {
   content_not_allowed: 'That wording is not allowed here. Try different words.',
   invalid_input: 'Check what you have typed, then try again.',
   connect_not_allowed:
-    'Not available. This person chooses who can send them a connection request. Try following them first.',
-  minor_restricted: 'Not available. Connections and messages are for people over 18.',
+    'You cannot send a request here. This person chooses who can send them a connection request. Try following them first.',
+  minor_restricted: 'You cannot connect here. Connections and messages are for people over 18.',
   not_connected: 'You need to be connected first.',
-  not_allowed: 'Not available just now. You can try again later.',
+  not_allowed: 'This is not available right now. You can try again later.',
   rules_outdated: 'The Community rules have changed. Accept them to carry on.',
 };
 

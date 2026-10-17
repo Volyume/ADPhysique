@@ -254,7 +254,7 @@ describe('Set as wallpaper, under Full screen', () => {
       await press(hostsByLabel(tree, 'Full screen')[0]);
       await waitFor(() => hostsByLabel(tree, WALLPAPER).length > 0);
       await press(hostsByLabel(tree, WALLPAPER)[0]);
-      await waitFor(() => mockToastShow.mock.calls.some((c) => c[0] === "Couldn't set the wallpaper, try again"));
+      await waitFor(() => mockToastShow.mock.calls.some((c) => c[0] === "Could not set the wallpaper. Please try again."));
     });
   });
 

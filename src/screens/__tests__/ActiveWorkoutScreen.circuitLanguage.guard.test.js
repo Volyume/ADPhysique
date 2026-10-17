@@ -90,19 +90,19 @@ describe('F-13 (b): unlinking a group clears the group KIND with the group id', 
 });
 
 describe('F-13 (c): rounds, not sets, wherever a circuit is described', () => {
-  test('the orientation row reads "Round n of m - Circuit" from the shared derivation', () => {
+  test('the orientation row reads "Round n of m: Circuit" from the shared derivation', () => {
     expect(SRC).toContain('`Round ${circuitRound.round} of ${circuitRound.targetRounds}`');
-    expect(SRC).toContain('return `${pos} - Circuit`;');
+    expect(SRC).toContain('return `${pos}: Circuit`;');
   });
 
-  test('the orientation row never falls through to "- Superset" on a circuit', () => {
+  test('the orientation row never falls through to "Superset" on a circuit', () => {
     const label = SRC.match(/const orientationLabel = \(\) => \{[\s\S]*?\}\)\(\);/)
       ?? SRC.match(/const orientationLabel = \(\(\) => \{[\s\S]*?\}\)\(\);/);
     const src = label ? label[0] : '';
     expect(src).toBeTruthy();
-    expect(src.indexOf('- Circuit')).toBeGreaterThan(-1);
+    expect(src.indexOf(': Circuit')).toBeGreaterThan(-1);
     // The circuit branch returns BEFORE the Superset/Working mode line.
-    expect(src.indexOf('- Circuit')).toBeLessThan(src.indexOf("? 'Superset'"));
+    expect(src.indexOf(': Circuit')).toBeLessThan(src.indexOf("? 'Superset'"));
   });
 
   test('the outline navigator labels a circuit station "Circuit"', () => {
@@ -141,7 +141,7 @@ describe('F-13 (d, e): the chip counts the CIRCUIT\'s round, and rotates rather 
   test('"alternates with" survives only on the superset chip, never on the circuit one', () => {
     const circuitChip = SRC.slice(SRC.indexOf("key: 'circuit',"), SRC.indexOf("key: 'superset',"));
     expect(circuitChip).not.toContain('alternates with');
-    expect(SRC).toContain('Superset - alternates with {partnerNamesText}');
+    expect(SRC).toContain('Superset: alternates with {partnerNamesText}');
   });
 
   test('the round comes from the shared pure helper, not from this station\'s own set count', () => {

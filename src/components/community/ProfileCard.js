@@ -41,25 +41,16 @@
  * Section 13, ruling 1: no amber anywhere in this file (pinned at 0 by
  * `rows.amber.guard.test.js`).
  *
- * Lead correction, ruling V8a (unchanged by CR-17): a row shows ONE
- * trailing action, never the Follow plus Connect pair. Precedence: if
- * `showConnect` and the viewer may connect (`ConnectButton`'s own
- * `shouldOfferConnect`), render `ConnectButton` alone (Connect `primary`,
- * Requested `secondary`, Respond `primary`); once connected, render
- * Message alone (`primary` sm `chatbubble-outline`, via `onMessage`) with
- * no Connected button on the row; otherwise (connect not offered) render
- * `FollowButton` alone. The profile screen composes the full
- * Follow+Connect pair itself and is unaffected.
+ * A row shows ONE trailing action: `FollowButton` (or the caller's own
+ * `trailing` node). Connect and Message are offered on the profile screen
+ * (`CommunityProfileScreen` composes Follow + Connect itself), not on rows;
+ * the row's old, never-enabled connect branch was removed (audit E2).
  *
  * Spec 1.1 C / 1.3 (migration 163): a card's `place_label` (falling back
  * to `area_label`) and `age_band` join the handle line when present, and
  * `reasons` runs through `reasonLines` so the four fixed-token reasons
  * (`same_place`, `near_place`, `within_25_miles`, `same_age_band`) read as
- * copy rather than a raw key. When Connect would otherwise be offered but
- * the target's own `connect_from` refuses the caller
- * (`connectDeniedByPreference`), Follow renders with the line explaining
- * why ("Accepts requests from people who follow them" / "Not taking
- * requests"): the row is never silently missing its action.
+ * copy rather than a raw key.
  *
  * Props:
  *   card       the profile card (user_id, handle, display_name,
@@ -70,19 +61,9 @@
  *   onPressWithLayout  origin-aware open (D188), passed to the row
  *   inBand     D221 V1: the row carries the band's gutter itself
  *   showFollow render the FollowButton (default true; pass false on your
- *              own card and inside a picker); only takes effect when
- *              Connect is not offered here (V8a)
+ *              own card and inside a picker)
  *   onFollowChange (relationship, card) after a successful follow toggle
  *   compact    drops the training facts, for a condensed creator line
- *   showConnect offer the connection tier instead of Follow when the viewer
- *              may connect (discovery blueprint section 4); V8a: one
- *              trailing action only, never both
- *   me         the `community_get_me` payload, for the minor check
- *   onConnect  (card) open the ConnectSheet
- *   onConnectChange (card) after any connection state change
- *   onMessage  (card) open the conversation; once connected this is the
- *              row's own Message action (V8a), not only the menu's
- *   onRulesOutdated () the rules changed and must be accepted first
  *   trailing   a caller-built node for the row's trailing slot, in place
  *              of the action above (the Followers and Connections kebab,
  *              the Activity screen's Accept/Decline pair, the Privacy
@@ -90,12 +71,10 @@
  *              surface's own control happens to be
  */
 
-import Button from '../Button';
 import PersonRow from './PersonRow';
 import FollowButton from './FollowButton';
-import ConnectButton, { shouldOfferConnect, connectDeniedByPreference } from './ConnectButton';
 import {
-  COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_SETTINGS, connectionState,
+  COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_SETTINGS,
   reasonLines, TP_AGE_BANDS,
 } from '../../lib/community';
 
@@ -125,48 +104,16 @@ export function placeLine(card) {
 }
 
 /**
- * Whether Connect would be offered here at all but for the target's own
- * `connect_from` preference (spec 1.3): the ProfileCard-only gate that
- * decides whether Follow gets its explanatory line.
- */
-function showConnectDenyLine(showConnect, me, card) {
-  return showConnect && connectDeniedByPreference(me, card);
-}
-
-/**
- * The line under Follow when Connect is hidden by the target's own
- * preference, never by a structural reason.
- *
- * The card never carries the target's `connect_from` value (their own
- * setting is not exposed to a viewer), so this cannot always name which
- * of the two closed settings it is. When the caller already follows the
- * target and Connect is STILL refused, the setting can only be 'nobody'
- * (a 'followers' setting would have opened it the moment the follow was
- * accepted), which is the one case this can state as fact rather than
- * invite. Every other case names the one thing that might open it.
- *
- * @param {object} card
- * @returns {string}
- */
-export function connectDenyLine(card) {
-  if (card?.relationship?.following === 'accepted') return 'Not taking requests';
-  return 'Accepts requests from people who follow them';
-}
-
-/**
- * The row's one line, by priority (see the header): the refusal that
- * explains a missing action, else the reasons this person is here, else
- * who they are. Never a concatenation of all three, which would truncate
- * the half that matters.
+ * The row's one line, by priority (see the header): the reasons this person
+ * is here, else who they are. Never a concatenation of both, which would
+ * truncate the half that matters.
  *
  * @param {object} card
  * @param {string[]} reasons
  * @param {boolean} compact
- * @param {string|null} denyLine
  * @returns {string|null}
  */
-export function personLine(card, reasons, compact, denyLine) {
-  if (denyLine) return denyLine;
+export function personLine(card, reasons, compact) {
   const reasonLine = reasons?.length ? reasonLines(reasons, card).join(' · ') : null;
   if (reasonLine) return reasonLine;
   const facts = compact ? [] : factLabels(card);
@@ -187,60 +134,21 @@ export default function ProfileCard({
   showFollow = true,
   onFollowChange,
   compact = false,
-  showConnect = false,
-  me = null,
-  onConnect,
-  onConnectChange,
-  onMessage,
-  onRulesOutdated,
   trailing = null,
 }) {
   if (!card) return null;
 
-  // V8a: one trailing action, never the Follow+Connect pair. Connect (in
-  // whichever of its own states) wins over Follow whenever it is offered at
-  // all; once connected, Message takes its place; Follow only ever shows
-  // when Connect is not offered here.
-  const canConnect = showConnect && shouldOfferConnect(me, card);
-  const connected = canConnect && connectionState(card) === 'connected';
-  const showAction = showFollow || canConnect;
-  // Spec 1.3: Connect hidden by the target's OWN preference (not by a
-  // structural reason) shows Follow with the line saying why, so the row
-  // is never quietly missing its action.
-  const denyLine = showConnectDenyLine(showConnect, me, card) ? connectDenyLine(card) : null;
-
-  const action = canConnect ? (
-    connected ? (
-      <Button
-        variant="primary"
-        size="sm"
-        fullWidth={false}
-        title="Message"
-        icon="chatbubble-outline"
-        onPress={() => onMessage?.(card)}
-        accessibilityLabel={`Message @${card.handle ?? ''}`.trim()}
-      />
-    ) : (
-      <ConnectButton
-        card={card}
-        me={me}
-        onConnect={onConnect}
-        onChange={onConnectChange}
-        onMessage={onMessage}
-        onRulesOutdated={onRulesOutdated}
-      />
-    )
-  ) : (
-    <FollowButton card={card} onChange={onFollowChange} />
-  );
+  // One trailing action: the caller's own node, else Follow. Connect and
+  // Message live on the profile screen (audit E2).
+  const action = <FollowButton card={card} onChange={onFollowChange} />;
 
   return (
     <PersonRow
-      person={{ ...card, caption: personLine(card, reasons, compact, denyLine) }}
+      person={{ ...card, caption: personLine(card, reasons, compact) }}
       onPress={onPress}
       onPressWithLayout={onPressWithLayout}
       inBand={inBand}
-      trailing={trailing ?? (showAction ? action : null)}
+      trailing={trailing ?? (showFollow ? action : null)}
     />
   );
 }

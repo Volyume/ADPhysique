@@ -292,3 +292,28 @@ describe('item 8 (D141): retryFailedOps un-parks MAX_RETRIES ops', () => {
     }
   });
 });
+
+
+describe('B3 (audit 2026-10-17): sign-out can make delete ops due again', () => {
+  const { resetDeleteOpsForRetry } = require('../syncQueue');
+
+  beforeEach(() => { jest.clearAllMocks(); });
+
+  test('resets retries and next_attempt_at for this user\'s delete ops only', async () => {
+    mockDb.runAsync.mockResolvedValueOnce({ changes: 2 });
+    const r = await resetDeleteOpsForRetry('u1');
+    expect(r).toEqual({ ok: true, reset: 2 });
+    const [sql, args] = mockDb.runAsync.mock.calls[0];
+    expect(sql).toMatch(/SET retries = 0, next_attempt_at = \?/);
+    expect(sql).toMatch(/op_type IN \('workout_delete', 'workout_set_delete'\)/);
+    expect(sql).toMatch(/user_id = \?/);
+    expect(args[1]).toBe('u1');
+  });
+
+  test('no user is a no-op, and a failed write says so', async () => {
+    expect(await resetDeleteOpsForRetry(null)).toEqual({ ok: false, reset: 0 });
+    expect(mockDb.runAsync).not.toHaveBeenCalled();
+    mockDb.runAsync.mockRejectedValueOnce(new Error('locked'));
+    expect(await resetDeleteOpsForRetry('u1')).toEqual({ ok: false, reset: 0 });
+  });
+});

@@ -73,9 +73,9 @@ describe('BlockReflectionScreen load states', () => {
 
     const { tree } = await render();
     let text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load block summary");
+    expect(text).toContain("Could not load block summary");
     expect(text).toContain('Your sessions are safe.');
-    expect(text).not.toContain('No data found');
+    expect(text).not.toContain('Nothing to show yet');
 
     const retry = tree.root.findByProps({ accessibilityLabel: 'Try again' });
     await act(async () => { retry.props.onPress(); });
@@ -83,15 +83,15 @@ describe('BlockReflectionScreen load states', () => {
 
     expect(getBlockReflectionData).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
-    expect(text).toContain('No data found');
-    expect(text).not.toContain("Couldn't load block summary");
+    expect(text).toContain('Nothing to show yet');
+    expect(text).not.toContain("Could not load block summary");
   });
 
   test('keeps the genuine no-data state after a successful empty read', async () => {
     const { tree, navigation, parent } = await render();
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('No data found');
+    expect(text).toContain('Nothing to show yet');
     // Re-anchored under FB-18 (D96): the empty state's CTA was "Start a new
     // block" pointing at MesocycleBuilder, which is read-only and has no
     // create action, so the button could not do what it said. The decision
@@ -105,7 +105,7 @@ describe('BlockReflectionScreen load states', () => {
     // The bare in-stack form is the dead tap this replaced: it resolved
     // against ProfileStack, where MesocycleBuilder is not registered.
     expect(navigation.navigate).not.toHaveBeenCalled();
-    expect(text).not.toContain("Couldn't load block summary");
+    expect(text).not.toContain("Could not load block summary");
   });
 });
 

@@ -55,7 +55,9 @@ describe('overlapping loads and the weigh-in refresh', () => {
   });
   test('a saved weigh-in re-reads both the weight and the first-review facts, then toasts', () => {
     const b = body(HS, 'async function handleLogWeight(');
-    expect(b).toMatch(/await logMorningWeight[\s\S]{0,900}await loadTodayWeight\(\);[\s\S]{0,40}await loadFirstReviewFacts\(\);/);
+    expect(b).toMatch(/await logMorningWeight[\s\S]{0,900}await loadTodayWeight\(weighReqId\);[\s\S]{0,40}await loadFirstReviewFacts\(weighReqId\);/);
+    // Audit A4 (2026-10-17): one request id for both reads.
+    expect(b).toMatch(/const weighReqId = \+\+loadReqRef\.current;/);
     expect(b).toMatch(/toast\.show\('Weight saved\.', \{ variant: 'success' \}\)/);
   });
   test('the revert-on-failure path is untouched', () => {
@@ -72,7 +74,9 @@ describe('a finished sync pull reaches Home', () => {
   });
   test('Home reloads on dataPulledVersion', () => {
     expect(HS).toMatch(/useAppStore\(s => s\.dataPulledVersion\)/);
-    expect(HS).toMatch(/dataPulledVersion > 0 && user\?\.id[\s\S]{0,200}\[dataPulledVersion\]/);
+    expect(HS).toMatch(/dataPulledVersion > 0 && user\?\.id[\s\S]{0,600}\[dataPulledVersion\]/);
+    // Audit A5 (2026-10-17): not on the mount run, and only while Home is focused.
+    expect(HS).toMatch(/pulledFirstRunRef\.current[\s\S]{0,700}homeFocusedRef\.current[\s\S]{0,300}loadDataRef\.current\?\.\(\)[\s\S]{0,200}\[dataPulledVersion\]/);
   });
 });
 
@@ -86,7 +90,7 @@ describe('failures are logged and out-of-range weights are said', () => {
     expect(HS).toMatch(/logWarn\('HomeScreen\.loadFirstReviewFacts'/);
   });
   test('handleLogWeight alerts with the shared range message instead of returning silently', () => {
-    expect(body(HS, 'async function handleLogWeight(')).toMatch(/appAlert\('Check that weight', BODY_WEIGHT_RANGE_MESSAGE\)/);
+    expect(body(HS, 'async function handleLogWeight(')).toMatch(/appAlert\('Is that weight right\?', BODY_WEIGHT_RANGE_MESSAGE\)/);
   });
 });
 

@@ -435,7 +435,7 @@ describe('CONFIRMATION COPY', () => {
   test('the skip confirmation is neutral and says what it does NOT do', () => {
     const c = skipConfirmation(legs, sessions);
     expect(c.title).toBe('Skip Legs this time?');
-    expect(c.body).toBe("This will move past this workout without logging it as completed. It won't remove Legs from your programme or change future workouts.");
+    expect(c.body).toBe("This will move past this workout without logging it as completed. It will not remove Legs from your plan or change future workouts.");
     expect(c.confirm).toBe('Skip this time');
     expect(c.body).not.toMatch(/why|reason|missed|lazy|behind/i);
   });
@@ -448,7 +448,7 @@ describe('CONFIRMATION COPY', () => {
   test('the end-early confirmation says what survives and what does not', () => {
     const c = endEarlyConfirmation(legs, sessions);
     expect(c.title).toBe('Finish Legs here?');
-    expect(c.body).toBe("The work you've logged will still count. The exercises you didn't do won't be logged as completed, and Volyume will move on from this workout.");
+    expect(c.body).toBe("The work you have logged will still count. The exercises you did not do will not be logged as completed, and Volyume will move on from this workout.");
     expect(c.confirm).toBe('Finish for today');
   });
 

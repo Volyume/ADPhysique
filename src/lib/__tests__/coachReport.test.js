@@ -81,7 +81,7 @@ const ENGINE_DISCLOSURE_REASONS = [
   'Calorie cut held. Multiple safety signals are active. See the held-decision card for details.',
   'Hold lifted. The signals that triggered the hold have settled for two weeks. Standard coaching resumes next week.',
   'Calories held. Wellbeing screen flagged restriction concerns.',
-  "Calories held. Cycle was flagged this week so the weight reading isn't a reliable signal.",
+  'Your calories stay the same this week. You noted your cycle this week, so the scale is not a reliable guide.',
 ];
 
 describe('full variant: every decision and its written why', () => {
