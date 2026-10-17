@@ -215,8 +215,8 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry20).toContain('Settings, under Privacy and legal');
     expect(entry20).toContain('Community has been improved');
     expect({ bad: /\bclips?\b/i.test(entry20) }).toEqual({ bad: false });
-    // 2.22.0: the same three founder lines.
-    const start22 = sheet.indexOf("'2.22.0': [");
+    // 3.0.0: the same three founder lines.
+    const start22 = sheet.indexOf("'3.0.0': [");
     expect(start22).toBeGreaterThan(-1);
     const entry22 = sheet.slice(start22, sheet.indexOf('],', start22));
     expect(entry22).toContain('The workout logger has been completely revamped.');
