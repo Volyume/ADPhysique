@@ -155,14 +155,14 @@ export const WHATS_NEW = {
   // 2.14.0 (2026-10-12): the new plan builder (register D222) and the
   // calorie choice inside the range (D226); the privacy notice rides inside
   // the Community line.
-  // 2.21.0 (2026-10-17): the share screen reworked (options first, then the
-  // preview; your own photos and videos, or record one), news emails with a
-  // switch in Settings, and starting a plan again. The privacy line rides
-  // inside the share line, as the policy promises.
+  // 2.21.0 (2026-10-17): founder order, verbatim: "I told you the three
+  // things that should be on it for this version": the logger revamp, set
+  // videos (with the privacy line) and Community. The same three lines as
+  // 2.20.0, which few people received, and nothing else.
   '2.21.0': [
-    { icon: 'share-social-outline', text: 'Sharing is easier: pick a photo or video from your gallery, take one there and then, or use a set video, set it up, then see it before you share. Videos stay on your phone and are never uploaded; our privacy policy says so, in Settings, under Privacy and legal.' },
-    { icon: 'refresh-outline', text: 'You can start your plan again from week 1 at any time, from the plan menu.' },
-    { icon: 'mail-outline', text: 'News by email: new features, short surveys and a weekly summary. Turn it off any time in Settings, under Privacy and legal.' },
+    { icon: 'barbell-outline', text: 'The workout logger has been completely revamped. Logging, fixing a set and finishing a workout are all quicker and smoother.' },
+    { icon: 'videocam-outline', text: 'Record videos of your sets and share them, with your lifts and PRs on top. Videos stay on your phone and are never uploaded; our privacy policy says so, in Settings, under Privacy and legal.' },
+    { icon: 'people-outline', text: 'Community has been improved, with smoother feeds, chats and profiles.' },
   ],
   // 2.20.0 (2026-10-17): founder order, "simplify it ... keep it high level
   // as to what the user sees": the logger revamp, recording and sharing
