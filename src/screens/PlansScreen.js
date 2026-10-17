@@ -90,7 +90,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'library',
     icon: 'library-outline',
     title: 'Pick from the plan library',
-    description: "Choose a ready-made plan. Your coach keeps adjusting whichever plan you're on.",
+    description: "Choose a ready-made plan. Your coach keeps adjusting whichever plan you are on.",
     screen: 'PlanLibrary',
   },
   {
@@ -182,7 +182,7 @@ function CompactPlanRow({
 // preview (the model), which is the source of the exact copy this pins.
 function capabilityBlockedNote(n) {
   return n === 1
-    ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
+    ? "1 movement clashed with an injury or limitation you have set, so your plan works without it."
     : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
@@ -531,7 +531,7 @@ export default function PlansScreen({ navigation }) {
         // again, and says nothing extra: the choice was the athlete's.
         if (prep.reason === 'dry_run_failed') {
           logError('PlansScreen.startWithPlanPreview', new Error(prep.error ?? 'plan_generation_failed'), { userId: user?.id });
-          toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+          toast.show("Could not start your plan. Please try again.", { variant: 'error', duration: 5000 });
         }
         return;
       }
@@ -554,7 +554,7 @@ export default function PlansScreen({ navigation }) {
       const prep = await prepareStartWithPlanOption(user.id, planPreview.chosenProfile ?? userProfile, option, { mode: 'first' });
       if (!prep.ok) {
         logError('PlansScreen.planOption', new Error(prep.error ?? prep.reason ?? 'plan_generation_failed'), { userId: user?.id });
-        toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+        toast.show("Could not start your plan. Please try again.", { variant: 'error', duration: 5000 });
         return;
       }
       setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount, chosenProfile: prep.profile });
@@ -592,7 +592,7 @@ export default function PlansScreen({ navigation }) {
       }
     } else {
       logError('PlansScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
-      toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+      toast.show("Could not start your plan. Please try again.", { variant: 'error', duration: 5000 });
     }
   }
 
@@ -638,7 +638,7 @@ export default function PlansScreen({ navigation }) {
           await openNextBlockReview();
         } catch (e) {
           logError('PlansScreen.openNextBlockReview', e, { userId: user?.id, planId: activePlan?.id });
-          toast.show("Couldn't prepare your next block, try again", { variant: 'error' });
+          toast.show("Could not prepare your next block. Please try again.", { variant: 'error' });
           restartingRef.current = false;
         }
         return;
@@ -681,7 +681,7 @@ export default function PlansScreen({ navigation }) {
                   const plural = n === 1 ? '' : 's';
                   appAlert(
                     'Update this plan to match your limitations?',
-                    `${n} exercise${plural} in it ${n === 1 ? "clashes with an injury or limitation you've set" : 'clash with your injuries or limitations'}. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`,
+                    `${n} exercise${plural} in it ${n === 1 ? "clashes with an injury or limitation you have set" : 'clash with your injuries or limitations'}. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`,
                     [
                       // Round 8 (R8-3): the F-1 no-op wording here too -
                       // this cancel writes nothing, and in the
@@ -702,7 +702,7 @@ export default function PlansScreen({ navigation }) {
               } catch (_e) { /* the offer is additive; the restart already stands */ }
             } catch (e) {
               logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent });
-              toast.show("Couldn't restart plan, try again", { variant: 'error' });
+              toast.show("Could not restart your plan. Please try again.", { variant: 'error' });
             } finally {
               restartingRef.current = false;
             }
@@ -913,7 +913,7 @@ export default function PlansScreen({ navigation }) {
       await runBlockActivation({ intent: 'adjust', refine, review: reviewed });
     } catch (e) {
       logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent: 'adjust' });
-      toast.show("Couldn't restart plan, try again", { variant: 'error' });
+      toast.show("Could not restart your plan. Please try again.", { variant: 'error' });
     } finally {
       restartingRef.current = false;
     }
@@ -959,7 +959,7 @@ export default function PlansScreen({ navigation }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('PlansScreen.handleStartNextWorkout', e, { userId: user?.id, planId: plan?.id });
-      toast.show("Couldn't start workout, try again", { variant: 'error' });
+      toast.show("Could not start your workout. Please try again.", { variant: 'error' });
     }
   }
 
@@ -1015,7 +1015,7 @@ export default function PlansScreen({ navigation }) {
       toast.show(`"${planHeadingName(plan.name)}" is now your active plan`, { variant: 'success' });
     } catch (e) {
       logError('PlansScreen.handleSetActive', e, { userId: user?.id, planId: plan?.id });
-      toast.show("Couldn't set active plan, try again", { variant: 'error' });
+      toast.show("Could not set your active plan. Please try again.", { variant: 'error' });
     } finally {
       restartingRef.current = false;
     }
@@ -1057,7 +1057,7 @@ export default function PlansScreen({ navigation }) {
       await loadData();
     } catch (e) {
       logError('PlansScreen.handleSaveFolder', e, { userId: user?.id });
-      toast.show("Couldn't save folder, try again", { variant: 'error' });
+      toast.show("Could not save the folder. Please try again.", { variant: 'error' });
     } finally {
       setSavingFolder(false);
     }
@@ -1078,7 +1078,7 @@ export default function PlansScreen({ navigation }) {
               await loadData();
             } catch (e) {
               logError('PlansScreen.handleDeleteFolder', e, { userId: user?.id, folderId: folder?.id });
-              toast.show("Couldn't delete folder, try again", { variant: 'error' });
+              toast.show("Could not delete the folder. Please try again.", { variant: 'error' });
             }
           },
         },
@@ -1107,7 +1107,7 @@ export default function PlansScreen({ navigation }) {
       await loadData();
     } catch (e) {
       logError('PlansScreen.handleMovePlanToFolder', e, { userId: user?.id, planId: plan?.id });
-      toast.show("Couldn't move plan, try again", { variant: 'error' });
+      toast.show("Could not move your plan. Please try again.", { variant: 'error' });
     }
   }
 
@@ -1223,7 +1223,7 @@ export default function PlansScreen({ navigation }) {
                   await loadData();
                 } catch (e) {
                   logError('PlansScreen.handleDeleteRoutine', e, { userId: user?.id, routineId: routine?.id });
-                  toast.show("Couldn't delete that workout, try again", { variant: 'error' });
+                  toast.show("Could not delete that workout. Please try again.", { variant: 'error' });
                 }
               },
             },
@@ -1250,7 +1250,7 @@ export default function PlansScreen({ navigation }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('PlansScreen.handleStartTemplate', e, { userId: user?.id, routineId: routine?.id });
-      toast.show("Couldn't start workout, try again", { variant: 'error' });
+      toast.show("Could not start your workout. Please try again.", { variant: 'error' });
     }
   }
 
@@ -1368,7 +1368,7 @@ export default function PlansScreen({ navigation }) {
           // a confirmed "no active plan" account state.
           <EmptyState
             icon="cloud-offline-outline"
-            title="Couldn't load your plans"
+            title="Could not load your plans"
             text="Check your connection and try again. Nothing has been lost."
             actionLabel="Retry"
             onAction={loadData}

@@ -166,7 +166,7 @@ describe('ImportScreen dynamic error is announced to screen readers (AX-08)', ()
       (n) => n.props.accessibilityRole === 'alert' && n.props.accessibilityLiveRegion === 'assertive',
     );
     expect(alertNode.length).toBeGreaterThan(0);
-    expect(JSON.stringify(tree.toJSON())).toContain('Could not read that file. Try again.');
+    expect(JSON.stringify(tree.toJSON())).toContain('Could not read that file. Please try again.');
 
     await act(async () => { tree.unmount(); });
   });

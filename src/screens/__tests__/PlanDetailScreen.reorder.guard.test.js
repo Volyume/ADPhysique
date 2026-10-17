@@ -42,7 +42,7 @@ describe('PlanDetailScreen day-level reorder', () => {
     const dragMoveWindow = PLAN_DETAIL.match(/async function handleReorderWorkouts\(nextWorkouts\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
     expect(dragMoveWindow).toContain('await updateRoutinePosition(nextWorkouts[i].id, i);');
     expect(dragMoveWindow).toContain('setWorkouts(previous);');
-    expect(dragMoveWindow).toContain("toast.show(\"Couldn't reorder, try again\", { variant: 'error' });");
+    expect(dragMoveWindow).toContain("toast.show(\"Could not change the order. Please try again.\", { variant: 'error' });");
   });
 
   test('a move persists both swapped positions via updateRoutinePosition', () => {
@@ -62,7 +62,7 @@ describe('PlanDetailScreen day-level reorder', () => {
     // persist still reverts and still toasts.
     expect(moveWindow).toContain('setWorkouts(current);');
     expect(moveWindow).not.toContain('setWorkouts(workouts);');
-    expect(moveWindow).toContain("toast.show(\"Couldn't reorder, try again\", { variant: 'error' });");
+    expect(moveWindow).toContain("toast.show(\"Could not change the order. Please try again.\", { variant: 'error' });");
   });
 
   test('repeated taps cannot interleave: the order carries forward and writes are chained', () => {

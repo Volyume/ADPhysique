@@ -21,7 +21,7 @@ describe('SettingsDataScreen never shows a raw exception message to the user', (
 
   test('exportData logs the cause and shows calm, stable copy', () => {
     expect(src).toMatch(
-      /logError\('SettingsScreen\.exportData', e, \{ userId: user\?\.id \}\);\s*\n\s*toast\.show\('Could not export your data, try again', \{ variant: 'error' \}\);/,
+      /logError\('SettingsScreen\.exportData', e, \{ userId: user\?\.id \}\);\s*\n\s*toast\.show\('Could not export your data\. Please try again\.', \{ variant: 'error' \}\);/,
     );
   });
 
@@ -39,7 +39,7 @@ describe('SettingsDataScreen never shows a raw exception message to the user', (
 
   test('handleClearHistory keeps its existing logError and shows calm, stable copy', () => {
     expect(src).toMatch(
-      /logError\('SettingsScreen\.handleClearHistory', e, \{ userId: user\.id \}\);\s*\n\s*appAlert\('Couldn\\'t clear history', 'Try again\.'\);/,
+      /logError\('SettingsScreen\.handleClearHistory', e, \{ userId: user\.id \}\);\s*\n\s*appAlert\('Could not clear history', 'Please try again\.'\);/,
     );
   });
 });

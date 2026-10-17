@@ -161,7 +161,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // read used to answer "Nothing to review right now." - a silent
     // fail-open on the copy layer (A15). Both terminal messages share
     // one module constant so the two sites cannot drift.
-    expect(screen).toContain("const COULD_NOT_READ_TOAST = 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.';");
+    expect(screen).toContain("const COULD_NOT_READ_TOAST = 'Volyume could not read your plan just now. Nothing has changed. Please try again in a moment.';");
     expect(screen).toContain("toast.show(checked ? 'Nothing to review right now.' : COULD_NOT_READ_TOAST);");
     expect(screen).not.toMatch(/const \{ lines \} = await computePlanEffectiveLines\(userId, createdIds\)/);
   });

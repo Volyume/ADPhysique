@@ -196,7 +196,7 @@ export default function SettingsProfileScreen() {
     const label = SEX_OPTIONS.find((opt) => opt.value === value)?.label || value;
     appAlert(
       'Change biological sex?',
-      `Set biological sex to ${label}. This affects BMR, calorie floors and future nutrition targets. Your current targets are not recalculated until the next weekly check-in.`,
+      `Set biological sex to ${label}. This affects your daily calorie estimate, your minimum calories and your future nutrition targets. Your current targets are not recalculated until the next weekly check-in.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Update', onPress: () => changeSex(value) },

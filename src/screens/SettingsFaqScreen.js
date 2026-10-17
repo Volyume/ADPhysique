@@ -45,7 +45,7 @@ export const FAQS = [
   {
     key: 'food-diary',
     q: 'How do I use the food diary, and mark meals as eaten?',
-    a: "Log food by searching, scanning a barcode, or adding your own foods and meals. If you've built a meal plan, tick each planned meal off as you eat it, or mark everything eaten at once from the bottom of the day. Either way works; pick whichever fits how your day goes.",
+    a: "Log food by searching, scanning a barcode, or adding your own foods and meals. If you have built a meal plan, tick each planned meal off as you eat it, or mark everything eaten at once from the bottom of the day. Either way works; pick whichever fits how your day goes.",
   },
   {
     key: 'dietary-needs',
@@ -55,7 +55,7 @@ export const FAQS = [
   {
     key: 'barcode-scan',
     q: 'How does barcode and label scanning work?',
-    a: "Point the camera at a barcode to look it up automatically, or scan a nutrition label when there's no barcode or the lookup misses. A miss on the barcode scan hands you straight into the label scan with the barcode already filled in, so you are not starting over.",
+    a: "Point the camera at a barcode to look it up automatically, or scan a nutrition label when there is no barcode or the lookup misses. A miss on the barcode scan hands you straight into the label scan with the barcode already filled in, so you are not starting over.",
   },
   {
     key: 'photo-privacy',
@@ -89,7 +89,7 @@ export const FAQS = [
   {
     key: 'app-lock',
     q: 'Can I lock the app with Face ID or a fingerprint?',
-    a: "Yes, if you want an extra layer on a shared or borrowed phone. Turn on App lock in Settings > Privacy and Volyume asks for your device's Face ID, fingerprint or passcode every time you open it or return to it. It's off by default and needs a biometric or passcode already set up on your device.",
+    a: "Yes, if you want an extra layer on a shared or borrowed phone. Turn on App lock in Settings > Privacy and Volyume asks for your device's Face ID, fingerprint or passcode every time you open it or return to it. It is off by default and needs a biometric or passcode already set up on your device.",
   },
   {
     key: 'calmer-coaching',

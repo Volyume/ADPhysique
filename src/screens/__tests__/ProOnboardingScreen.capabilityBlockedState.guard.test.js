@@ -30,7 +30,7 @@ describe('T1-13: the graded total-block state', () => {
 
   test('the honest title/copy, never "safe to perform" or a condition name (CAP-18)', () => {
     expect(SOURCE).toContain('Volyume could not build a full plan within your limitations.');
-    expect(SOURCE).toContain("clashes with an injury or limitation you've set right now.");
+    expect(SOURCE).toContain("clashes with an injury or limitation you have set right now.");
     expect(SOURCE).not.toMatch(/safe to perform/i);
   });
 
@@ -93,7 +93,7 @@ describe('T1-12: every generation entry reveals capability effects', () => {
 
   test('capabilityBlockedNote is a local pure helper with the exact singular/plural copy', () => {
     expect(SOURCE).toMatch(
-      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? "1 movement clashed with an injury or limitation you've set, so your plan works without it\."\s*\n\s*: `\$\{n\} movements clashed with your injuries or limitations, so your plan works without them\.`;\s*\n\s*\}/,
+      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? "1 movement clashed with an injury or limitation you have set, so your plan works without it\."\s*\n\s*: `\$\{n\} movements clashed with your injuries or limitations, so your plan works without them\.`;\s*\n\s*\}/,
     );
   });
 });

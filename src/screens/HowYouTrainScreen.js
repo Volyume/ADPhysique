@@ -64,7 +64,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // (the revisit row's toast and the per-line review's empty answer) share
 // this constant so the two sites cannot drift - a failed read is "could
 // not tell", never "nothing needs a decision" (A15).
-const COULD_NOT_READ_TOAST = 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.';
+const COULD_NOT_READ_TOAST = 'Volyume could not read your plan just now. Nothing has changed. Please try again in a moment.';
 
 // Round 8 (R8-2): the ONE fail-safe sentence, spoken wherever the
 // never-served-empty fail-safe absorbs a routine - the standalone
@@ -118,7 +118,7 @@ function planStatusSentence(st) {
   if (st.omitted) bits.push(`${st.omitted} left out`);
   const parts = [];
   if (bits.length) parts.push(`Right now: ${bits.join(', ')} while you work around a temporary change.`);
-  if (st.rewriteCount) parts.push(`${st.rewriteCount} exercise${st.rewriteCount === 1 ? '' : 's'} in your plan ${st.rewriteCount === 1 ? "clashes with an injury or limitation you've set" : 'clash with your injuries or limitations'}.`);
+  if (st.rewriteCount) parts.push(`${st.rewriteCount} exercise${st.rewriteCount === 1 ? '' : 's'} in your plan ${st.rewriteCount === 1 ? "clashes with an injury or limitation you have set" : 'clash with your injuries or limitations'}.`);
   return parts.length ? parts.join(' ') : 'Your current plan matches your limitations.';
 }
 
@@ -636,7 +636,7 @@ export default function HowYouTrainScreen() {
         refresh();
       } catch (e) {
         logError('HowYouTrain.saveLineReview', e, {});
-        toast.show('That did not save. Try again.');
+        toast.show('That did not save. Please try again.');
       }
     };
     if (keptClinician) { confirmClinicianDecline(review.subject, commit, 'keep'); return; }
@@ -884,7 +884,7 @@ export default function HowYouTrainScreen() {
       const k = rw.substitutable;
       const u = rw.unsolvable;
       const plural = (c) => (c === 1 ? '' : 's');
-      const clashes = n === 1 ? "clashes with an injury or limitation you've set" : 'clash with your injuries or limitations';
+      const clashes = n === 1 ? "clashes with an injury or limitation you have set" : 'clash with your injuries or limitations';
       let body;
       if (k === 0) {
         body = `${n} exercise${plural(n)} in your current plan ${clashes}, and no close match fits right now. ${n === 1 ? 'It stays' : 'They stay'} in place with a quiet note, and you can swap ${n === 1 ? 'it' : 'them'} any time.`;
@@ -1017,7 +1017,7 @@ export default function HowYouTrainScreen() {
             toast.show('Removed. You can set this up again any time.');
           } catch (e) {
             logError('HowYouTrain.withdraw', e);
-            toast.show('Could not delete right now. Nothing was removed - try again.', { variant: 'error' });
+            toast.show('Could not delete right now. Nothing was removed. Please try again.', { variant: 'error' });
           }
           refresh();
         },
@@ -1052,7 +1052,7 @@ export default function HowYouTrainScreen() {
       }
     } catch (e) {
       logError('HowYouTrain.exportCapabilityData', e);
-      toast.show('Could not export right now. Try again later.', { variant: 'error' });
+      toast.show('Could not export right now. Please try again later.', { variant: 'error' });
     }
   };
 
@@ -1248,7 +1248,7 @@ export default function HowYouTrainScreen() {
       {state.unavailable ? (
         <Text style={[styles.hint, { color: t.colors.textSecondary, margin: spacing.lg }]}
           accessibilityLiveRegion="polite">
-          Volyume could not read this right now. Nothing has changed; try again in a moment.
+          Volyume could not read this right now. Nothing has changed. Please try again in a moment.
         </Text>
       ) : null}
 

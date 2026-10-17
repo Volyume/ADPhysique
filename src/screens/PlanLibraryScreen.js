@@ -473,7 +473,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
 
   async function handleAddToMyPlans(plan) {
     if (!user?.id) {
-      toast.show('Setting up your profile, try again in a second', { variant: 'info' });
+      toast.show('Your profile is still being set up. Please try again in a moment.', { variant: 'info' });
       return;
     }
     if (addingRef.current) return;
@@ -508,7 +508,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
               if (await surfaceConflicts(copy.id)) return;
               navigation.goBack();
             } catch (_e) {
-              toast.show("Couldn't copy plan, try again", { variant: 'error' });
+              toast.show("Could not copy that plan. Please try again.", { variant: 'error' });
             } finally {
               addingRef.current = false;
             }
@@ -539,7 +539,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
               if (await surfaceConflicts(copy.id)) return;
               navigation.goBack();
             } catch (_e) {
-              toast.show("Couldn't set active plan, try again", { variant: 'error' });
+              toast.show("Could not set your active plan. Please try again.", { variant: 'error' });
             } finally {
               addingRef.current = false;
             }
@@ -752,8 +752,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
             <View style={styles.listEmptyWrap}>
               <EmptyState
                 icon="cloud-offline-outline"
-                title="Couldn't load plans"
-                text="Something went wrong loading the plan library."
+                title="Could not load plans"
+                text="Could not load the plan library."
                 actionLabel="Try again"
                 onAction={handleRetry}
               />
@@ -948,7 +948,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <View style={styles.quizResultIcon}>
                   <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
                 </View>
-                <Text style={[styles.quizResultTitle, live.quizResultTitle]}>Here's your coach's suggestion</Text>
+                <Text style={[styles.quizResultTitle, live.quizResultTitle]}>Here is your coach's suggestion</Text>
                 <Card surface="surface2" style={styles.quizResultCard}>
                   <Text style={[styles.quizResultName, live.quizResultName]}>{quizResult.name}</Text>
                   {quizResult.description ? (

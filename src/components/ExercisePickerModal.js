@@ -141,14 +141,14 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
     const clinUnknown = conflicts.find(c => c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED && c.unknown);
     if (clinUnknown) {
       const label = demandLabel(clinUnknown.ruleValue).toLowerCase();
-      return `You told Volyume a clinician asked you to keep ${label} out, and Volyume doesn't know yet whether this involves it`;
+      return `You told Volyume a clinician asked you to keep ${label} out, and Volyume does not know yet whether this involves it`;
     }
     return 'You told Volyume a clinician asked for this one to stay out';
   }
   if (reason === CAPABILITY_BLOCK.UNKNOWN) {
     const axis = conflicts.find(c => c.unknown)?.ruleValue;
     const label = axis ? demandLabel(axis).toLowerCase() : 'this';
-    return `Volyume doesn't know yet whether this involves ${label}`;
+    return `Volyume does not know yet whether this involves ${label}`;
   }
   const first = conflicts.find(c => !c.unknown);
   if (first?.ruleKind === 'demand') {
@@ -164,7 +164,7 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
     if (first.laterality && sided) {
       const oneSideLoadable = exercise?.unilateralLoadable === true || exercise?.unilateralLoadable === 1;
       if (!oneSideLoadable) {
-        return `You've said ${sided} does not work, and this one cannot be done a side at a time`;
+        return `You have said ${sided} does not work, and this one cannot be done a side at a time`;
       }
       // One-side-loadable yet still definitely conflicted: the axis no
       // longer carves. Both sides restricted names both facts; a sided
@@ -175,7 +175,7 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
       // is how the law stayed picker-only for eight rounds.
       const shape = sidedUnionShape(first, capabilityState);
       const base = rulePhrase({ ...first, laterality: null });
-      if (shape === 'both_sides' && base) return `You've said ${base} does not work on either side`;
+      if (shape === 'both_sides' && base) return `You have said ${base} does not work on either side`;
     }
     return `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under Injuries & limitations`;
   }
@@ -489,8 +489,8 @@ export default function ExercisePickerModal({
     if (capReason === CAPABILITY_BLOCK.CLINICIAN) {
       // No inline override for a clinician-reported rule (CAP-7).
       appAlert(
-        `${item.name} is one you're keeping out`,
-        `${describeCapabilityConflict(intentState.capability, item, capReason)}. If that's changed, update it under Injuries & limitations first.`,
+        `${item.name} is one you are keeping out`,
+        `${describeCapabilityConflict(intentState.capability, item, capReason)}. If that is changed, update it under Injuries & limitations first.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -611,7 +611,7 @@ export default function ExercisePickerModal({
       onSelect(newEx);
       onClose();
     } catch (_e) {
-      toast.show("Couldn't save exercise, try again", { variant: 'error' });
+      toast.show("Could not save the exercise. Please try again.", { variant: 'error' });
     } finally {
       setCreating(false);
     }

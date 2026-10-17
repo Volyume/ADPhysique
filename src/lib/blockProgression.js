@@ -380,7 +380,7 @@ export function sessionDisplayName(session, sessions = []) {
 export function skipConfirmation(session, sessions = [], { recoveryNext = false } = {}) {
   const label = sessionDisplayName(session, sessions);
   if (!label) return null;
-  const body = `This will move past this workout without logging it as completed. It won't remove ${session.name} from your programme or change future workouts.`;
+  const body = `This will move past this workout without logging it as completed. It will not remove ${session.name} from your plan or change future workouts.`;
   return {
     title: `Skip ${label} this time?`,
     body: recoveryNext ? `${body} After this, your recovery week will begin.` : body,
@@ -398,7 +398,7 @@ export function skipConfirmation(session, sessions = [], { recoveryNext = false 
  */
 export function endEarlyConfirmation(session, sessions = [], { recoveryNext = false } = {}) {
   const label = sessionDisplayName(session, sessions);
-  const body = "The work you've logged will still count. The exercises you didn't do won't be logged as completed, and Volyume will move on from this workout.";
+  const body = "The work you have logged will still count. The exercises you did not do will not be logged as completed, and Volyume will move on from this workout.";
   return {
     title: label ? `Finish ${label} here?` : 'Finish for today?',
     body: recoveryNext ? `${body} After this, your recovery week will begin.` : body,

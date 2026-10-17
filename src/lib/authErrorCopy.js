@@ -34,7 +34,7 @@ export const AUTH_COPY = Object.freeze({
   // address: invalid format" reached people as the fallback and Sentry as an
   // error. It is a typing slip, so it says what to check.
   invalidEmail: 'That email address does not look right. Check it and try again.',
-  fallback: "That didn't go through. Try again.",
+  fallback: "That did not go through. Please try again.",
 });
 
 /**

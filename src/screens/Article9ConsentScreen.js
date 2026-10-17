@@ -299,10 +299,10 @@ export default function Article9ConsentScreen({ navigation }) {
           style={[styles.declineLink, live.declineLink]}
           accessibilityRole="button"
           accessibilityState={{ expanded: declineInfoOpen }}
-          accessibilityLabel="What if I don't agree?"
+          accessibilityLabel="What if I do not agree?"
         >
           <Ionicons name="help-circle-outline" size={16} color={t.colors.textSecondary} />
-          <Text style={[styles.declineLinkText, live.declineLinkText]}>What if I don't agree?</Text>
+          <Text style={[styles.declineLinkText, live.declineLinkText]}>What if I do not agree?</Text>
           <Ionicons name={declineInfoOpen ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textMuted} />
         </TouchableOpacity>
 

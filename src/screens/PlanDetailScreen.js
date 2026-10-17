@@ -322,7 +322,7 @@ export default function PlanDetailScreen({ navigation, route }) {
               await copyPlanFromLibrary(planId, user.id);
               navigation.goBack();
             } catch (_e) {
-              toast.show('Could not copy plan. Try again.', { variant: 'error' });
+              toast.show('Could not copy your plan. Please try again.', { variant: 'error' });
             }
           },
         },
@@ -336,7 +336,7 @@ export default function PlanDetailScreen({ navigation, route }) {
               try {
                 copy = await copyPlanFromLibrary(planId, user.id);
               } catch (_e) {
-                toast.show('Could not copy plan. Try again.', { variant: 'error' });
+                toast.show('Could not copy your plan. Please try again.', { variant: 'error' });
                 return;
               }
               const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name, blockSentence: (isAuthoredPlanTags(plan?.tags) ? AUTHORED_BLOCK_START_SENTENCE : BLOCK_START_SENTENCE) });
@@ -372,7 +372,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       toast.show(`"${plan?.name}" is now your active plan`, { variant: 'success' });
     } catch (e) {
       logError('PlanDetailScreen.handleSetActive', e, { userId: user?.id, planId });
-      toast.show("Couldn't activate plan, try again", { variant: 'error' });
+      toast.show("Could not activate your plan. Please try again.", { variant: 'error' });
     } finally {
       activatingRef.current = false;
     }
@@ -394,7 +394,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('PlanDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId: routine?.id });
-      toast.show("Couldn't start workout, try again", { variant: 'error' });
+      toast.show("Could not start your workout. Please try again.", { variant: 'error' });
     }
   }
 
@@ -446,7 +446,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         // Revert to what the user can actually see now, not to a stale array.
         orderRef.current = current;
         setWorkouts(current);
-        toast.show("Couldn't reorder, try again", { variant: 'error' });
+        toast.show("Could not change the order. Please try again.", { variant: 'error' });
       }
     });
     await reorderChain.current;
@@ -477,7 +477,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         logError('PlanDetailScreen.handleReorderWorkouts', e, { planId });
         orderRef.current = previous;
         setWorkouts(previous);
-        toast.show("Couldn't reorder, try again", { variant: 'error' });
+        toast.show("Could not change the order. Please try again.", { variant: 'error' });
       }
     });
     await reorderChain.current;
@@ -498,7 +498,7 @@ export default function PlanDetailScreen({ navigation, route }) {
               navigation.goBack();
             } catch (e) {
               logError('PlanDetailScreen.handleArchive', e, { planId });
-              toast.show("Couldn't archive plan, try again", { variant: 'error' });
+              toast.show("Could not archive your plan. Please try again.", { variant: 'error' });
             }
           },
         },

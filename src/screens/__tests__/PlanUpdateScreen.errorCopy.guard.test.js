@@ -25,7 +25,7 @@ describe('PlanUpdateScreen rebuild-failure copy (C1 pin)', () => {
     expect(source).not.toMatch(/toast\.show\(`[^`]*\$\{dry\.error/);
     expect(source).not.toMatch(/toast\.show\(`[^`]*\$\{planResult\.error/);
     // Belt-and-braces: the old literal wording must not reappear verbatim.
-    expect(source).not.toMatch(/Couldn't rebuild your plan \(/);
+    expect(source).not.toMatch(/Could not rebuild your plan \(/);
   });
 
   test('every rebuild-failure toast uses the single fixed calm message', () => {
@@ -40,7 +40,7 @@ describe('PlanUpdateScreen rebuild-failure copy (C1 pin)', () => {
     const m = source.match(/const REBUILD_FAILED_MESSAGE = "([^"]+)";/);
     expect(m).toBeTruthy();
     expect(m[1]).not.toMatch(/\$\{/);
-    expect(m[1].toLowerCase()).toMatch(/wasn't changed/);
+    expect(m[1].toLowerCase()).toMatch(/has not changed/);
     expect(m[1]).not.toMatch(/—/); // no em dash in user-facing copy
   });
 

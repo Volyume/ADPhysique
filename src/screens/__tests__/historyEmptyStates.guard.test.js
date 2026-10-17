@@ -12,7 +12,7 @@ describe('history empty states', () => {
   test('BlockReflectionScreen uses shared EmptyState for the no-data state', () => {
     expect(blockReflection).toMatch(/import EmptyState from '\.\.\/components\/EmptyState';/);
     expect(blockReflection).toMatch(
-      /<EmptyState[\s\S]*icon="calendar-outline"[\s\S]*title="No data found"[\s\S]*text="This block doesn't have any logged sessions yet\."[\s\S]*compact/,
+      /<EmptyState[\s\S]*icon="calendar-outline"[\s\S]*title="Nothing to show yet"[\s\S]*text="This block does not have any logged sessions yet\."[\s\S]*compact/,
     );
     expect(blockReflection).not.toMatch(/styles\.empty(?:Card|Title|Body)/);
   });

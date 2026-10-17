@@ -26,7 +26,7 @@ const ACTIVE = read('ActiveWorkoutScreen.js');
 const ACTIVE_SHEETS = read('../components/workout/session/SessionSheets.js');
 const ROUTINE = read('RoutineDetailScreen.js');
 const PLANS = read('PlansScreen.js');
-const LINE = /Swaps aren(\\)?'t available right now\. Try again in a moment\./;
+const LINE = /Swaps (aren(\\)?'t|are not) available right now\. (Please t|T)ry again in a moment\./;
 
 test('3: the exercise page narrows substitutes to the authored slot\'s options', () => {
   expect(DETAIL).toContain('authoredSwapOptions(');

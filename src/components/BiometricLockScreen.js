@@ -34,7 +34,7 @@ export default function BiometricLockScreen({ authenticating = false, lastFailed
           <Text style={[styles.title, live.title]}>Volyume is locked</Text>
           <Text style={[styles.body, live.body]}>
             {lastFailed
-              ? "That didn't go through. You can try again, or use your device passcode."
+              ? "That did not go through. You can try again, or use your device passcode."
               : 'Unlock with Face ID, your fingerprint, or your device passcode to continue.'}
           </Text>
           <Button

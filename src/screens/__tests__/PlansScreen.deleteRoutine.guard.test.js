@@ -17,6 +17,6 @@ test('the saved-workout delete logs and tells the user on failure, in calm copy'
   const body = src.slice(at, at + 1200);
   expect(body).toMatch(/try \{\s*await softDeleteRoutine\(routine\.id\);\s*await loadData\(\);\s*\} catch \(e\) \{/);
   expect(body).toMatch(/logError\('PlansScreen\.handleDeleteRoutine', e, \{ userId: user\?\.id, routineId: routine\?\.id \}\)/);
-  expect(body).toMatch(/Couldn't delete that workout, try again/);
+  expect(body).toMatch(/Could not delete that workout\. Please try again/);
   expect(body).not.toMatch(/toast\.show\(e\?\.message/);
 });

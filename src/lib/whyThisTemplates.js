@@ -149,7 +149,7 @@ const EXERCISE_WHY_TEMPLATES = {
   neutral_curl:     (name) => `${name} curls with your palms facing each other. This eases strain on the elbows and shifts some of the work to the muscle under your biceps, which adds arm thickness.`,
 
   // Generic fallback
-  default:          (name) => `${name} is the best fit for your kit, the muscle you're training and the time you've got this session.`,
+  default:          (name) => `${name} is the best fit for your kit, the muscle you are training and the time you have this session.`,
 };
 
 /**
@@ -412,8 +412,8 @@ export const ED_PATTERN_LOCKOUT_COPY = {
   // Tooltip body for the "Read more about why" InfoTooltip.
   readMoreBody:
     "Low energy that sticks around alongside fast weight loss is the body's signal that fuel intake is too low for what training is demanding. The condition has a name in sports medicine: relative energy deficiency. It shows up first as low energy, then in training quality, then in hormones and bone health.\n\n" +
-    "Volyume waits for two or more of these signals to stack before holding the cut. One signal on its own is normal: people have low-energy weeks. It's the combination that matters.\n\n" +
-    "The hold is not a punishment. It's a pause while your numbers settle. Once your energy scores recover and your intake catches up for two weeks, Precision Coaching starts adjusting again.",
+    "Volyume waits for two or more of these signals to stack before holding the cut. One signal on its own is normal: people have low-energy weeks. It is the combination that matters.\n\n" +
+    "The hold is not a punishment. It is a pause while your numbers settle. Once your energy scores recover and your intake catches up for two weeks, Precision Coaching starts adjusting again.",
 };
 
 export const ED_PATTERN_CLEARED_COPY = {
@@ -435,7 +435,7 @@ export const RAPID_LOSS_CORRECTED_COPY = {
   title: 'Your coach has added calories straight away',
   body:
     "Your weight dropped more than 1.5% this week and your energy is low. Rather than wait two weeks, your coach has raised your daily target now.\n\n" +
-    "This isn't a punishment for hitting your goal too fast. It's a safety call. Steady is the goal.",
+    "This is not a punishment for hitting your goal too fast. It is a safety call. Steady is the goal.",
 };
 
 // Locale-appropriate eating disorder support links (locked).

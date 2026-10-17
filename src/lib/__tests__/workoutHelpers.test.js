@@ -125,8 +125,8 @@ describe('validateSetEntryValue', () => {
       units: 'kg',
     })).toEqual({
       ok: false,
-      title: 'Enter reps',
-      message: 'Please enter the number of reps completed.',
+      title: 'Reps needed',
+      message: 'Add the number of reps you did, then log the set.',
     });
   });
 
@@ -137,8 +137,8 @@ describe('validateSetEntryValue', () => {
       units: 'kg',
     })).toEqual({
       ok: false,
-      title: 'Enter time',
-      message: 'Please enter the duration for this set.',
+      title: 'Time needed',
+      message: 'Add how long the set lasted, then log the set.',
     });
   });
 
@@ -159,8 +159,8 @@ describe('validateSetEntryValue', () => {
       // A distance exercise names the distance it needs, never a weight
       // (D220 addendum 37, audit D11).
       ok: false,
-      title: 'Enter distance',
-      message: 'Enter the distance covered before completing this set.',
+      title: 'Distance needed',
+      message: 'Add the distance you covered before completing this set.',
     });
   });
 

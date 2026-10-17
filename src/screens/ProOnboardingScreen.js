@@ -427,7 +427,7 @@ function QuestionGroup({ icon, title, sub, children }) {
 // preview (the model), which is the source of the exact copy this pins.
 function capabilityBlockedNote(n) {
   return n === 1
-    ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
+    ? "1 movement clashed with an injury or limitation you have set, so your plan works without it."
     : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
@@ -1092,7 +1092,7 @@ export default function ProOnboardingScreen({ navigation }) {
         // first touchpoint. The real error is already captured above by
         // logError; the user only ever sees one calm fallback sentence
         // (same fix pattern as L01-B35).
-        appAlert('Sign-in failed', "That didn't go through. Try again.");
+        appAlert('Sign-in failed', "That did not go through. Please try again.");
         return;
       }
       if (result?.cancelled) {
@@ -1136,7 +1136,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // returning to idle with no explanation. Show the same calm fallback
       // sentence as the resolved-error branch above (same fix pattern as
       // LoginScreen and ProUpgradeScreen's oauth.threw catches).
-      appAlert('Sign-in failed', "That didn't go through. Try again.");
+      appAlert('Sign-in failed', "That did not go through. Please try again.");
     } finally {
       oauthInFlightRef.current = false;
       setBusy(false);
@@ -2086,13 +2086,13 @@ export default function ProOnboardingScreen({ navigation }) {
             // GENERATES. That is the wrong instruction for this kit, so the
             // retry route named here is the library the plan came from.
             appAlert(
-              "Plan setup didn't finish",
+              "Plan setup did not finish",
               `Your profile is saved, but your plan was not added. Open Plans from the Train tab, browse the plan library and choose a ${libraryKit === 'kettlebell' ? 'kettlebell' : 'band'} plan.`,
             );
           } else if (planResult.error === 'plan_blocked_by_exclusions' && planResult.blockedByCapability) {
             appAlert(
               'Volyume could not build a full plan within your limitations.',
-              "Your profile and targets are saved. Every session needed at least one movement that clashes with an injury or limitation you've set right now.",
+              "Your profile and targets are saved. Every session needed at least one movement that clashes with an injury or limitation you have set right now.",
               [
                 { text: 'Open Injuries & limitations', onPress: () => navigation.navigate('HowYouTrain') },
                 // First run has no plan library route from this screen
@@ -2125,7 +2125,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         // eslint-disable-next-line global-require
                         try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan.retry', retryResult.error, { userId: user.id }); } catch (_) {} // logging must never break the retry
                         appAlert(
-                          'Plan setup didn\'t finish',
+                          'Plan setup did not finish',
                           'Your profile is saved, but your training plan did not generate. Open Today and choose "Start with a plan" to retry.',
                         );
                       }
@@ -2141,7 +2141,7 @@ export default function ProOnboardingScreen({ navigation }) {
             // D228 item 5: the reason is said, not dropped. The refusal's own
             // sentence, then the way on; the plan can be set up from Today.
             appAlert(
-              "Plan setup didn't finish",
+              "Plan setup did not finish",
               `Your profile is saved, but your plan was not built. ${planResult.refusal.text} Open Today to choose how to go on.`,
               [{ text: 'Open Today' }],
             );
@@ -2150,7 +2150,7 @@ export default function ProOnboardingScreen({ navigation }) {
             // being interpolated raw into this alert, so the last thing a new
             // user saw at the end of setup could be a JS or database error.
             appAlert(
-              'Plan setup didn\'t finish',
+              'Plan setup did not finish',
               'Your profile is saved, but your training plan did not generate. Open Today and choose "Start with a plan" to retry.',
             );
           }
@@ -2212,7 +2212,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // is not lost now that it no longer reaches the user.
       // eslint-disable-next-line global-require
       try { require('../lib/errorLog').logError('ProOnboardingScreen.finish', e, { userId: user?.id }); } catch (_) {}
-      appAlert('Something went wrong', 'We could not finish setting up your account. Check your connection and try again.');
+      appAlert('That did not work', 'We could not finish setting up your account. Check your connection and try again.');
       endSequence();
       setBusy(false);
       submittingRef.current = false;
@@ -2660,7 +2660,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   value={experience}
                   options={EXPERIENCE_OPTIONS}
                   onChange={setExperience}
-                  placeholder="Select your experience"
+                  placeholder="Choose your experience"
                   error={errors4.experience}
                 />
               </View>
@@ -2698,7 +2698,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   value={equipment}
                   options={EQUIPMENT_OPTIONS}
                   onChange={setEquipment}
-                  placeholder="Select your equipment"
+                  placeholder="Choose your equipment"
                   error={errors4.equipment}
                 />
               </View>
@@ -2732,7 +2732,7 @@ export default function ProOnboardingScreen({ navigation }) {
   if (step === 5) {
     const errors5 = attempted5 ? validateStep5() : {};
     const handleLine = communityJoin === 'existing'
-      ? `You're already in Community as @${communityHandle}. A gym chosen above goes on your profile.`
+      ? `You are already in Community as @${communityHandle}. A gym chosen above goes on your profile.`
       : ({
         idle: 'Leave it blank and Volyume picks one for you.',
         invalid: HANDLE_HINT,
@@ -2803,9 +2803,9 @@ export default function ProOnboardingScreen({ navigation }) {
                     />
                     <Button
                       variant="secondary"
-                      title="I don't train at a gym"
+                      title="I do not train at a gym"
                       onPress={() => { setGymVenue(null); setGymChoice('none'); }}
-                      accessibilityLabel="I don't train at a gym"
+                      accessibilityLabel="I do not train at a gym"
                     />
                   </>
                 )}
@@ -2962,7 +2962,7 @@ export default function ProOnboardingScreen({ navigation }) {
           <QuestionGroup icon="body-outline">
             <View style={styles.section}>
               <Button
-                title="Yes, let's set that up"
+                title="Yes, set that up"
                 onPress={() => navigation.navigate('HowYouTrain')}
               />
             </View>

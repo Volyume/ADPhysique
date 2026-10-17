@@ -122,7 +122,7 @@ describe('T1-10 - the stored review never outranks capability', () => {
     // planRationale.capabilityLaneStop.guard for the full split).
     expect(read('lib/planAutoGen.js')).toContain('capabilityIneligible: capBaselineBlocked,');
     expect(read('lib/programmeEpoch.js')).toContain("CAPABILITY_EXCLUDED: 'capability_excluded',");
-    expect(read('lib/planRationale.js')).toContain("This clashes with an injury or limitation you've set.");
+    expect(read('lib/planRationale.js')).toContain("This clashes with an injury or limitation you have set.");
   });
 });
 

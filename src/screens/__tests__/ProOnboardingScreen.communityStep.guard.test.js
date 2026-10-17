@@ -88,7 +88,7 @@ describe('nothing on the step is pre-decided', () => {
   });
 
   test('the gym is optional (founder 2026-09-11): never a gap, either action proceeds without it, and an explicit "none" still exists', () => {
-    expect(STEP5).toContain(`title="I don't train at a gym"`);
+    expect(STEP5).toContain(`title="I do not train at a gym"`);
     expect(STEP5).toContain("onPress={() => { setGymVenue(null); setGymChoice('none'); }}");
     expect(STEP5).toContain('sub="Optional: pick your gym');
     const v = SRC.slice(SRC.indexOf('function validateStep5('), SRC.indexOf('function advanceFrom5(intent)'));

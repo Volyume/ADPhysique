@@ -144,7 +144,7 @@ export default function SettingsCoachingScreen() {
         <SettingRow
           icon="heart-outline"
           label="Calmer coaching"
-          sub="Quieter progress prompts, and coaching never pushes for more while it's on. Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change. The safety limits on calories and training load are always on, in both modes."
+          sub="Quieter progress prompts, and coaching never pushes for more while it is on. Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change. The safety limits on calories and training load are always on, in both modes."
           showArrow={false}
           rightElement={
             <Switch
