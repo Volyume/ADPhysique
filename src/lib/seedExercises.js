@@ -13,9 +13,9 @@ import { logError, logInfo } from './errorLog';
 // drift the way the old per-row hand insert used to.
 import { CORPUS, CORPUS_BY_NAME, RETIRED_ENTRIES, corpusEntryToSeedRow } from './exerciseCorpus';
 
-const SEEDED_KEY = '@volyume_exercises_seeded_v7';
+export const SEEDED_KEY = '@volyume_exercises_seeded_v7';
 // Bumped when the derived metadata changes so the backfill re-runs once.
-const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
+export const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
 // Bumped when the metadata RULES change (not just new columns) so every
 // canonical row is re-derived once, even ones the v1 backfill already filled.
 // v2: equipment profiles now keep bodyweight compounds and bands out of
@@ -46,7 +46,7 @@ const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
 // v8 (register D227, 2026-10-12, spec A3): Single-Arm Cable Lateral Raise
 // takes its lateral_raise subregion. updateExerciseMetadata now writes the
 // subregion it is handed, so an existing install takes the fix once.
-const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v8';
+export const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v8';
 // Bumped when exercises are added to the corpus so the top-up scans for the
 // new canonical IDs once on installs that already seeded an earlier list.
 // v4 (EL-14/EL-15, exercise-library-expansion-2026-09-05): the corpus
@@ -59,7 +59,7 @@ const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v8';
 // founder's off-season plan lists that the library lacked (Cable Preacher
 // Curl, Seated Cable Chest Press, Neutral-Grip Machine Pulldown,
 // Single-Arm High-Pulley Seated Cable Row).
-const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v6';
+export const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v6';
 
 // ─── Deterministic canonical exercise IDs ────────────────────────────────
 //

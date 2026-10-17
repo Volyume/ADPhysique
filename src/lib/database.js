@@ -200,6 +200,43 @@ export function initDatabase() {
   return _initPromise;
 }
 
+// Reset and restore (founder answer 2026-10-17): forget the cached init state
+// so the next initDatabase() opens the file afresh after the RootNavigator
+// reset has deleted it. A published handle is closed first (a checkpoint
+// that fails on a damaged file falls back to a plain close).
+// A HUNG open's own handle cannot be closed from here: it is local to
+// _doInit until that open settles. If a discarded open settles later and
+// publishes its handle, the hook below unpublishes and closes it, which
+// narrows that window to a few microtasks but does not close it, and a
+// discarded open that rejects late still runs initDatabase's own catch.
+// (The reset releases expo-sqlite's cached native connection itself, which
+// can make an open stuck on that connection settle; one stuck elsewhere,
+// such as a key read, may not. See localDbReset.releaseCachedConnections.)
+export async function discardDatabaseInitState() {
+  const handle = _db;
+  const pending = _initPromise;
+  _db = null;
+  _initPromise = null;
+  _initDeferredAt = null;
+  if (pending) {
+    pending.then((late) => {
+      if (late && _db === late) _db = null;
+      // Best-effort: a superseded handle on a deleted file.
+      if (late) Promise.resolve().then(() => late.closeAsync?.()).catch(() => {});
+    }).catch(() => { /* the discarded open failed: nothing was published */ });
+  }
+  if (handle) {
+    try {
+      await closeDatabaseHandle(handle);
+    } catch (_) {
+      try { await handle.closeAsync(); } catch (__) { /* best-effort: the file is deleted next */ }
+    }
+  }
+  // Wrapped, not returned bare: an async function would otherwise wait on a
+  // hung open here. The caller bounds its own wait (src/lib/localDbReset.js).
+  return { pending };
+}
+
 async function _doInit() {
   // A process may have died between the two atomic renames of snapshot
   // promotion. Repair from the durable restore journal before any SQLite open
