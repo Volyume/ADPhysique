@@ -77,6 +77,12 @@
   .result strong{color:var(--text); font-weight:600;}
   .hidden{display:none;}
 
+  .g-error{color:var(--amber); font-size:17px; line-height:1.55; margin:24px 0 0; max-width:60ch;}
+  .g-closed-text{color:var(--textSecondary);}
+  #g-closed{color:var(--textSecondary); font-size:19px; margin:34px 0;}
+  #g-error{margin:0 0 18px;}
+  .chip input[type="checkbox"]{position:absolute; opacity:0; width:0; height:0;}
+
   footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
   footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
   footer .links{display:flex; gap:24px; flex-wrap:wrap;}
@@ -104,6 +110,7 @@
 
 <main class="survey">
   <div class="wrap">
+    <div id="legacy">
     <div class="head">
       <h1>A two-minute survey</h1>
       <p class="intro">Thank you for taking the time. Only the first question is needed, the rest are optional, and your answers genuinely shape what gets built next. There is no wrong answer here.</p>
@@ -163,6 +170,26 @@
     <div class="result hidden" id="result" role="status" aria-live="polite">
       <p id="result-text"></p>
     </div>
+    </div>
+
+    <div id="generic" class="hidden">
+      <div class="head">
+        <h1 id="g-title" tabindex="-1">Survey</h1>
+        <p class="intro" id="g-intro"></p>
+      </div>
+      <p class="g-error hidden" id="g-closed" role="status">This survey is closed. Thank you for looking.</p>
+      <form id="g-form" class="hidden" novalidate>
+        <div id="g-questions"></div>
+        <div class="actions">
+          <p class="g-error hidden" id="g-error" role="alert"></p>
+          <button type="submit" class="btn btn-primary" id="g-submit">Send my answers</button>
+          <p class="form-note" id="g-note"></p>
+        </div>
+      </form>
+      <div class="result hidden" id="g-result" role="status" aria-live="polite">
+        <p id="g-result-text"></p>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -199,6 +226,166 @@
     resultText.textContent = message;
     resultBox.classList.remove("hidden");
   }
+
+  var FUNCTION_URL = "https://sujrylzzxcqxxfygptns.supabase.co/functions/v1/member-email-public";
+  var surveyId = param("id");
+  var surveyToken = param("t");
+  var CLOSED_TEXT = "This survey is closed. Thank you for looking.";
+  var TRY_LATER_TEXT = "That did not work just now. Please try again later.";
+
+  if (surveyId) {
+    document.getElementById("legacy").classList.add("hidden");
+    document.getElementById("generic").classList.remove("hidden");
+    startGeneric();
+  }
+
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function startGeneric(){
+    var gForm = document.getElementById("g-form");
+    var gClosed = document.getElementById("g-closed");
+    var gError = document.getElementById("g-error");
+    var gSubmit = document.getElementById("g-submit");
+    var gResult = document.getElementById("g-result");
+    var gResultText = document.getElementById("g-result-text");
+    var gQuestions = document.getElementById("g-questions");
+    var questions = [];
+
+    document.getElementById("g-note").textContent = surveyToken
+      ? "You opened this from your email, so your answers are linked to your account. If you send again, the new answers replace the first."
+      : "Your answers are stored on Volyume's EU database and used only to improve the app. They are sent without your name.";
+
+    function showClosed(){
+      document.getElementById("g-title").textContent = "Survey";
+      document.getElementById("g-intro").textContent = "";
+      gForm.classList.add("hidden");
+      gClosed.classList.remove("hidden");
+    }
+
+    function showError(message){
+      gError.textContent = message;
+      gError.classList.remove("hidden");
+    }
+
+    function render(survey){
+      document.getElementById("g-title").textContent = survey.title || "Survey";
+      document.getElementById("g-intro").textContent = survey.intro || "";
+      questions = Array.isArray(survey.questions) ? survey.questions : [];
+      gQuestions.textContent = "";
+      questions.forEach(function(q, i){
+        var fs = el("fieldset");
+        var legend = el("legend");
+        legend.appendChild(el("span", "q-index", String(i + 1)));
+        legend.appendChild(document.createTextNode(q.prompt));
+        if (!q.required) legend.appendChild(el("span", "q-optional", "optional"));
+        fs.appendChild(legend);
+        if (q.type === "text") {
+          var ta = el("textarea");
+          ta.name = q.id;
+          ta.maxLength = 2000;
+          ta.placeholder = "Whatever comes to mind";
+          ta.setAttribute("aria-label", q.prompt);
+          fs.appendChild(ta);
+        } else {
+          var multi = q.type === "multi";
+          if (multi) fs.appendChild(el("p", "q-help", "You can choose more than one."));
+          var chips = el("div", "chips");
+          chips.setAttribute("role", multi ? "group" : "radiogroup");
+          chips.setAttribute("aria-label", q.prompt);
+          (q.options || []).forEach(function(opt, j){
+            var chip = el("span", "chip");
+            var input = el("input");
+            input.type = multi ? "checkbox" : "radio";
+            input.name = q.id;
+            input.value = opt;
+            input.id = "g-" + q.id + "-" + j;
+            var label = el("label", "", opt);
+            label.setAttribute("for", input.id);
+            chip.appendChild(input);
+            chip.appendChild(label);
+            chips.appendChild(chip);
+          });
+          fs.appendChild(chips);
+        }
+        gQuestions.appendChild(fs);
+      });
+      gForm.classList.remove("hidden");
+    }
+
+    function collect(){
+      var answers = {};
+      var missing = null;
+      questions.forEach(function(q, i){
+        var value = null;
+        if (q.type === "text") {
+          var ta = gForm.querySelector('textarea[name="' + q.id + '"]');
+          var t = ta ? ta.value.trim() : "";
+          if (t) value = t;
+        } else if (q.type === "multi") {
+          var picked = Array.prototype.map.call(
+            gForm.querySelectorAll('input[name="' + q.id + '"]:checked'),
+            function(n){ return n.value; });
+          if (picked.length) value = picked;
+        } else {
+          var one = gForm.querySelector('input[name="' + q.id + '"]:checked');
+          if (one) value = one.value;
+        }
+        if (value !== null) answers[q.id] = value;
+        else if (q.required && missing === null) missing = i + 1;
+      });
+      return { answers: answers, missing: missing };
+    }
+
+    fetch(FUNCTION_URL + "?action=get_survey&id=" + encodeURIComponent(surveyId))
+      .then(function(res){
+        if (!res.ok) { var e = new Error("status"); e.status = res.status; throw e; }
+        return res.json();
+      })
+      .then(function(survey){
+        if (!survey || !Array.isArray(survey.questions)) { showClosed(); return; }
+        render(survey);
+      })
+      .catch(function(err){
+        if (err && err.status && err.status < 500 && err.status !== 429) showClosed();
+        else { gClosed.textContent = TRY_LATER_TEXT; gClosed.classList.remove("hidden"); }
+      });
+
+    gForm.addEventListener("submit", function(e){
+      e.preventDefault();
+      gError.classList.add("hidden");
+      var got = collect();
+      if (got.missing !== null) {
+        showError("Please answer question " + got.missing + " before sending.");
+        return;
+      }
+      gSubmit.disabled = true;
+      gSubmit.textContent = "Sending";
+      var body = { action: "submit_survey", id: surveyId, answers: got.answers };
+      if (surveyToken) body.t = surveyToken;
+      fetch(FUNCTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }).then(function(res){
+        if (!res.ok) { var er = new Error("status"); er.status = res.status; throw er; }
+        gForm.classList.add("hidden");
+        gResultText.textContent = "Thank you. Your answers shape what gets built next.";
+        gResult.classList.remove("hidden");
+      }).catch(function(err){
+        gSubmit.disabled = false;
+        gSubmit.textContent = "Send my answers";
+        if (err && (err.status === 404 || err.status === 410)) showClosed();
+        else if (err && err.status === 400) showError("One of your answers could not be saved. Please check them and try again.");
+        else showError(TRY_LATER_TEXT);
+      });
+    });
+  }
+
 
   form.addEventListener("submit", function(e){
     e.preventDefault();

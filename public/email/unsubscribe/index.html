@@ -122,13 +122,47 @@
     resultBox.classList.remove("hidden");
   }
 
+  var FUNCTION_URL = "https://sujrylzzxcqxxfygptns.supabase.co/functions/v1/member-email-public";
+  var token = param("t");
   var userId = param("u");
-  if (!userId) {
+
+  // News emails carry a signed token (t). Older emails carry a user id (u),
+  // which keeps the original behaviour below.
+  function unsubscribeWithToken(){
+    actions.classList.add("hidden");
+    showResult("One moment.");
+    fetch(FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "unsubscribe", t: token })
+    }).then(function(res){
+      if (res.ok) {
+        showResult("You will not get news emails from Volyume any more. You can turn them back on in the app, in Settings.");
+        return;
+      }
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+        showResult("This link is not valid any more. You can turn news emails off in the app, in Settings.");
+        return;
+      }
+      throw new Error("Request failed: " + res.status);
+    }).catch(function(){
+      showResult("That did not work just now. Please press the button to try again, or turn news emails off in the app, in Settings.");
+      stopBtn.disabled = false;
+      stopBtn.textContent = "Stop these emails";
+      actions.classList.remove("hidden");
+    });
+  }
+
+  if (token) {
+    document.getElementById("intro").textContent = "This only affects news emails from the Volyume team. It does not change anything else inside the app, and it takes effect straight away.";
+    stopBtn.addEventListener("click", unsubscribeWithToken);
+    unsubscribeWithToken();
+  } else if (!userId) {
     actions.classList.add("hidden");
     showResult("This link is missing its reference, so nothing can be changed from here. If you want to stop these emails, reply to the one you received and it will be handled by a person.");
   }
 
-  stopBtn.addEventListener("click", function(){
+  if (!token) stopBtn.addEventListener("click", function(){
     stopBtn.disabled = true;
     stopBtn.textContent = "Working";
 
