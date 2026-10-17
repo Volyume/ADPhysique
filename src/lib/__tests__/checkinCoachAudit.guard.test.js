@@ -53,7 +53,7 @@ describe('ALGO-001: weekly volume anchors to the check-in week', () => {
   test('source guard: getWeeklyVolumeByMuscle uses the helper; the check-in passes the week end', () => {
     const body = fnBody(DB, 'export async function getWeeklyVolumeByMuscle');
     expect(body).toMatch(/weekWindowsEndingAt\(now, weeksBack\)/);
-    expect(CHECKIN).toMatch(/getWeeklyVolumeByMuscle\(user\.id, 2, weekStartMs \+ 7 \* 86400000\)/);
+    expect(CHECKIN).toMatch(/getWeeklyVolumeByMuscle\(user\.id, 2, localWeekEndMs\(weekStartMs\)\)/);
   });
 });
 

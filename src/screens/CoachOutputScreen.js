@@ -77,7 +77,7 @@ import { isCompetitionGoal } from '../lib/coachingGoals';
 import { getCycleTracking } from '../lib/cyclePrefs';
 import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
 import { getRecentIntakeSummary } from '../lib/food/db';
-import { localWeekStartMs, localDayKey } from '../lib/dayKey';
+import { localWeekStartMs, localWeekEndMs, localDayKey } from '../lib/dayKey';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 // NAV-4 (founder decision): the differential paywall no longer renders here.
 // Its only audience is the free tier, which withProGuard keeps out of this
@@ -1002,6 +1002,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ref makes the entry guard synchronous, the same pattern the wizard and
   // the activation paths use.
   const applyingRef = useRef(false);
+  // C1: the Coached walk's once-per-week attempt record (see the auto-apply
+  // effect). Keys are `${adjustment}:${output.weekStart}`.
+  const autoApplyAttemptedRef = useRef(new Set());
   // Food-level receipt after a calorie apply edits an active meal plan
   // ({ headline, body, deepLink, floorNote } from planExplain, or null).
   const [planEditNote, setPlanEditNote] = useState(null);
@@ -1690,7 +1693,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       // (weeklyCoach weighInDayCount), so a same-morning double log must
       // not show the user more credit than the engine gave.
       try {
-        const weekEnd = weekStart + 7 * 86400000;
+        // C5: the next local Monday, not +168h (a DST week is 167 or 169h).
+        const weekEnd = localWeekEndMs(weekStart);
         setWeighInsThisWeek(new Set(
           weights
             .filter(w => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekStart && Number(w.loggedAt) < weekEnd)
@@ -1853,7 +1857,13 @@ export default function CoachOutputScreen({ navigation, route }) {
       // consecutive off-target weeks. (The sibling
       // lastCalAdjustmentWeeksAgo below already counts real elapsed
       // weeks; this brings the counter to the same standard.)
-      const lastOutput = await getLatestCoachOutput(user.id);
+      // C2 (final audit 2026-10-17): the PREVIOUS week's output, never this
+      // week's own row. Unbounded, a same-week reopen read back the row this
+      // run saved on first open, so the off-target counter recomputed from
+      // itself (to 0, then persisted) and the cooldown counted 0 weeks since
+      // the change this very week had only proposed, hiding it. Bounded, a
+      // reopen feeds the engine exactly what the first open did.
+      const lastOutput = await getLatestCoachOutput(user.id, { beforeWeekStart: weekStart });
       const lastOutputAdjacent = lastOutput?.weekStart != null
         && Math.abs(weekStart - lastOutput.weekStart - WEEK_STEP_MS) <= 86400000;
       const consecutiveOffTargetWeeks = lastOutputAdjacent && lastOutput?.trend?.onTarget === false
@@ -2394,6 +2404,25 @@ export default function CoachOutputScreen({ navigation, route }) {
         await saveCoachOutput(user.id, { weekStart, ...persistedResult });
       }
 
+      // C2 (c): saveCoachOutput keeps this week's stored Applied and
+      // Declined records across the recompute (preserveAppliedAdjustments),
+      // but the in-memory output did not, so a reopen offered Apply again on
+      // a change already taken and a second tap stacked another step. Show
+      // what is stored: carry the same two maps into the state object, under
+      // the same rule the save uses (a map the fresh run carries wins). The
+      // object is this run's own, already saved above, so filling it in place
+      // keeps it the one object the apply handlers re-save from.
+      try {
+        const storedThisWeek = await getLatestCoachOutput(user.id, { beforeWeekStart: weekStart + 1 });
+        if (storedThisWeek && Number(storedThisWeek.weekStart) === Number(weekStart)) {
+          for (const key of ['appliedAdjustments', 'declinedAdjustments']) {
+            if (!persistedResult[key] && storedThisWeek[key]) persistedResult[key] = storedThisWeek[key];
+          }
+        }
+      } catch (e) {
+        logError('CoachOutputScreen.storedActionsMerge', e, { userId: user?.id });
+      }
+
       setOutput(persistedResult);
 
       // T2 (world-class-audit-2026-07-03/05-cohesion.md #4): viewing a real
@@ -2620,8 +2649,22 @@ export default function CoachOutputScreen({ navigation, route }) {
     // (TrainingNextWeekCard shows one or the other, never both); Coached
     // mode follows the same either/or so it can never apply a push the
     // Collaborative UI would never have offered this week.
+    // C1 (final audit 2026-10-17): each auto apply is attempted ONCE per
+    // adjustment per reviewed week. A handler that ends without marking the
+    // row applied (the calorie floor holds, a diet break with the target
+    // already at or above maintenance, a plan that changed under the
+    // training push, a "tap again" preview refresh, a failed write) used to
+    // flip applyingKey and re-fire this effect into the same no-op for ever:
+    // repeated database reads and the same notice again and again. The key
+    // is marked BEFORE the call, so the walk moves on to the next decision
+    // instead; the row keeps its manual Apply (the handlers never consult
+    // this ref), so a tap still works.
+    const attemptWeek = output?.weekStart ?? weekStart;
+    const autoAttempted = (key) => autoApplyAttemptedRef.current.has(`${key}:${attemptWeek}`);
+    const markAutoAttempted = (key) => { autoApplyAttemptedRef.current.add(`${key}:${attemptWeek}`); };
     if (output.deloadSuggested) {
-      if (!isApplied(output, 'deload') && nextTrainingWeekId) {
+      if (!isApplied(output, 'deload') && nextTrainingWeekId && !autoAttempted('deload')) {
+        markAutoAttempted('deload');
         handleApplyDeload();
       }
       return;
@@ -2630,15 +2673,19 @@ export default function CoachOutputScreen({ navigation, route }) {
     // would call a handler that returns without changing state and stall
     // here for ever — silently skipping every nutrition apply below.
     if (output.volumeSignal && !isApplied(output, 'training') && nextTrainingWeekId
-      && !(output.volumeSignal > 0 && nextWeekIsDeload)) {
+      && !(output.volumeSignal > 0 && nextWeekIsDeload) && !autoAttempted('training')) {
+      markAutoAttempted('training');
       handleApplyTraining();
       return;
     }
-    if (output.adjustments?.calories && output.adjustments.calories.change !== 0 && !isApplied(output, 'calories')) {
+    if (output.adjustments?.calories && output.adjustments.calories.change !== 0 && !isApplied(output, 'calories')
+      && !autoAttempted('calories')) {
+      markAutoAttempted('calories');
       handleApplyCalories();
       return;
     }
-    if (output.dietBreakSuggested && !isApplied(output, 'dietBreak')) {
+    if (output.dietBreakSuggested && !isApplied(output, 'dietBreak') && !autoAttempted('dietBreak')) {
+      markAutoAttempted('dietBreak');
       handleApplyDietBreak();
       return;
     }

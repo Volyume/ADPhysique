@@ -93,4 +93,31 @@ export function classifyFreshInstall({
   return 'unknown';
 }
 
+/**
+ * B1 (final audit 2026-10-17): what one `client.auth.getSession()` answer
+ * actually says about the device's sign-in.
+ *
+ * auth-js (2.x, GoTrueClient.__loadSession) answers an EXPIRED access token
+ * by refreshing it. When that refresh cannot reach the server (offline, a
+ * flaky network) it returns `{ data: { session: null }, error }` and KEEPS
+ * the stored refresh token, so the person is still signed in and the next
+ * successful refresh (TOKEN_REFRESHED) brings the session back. Reading that
+ * null as "signed out" dropped a signed-in person on Welcome. Only a null
+ * session with NO error is a definitive signed-out answer. A refresh token
+ * the server has revoked is removed by auth-js itself (SIGNED_OUT), so the
+ * next read answers null with no error and resolves honestly then.
+ *
+ * Pure. A thrown getSession is passed in by the caller as `{ error }`.
+ *
+ * @param {{ data?: { session?: object|null }, error?: unknown }|null|undefined} result
+ * @returns {'session'|'signed_out'|'unresolved'}
+ */
+export function classifySessionRead(result) {
+  const session = result?.data?.session ?? null;
+  if (session?.user) return 'session';
+  if (result?.error) return 'unresolved';
+  if (result == null) return 'unresolved';
+  return 'signed_out';
+}
+
 export default classifyAuthBoot;

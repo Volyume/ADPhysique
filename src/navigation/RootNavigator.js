@@ -37,7 +37,8 @@ import useAppStore from '../store/useAppStore';
 import { getSupabaseClient, hasStoredAuthSession } from '../lib/supabase';
 // Campaign 24 Wave E: the pure boot-time auth presentation decision (the
 // startup auth-hydration flash fix — see the give-up branch in the render).
-import { classifyAuthBoot, classifyFreshInstall } from '../lib/authBootGate';
+import { classifyAuthBoot, classifyFreshInstall, classifySessionRead } from '../lib/authBootGate';
+import { readHealthConsentStatus } from '../lib/consent/healthConsentRead';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { runExerciseSeedChain } from '../lib/seedExercises';
 import * as haptics from '../lib/haptics';
@@ -1375,11 +1376,20 @@ export default function RootNavigator() {
   // renders Welcome as a now-honest, definitively signed-out state. A
   // throw/timeout keeps the retry state visible (transient failures stay
   // visible until fixed, the dbInitFailed philosophy).
+  // B1 (final audit 2026-10-17): a null session WITH an error (an expired
+  // access token whose refresh could not reach the server; auth-js keeps the
+  // refresh token) is not an answer either, so it stays on this state
+  // exactly like a throw. Only a null session with no error is definitive.
   const handleAuthRetry = useCallback(async () => {
     setAuthRetrying(true);
     try {
       const client = getSupabaseClient();
-      const { data } = await client.auth.getSession();
+      const result = await client.auth.getSession();
+      const data = result?.data;
+      if (classifySessionRead(result) === 'unresolved') {
+        _bootLog('warn', 'RootNavigator.handleAuthRetry.sessionUnresolved', result?.error);
+        return; // still signed in but unreachable: stay on the retry state
+      }
       authGenuinelyResolvedRef.current = true;
       if (data?.session?.user) {
         // The auth listener (SIGNED_IN fires on getSession restoring a
@@ -1403,6 +1413,65 @@ export default function RootNavigator() {
     authGenuinelyResolvedRef.current = true;
     setAuthGaveUp(false);
   }, []);
+
+  // B2 (final audit 2026-10-17): Article 9 consent used to be resolved ONLY
+  // inside the SIGNED_IN / INITIAL_SESSION enter pipeline. A session that
+  // came back through TOKEN_REFRESHED (the B1 offline recovery), or a cloud
+  // read that failed with no local cache, left healthConsent null for the
+  // whole session: sync and Community refused in silence and a later
+  // sign-out reported unsynced data. This re-runs the SAME cache-then-cloud
+  // read (readHealthConsentStatus) whenever a signed-in user still has
+  // consent unresolved, on a token refresh, an app foreground and a network
+  // reconnect.
+  //
+  // FAIL CLOSED, and only closed. It never grants consent nobody gave (the
+  // shared read grants only from the post-grant cache or the cloud row), a
+  // failed read changes NOTHING (consent stays null, the gate stays closed,
+  // the next trigger retries), and it never overwrites a real answer: the
+  // result is applied only while consent is still null for the same user,
+  // so a grant made on the consent screen meanwhile always wins. A new user
+  // sees exactly what they saw before: null and false both route them to
+  // the Article 9 gate.
+  const consentRetryInFlightRef = useRef(false);
+  const retryUnresolvedHealthConsent = useCallback(async (trigger) => {
+    const before = useAppStore.getState();
+    const uid = before.user?.id ?? null;
+    if (!uid || before.user?.isLocal) return;
+    if (before.healthConsent != null) return;
+    if (consentRetryInFlightRef.current) return;
+    consentRetryInFlightRef.current = true;
+    try {
+      const consentRead = await readHealthConsentStatus({
+        client: getSupabaseClient(), userId: uid, storage: AsyncStorage,
+      });
+      const now = useAppStore.getState();
+      // The account changed, or a real answer landed while we read.
+      if (now.user?.id !== uid || now.healthConsent != null) return;
+      if (consentRead.status === 'unresolved') return; // stays null: retried on the next trigger
+      const granted = consentRead.status === 'granted';
+      now.setHealthConsent(granted, true);
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logInfo('RootNavigator.consentRetry.resolved', trigger, { granted }); } catch (_) {}
+      if (granted) {
+        // The sign-in restore was held while consent was unresolved
+        // (SignIn.restoreDeferred), and the sync triggers that fired
+        // meanwhile were refused, so run it now, as the consent screen
+        // does after a grant. The runner re-checks consent itself.
+        // eslint-disable-next-line global-require
+        const { syncAll } = require('../lib/sync');
+        useAppStore.getState().markCloudSyncing();
+        syncAll({ userId: uid, localUserId: uid, triggeredBy: 'manual' })
+          .then(() => useAppStore.getState().markCloudSyncComplete())
+          .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
+      }
+    } catch (e) {
+      _bootLog('warn', 'RootNavigator.consentRetry', e);
+    } finally {
+      consentRetryInFlightRef.current = false;
+    }
+  }, []);
+  const retryUnresolvedHealthConsentRef = useRef(retryUnresolvedHealthConsent);
+  retryUnresolvedHealthConsentRef.current = retryUnresolvedHealthConsent;
 
   useEffect(() => {
     const queueIncomingSessionRefusal = (client) => {
@@ -1529,8 +1598,8 @@ export default function RootNavigator() {
           try {
             // eslint-disable-next-line global-require
             require('../components/AppAlert').appAlert(
-              "Couldn't switch accounts safely",
-              'The previous account could not be fully removed from this device, so the new account was not opened. Try again in a moment.',
+              'Could not switch accounts safely',
+              'The previous account could not be fully removed from this phone, so the new account was not opened. Please try again in a moment.',
               [{ text: 'OK' }],
             );
           } catch (_) { /* alert module is optional; refusal still signs out */ }
@@ -1570,7 +1639,33 @@ export default function RootNavigator() {
         try {
           const client = getSupabaseClient();
           if (client) {
-            const { data: { session } } = await client.auth.getSession();
+            // B1 (final audit 2026-10-17): read getSession's error too. An
+            // expired access token refreshed while offline answers
+            // { session: null, error } and auth-js KEEPS the refresh token,
+            // so the person is still signed in. Treating that (or a thrown
+            // read) as "no session" fell through to the no-session branch
+            // below, marked it a genuine answer and dropped a signed-in
+            // person on Welcome. It is a GIVE-UP instead: the bounded retry
+            // state holds (classifyAuthBoot), and the next successful
+            // refresh (TOKEN_REFRESHED) publishes the user and lifts it.
+            let sessionResult;
+            try {
+              sessionResult = await client.auth.getSession();
+            } catch (readErr) {
+              sessionResult = { data: { session: null }, error: readErr };
+            }
+            if (classifySessionRead(sessionResult) === 'unresolved') {
+              _bootLog('warn', 'RootNavigator.bootstrap.sessionUnresolved', sessionResult?.error);
+              setAuthLoading(false);
+              // A refresh error means a stored session exists on this
+              // install, so the retry state (never Welcome) is the honest
+              // frame even if the owner marker read came back empty.
+              setHadPriorSession(true);
+              setAuthGaveUp(true);
+              setInitialAuthResolved(true);
+              return;
+            }
+            const session = sessionResult?.data?.session ?? null;
             if (session?.user) {
               const admission = await preflightIncomingSession(client, session);
               if (!admission.ok) return;
@@ -1836,6 +1931,13 @@ export default function RootNavigator() {
           } catch (_) {}
           setSession(session);
           setUser(session?.user ?? null);
+          // B2: a session that comes back through a token refresh (the B1
+          // offline recovery) never runs the enter pipeline below, so it
+          // never resolved consent. Re-run the same read when it is still
+          // unresolved; a no-op the moment consent has a real answer.
+          if (event === 'TOKEN_REFRESHED' && session?.user?.id) {
+            retryUnresolvedHealthConsentRef.current?.('token_refreshed');
+          }
           // On a fresh sign-in (email OR OAuth), pull the cloud profile
           // before the navigator routes. Otherwise a returning user whose
           // local AsyncStorage was wiped on sign-out gets routed back
@@ -1987,37 +2089,33 @@ export default function RootNavigator() {
                 // first (set after a successful grant in the consent
                 // screen), then cloud fallback for cross-device
                 // restore. Result drives the renderNavigator gate.
+                // B2 (final audit 2026-10-17): the read itself is the shared
+                // readHealthConsentStatus (src/lib/consent/healthConsentRead.js),
+                // so the re-resolution below (retryUnresolvedHealthConsent)
+                // runs exactly this rule, never a second copy of it.
                 try {
-                  const cacheKey = `@volyume_health_consent_${session.user.id}`;
-                  const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
-                  if (cached === 'true') {
-                    useAppStore.getState().setHealthConsent(true, true);
+                  const consentRead = await readHealthConsentStatus({
+                    client, userId: session.user.id, storage: AsyncStorage,
+                  });
+                  if (consentRead.thrown) throw consentRead.thrown;
+                  if (consentRead.status === 'unresolved') {
+                    // A transient cloud-read failure must NOT re-fire
+                    // the (un-skippable) Article 9 gate. New users
+                    // still hit the dedicated consent step during
+                    // onboarding; this branch only runs for a returning
+                    // / cross-device sign-in whose local cache is
+                    // absent. Leave consent unresolved (null, not
+                    // false) so the gate stays closed and we re-check
+                    // on the next token refresh, foreground or reconnect
+                    // (retryUnresolvedHealthConsent), rather than
+                    // re-prompting a user who already consented just
+                    // because the network blipped.
+                    useAppStore.getState().setHealthConsent(null, true);
                   } else {
-                    // No local cache; ask cloud. RLS keeps this
-                    // scoped to the signed-in user.
-                    const { data, error } = await client
-                      .from('users_profile')
-                      .select('health_data_consent')
-                      .eq('id', session.user.id)
-                      .maybeSingle();
-                    if (error) {
-                      // A transient cloud-read failure must NOT re-fire
-                      // the (un-skippable) Article 9 gate. New users
-                      // still hit the dedicated consent step during
-                      // onboarding; this branch only runs for a returning
-                      // / cross-device sign-in whose local cache is
-                      // absent. Leave consent unresolved (null, not
-                      // false) so the gate stays closed and we re-check
-                      // next session, rather than re-prompting a user who
-                      // already consented just because the network blipped.
-                      useAppStore.getState().setHealthConsent(null, true);
-                    } else {
-                      const granted = data?.health_data_consent === true;
-                      useAppStore.getState().setHealthConsent(granted, true);
-                      if (granted) {
-                        try { await AsyncStorage.setItem(cacheKey, 'true'); } catch (_) {}
-                      }
-                    }
+                    // Cache first, then cloud; the cache is written only on
+                    // a cloud grant, inside the shared read.
+                    const granted = consentRead.status === 'granted';
+                    useAppStore.getState().setHealthConsent(granted, true);
                   }
                 } catch (e) {
                   log.logWarn('SignIn.healthConsentCheck.failed', e?.message);
@@ -2111,6 +2209,37 @@ export default function RootNavigator() {
       subscription?.unsubscribe();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // B2: the foreground and reconnect triggers for the consent re-resolution
+  // (retryUnresolvedHealthConsent above). Each is a no-op unless a signed-in
+  // user still has consent unresolved. NetInfo is lazy-required as App.js
+  // does, so a build or test without the native module keeps the other
+  // triggers.
+  useEffect(() => {
+    let appStateSub = null;
+    let netInfoUnsub = null;
+    let prevConnected = null;
+    try {
+      appStateSub = AppState.addEventListener('change', (state) => {
+        if (state === 'active') retryUnresolvedHealthConsentRef.current?.('foreground');
+      });
+    } catch (_) { appStateSub = null; }
+    try {
+      // eslint-disable-next-line global-require
+      const NetInfo = require('@react-native-community/netinfo').default;
+      netInfoUnsub = NetInfo.addEventListener((state) => {
+        const connected = !!state?.isConnected;
+        if (prevConnected === false && connected === true) {
+          retryUnresolvedHealthConsentRef.current?.('network');
+        }
+        prevConnected = connected;
+      });
+    } catch (_) { netInfoUnsub = null; }
+    return () => {
+      try { appStateSub?.remove?.(); } catch (_) { /* best-effort */ }
+      try { if (typeof netInfoUnsub === 'function') netInfoUnsub(); } catch (_) { /* best-effort */ }
+    };
   }, []);
 
   // Splash self-heal: if we ever land in a state where the user is gone
@@ -2220,11 +2349,11 @@ export default function RootNavigator() {
     return (
       <View style={dbErrorStyles.container}>
         <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
-        <Text style={dbErrorStyles.title}>Couldn't check your sign-in</Text>
+        <Text style={dbErrorStyles.title}>Could not check your sign-in</Text>
         <Text style={dbErrorStyles.body}>
-          Nothing has been lost. Volyume couldn't reach your account this
-          time - your data is safe on this device. Try again, or sign in
-          fresh.
+          Nothing has been lost. Volyume could not reach your account just
+          now, and your data is safe on this phone. Check your connection
+          and try again, or sign in again.
         </Text>
         <Button
           title={authRetrying ? 'Trying again...' : 'Try again'}
@@ -2253,11 +2382,11 @@ export default function RootNavigator() {
     return (
       <View style={dbErrorStyles.container}>
         <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
-        <Text style={dbErrorStyles.title}>Couldn't open your data</Text>
+        <Text style={dbErrorStyles.title}>Could not open your data</Text>
         <Text style={dbErrorStyles.body}>
-          Nothing has been lost. Volyume couldn't open your local data this
-          time - try again, and if it keeps happening, it has already been
-          reported.
+          Nothing has been lost. Volyume could not open the data stored on
+          this phone just now. Please try again. If it keeps happening, we
+          have already been told about it.
         </Text>
         <Button
           title={dbRetrying ? 'Trying again...' : 'Try again'}

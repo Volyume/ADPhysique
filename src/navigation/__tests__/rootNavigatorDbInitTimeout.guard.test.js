@@ -52,7 +52,7 @@ describe('D141 item 2: a hung initDatabase is bounded and handled as a failure',
 
   test('the DB-failed screen still renders ahead of every other route', () => {
     expect(src.indexOf('if (dbInitFailed) {')).toBeGreaterThan(-1);
-    expect(src).toMatch(/Couldn't open your data/);
+    expect(src).toMatch(/Could not open your data/);
   });
 });
 
