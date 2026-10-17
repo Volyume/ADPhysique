@@ -1008,7 +1008,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
       // COMP-013: first completed session ever → the calibrated acknowledgement.
       if (totalCompleted === 1) {
-        setFirstSessionLine(suppressed ? null : "Your first workout is done, and that's the hard part over.");
+        setFirstSessionLine(suppressed ? null : 'Your first workout is done, and that is the hard part over.');
       }
 
       // D1: claim the early-win milestone for this session. Skipped on the very
@@ -1589,7 +1589,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (ambientOutcome.sessionRefused === 'not_allowed') {
       return {
         title: 'Not shared to Community',
-        sub: "Your Community sharing settings didn't allow this session, so it wasn't posted.",
+        sub: 'Your Community sharing settings did not allow this session, so it was not posted.',
         action: {
           title: 'Post this session',
           a11y: 'Post this session to Community',
@@ -2265,7 +2265,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   not make yet (seeding is a fresh ramp until the Stage 6
                   ledger); point to the real decision instead. */}
               <Text style={[styles.phaseNext, live.phaseNext]}>
-                What's next: choose your next block from the Train tab when you're ready.
+                What comes next: choose your next block from the Train tab when you are ready.
               </Text>
               <View style={styles.phaseActions}>
                 <Button
@@ -2335,7 +2335,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     any control. Same sentence, same words, moved above the
                     toggle. */}
                 <Text style={[styles.feedbackPurpose, live.feedbackPurpose]}>
-                  Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you're not sure about.
+                  Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you are not sure about.
                 </Text>
               </>
             )}

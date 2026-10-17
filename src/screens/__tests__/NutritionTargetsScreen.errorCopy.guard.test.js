@@ -28,7 +28,7 @@ describe('NutritionTargetsScreen never shows a raw exception message to the user
 
   test('the outer calculate catch logs the cause and shows calm, stable copy', () => {
     expect(src).toMatch(
-      /logError\('NutritionTargets\.calculate', e, \{ userId: user\?\.id \}\); \} catch \(_\) \{\}\s*\n\s*toast\.show\('Could not calculate your targets, try again', \{ variant: 'error' \}\);/,
+      /logError\('NutritionTargets\.calculate', e, \{ userId: user\?\.id \}\); \} catch \(_\) \{\}\s*\n\s*toast\.show\('Could not calculate your targets\. Please try again\.', \{ variant: 'error' \}\);/,
     );
   });
 });

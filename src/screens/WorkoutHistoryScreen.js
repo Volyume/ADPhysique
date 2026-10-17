@@ -287,7 +287,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       setWorkouts(prev => [...prev, ...nextRows]);
     } catch (e) {
       logError('WorkoutHistoryScreen.handleShowMore', e, { userId: user?.id });
-      toast.show("Couldn't load more sessions. Try again.", { variant: 'error' });
+      toast.show('Could not load more sessions. Please try again.', { variant: 'error' });
     } finally {
       if (loadRequestRef.current === requestId) setLoadingMore(false);
     }
@@ -409,7 +409,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       logError('WorkoutHistoryScreen.handleRepeatAsIs', e, {
         userId: user?.id, workoutId: workout?.id, routineId: workout?.routineId,
       });
-      toast.show('Couldn\'t repeat workout. Try again.', { variant: 'error' });
+      toast.show('Could not repeat that workout. Please try again.', { variant: 'error' });
     }
   }
 
@@ -444,7 +444,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           onPress: async () => {
             try {
               const ok = await deleteWorkoutAndSets(user.id, workout.id);
-              if (!ok) { toast.show("Couldn't delete that workout. Try again.", { variant: 'error' }); return; }
+              if (!ok) { toast.show('Could not delete that workout. Please try again.', { variant: 'error' }); return; }
               const supabaseUserId = session?.user?.id;
               if (supabaseUserId) {
                 // eslint-disable-next-line global-require
@@ -473,7 +473,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               setMonthReloadKey(k => k + 1);
             } catch (e) {
               logError('WorkoutHistory.delete', e, { workoutId: workout.id });
-              toast.show("Couldn't delete that workout. Try again.", { variant: 'error' });
+              toast.show('Could not delete that workout. Please try again.', { variant: 'error' });
             }
           },
         },
@@ -1089,8 +1089,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
           ) : loadError ? (
             <EmptyState
               icon="alert-circle-outline"
-              title="Couldn't load workout history"
-              text="Couldn't load this on your device. Try again. Your saved sessions have not been changed."
+              title="Could not load workout history"
+              text="Could not load this on your device. Try again. Your saved sessions have not been changed."
               actionLabel="Try again"
               onAction={loadWorkouts}
               actionAccessibilityLabel="Try loading workout history again"

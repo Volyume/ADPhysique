@@ -188,7 +188,7 @@ describe('quick entry: the 20 kg floor and the plausibility prompt (BM-40)', () 
     submit(tree);
     expect(onLogWeight).not.toHaveBeenCalled();
     // Said, never swallowed (lane 7 review S10): the form's own words.
-    expect(appAlert).toHaveBeenCalledWith('Check that weight', expect.stringMatching(/looks off/));
+    expect(appAlert).toHaveBeenCalledWith('Is that weight right?', expect.stringMatching(/looks off/));
     const input = tree.root.findAll((n) => n.props.placeholder === 'kg' && typeof n.props.onChangeText === 'function')[0];
     act(() => input.props.onChangeText('20'));
     submit(tree);
@@ -264,7 +264,7 @@ describe('quick entry: the 20 kg floor and the plausibility prompt (BM-40)', () 
   test('Home\'s handler holds the same floor, and hands the strip the last REAL weigh-in only', () => {
     const home = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'HomeScreen.js'), 'utf8');
     expect(home).toMatch(/import \{ BODY_WEIGHT_MIN_KG, BODY_WEIGHT_MAX_KG, BODY_WEIGHT_RANGE_MESSAGE \} from '\.\.\/lib\/bodyMetricValidate';/); // the form's own ceiling too (closing review); the range message is said, never swallowed
-    expect(home).toMatch(/weightKg < BODY_WEIGHT_MIN_KG \|\| weightKg > BODY_WEIGHT_MAX_KG\) \{\s*\n[^\n]*\n\s*appAlert\('Check that weight', BODY_WEIGHT_RANGE_MESSAGE\);\s*\n\s*return;/);
+    expect(home).toMatch(/weightKg < BODY_WEIGHT_MIN_KG \|\| weightKg > BODY_WEIGHT_MAX_KG\) \{\s*\n[^\n]*\n\s*appAlert\('Is that weight right\?', BODY_WEIGHT_RANGE_MESSAGE\);\s*\n\s*return;/);
     expect(home).toMatch(/lastWeighInKg=\{recentWeights\.length \? recentWeights\[recentWeights\.length - 1\] : null\}/);
     // the prefill keeps its own prop; the profile's setup weight is never "your last weigh-in"
     expect(home).toMatch(/lastWeightKg=\{recentWeights\.length \? recentWeights\[recentWeights\.length - 1\] : \(userProfile\?\.weightKg \?\? null\)\}/);

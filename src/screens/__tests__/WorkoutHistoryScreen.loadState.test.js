@@ -166,8 +166,8 @@ describe('WorkoutHistoryScreen load states', () => {
     await flush();
 
     let text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load workout history");
-    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).toContain('Could not load workout history');
+    expect(text).toContain('Could not load this on your device. Try again.');
     expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Your sessions will appear here');
@@ -185,7 +185,7 @@ describe('WorkoutHistoryScreen load states', () => {
 
     expect(getRecentCompletedWorkouts).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load workout history");
+    expect(text).toContain('Could not load workout history');
   });
 
   test('fetches sets for at most the 50 visible recent sessions', async () => {
@@ -515,11 +515,11 @@ describe('WorkoutHistoryScreen summary polish', () => {
     // flagged (L01-B37). "workout" is the dominant term app-wide (grepped
     // 2026-07-09: src/screens+src/components sentence-like copy, "workout"
     // 62 vs "session" 39; raw string occurrences 228 vs 174).
-    expect(WORKOUT_HISTORY_SOURCE).toContain("Couldn\\'t repeat workout. Try again.");
+    expect(WORKOUT_HISTORY_SOURCE).toContain('Could not repeat that workout. Please try again.');
     expect(WORKOUT_HISTORY_SOURCE).toContain(
       'The workout and all its sets are removed from your history, and your stats recalculate. This cannot be undone.',
     );
-    expect(WORKOUT_HISTORY_SOURCE).not.toContain("Couldn\\'t repeat session");
+    expect(WORKOUT_HISTORY_SOURCE).not.toContain('Could not repeat that session');
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('The session and all its sets are removed');
     // The repeat/delete action labels themselves already said "workout"
     // before this fix; pin them too so the whole action group stays aligned.

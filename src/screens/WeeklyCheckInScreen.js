@@ -542,7 +542,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         let plannedDays = [];
         if (targets?.targetKcal) {
           const startIso = localDayKey(weekStartMs); // local-day bounds match the rollup keys
-          const endIso = localDayKey(weekStartMs + 6 * 86400000);
+          const endIso = localDayKey(localWeekEndMs(weekStartMs) - 1);
           rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
           plannedDays = await getPlannedDaysInRange(user.id, startIso, endIso).catch(() => []);
         }
@@ -847,7 +847,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       }
       const weekStartMs = localWeekStartMs(weekAnchorMs);
       const startIso = localDayKey(weekStartMs);
-      const endIso = localDayKey(weekStartMs + 6 * 86400000);
+      const endIso = localDayKey(localWeekEndMs(weekStartMs) - 1);
       const rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
       const targetKcal = autoDerived.calsMeta?.target ?? null;
       const calsAdh = deriveCalsAdherence({ rollups, targetKcal });
@@ -1060,8 +1060,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
       // calm fixed line.
       logError('WeeklyCheckInScreen.submit', e, { userId: user?.id, message: e?.message ?? null });
       appAlert(
-        'Couldn\'t save check-in',
-        'Nothing has been lost. Try again in a moment.',
+        'Could not save your check-in',
+        'Nothing has been lost. Please try again in a moment.',
       );
     } finally {
       setBusy(false);
@@ -1145,7 +1145,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         <Text style={[styles.stepHeading, live.stepHeading]}>This week's data</Text>
         {/* C5-P20-03 (D96): the consequence, in step 2's register (the model
             the audit names). This step described its mechanics only. */}
-        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>We fill in what we can from what you've logged. Correct anything that does not match your week, because this is what the weekly decision is based on.</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>We fill in what we can from what you have logged. Correct anything that does not match your week, because this is what the weekly decision is based on.</Text>
 
         {/* Weight trend, read-only */}
         {!loading && (
@@ -1209,7 +1209,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         {showCycle && (
           <View style={styles.section}>
             <SectionLabel
-              hint="If your period could be moving the scale this week, flag it. Your coach then makes no weight-based changes, so a normal rise or dip isn't mistaken for fat gain or loss."
+              hint="If your period could be moving the scale this week, flag it. Your coach then makes no weight-based changes, so a normal rise or dip is not mistaken for fat gain or loss."
             >
               Cycle
             </SectionLabel>
@@ -1253,7 +1253,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               <View style={[styles.plannedBackstop, live.plannedBackstop]}>
                 <Text style={[styles.plannedBackstopText, live.plannedBackstopText]}>
                   You had a meal plan on {unconfirmedPlannedDays.length} {unconfirmedPlannedDays.length === 1 ? 'day' : 'days'} this
-                  week but didn't confirm eating {unconfirmedPlannedDays.length === 1 ? 'it' : 'them'}, so {unconfirmedPlannedDays.length === 1 ? "it isn't" : "they aren't"} counted
+                  week but did not confirm eating {unconfirmedPlannedDays.length === 1 ? 'it' : 'them'}, so {unconfirmedPlannedDays.length === 1 ? 'it is not' : 'they are not'} counted
                   above. If you stuck to your plan, confirm so it counts.
                 </Text>
                 <Button
@@ -1272,7 +1272,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               options={[
                 { value: 'yes', label: 'Hit it' },
                 { value: 'no', label: 'Off target' },
-                { value: 'untracked', label: "Didn't track" },
+                { value: 'untracked', label: 'Did not track' },
               ]}
               selected={calsAdherence}
               onSelect={setCalsAdherence}
@@ -1347,8 +1347,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
               <SectionLabel
                 hint={episodeOverdue
                   ? (episodeSubject
-                    ? `You thought you'd be back to ${episodeSubject} by about now. When you're ready, you can end this under Injuries & limitations and everything comes back.`
-                    : "This has been going longer than you expected. If you're done with it, you can end it under Injuries & limitations.")
+                    ? `You thought you would be back to ${episodeSubject} by about now. When you are ready, you can end this under Injuries & limitations and everything comes back.`
+                    : 'This has been going longer than you expected. If you are done with it, you can end it under Injuries & limitations.')
                   : undefined}
               >{episodeSubject
                   ? `How did you get on training without ${episodeSubject}?`
@@ -1489,7 +1489,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // user accepted every pre-filled value and answered only the two required
   // recovery questions.
   function renderFastCheckIn() {
-    const CALS_TEXT = { yes: 'Hit your target', no: 'Off your target', untracked: "Didn't track" };
+    const CALS_TEXT = { yes: 'Hit your target', no: 'Off your target', untracked: 'Did not track' };
     const summaryRows = [
       {
         key: 'training',
@@ -1526,7 +1526,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       <>
         <Text style={[styles.stepHeading, live.stepHeading]}>Quick check-in</Text>
         <Text style={[styles.stepSubtitle, live.stepSubtitle]}>
-          Volyume has filled in your week from what you've logged. Confirm energy and recovery, then submit.
+          Volyume has filled in your week from what you have logged. Confirm energy and recovery, then submit.
         </Text>
 
         <View style={[styles.fastSummaryCard, live.fastSummaryCard]}>
@@ -1549,7 +1549,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               autoDerived.calsMeta
                 ? `from your diary: ${autoDerived.calsMeta.daysLogged} of 7 days logged`
                 : null,
-            ].filter(Boolean).join(' - ') || "Filled in from what you've logged this week."}
+            ].filter(Boolean).join(', ') || 'Filled in from what you have logged this week.'}
           </Text>
         </View>
 
@@ -1590,7 +1590,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         {showCycle && (
           <View style={styles.section}>
             <SectionLabel
-              hint="If your period could be moving the scale this week, flag it. Your coach then makes no weight-based changes, so a normal rise or dip isn't mistaken for fat gain or loss."
+              hint="If your period could be moving the scale this week, flag it. Your coach then makes no weight-based changes, so a normal rise or dip is not mistaken for fat gain or loss."
             >
               Cycle
             </SectionLabel>
@@ -1803,9 +1803,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </View>
           <Text style={[styles.gateTitle, live.gateTitle]}>A few more weight readings needed</Text>
           <Text style={[styles.gateBody, live.gateBody]}>
-            You've logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'morning' : 'mornings'} in the last 7 days. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
+            You have logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'morning' : 'mornings'} in the last 7 days. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
             {'\n\n'}
-            Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day gives enough readings to smooth out those daily ups and downs and see what's actually changing. With fewer readings, the coaching adjustments won't be as accurate.
+            Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day gives enough readings to smooth out those daily ups and downs and see what is actually changing. With fewer readings, the coaching adjustments will not be as accurate.
             {'\n\n'}
             Log {remaining} more {remaining === 1 ? 'morning' : 'mornings'} from the Today tab and come back on {dayName}.
           </Text>
@@ -1846,9 +1846,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
             <Ionicons name="cloud-offline-outline" size={32} color={t.colors.warning} />
           </View>
-          <Text style={[styles.gateTitle, live.gateTitle]}>Couldn't load your week</Text>
+          <Text style={[styles.gateTitle, live.gateTitle]}>Could not load your week</Text>
           <Text style={[styles.gateBody, live.gateBody]}>
-            We couldn't load this week's data, so the check-in is paused to keep the coaching accurate.
+            We could not load this week's data, so the check-in is paused to keep the coaching accurate.
           </Text>
           <Button
             title="Try again"
@@ -1943,8 +1943,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   targets may hold rather than that they will. */}
               <Text style={[styles.ritualIntroSub, live.ritualIntroSub]}>
                 {hasPriorReview === false
-                  ? "Four short sections. Volyume combines them with what you've logged, then shows what your coach makes of the week. Your first review sets the starting point future weeks are measured against, so your coach may keep your targets the same rather than change them."
-                  : "Four short sections. Volyume combines them with what you've logged, then shows the weekly coaching decision straight away."}
+                  ? "Four short sections. Volyume combines them with what you have logged, then shows what your coach makes of the week. Your first review sets the starting point future weeks are measured against, so your coach may keep your targets the same rather than change them."
+                  : "Four short sections. Volyume combines them with what you have logged, then shows the weekly coaching decision straight away."}
               </Text>
             </View>
           )}
@@ -1956,7 +1956,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <View style={[styles.alreadyInRow, live.alreadyInRow]}>
               <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
               <Text style={[styles.alreadyInText, live.alreadyInText]}>
-                You've checked in this week. Your answers are loaded, edit and resubmit to update.
+                You have checked in this week. Your answers are loaded. Edit them and resubmit to update.
               </Text>
             </View>
           )}

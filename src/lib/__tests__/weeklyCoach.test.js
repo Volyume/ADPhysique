@@ -215,7 +215,7 @@ describe('runWeeklyCoach output shape', () => {
     expect(waiting.primary.reasonKey).toBe('holding_off_target');
     expect(waiting.primary.domain).toBeNull();
     expect(waiting.whyThisWeek).not.toMatch(/moving at the planned rate\. No change needed/);
-    expect(waiting.whyThisWeek).toBe("Your weight isn't moving at the planned rate yet, but your targets stay the same this week.");
+    expect(waiting.whyThisWeek).toBe("Your weight is not moving at the planned rate yet, but your targets stay the same this week.");
   });
 
   test('the dose receipt names the direction of the last change, and the actor', () => {

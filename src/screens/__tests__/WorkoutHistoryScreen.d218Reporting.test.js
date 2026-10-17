@@ -507,7 +507,7 @@ describe('F-2: "Repeat as-is" with no routine keeps what resolves and says what 
     await openRepeatAsIs(tree);
     expect(mockStartWorkout).not.toHaveBeenCalled();
     expect(mockToastShow).toHaveBeenCalledTimes(1);
-    expect(mockToastShow).toHaveBeenCalledWith("Couldn't repeat workout. Try again.", { variant: 'error' });
+    expect(mockToastShow).toHaveBeenCalledWith('Could not repeat that workout. Please try again.', { variant: 'error' });
   });
 
   test('nothing left out: no toast, and a retired id and its survivor are ONE entry with every working set counted', async () => {

@@ -31,7 +31,7 @@ const ACTIVE_WORKOUT = fs.readFileSync(
 describe('ActiveWorkoutScreen local-finish failure never claims a connection problem', () => {
   test('the finish-failure alert no longer says "check your connection"', () => {
     const alertBlockMatch = ACTIVE_WORKOUT.match(
-      /appAlert\(\s*'Couldn\\'t finish workout',\s*\n\s*'([^']*)',/,
+      /appAlert\(\s*'Could not finish workout',\s*\n\s*'([^']*)',/,
     );
     expect(alertBlockMatch).not.toBeNull();
     expect(alertBlockMatch[1]).not.toMatch(/check your connection/i);

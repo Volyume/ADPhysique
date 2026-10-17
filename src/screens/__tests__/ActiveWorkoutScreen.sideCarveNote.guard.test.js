@@ -165,7 +165,7 @@ describe('Q-1 (round 5): the in-session episode notice never asserts an adaptati
     // false in every reachable case - most of all for declined and
     // undecided rules, where the app is doing nothing to the row.
     expect(SRC).toContain(
-      `{ kind: 'episode', copy: "This one sits outside your temporary change. Swap it when you're ready." }`,
+      `{ kind: 'episode', copy: "This one sits outside your temporary change. Swap it when you are ready." }`,
     );
     expect(SRC).not.toContain('Today this works around your temporary change');
     expect(SRC).not.toContain("This is one you're working around at the moment");
@@ -182,7 +182,7 @@ describe('Q-1 (round 5): the in-session episode notice never asserts an adaptati
     // (subjectPhrase names those), so the false claim survived on the
     // dominant path. It now mirrors the baseline named line: state the
     // conflict, offer the action.
-    expect(SRC).toContain('This one involves ${named}, which sits outside your temporary change. Swap it when you\'re ready.');
+    expect(SRC).toContain('This one involves ${named}, which sits outside your temporary change. Swap it when you are ready.');
     expect(SRC).not.toContain("working around at the moment");
   });
 });

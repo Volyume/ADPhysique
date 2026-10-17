@@ -1134,7 +1134,7 @@ export default function CommunityHubScreen({ navigation, route }) {
           big
           icon="people-outline"
           title="Find people"
-          subtitle="Train like you, same gym, near you, same discipline"
+          subtitle="People who train like you, at your gym, near you or in your discipline"
           onPress={() => navigation.navigate('CommunityFindPeople')}
         />
         <EntryRow

@@ -667,7 +667,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               navigation.goBack();
             } catch (e) {
               logError('ExerciseDetailScreen.deleteExercise', e, { exerciseId: exercise.id });
-              toast.show("Couldn't delete that exercise. Try again.", { variant: 'error' });
+              toast.show('Could not delete that exercise. Please try again.', { variant: 'error' });
             } finally {
               setDeletingExercise(false);
             }
@@ -686,9 +686,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <View style={[styles.loadErrorIcon, live.loadErrorIcon]}>
               <Ionicons name="alert-circle-outline" size={22} color={t.colors.warning} />
             </View>
-            <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't load exercise details</Text>
+            <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Could not load exercise details</Text>
             <Text style={[styles.loadErrorText, live.loadErrorText]}>
-              Couldn't load this on your device. Try again. Your workout history has not been changed.
+              Could not load this on your device. Try again. Your workout history has not been changed.
             </Text>
             <Button
               title="Try again"
@@ -898,7 +898,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               {/* D88: an estimate is never exact. One convention everywhere:
                   hedged and whole, matching the session rows below. */}
               <Text style={[styles.est1RMText, live.est1RMText]}>Estimated max: ~{Math.round(best1RM)} {units}</Text>
-              <InfoTooltip text="Your estimated max lift: the most weight you could lift for a single rep, calculated from the sets you've logged. It updates automatically as you get stronger." size={12} />
+              <InfoTooltip text="Your estimated max lift: the most weight you could lift for a single rep, calculated from the sets you have logged. It updates automatically as you get stronger." size={12} />
             </View>
           )}
 
@@ -907,7 +907,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <Text style={[styles.sfrValue, live.sfrValue]}>{exercise.stimulusToFatigueRatio || 3}/5</Text>
               <View style={styles.sfrLabelRow}>
                 <Text style={[styles.sfrLabel, live.sfrLabel]}>Quality</Text>
-                <InfoTooltip text="Quality: how much growth this exercise produces relative to how tiring it is overall. 5/5 means you get a lot of growth for how tiring it is. 3/5 is moderate. 1/5 means it's very demanding for what you get back." size={11} />
+                <InfoTooltip text="Quality: how much growth this exercise produces relative to how tiring it is overall. 5/5 means you get a lot of growth for how tiring it is. 3/5 is moderate. 1/5 means it is very demanding for what you get back." size={11} />
               </View>
             </View>
             <View style={[styles.sfrDivider, live.sfrDivider]} />
@@ -1000,7 +1000,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {congratsBanner && (
           <Animated.View style={[styles.congratsBanner, live.congratsBanner, { opacity: congratsOpacity }]}>
             <Ionicons name="checkmark-circle" size={18} color={t.colors.primary} />
-            <Text style={[styles.congratsText, live.congratsText]}>You've hit your target. Set a new one.</Text>
+            <Text style={[styles.congratsText, live.congratsText]}>You have hit your target. Set a new one.</Text>
           </Animated.View>
         )}
 
@@ -1178,12 +1178,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     {sessionSets.map((s, j) => (
                       <Text key={j} style={[styles.historySetText, live.historySetText]}>
                         {s.weight}{units} x {s.actualReps}
-                        {s.set_type === 'warmup' || s.setType === 'warmup' ? ' - Warm-up' : ''}
-                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop set' : ''}
+                        {s.set_type === 'warmup' || s.setType === 'warmup' ? ', Warm-up' : ''}
+                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ', Drop set' : ''}
                         {/* EL-7: truthful label only, same mechanism as warm-up/drop-set above. */}
-                        {(s.evidenceClass ?? s.evidence_class) === 'circuit_ballistic' ? ' - Circuit, Ballistic'
-                          : (s.evidenceClass ?? s.evidence_class) === 'circuit' ? ' - Circuit'
-                          : (s.evidenceClass ?? s.evidence_class) === 'ballistic' ? ' - Ballistic' : ''}
+                        {(s.evidenceClass ?? s.evidence_class) === 'circuit_ballistic' ? ', Circuit, Ballistic'
+                          : (s.evidenceClass ?? s.evidence_class) === 'circuit' ? ', Circuit'
+                          : (s.evidenceClass ?? s.evidence_class) === 'ballistic' ? ', Ballistic' : ''}
                       </Text>
                     ))}
                   </View>
@@ -1201,7 +1201,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           <EmptyState
             compact
             icon="time-outline"
-            title="You haven't logged this exercise yet"
+            title="You have not logged this exercise yet"
             text="Add it to a session to start tracking your progress."
             actionLabel="Start workout"
             onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}

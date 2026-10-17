@@ -90,7 +90,7 @@ describe('failures are logged and out-of-range weights are said', () => {
     expect(HS).toMatch(/logWarn\('HomeScreen\.loadFirstReviewFacts'/);
   });
   test('handleLogWeight alerts with the shared range message instead of returning silently', () => {
-    expect(body(HS, 'async function handleLogWeight(')).toMatch(/appAlert\('Check that weight', BODY_WEIGHT_RANGE_MESSAGE\)/);
+    expect(body(HS, 'async function handleLogWeight(')).toMatch(/appAlert\('Is that weight right\?', BODY_WEIGHT_RANGE_MESSAGE\)/);
   });
 });
 

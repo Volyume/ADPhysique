@@ -110,8 +110,8 @@ describe('ExerciseDetailScreen load states', () => {
     await flush();
 
     let text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load exercise details");
-    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).toContain('Could not load exercise details');
+    expect(text).toContain('Could not load this on your device. Try again.');
     expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
 
@@ -124,7 +124,7 @@ describe('ExerciseDetailScreen load states', () => {
 
     expect(getExerciseById).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
-    expect(text).toContain("Couldn't load exercise details");
+    expect(text).toContain('Could not load exercise details');
   });
 });
 

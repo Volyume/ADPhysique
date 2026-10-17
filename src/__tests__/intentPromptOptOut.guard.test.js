@@ -27,7 +27,7 @@ describe('D2: readiness ask opt-out never fabricates coaching input', () => {
   });
 
   test('the modal opt-out persists the flag and starts as Skip in the same handler', () => {
-    const site = HOME.indexOf("Don't ask before each session");
+    const site = HOME.indexOf('Do not ask before each session');
     expect(site).toBeGreaterThan(-1);
     const window = HOME.slice(Math.max(0, site - 800), site + 400);
     // C14 job 2 re-anchor: the same write, through the one path that also

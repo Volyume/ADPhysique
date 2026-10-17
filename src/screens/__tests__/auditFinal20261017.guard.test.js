@@ -102,6 +102,12 @@ describe('Week ends (C5)', () => {
     expect(checkin).toContain('getWeeklyVolumeByMuscle(user.id, 2, localWeekEndMs(weekStartMs))');
     expect(checkin).not.toMatch(/weekStartMs \+ 7 \* 86400000/);
   });
+
+  test('WeeklyCheckInScreen finds the last local day of the week without adding 6 x 24 h', () => {
+    const checkin = read('WeeklyCheckInScreen.js');
+    expect(checkin).not.toMatch(/weekStartMs \+ 6 \* 86400000/);
+    expect(checkin.match(/localDayKey\(localWeekEndMs\(weekStartMs\) - 1\)/g)).toHaveLength(2);
+  });
 });
 
 describe('Reload on focus (C6)', () => {

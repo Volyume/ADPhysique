@@ -23,13 +23,13 @@ import { formatEnergy, energyUnitLabel } from '../lib/format';
 function buildPhaseReason(prevPhase, nextPhase) {
   if (!prevPhase || prevPhase === nextPhase) return null;
   if (prevPhase === 'cut' && nextPhase !== 'cut') {
-    return `You're stepping out of a deficit. Calories rise so your body has the fuel to rebuild and train hard again.`;
+    return `You are stepping out of a deficit. Calories rise so your body has the fuel to rebuild and train hard again.`;
   }
   if (prevPhase !== 'cut' && nextPhase === 'cut') {
-    return `You're entering a controlled calorie deficit. Protein stays high to protect the muscle you've built while fat comes off.`;
+    return `You are entering a controlled calorie deficit. Protein stays high to protect the muscle you have built while fat comes off.`;
   }
   if ((prevPhase === 'bulk' || prevPhase === 'lean_gain') && nextPhase === 'maintain') {
-    return `You're moving to maintenance, eating the calories that keep your weight steady. The focus shifts to consistency and performance rather than weight change.`;
+    return `You are moving to maintenance, eating the calories that keep your weight steady. The focus shifts to consistency and performance rather than weight change.`;
   }
   if (prevPhase === 'lean_gain' && nextPhase === 'bulk') {
     return `Bigger surplus for faster gains. Expect some fat to come with the muscle. That's the trade-off.`;

@@ -233,7 +233,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
     return {
       level: 'data_hold',
       reasons: ['Unusual event flagged with limited weight data'],
-      holdMessage: "You flagged an unusual week and there are only a few weigh-ins. The scale isn't a reliable guide right now. Your calorie target stays the same. Weigh in regularly next week so the next check-in is more accurate.",
+      holdMessage: "You flagged an unusual week and there are only a few weigh-ins. The scale is not a reliable guide right now. Your calorie target stays the same. Weigh in regularly next week so the next check-in is more accurate.",
     };
   }
 
@@ -491,10 +491,10 @@ const WHY_LIBRARY = {
   // still settling, a hold) told the athlete their weight was on target.
   // The branch now reads the engine's own onTarget.
   holding_off_target: [
-    "Your weight isn't moving at the planned rate yet, but your targets stay the same this week.",
+    "Your weight is not moving at the planned rate yet, but your targets stay the same this week.",
   ],
   holding_no_trend: [
-    "There isn't enough weight information yet to judge your rate, so your targets stay the same this week.",
+    "There is not enough weight information yet to judge your rate, so your targets stay the same this week.",
   ],
   off_target_cal_up: [
     "Your weight is not moving at the planned rate, so your calorie target goes up.",
@@ -503,7 +503,7 @@ const WHY_LIBRARY = {
     "Your weight is not moving at the planned rate, so your calorie target comes down.",
   ],
   recovery_lagging: [
-    "Your recovery's down. Your calorie target stays the same until it's back.",
+    "Your recovery is down. Your calorie target stays the same until it is back.",
   ],
   performance_regressed: [
     "Your strength is dipping. Your calorie target stays the same until your strength steadies.",
@@ -512,19 +512,19 @@ const WHY_LIBRARY = {
     "Not enough information yet to make a change. Keep logging your weight and sessions until there is enough to go on.",
   ],
   stabilise_sessions: [
-    "Sessions were inconsistent this week, so the plan stays as it is until you're doing your sessions regularly again.",
+    "Sessions were inconsistent this week, so the plan stays as it is until you are doing your sessions regularly again.",
   ],
   steps_bump: [
-    "Your weight is behind target, so your step target goes up: it's the least tiring change to make.",
+    "Your weight is behind target, so your step target goes up: it is the least tiring change to make.",
   ],
   deload_suggested: [
     "Several signs show you are not recovering well, so next week is lighter, to set you up for the weeks after it.",
   ],
   diet_break_suggested: [
-    "You've been in a calorie deficit for a long stretch. A short break at maintenance will help the next one.",
+    "You have been in a calorie deficit for a long stretch. A short break at maintenance will help the next one.",
   ],
   push_volume: [
-    "Recovery's good and your lifts are going up, so there's a bit more work in the plan this week.",
+    "Recovery is good and your lifts are going up, so there is a bit more work in the plan this week.",
   ],
   // D15 (founder ruling 2026-07-09): fires only when exceededEscalationApplied
   // is true, i.e. only on the week the bounded one-step escalation actually
@@ -1988,7 +1988,7 @@ export function runWeeklyCoach(inputs) {
       dietBreakNote = phaseClaimGap
         ? `This cut has been set for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
         : weeksInPhase >= 12
-          ? `You've been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
+          ? `You have been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
           : 'Eight or more consecutive weeks below maintenance is a long stretch. A week at your full calorie need lets your body reset and makes the next stretch more effective.';
     }
   }
@@ -2162,7 +2162,7 @@ export function runWeeklyCoach(inputs) {
     if (scoffPositive) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Wellbeing screen flagged restriction concerns." });
     } else if (cycleOverride) {
-      heldDecisions.push({ type: 'calories', reason: "Calories held. Cycle was flagged this week so the weight reading isn't a reliable signal." });
+      heldDecisions.push({ type: 'calories', reason: "Your calories stay the same this week. You noted your cycle this week, so the scale is not a reliable guide." });
     } else if (onTarget && !inBand && gainSettling) {
       heldDecisions.push({ type: 'calories', reason: 'Calorie target stays the same. Early in a building phase, fast gain is mostly water and stored carbohydrate, so your coach waits for it to settle.' });
     } else if (onTarget && !inBand) {
@@ -2177,7 +2177,7 @@ export function runWeeklyCoach(inputs) {
       const weeksLeft = offTargetWeeksRequired - consecutiveOffTargetWeeks;
       heldDecisions.push({ type: 'calories', reason: `Calorie target stays the same. Your coach waits for ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same weight trend before changing it.` });
     } else if (calsAdherence === 'untracked') {
-      heldDecisions.push({ type: 'calories', reason: "Calories stay where they are. Food wasn't tracked this week, so any change would be a guess." });
+      heldDecisions.push({ type: 'calories', reason: "Your calories stay where they are. Food was not tracked this week, so any change would be a guess." });
     }
   }
 
@@ -2670,10 +2670,10 @@ function appendWeeklyAnswerSuggestion(note, pcFact) {
       : `${note} You said working around your temporary change got in the way more than expected. If that carries on, you can adjust it under Injuries & limitations.`;
   }
   if (pcFact.weeklyAnswer === 'not_relevant') {
-    if (subject) return `${note} You said working around ${subject} mostly didn't get in the way. If you're done working around it, you can end that under Injuries & limitations.`;
+    if (subject) return `${note} You said working around ${subject} mostly did not get in the way. If you are done working around it, you can end that under Injuries & limitations.`;
     return scope
-      ? `${note} You said working around your temporary change mostly didn't get in the way; that mainly touches your ${scope} work. If you're done working around it, you can end that under Injuries & limitations.`
-      : `${note} You said your temporary change mostly didn't come up. If you're done with it, you can end it under Injuries & limitations.`;
+      ? `${note} You said working around your temporary change mostly did not get in the way; that mainly touches your ${scope} work. If you are done working around it, you can end that under Injuries & limitations.`
+      : `${note} You said your temporary change mostly did not come up. If you are done with it, you can end it under Injuries & limitations.`;
   }
   // D112 R4 (audit T2-17): 'fine' is an answer too. It changes no
   // number, and saying so is the point - the one question the app asked

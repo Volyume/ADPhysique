@@ -210,7 +210,7 @@ describe('source wiring', () => {
     // F1 (adversarial review): judged on the library-RESOLVED row - the
     // entry's own exercise object has no demand columns.
     expect(src).toContain('baselineConflicts(intentState.capability, judgedExercise)');
-    expect(src).toContain("clashes with an injury or limitation you've set. Swap it when you're ready.");
+    expect(src).toContain('clashes with an injury or limitation you have set. Swap it when you are ready.');
     // The strip label follows the lane - a permanent rule is never
     // presented as a temporary change, and the F4 unknown notice labels
     // by the lane's settings home too.
