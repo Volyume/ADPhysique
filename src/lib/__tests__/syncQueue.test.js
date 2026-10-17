@@ -31,6 +31,13 @@ jest.mock('../community/challenges', () => ({
   isRetryableChallengeError: (e) => !['not_found', 'not_allowed', 'invalid_input', 'forbidden'].includes(e?.code),
 }));
 
+// Community audit 2026-10-17, finding 5: the challenge op re-reads the
+// calm/ED gate at replay. Allowed by default; the gate tests below flip it.
+const mockGate = jest.fn(async () => ({ allowed: true, gated: false, isMinor: false }));
+jest.mock('../community/trainingConsistency', () => ({
+  consistencyGateState: (...a) => mockGate(...a),
+}));
+
 const { drainSyncQueue, retryFailedOps } = require('../syncQueue');
 const { setSignOutWiping } = require('../sync/signOutGuard');
 
@@ -132,6 +139,24 @@ describe('challenge_session op (round 3R): an offline finish is retried', () => 
   });
   test('a payload missing a field is dropped without a call', async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([row({ payload: JSON.stringify({ challengeId: 'c1' }) })]);
+    await drainSyncQueue(CLIENT, UID);
+    expect(mockLog).not.toHaveBeenCalled();
+    expect(deleted()).toBe(true);
+  });
+
+  // Finding 5: a session queued offline before calm mode or an ED flag is
+  // never sent under them; the op is dropped, and an unreadable gate drops it.
+  test('under calm mode or an open ED flag at replay, nothing is sent and the op is dropped', async () => {
+    mockGate.mockResolvedValueOnce({ allowed: false, gated: true, isMinor: false });
+    mockDb.getAllAsync.mockResolvedValueOnce([row()]);
+    await drainSyncQueue(CLIENT, UID);
+    expect(mockGate).toHaveBeenCalledWith(UID, true);
+    expect(mockLog).not.toHaveBeenCalled();
+    expect(deleted()).toBe(true);
+  });
+  test('a gate that cannot be read fails closed: nothing is sent', async () => {
+    mockGate.mockRejectedValueOnce(new Error('locked'));
+    mockDb.getAllAsync.mockResolvedValueOnce([row()]);
     await drainSyncQueue(CLIENT, UID);
     expect(mockLog).not.toHaveBeenCalled();
     expect(deleted()).toBe(true);
