@@ -42,3 +42,9 @@ test('a failed replay keeps the op for another try', async () => {
   expect(res).toMatchObject({ drained: 0, failed: 1 });
   expect(deleted()).toBe(false);
 });
+
+test('a member_email_topic op is replayed through replayTopicOp', () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'syncQueue.js'), 'utf8');
+  expect(src).toContain("case 'member_email_topic'");
+  expect(src).toContain('replayTopicOp');
+});

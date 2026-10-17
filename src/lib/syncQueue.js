@@ -35,7 +35,7 @@ function uid() {
  * Enqueue an op for cloud sync. Caller has already written to local
  * SQLite, this is the retry-on-failure fallback for the cloud push.
  *
- * @param {string} opType    one of 'workout' | 'workout_delete' | 'workout_set_delete' | 'body_metric' | 'morning_weight' | 'check_in' | 'challenge_session' | 'member_email_subscription'
+ * @param {string} opType    one of 'workout' | 'workout_delete' | 'workout_set_delete' | 'body_metric' | 'morning_weight' | 'check_in' | 'challenge_session' | 'member_email_subscription' | 'member_email_topic'
  * @param {string} entityId  the local SQLite row id we want to ship
  * @param {string} userId    supabase user.id
  * @param {object} payload   optional, extra data the worker needs (most ops
@@ -280,7 +280,7 @@ async function _runOp(supabaseClient, row) {
       }
     }
     case 'member_email_subscription': {
-      // The Settings switch "News and offers by email" (founder 2026-10-17):
+      // The Settings switch "News by email" (founder 2026-10-17):
       // a choice made offline or refused is replayed to
       // member_email_set_subscribed, oldest first so the last choice wins.
       // The worker throws when the server cannot be reached, so the queue
@@ -288,6 +288,13 @@ async function _runOp(supabaseClient, row) {
       // eslint-disable-next-line global-require
       const { replaySubscriptionOp } = require('./memberEmail/subscription');
       return replaySubscriptionOp(row);
+    }
+    case 'member_email_topic': {
+      // A per-topic email choice (weekly summary), replayed to
+      // member_email_set_topic with the same retry contract as above.
+      // eslint-disable-next-line global-require
+      const { replayTopicOp } = require('./memberEmail/topics');
+      return replayTopicOp(row);
     }
     default:
       logWarn('syncQueue.unknownOp', `unknown op_type=${row.op_type}`, { id: row.id });

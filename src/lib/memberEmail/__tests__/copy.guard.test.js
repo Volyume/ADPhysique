@@ -14,9 +14,18 @@ const read = (...p) => fs.readFileSync(path.join(root, ...p), 'utf8');
 const CONTRACTION = /\b\w+(n't|'re|'ve|'ll|'d|'m)\b/i;
 
 test('the agreed words, exactly', () => {
-  expect(copy.MEMBER_EMAIL_SWITCH_LABEL).toBe('News and offers by email');
-  expect(copy.MEMBER_EMAIL_SWITCH_LINE).toBe('New features, the occasional offer and short surveys. You can turn this off at any time, here or from any email.');
-  expect(copy.MEMBER_EMAIL_SIGNUP_NOTICE).toBe('Volyume will email you about new features, offers and the occasional survey. You can turn this off at any time in Settings or from any email.');
+  expect(copy.MEMBER_EMAIL_SWITCH_LABEL).toBe('News by email');
+  expect(copy.MEMBER_EMAIL_SWITCH_LINE).toBe('New features, short surveys and your weekly summary. You can turn this off at any time, here or from any email.');
+  expect(copy.MEMBER_EMAIL_SIGNUP_NOTICE).toBe('Volyume will email you about new features, short surveys and a weekly summary. You can turn these off at any time in Settings or from any email.');
+});
+
+test('the weekly summary words, exactly', () => {
+  expect(copy.WEEKLY_SUMMARY_SWITCH_LABEL).toBe('Weekly summary email');
+  expect(copy.WEEKLY_SUMMARY_SWITCH_LINE).toBe('A short Monday email with how many sessions you trained last week. Never weights, food or body details.');
+});
+
+test.each(Object.entries(copy))('%s never says "offers"', (_name, text) => {
+  expect(text).not.toMatch(/\boffers?\b/i);
 });
 
 test.each(Object.entries(copy))('%s has no contraction and no em dash', (_name, text) => {
@@ -51,7 +60,7 @@ test('the sign-up notice is shown in create-account mode only and is not a check
 
 test('the Article 9 consent screen and its action carry no member email wording or import', () => {
   const src = read('src', 'screens', 'Article9ConsentScreen.js');
-  expect(src).not.toMatch(/memberEmail|member_email|MEMBER_EMAIL|news and offers|email you about/i);
+  expect(src).not.toMatch(/memberEmail|member_email|MEMBER_EMAIL|news by email|email you about/i);
 });
 
 test('only the Settings switch and the sign-up notice use the copy; no consent prompt exists', () => {

@@ -180,7 +180,7 @@ export default function PrivacyPolicyScreen() {
             Ireland region, and the rows cascade with the account. */}
         <Section title="News emails">
           <Body>
-            Volyume emails members about new features, offers and the occasional short survey. You get these
+            Volyume emails members about new features, short surveys and a weekly summary. You get these
             emails unless you turn them off, and you can do that at any time in Settings, under Privacy and
             legal, or with the unsubscribe link in any email.
           </Body>

@@ -45,14 +45,14 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(data).toContain('Workout sets only');
   });
 
-  // Member email (founder decision 2026-10-17): members get news, offers and
+  // Member email (founder decision 2026-10-17): members get news, short surveys and
   // the occasional survey by email unless they turn it off, in Settings or
   // from any email. The in-app policy says so, and the Settings switch and the
   // sign-up notice carry the same promise.
   test('the in-app policy has a News emails section saying members can turn it off', () => {
     const flat = readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js').replace(/\s+/g, ' ');
     expect(flat).toContain('<Section title="News emails">');
-    expect(flat).toContain('Volyume emails members about new features, offers and the occasional short survey.');
+    expect(flat).toContain('Volyume emails members about new features, short surveys and a weekly summary.');
     expect(flat).toContain('You get these emails unless you turn them off');
     expect(flat).toContain('in Settings, under Privacy and legal, or with the unsubscribe link in any email');
     expect(flat).toContain("No news emails are sent while Volyume's safety check has paused your calorie changes");

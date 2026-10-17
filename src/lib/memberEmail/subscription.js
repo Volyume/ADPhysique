@@ -2,7 +2,7 @@
  * Member email subscription (founder decision 2026-10-17; spec
  * docs/member-email-2026-10-17/SPEC.md section 4, as amended).
  *
- * Members are subscribed to news, offers and short surveys by email unless
+ * Members are subscribed to news, short surveys and a weekly summary by email unless
  * they turn it off, in Settings or from any email. This module reads and
  * writes that one choice. Components never call Supabase: the Settings
  * switch goes through here.

@@ -17,7 +17,10 @@ import {
   getBiometricAvailability,
 } from '../lib/biometricLock';
 import { getSubscribed, setSubscribed } from '../lib/memberEmail/subscription';
-import { MEMBER_EMAIL_SWITCH_LABEL, MEMBER_EMAIL_SWITCH_LINE } from '../lib/memberEmail/copy';
+import { getTopic, setTopic, TOPIC_WEEKLY_SUMMARY } from '../lib/memberEmail/topics';
+import {
+  MEMBER_EMAIL_SWITCH_LABEL, MEMBER_EMAIL_SWITCH_LINE, WEEKLY_SUMMARY_SWITCH_LABEL, WEEKLY_SUMMARY_SWITCH_LINE,
+} from '../lib/memberEmail/copy';
 import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
 // Privacy & legal: health-data consent withdrawal, the two data-sharing
@@ -50,12 +53,16 @@ export default function SettingsPrivacyScreen({ navigation }) {
   // turn it off, so the switch starts ON and shows the last known value if
   // the cloud read fails (getSubscribed never throws).
   const [emailOn, setEmailOn] = useState(true);
+  // Weekly summary topic: ON by default, shown off and disabled while the
+  // main switch is off.
+  const [weeklyOn, setWeeklyOn] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       getOffWritebackConsent().then(setOffConsent);
       if (userId) getSubscribed(userId).then((r) => { if (active) setEmailOn(r.subscribed); });
+      if (userId) getTopic(userId, TOPIC_WEEKLY_SUMMARY).then((r) => { if (active) setWeeklyOn(r.on); });
       setCheckingLock(true);
       getAppLockEnabled().then((v) => { if (active) setAppLockOn(v); });
       getBiometricAvailability().then((a) => {
@@ -91,6 +98,12 @@ export default function SettingsPrivacyScreen({ navigation }) {
     haptics.selection();
     setEmailOn(value);
     if (userId) await setSubscribed(userId, value);
+  }
+
+  async function toggleWeekly(value) {
+    haptics.selection();
+    setWeeklyOn(value);
+    if (userId) await setTopic(userId, TOPIC_WEEKLY_SUMMARY, value);
   }
 
   return (
@@ -186,6 +199,24 @@ export default function SettingsPrivacyScreen({ navigation }) {
               accessibilityState={{ checked: emailOn }}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={emailOn ? t.colors.primary : t.colors.textMuted}
+            />
+          }
+        />
+        <SettingRow
+          icon="calendar-outline"
+          label={WEEKLY_SUMMARY_SWITCH_LABEL}
+          sub={WEEKLY_SUMMARY_SWITCH_LINE}
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={emailOn && weeklyOn}
+              onValueChange={toggleWeekly}
+              disabled={!emailOn}
+              accessibilityRole="switch"
+              accessibilityLabel={WEEKLY_SUMMARY_SWITCH_LABEL}
+              accessibilityState={{ checked: emailOn && weeklyOn, disabled: !emailOn }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={emailOn && weeklyOn ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

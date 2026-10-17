@@ -79,9 +79,9 @@ We do not pass data to advertising networks or third-party analytics providers.
 
 ## 7. News emails
 
-When you create an account you are told that Volyume will email you about new features, offers and the occasional short survey. These are the news emails.
+When you create an account you are told that Volyume will email you about new features, short surveys and a weekly summary. These are the news emails.
 
-**Your choice.** You can turn them off at any time, in the app under Settings with the "News and offers by email" switch, or with the Unsubscribe link in every email. Turning them off does not change anything else in the app, and you can turn them back on in Settings.
+**Your choice.** You can turn them off at any time, in the app under Settings with the "News by email" switch, or with the Unsubscribe link in every email. Turning them off does not change anything else in the app, and you can turn them back on in Settings.
 
 **When we do not send.** We do not send news emails while Volyume's safety check has paused your calorie changes.
 
