@@ -123,11 +123,17 @@ describe('WorkoutSummaryScreen: the video row, in its two forms', () => {
     expect(rowSource()).toContain('sub={clipRowCopy.sub}');
   });
 
-  test('addendum 14: with a video the share can use, the footer Share steps up (secondary, video glyph, "Share with your video") behind the same calm and flag gate as the row, and opens the share with that video', () => {
+  test('addendum 14: with a video the share can use, the footer Share steps up (secondary, plain "Share") behind the same calm and flag gate as the row, and always opens the normal share screen', () => {
     expect(SUMMARY).toMatch(/const videoReadyForShare = !!clipRowCopy\.newest && summaryClipRowVisible\(\{\s*readOnly, workoutId, settled: calmKnown, suppressed: calmSuppressed, shareable: displayWorkingSets > 0,\s*\}\);/);
-    expect(SUMMARY).toMatch(/title=\{videoReadyForShare \? 'Share with your video' : 'Share'\}/);
+    // Founder 2026-10-17: the label is always plain "Share".
+    expect(SUMMARY).toMatch(/title="Share"\s+icon="share-social-outline"/);
+    expect(SUMMARY).not.toContain('Share with your video');
     expect(SUMMARY).toMatch(/variant=\{videoReadyForShare \? 'secondary' : 'tertiary'\}/);
-    expect(SUMMARY).toMatch(/onPress=\{videoReadyForShare && clipRowCopy\.newest\s*\? \(\) => handleUseClip\(clipRowCopy\.newest\.id\)\s*: handleShareCard\}/);
+    // Founder 2026-10-17: the footer button ALWAYS opens the normal share
+    // screen; it never pre-selects a set video (the video row may).
+    const footer = SUMMARY.slice(SUMMARY.indexOf('testID="summary-share-footer"') - 900, SUMMARY.indexOf('testID="summary-share-footer"'));
+    expect(footer).toMatch(/onPress=\{handleShareCard\}/);
+    expect(footer).not.toContain('handleUseClip');
     // Done stays the one primary: the share never becomes a second amber.
     expect(SUMMARY).not.toMatch(/variant=\{videoReadyForShare \? 'primary'/);
   });

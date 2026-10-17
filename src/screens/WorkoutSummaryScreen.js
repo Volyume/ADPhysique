@@ -2504,23 +2504,23 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               have [a video] in some elegant way post workout"): when the
               workout holds a video the share can use (the same calm and
               flag gate as the video row), the footer's Share steps up from
-              a text link to the ink-filled secondary button, takes the
-              video glyph and reads "Share with your video". Done stays the
+              a text link to the ink-filled secondary button. It reads plain
+              "Share" and ALWAYS opens the normal share screen (founder
+              2026-10-17: the person picks the background there; a set video
+              is never pre-selected by this button). Done stays the
               one primary (the terminal action of the training loop), so
               the screen keeps its one amber. */}
           {displayWorkingSets > 0 && (
             <Button
-              title={videoReadyForShare ? 'Share with your video' : 'Share'}
-              icon={videoReadyForShare ? 'videocam-outline' : 'share-social-outline'}
+              title="Share"
+              icon="share-social-outline"
               variant={videoReadyForShare ? 'secondary' : 'tertiary'}
               size="sm"
               fullWidth={false}
-              onPress={videoReadyForShare && clipRowCopy.newest
-                ? () => handleUseClip(clipRowCopy.newest.id)
-                : handleShareCard}
+              onPress={handleShareCard}
               style={videoReadyForShare ? styles.shareFooterBtnVideo : [styles.shareFooterBtn, live.shareFooterBtn]}
               textStyle={videoReadyForShare ? undefined : [styles.shareFooterBtnText, live.shareFooterBtnText]}
-              accessibilityLabel={videoReadyForShare ? 'Share this session with your video' : 'Share session'}
+              accessibilityLabel="Share session"
               testID="summary-share-footer"
             />
           )}
