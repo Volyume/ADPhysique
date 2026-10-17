@@ -27,9 +27,11 @@ describe('ActiveWorkoutScreen (A1, A3, A6)', () => {
     expect(fn).toContain('await flushPendingDeletes()');
   });
 
-  test('A1: logging a set commits pending deletes before numbering it', () => {
-    const fn = body(src, 'async function handleCompleteSet', 'setNumberForKind(loggedSets');
-    expect(fn).toContain('await flushPendingDeletes()');
+  test('A1: logging a set commits pending deletes once the new set is stored, never before the save', () => {
+    const before = body(src, 'async function handleCompleteSet', 'await createWorkoutSet({');
+    expect(before).not.toContain('flushPendingDeletes');
+    const after = body(src, 'setPersisted = true;', 'const setData = {');
+    expect(after).toContain('await flushPendingDeletes()');
   });
 
   test('A3: Finish anyway is read and cleared only after the saving and finishing guards', () => {

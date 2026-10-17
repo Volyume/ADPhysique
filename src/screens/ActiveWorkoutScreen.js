@@ -3315,9 +3315,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // counted warm-ups, so the first working set after a warm-up was "2").
       // Warm-ups get their own 1,2 sequence; set_type distinguishes them.
       const isWarmupSet = (currentSet.setType ?? 'straight') === 'warmup';
-      // A1: a delete still inside its Undo window is hidden but stored; commit
-      // it before numbering so this set's number and the stored renumber agree.
-      await flushPendingDeletes();
       const setNumber = setNumberForKind(loggedSets, isWarmupSet);
       // D229 addendum 9: the number the rows and the Now card show for this
       // set (countProgressSets: warm-ups and drop sets never move it), which
@@ -3365,6 +3362,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       });
 
       setPersisted = true;
+      // A1: a delete still inside its Undo window is hidden on screen but
+      // stored. Commit it now the new set is stored (never before the save:
+      // nothing may be awaited between the tap and createWorkoutSet), so an
+      // Undo can no longer bring back a set whose number this one now uses.
+      await flushPendingDeletes();
       const setData = {
         id: savedSet.id,
         exerciseId: exercise.id,
