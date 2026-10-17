@@ -33,7 +33,9 @@ describe('privacy, consent, export and store-copy truth', () => {
     // RE-ANCHORED 2026-10-15 (register D229, video shares): the policy gained
     // its workout-video line (device-only, never uploaded, deleted with the
     // workout), so the date moved with it.
-    expect(privacy).toContain("LAST_UPDATED = '15 October 2026'");
+    // RE-ANCHORED 2026-10-17 (member email, founder decision the same day):
+    // the policy gained its News emails section, so the date moved with it.
+    expect(privacy).toContain("LAST_UPDATED = '17 October 2026'");
     expect(privacy).toMatch(/Volyume Score is a simple\s+progress read/);
     expect(privacy).toContain('not a DEXA scan, diagnosis, medical assessment, or medical advice');
     expect(privacy).toContain('progress photo metadata and Volyume Score analysis metadata');
@@ -41,6 +43,27 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(data).toContain('Back up app data (JSON)');
     expect(data).toContain('photo image files stay on this device');
     expect(data).toContain('Workout sets only');
+  });
+
+  // Member email (founder decision 2026-10-17): members get news, short surveys and
+  // the occasional survey by email unless they turn it off, in Settings or
+  // from any email. The in-app policy says so, and the Settings switch and the
+  // sign-up notice carry the same promise.
+  test('the in-app policy has a News emails section saying members can turn it off', () => {
+    const flat = readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js').replace(/\s+/g, ' ');
+    expect(flat).toContain('<Section title="News emails">');
+    expect(flat).toContain('Volyume emails members about new features, short surveys and a weekly summary.');
+    expect(flat).toContain('You get these emails unless you turn them off');
+    expect(flat).toContain('in Settings, under Privacy and legal, or with the unsubscribe link in any email');
+    expect(flat).toContain("No news emails are sent while Volyume's safety check has paused your calorie changes");
+    // Founder order 2026-10-17: the team's member list shows the last day the
+    // app was opened, its version and workout counts (never their content).
+    expect(flat).toContain('To choose who to email, the team can see the last day you opened the app, your app version and how many workouts you logged recently, never what was in them.');
+    const settings = readRepoFile('src', 'screens', 'SettingsPrivacyScreen.js');
+    expect(settings).toContain('MEMBER_EMAIL_SWITCH_LABEL');
+    expect(settings).toContain('<SectionHeader title="Email" />');
+    const sheet = readRepoFile('src', 'components', 'auth', 'AuthSheet.js');
+    expect(sheet).toContain('MEMBER_EMAIL_SIGNUP_NOTICE');
   });
 
   // P-08 (Codex end-user-polish audit): the in-app privacy policy exposed the

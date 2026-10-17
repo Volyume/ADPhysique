@@ -192,6 +192,14 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
         // eslint-disable-next-line global-require
         require('../payments/pendingCascade').flushPendingCascade(userId).catch(() => {});
       } catch (_) { /* tolerate */ }
+      // Founder order 2026-10-17: the team's member list shows the last day
+      // the app was opened, its version and platform. At most one check-in
+      // per local day, best-effort, no queue; information only (it never
+      // decides who is emailed). Same lazy-require shape as the flushes above.
+      try {
+        // eslint-disable-next-line global-require
+        require('../memberEmail/appSeen').reportAppSeenIfDue(userId).catch(() => {});
+      } catch (_) { /* tolerate */ }
       // Two-track push/pull. The registry-driven transport.js owns
       // every table listed in MIGRATED_TABLES; everything else still
       // lives inside bulkUploadLocalData / pullFromCloud in

@@ -81,7 +81,10 @@ database is the source of truth on device. Local migrations run via
 `PRAGMA user_version` in `database.js` (each runs exactly once).
 
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
-is absolute — all user data stays in Dublin. Components NEVER query Supabase
+is absolute — all user data stays in Dublin (one founder exception,
+2026-10-17 "Keep Resend, say so": member and sign-in emails go through
+Resend, which sends from Ireland and keeps its records in the United States
+under the standard contract clauses; the privacy policy says so). Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
 `supabase/migrate_NNN_*.sql` (highest `migrate_197`, applied through 197 except 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).

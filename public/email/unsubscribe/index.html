@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <meta name="theme-color" content="#0D0D0D">
 <meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
 <style>
   :root{
     --bg:#0D0D0D; --surface:#191917;
@@ -46,6 +47,14 @@
   .result{margin:34px 0 0; max-width:760px;}
   .result p{color:var(--textSecondary); font-size:19px; line-height:1.6; margin:0; max-width:60ch;}
   .hidden{display:none;}
+  .btn-line{background:transparent; border-color:var(--border); color:var(--text); white-space:normal; text-align:center;}
+  .btn-line:hover{border-color:var(--amber);}
+  .btn-line:disabled{opacity:.5; cursor:default;}
+  .reason-box{margin:28px 0 0; max-width:760px;}
+  .reason-box h2{font-size:20px; margin:0 0 6px;}
+  .reason-box p{color:var(--textSecondary); margin:0 0 14px; max-width:60ch;}
+  .reason-box .choices{display:flex; flex-wrap:wrap; gap:10px;}
+  .reason-box a{color:var(--amber); text-decoration:underline;}
 
   footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:64px;}
   footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
@@ -85,6 +94,19 @@
     <div class="result hidden" id="result" role="status" aria-live="polite">
       <p id="result-text"></p>
     </div>
+
+    <div class="reason-box hidden" id="reason-box">
+      <h2>Would you tell us why?</h2>
+      <p>This is optional. It helps us send fewer, better emails. We keep only the choice you pick, never anything you type.</p>
+      <div class="choices" id="reason-choices">
+        <button type="button" class="btn btn-line" data-reason="too_many">Too many emails</button>
+        <button type="button" class="btn btn-line" data-reason="not_relevant">Not relevant to me</button>
+        <button type="button" class="btn btn-line" data-reason="not_expected">I did not expect them</button>
+        <button type="button" class="btn btn-line" data-reason="other">Something else</button>
+      </div>
+      <p id="reason-thanks" class="hidden" role="status" aria-live="polite"></p>
+      <p id="prefs-line" class="hidden">If you would still like some of them, you can <a id="prefs-link" href="/email/preferences/">choose which emails you get</a>.</p>
+    </div>
   </div>
 </main>
 
@@ -122,13 +144,81 @@
     resultBox.classList.remove("hidden");
   }
 
+  var FUNCTION_URL = "https://sujrylzzxcqxxfygptns.supabase.co/functions/v1/member-email-public";
+  var token = param("t");
   var userId = param("u");
-  if (!userId) {
+
+  // After a successful unsubscribe, an optional reason (one of four choices).
+  function offerReason(){
+    var box = document.getElementById("reason-box");
+    box.classList.remove("hidden");
+    var link = document.getElementById("prefs-link");
+    link.href = "/email/preferences/?t=" + encodeURIComponent(token);
+    document.getElementById("prefs-line").classList.remove("hidden");
+    var buttons = box.querySelectorAll("button[data-reason]");
+    Array.prototype.forEach.call(buttons, function(b){
+      b.addEventListener("click", function(){
+        Array.prototype.forEach.call(buttons, function(x){ x.disabled = true; });
+        var thanks = document.getElementById("reason-thanks");
+        fetch(FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "unsubscribe_reason", t: token, reason: b.getAttribute("data-reason") })
+        }).then(function(res){
+          if (!res.ok) throw new Error("Request failed: " + res.status);
+          document.getElementById("reason-choices").classList.add("hidden");
+          thanks.textContent = "Thank you. That is all we need.";
+          thanks.classList.remove("hidden");
+        }).catch(function(){
+          Array.prototype.forEach.call(buttons, function(x){ x.disabled = false; });
+          thanks.textContent = "That did not work just now. You can try again, or skip this.";
+          thanks.classList.remove("hidden");
+        });
+      });
+    });
+  }
+
+  // News emails carry a signed token (t). Older emails carry a user id (u),
+  // which keeps the original behaviour below.
+  function unsubscribeWithToken(){
+    actions.classList.add("hidden");
+    showResult("One moment.");
+    fetch(FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "unsubscribe", t: token })
+    }).then(function(res){
+      if (res.ok) {
+        showResult("You will not get news emails from Volyume any more. You can turn them back on in the app, in Settings.");
+        offerReason();
+        return;
+      }
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+        showResult("This link is not valid any more. You can turn news emails off in the app, in Settings.");
+        return;
+      }
+      throw new Error("Request failed: " + res.status);
+    }).catch(function(){
+      showResult("That did not work just now. Please press the button to try again, or turn news emails off in the app, in Settings.");
+      stopBtn.disabled = false;
+      stopBtn.textContent = "Stop these emails";
+      actions.classList.remove("hidden");
+    });
+  }
+
+  if (token) {
+    // Click to confirm, never on load: some mail security scanners open links
+    // (and run their scripts) by themselves, which would unsubscribe people
+    // who never asked. Mail apps' own one-click unsubscribe (RFC 8058) posts
+    // to the function directly and needs no page.
+    document.getElementById("intro").textContent = "Press the button to stop news emails from Volyume. It does not change anything else inside the app, and it takes effect straight away.";
+    stopBtn.addEventListener("click", unsubscribeWithToken);
+  } else if (!userId) {
     actions.classList.add("hidden");
     showResult("This link is missing its reference, so nothing can be changed from here. If you want to stop these emails, reply to the one you received and it will be handled by a person.");
   }
 
-  stopBtn.addEventListener("click", function(){
+  if (!token) stopBtn.addEventListener("click", function(){
     stopBtn.disabled = true;
     stopBtn.textContent = "Working";
 

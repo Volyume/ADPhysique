@@ -1,7 +1,7 @@
 # Volyume Privacy Policy
 
 **Effective date:** 26 September 2026
-**Last updated:** 15 October 2026
+**Last updated:** 17 October 2026
 
 This policy explains what Volyume collects, why, how it is stored, and how to delete it. Volyume is a training and nutrition self-coaching tool. Your health data stays private: it is never shown to other people, used for advertising or sold. Community, where you can follow other lifters and share your workouts, is optional, and section 5 explains what it shares.
 
@@ -72,15 +72,32 @@ We use a small number of processors to run the app:
 | Sentry | Crash and performance reporting | Scrubbed diagnostic events |
 | Apple App Store / Google Play | Subscription purchases | Store receipt and transaction metadata |
 | Expo push | Push notification delivery | Device push token |
+| Resend (sends from Ireland, records kept in the United States under the standard contract clauses) | Sending the news emails | Your email address and the email itself |
 | Open Food Facts / USDA FoodData Central | Food lookup data | Search terms and barcode values only |
 
 We do not pass data to advertising networks or third-party analytics providers.
 
-## 7. Health-app access
+## 7. News emails
+
+When you create an account you are told that Volyume will email you about new features, short surveys and a weekly summary. These are the news emails.
+
+**Your choice.** You can turn them off at any time, in the app under Settings with the "News by email" switch, or with the Unsubscribe link in every email. Turning them off does not change anything else in the app, and you can turn them back on in Settings.
+
+**When we do not send.** We do not send news emails while Volyume's safety check has paused your calorie changes.
+
+**Who sends them.** Resend sends these emails for us from Ireland and keeps its email records in the United States under the standard contract clauses. It receives your email address and the email itself, and only for that purpose. We measure whether each news email is opened and which of its links are clicked.
+
+**What the team can see.** To choose who to email, the team can see the last day you opened the app, your app version and how many workouts you logged recently, never what was in them.
+
+**What we keep.** Your email address, a record of each time you turned them on or off and the wording you saw, a log of which news emails were sent to you, and your answers to any survey you take. A survey opened from one of our emails links your answers to your account, so a second answer replaces the first.
+
+**Deleting.** Deleting your account deletes all of this.
+
+## 8. Health-app access
 
 If you opt in, Volyume can read body weight and daily steps and write completed workouts through Apple Health or Health Connect. We do not read heart rate, sleep, or HRV. Health-app permissions are controlled by the operating system and can be revoked there at any time.
 
-## 8. Deletion and retention
+## 9. Deletion and retention
 
 While your account is active, we keep your data so the app can work and sync across devices.
 
@@ -88,22 +105,22 @@ If you delete your account from Settings > Account > Delete account, cloud remov
 
 Crash and diagnostic events age out according to the retention settings of our Sentry project.
 
-## 9. Your rights
+## 10. Your rights
 
 Under UK and EU GDPR you have the right to access, correct, delete, restrict, object to, and port your personal data. In Volyume, Settings > Your data lets you export workout sets as CSV and create a JSON app-data backup. The JSON backup contains database records, including progress photo metadata and Volyume Score analysis metadata, but not private photo image files.
 
 To make a request, use the in-app controls or email support@volyume.app. We respond to verifiable requests within 30 days.
 
-## 10. Children
+## 11. Children
 
 Volyume is not directed at children under 13 and we do not knowingly collect data from anyone under 13. If we discover an account belongs to someone under 13, we delete it and refund any active subscription where possible.
 
 In Community, anyone under 18 shares with their followers only and never appears on pages shown outside the app.
 
-## 11. Changes
+## 12. Changes
 
 If we materially change this policy we update the date above and notify signed-in users in the app.
 
-## 12. Contact
+## 13. Contact
 
 Privacy questions or requests: support@volyume.app. You can also contact the UK Information Commissioner's Office at https://ico.org.uk/.

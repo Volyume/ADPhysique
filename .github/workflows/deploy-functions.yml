@@ -33,6 +33,10 @@ on:
           - partner-cheer
           - community-notify
           - community-public
+          - member-email-admin
+          - member-email-public
+          - member-email-runner
+          - member-email-webhook
           - all
 
 # GitHub forces JavaScript actions onto Node 24 on 2026-06-16. Opt in early so
@@ -127,4 +131,36 @@ jobs:
             # --no-verify-jwt, as its header documents.
             echo "Deploying community-public (--no-verify-jwt; anonymous link-page reads)"
             supabase functions deploy community-public --project-ref "$REF" --no-verify-jwt
+          fi
+          if [ "$CHOICE" = "member-email-admin" ] || [ "$CHOICE" = "all" ]; then
+            # The private members page signs in with its own one-time link and
+            # a signed admin session re-checked against marketing_admins on
+            # every action; it holds no Supabase JWT. Deliberately
+            # --no-verify-jwt, as its header documents. Needs migrate_198.
+            echo "Deploying member-email-admin (--no-verify-jwt; own admin session)"
+            supabase functions deploy member-email-admin --project-ref "$REF" --no-verify-jwt
+          fi
+          if [ "$CHOICE" = "member-email-public" ] || [ "$CHOICE" = "all" ]; then
+            # Survey page, unsubscribe page and the RFC 8058 one-click POST from
+            # mail providers, none of which hold a Supabase JWT; every write is
+            # bound to a signed token. Deliberately --no-verify-jwt, as its
+            # header documents. Needs migrate_198.
+            echo "Deploying member-email-public (--no-verify-jwt; signed links and one-click unsubscribe)"
+            supabase functions deploy member-email-public --project-ref "$REF" --no-verify-jwt
+          fi
+          if [ "$CHOICE" = "member-email-runner" ] || [ "$CHOICE" = "all" ]; then
+            # Called every 5 minutes by pg_cron through pg_net, which holds no
+            # Supabase JWT; the function refuses any call without the
+            # x-runner-secret that migrate_199 generated. Deliberately
+            # --no-verify-jwt, as its header documents. Needs migrate_199.
+            echo "Deploying member-email-runner (--no-verify-jwt; pg_cron with its own secret)"
+            supabase functions deploy member-email-runner --project-ref "$REF" --no-verify-jwt
+          fi
+          if [ "$CHOICE" = "member-email-webhook" ] || [ "$CHOICE" = "all" ]; then
+            # Resend's webhook, signed with Svix and verified in the function
+            # against RESEND_WEBHOOK_SECRET; Resend holds no Supabase JWT.
+            # Deliberately --no-verify-jwt, as its header documents. Needs
+            # migrate_199.
+            echo "Deploying member-email-webhook (--no-verify-jwt; Svix-signed Resend events)"
+            supabase functions deploy member-email-webhook --project-ref "$REF" --no-verify-jwt
           fi

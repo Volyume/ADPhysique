@@ -5,7 +5,7 @@ import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 
-const LAST_UPDATED = '15 October 2026';
+const LAST_UPDATED = '17 October 2026';
 
 export default function PrivacyPolicyScreen() {
   // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
@@ -169,6 +169,33 @@ export default function PrivacyPolicyScreen() {
             everything you shared in Community too. Reports you made are kept for moderation, with your account
             removed from them. We use this data to run the Community features you choose to use, which is part of
             our agreement with you, and to keep Community safe, which is our legitimate interest.
+          </Body>
+        </Section>
+
+        {/* Founder decision 2026-10-17: members get news emails unless they
+            turn them off. Every sentence is checked against the spec
+            (docs/member-email-2026-10-17/SPEC.md): the opt-out and the
+            withholding under calm mode or an open safety flag are enforced
+            server-side (member_email_audience), the sender is Resend in its
+            Ireland region, and the rows cascade with the account. */}
+        <Section title="News emails">
+          <Body>
+            Volyume emails members about new features, short surveys and a weekly summary. You get these
+            emails unless you turn them off, and you can do that at any time in Settings, under Privacy and
+            legal, or with the unsubscribe link in any email.
+          </Body>
+          <Body>
+            No news emails are sent while Volyume's safety check has paused your calorie changes. We
+            measure whether each news email is opened and which of its links are clicked.
+          </Body>
+          <Body>
+            To choose who to email, the team can see the last day you opened the app, your app version and
+            how many workouts you logged recently, never what was in them.
+          </Body>
+          <Body>
+            We send them through Resend, which sends from Ireland and keeps its email records in the United States under the standard contract clauses. We keep your email address, your choice and
+            when you made it, a log of the emails sent to you and any survey answers you give. All of it is
+            deleted with your account.
           </Body>
         </Section>
 
