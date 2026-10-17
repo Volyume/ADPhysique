@@ -259,3 +259,15 @@ SUPABASE_SERVICE_ROLE_KEY and SUPABASE_URL are provided by the platform.
 2. Set `RESEND_API_KEY` in Supabase (Edge Functions, Secrets).
 3. A go to deploy the two edge functions (Claude deploys them).
 4. A build (with the version bump) for the switch and the prompt.
+
+## 7. Founder exclusions (founder order 2026-10-17)
+
+Verbatim: "I want to be able to exclude people myself too there's test
+accounts and things. So I have an exclude feature in the web app."
+`member_email_exclusions` (user_id and/or email, note, added_by), service role
+only; the audience excludes any match by user_id or case-insensitive email.
+Admin actions `list_members`, `exclude`, `include`, `list_exclusions`;
+`overview` gains `excluded`. The private page gains a People section (search,
+status per member, Exclude with an optional note, Include, and an
+exclude-an-address field that also covers a future sign-up). A member
+withheld for wellbeing shows only "Paused", never the reason.
