@@ -109,7 +109,7 @@ describe('Presentation guard — honest denominators (the evidence pane never sh
   });
 
   test('HomeScreen feeds the loader\'s raw weighIns7d straight through, never pre-clamped before it reaches the resolver', () => {
-    const site = HOME.indexOf('async function loadFirstReviewFacts()');
+    const site = HOME.indexOf('async function loadFirstReviewFacts(reqId = ++loadReqRef.current)');
     const end = HOME.indexOf('async function loadBriefDismissal()');
     const loader = HOME.slice(site, end);
     expect(loader).toMatch(/const weighIns7d = new Set\(/);
@@ -120,7 +120,7 @@ describe('Presentation guard — honest denominators (the evidence pane never sh
 
 describe('ED-safety — D98-2 suppression parity (moved here from the deleted firstReviewLine.test.js, never lapsed)', () => {
   test('the loader\'s edSuppressed chain carries all four conditions, fail closed, matching the You tab formula', () => {
-    const site = HOME.indexOf('async function loadFirstReviewFacts()');
+    const site = HOME.indexOf('async function loadFirstReviewFacts(reqId = ++loadReqRef.current)');
     const end = HOME.indexOf('async function loadBriefDismissal()');
     const loader = HOME.slice(site, end);
     // D228 item 2: the four conditions (open flag, SCOFF >= 2, a failed

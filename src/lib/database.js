@@ -9246,7 +9246,9 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
   const dayStart = startLocalDay(loggedAt);
   const dayEnd = nextLocalDay(loggedAt);
   const existing = await d.getFirstAsync(
-    'SELECT id, notes FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ? AND deleted_at IS NULL',
+    // Newest first, rowid as the tiebreak: if two rows ever share a local day
+    // (two devices), the write and getMorningWeightToday agree on the same one.
+    'SELECT id, notes FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ? AND deleted_at IS NULL ORDER BY logged_at DESC, rowid DESC LIMIT 1',
     [userId, dayStart, dayEnd],
   );
   let savedId = id;
@@ -9354,7 +9356,9 @@ export async function getMorningWeightToday(userId) {
   // TZ-2: next local midnight, not +86400000 (DST-safe; see logMorningWeight).
   const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
   const row = await d.getFirstAsync(
-    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ? AND deleted_at IS NULL',
+    // Newest first, rowid as the tiebreak (see logMorningWeight): two rows on
+    // one local day always read the newest.
+    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ? AND deleted_at IS NULL ORDER BY logged_at DESC, rowid DESC LIMIT 1',
     [userId, dayStart, dayEnd],
   );
   return rowToCamel(row);

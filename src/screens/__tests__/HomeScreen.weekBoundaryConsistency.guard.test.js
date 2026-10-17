@@ -72,7 +72,7 @@ describe('X5/X11: HomeScreen "this week" counts are Monday-anchored, not rolling
   test('the rehomed trial banner and Home\'s new first-review facts loader both use the Monday-anchored window, never a rolling one', () => {
     expect(YOU).toMatch(/const weekAgo = localWeekStartMs\(\);/);
     expect(YOU).not.toMatch(/Date\.now\(\) - 7 \* 86400000/);
-    const body = fnBody(HOME, 'async function loadFirstReviewFacts()');
+    const body = fnBody(HOME, 'async function loadFirstReviewFacts(reqId = ++loadReqRef.current)');
     expect(body).toMatch(/const weekStartMs = localWeekStartMs\(\);/);
     expect(body).not.toMatch(/Date\.now\(\) - 7 \* 86400000/);
   });

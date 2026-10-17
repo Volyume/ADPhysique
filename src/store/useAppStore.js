@@ -862,6 +862,13 @@ const useAppStore = create((set, get) => ({
   })),
   dismissCloudSyncStatus: () => set({ cloudSyncStatus: 'idle', cloudSyncError: null }),
 
+  // Bumped by the sync runner (src/lib/sync/runner.js) after a background or
+  // foreground pull completes without throwing, so a screen that reads local
+  // SQLite (Home) can re-read what the pull may have written. Deliberately NOT
+  // markCloudSyncComplete: that drives the "restoring" banner.
+  dataPulledVersion: 0,
+  markDataPulled: () => set(s => ({ dataPulledVersion: s.dataPulledVersion + 1 })),
+
   // T2 (world-class-audit-2026-07-03/05-cohesion.md #4), durability fix under
   // Item 6 (D141): whether there is an unseen weekly coach review, for the
   // You-tab icon badge (VolyumeTabBar). Set by HomeScreen from a durable

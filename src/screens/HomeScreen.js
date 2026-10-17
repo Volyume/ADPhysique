@@ -67,7 +67,7 @@ import { resolveHasUnseenCoachChange, COACH_OUTPUT_VIEWED_KEY_FOR } from '../lib
 import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 // D214 addendum 4 (Body metrics, lane 7): the quick weigh-in shares the Body
 // metrics form's 20 kg floor (it had none) and its plausibility rule.
-import { BODY_WEIGHT_MIN_KG, BODY_WEIGHT_MAX_KG } from '../lib/bodyMetricValidate';
+import { BODY_WEIGHT_MIN_KG, BODY_WEIGHT_MAX_KG, BODY_WEIGHT_RANGE_MESSAGE } from '../lib/bodyMetricValidate';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   recordSessionResolution,
@@ -94,6 +94,7 @@ import { heroPlanLabel, weekCompleteLine } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localDayKey, todayLocalKey } from '../lib/dayKey';
+import { shouldReloadHomeOnResume } from '../lib/home/homeReload';
 import { WELLBEING_KEY } from '../lib/wellbeing';
 // Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13/§17 region R2):
 // the single unified P1 "Today line" and its pure priority arbiter.
@@ -319,6 +320,39 @@ export default function HomeScreen({ navigation, route }) {
   // re-runs loadData so the empty state swaps for real data without
   // the user navigating away and back.
   const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
+  // Bumped by the sync runner after a pull finishes (a weigh-in made on another
+  // phone, say). Not cloudSyncVersion: that one drives the restore banner.
+  const dataPulledVersion = useAppStore(s => s.dataPulledVersion);
+  // Newest loadData / loader request wins: an older run that finishes late must
+  // not overwrite what a newer one (or a fresh weigh-in) already painted.
+  const loadReqRef = useRef(0);
+  // The local day and time the data on screen was loaded for (null until the
+  // first load completes); the resume check below compares against them.
+  const loadedDayKeyRef = useRef(null);
+  const lastLoadAtRef = useRef(null);
+  // Always the latest loadData, so listeners registered once never call a
+  // closure from an old render.
+  const loadDataRef = useRef(null);
+
+  // Coming back to the foreground on the same screen fires no focus event, so a
+  // phone left overnight would keep yesterday's data and never ask for today's
+  // weigh-in. Reload when the local day has changed since the last load, or the
+  // data is more than five minutes old. A check on 'active' only; no timer.
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      if (shouldReloadHomeOnResume({
+        loadedDayKey: loadedDayKeyRef.current,
+        lastLoadAt: lastLoadAtRef.current,
+        todayKey: todayLocalKey(),
+        now: Date.now(),
+      })) {
+        loadDataRef.current?.().catch(() => { /* best-effort: the next focus reloads */ });
+      }
+    });
+    return () => { sub?.remove?.(); };
+  }, [user?.id]);
   const bwu = bodyWeightUnits || 'st';
 
   const [activePlan, setActivePlanData] = useState(null);
@@ -521,6 +555,15 @@ export default function HomeScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudSyncVersion]);
 
+  // A background or foreground sync pull finished: re-read what it may have
+  // written (a weigh-in from another phone) without the user leaving Home.
+  useEffect(() => {
+    if (dataPulledVersion > 0 && user?.id) {
+      loadDataRef.current?.().catch(() => { /* best-effort */ });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataPulledVersion]);
+
   // Safety-net delayed refreshes after sign-in. The cloudSyncVersion
   // effect above usually fires fast enough, but pull payloads can be
   // large (450+ exercises, 100+ routines, hundreds of sets) and the
@@ -540,6 +583,8 @@ export default function HomeScreen({ navigation, route }) {
     // loader can't leave Home spinning forever. The loaders each guard
     // their own errors, but Promise.all rejects on the first unhandled
     // throw and would otherwise skip setInitialLoading(false).
+    const reqId = ++loadReqRef.current;
+    const loadedForDay = todayLocalKey();
     try {
       // D219 lane C1b (founder Q1 = A): the first open of an active plan whose facts
       // are not version 2 rebuilds it by its kind, so every loader below reads the
@@ -559,10 +604,14 @@ export default function HomeScreen({ navigation, route }) {
         loadCommunityIntro(),
         loadCommunityFriendsRow(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
-        loadTodayWeight(),
+        loadTodayWeight(reqId),
         loadLatestCoachOutput(),
-        loadFirstReviewFacts(),
+        loadFirstReviewFacts(reqId),
       ]);
+      // Recorded even when a newer request superseded this one's weight
+      // results: the worst case is one extra reload on the next resume.
+      loadedDayKeyRef.current = loadedForDay;
+      lastLoadAtRef.current = Date.now();
       // FOUNDER DECISION (fully free, no tier split): activation-funnel
       // marker for a signed-in user's first successful Home render.
       // Fire-and-forget, no payload; trackFirst is durably once-per-user.
@@ -577,6 +626,7 @@ export default function HomeScreen({ navigation, route }) {
       setInitialLoading(false);
     }
   }
+  loadDataRef.current = loadData;
 
   async function loadLatestCoachOutput() {
     try {
@@ -599,7 +649,9 @@ export default function HomeScreen({ navigation, route }) {
       } else {
         setCoachBannerDismissed(false);
       }
-    } catch (_) {}
+    } catch (e) {
+      logWarn('HomeScreen.loadLatestCoachOutput', e?.message);
+    }
   }
 
   // Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §9/§17 region R4;
@@ -610,7 +662,7 @@ export default function HomeScreen({ navigation, route }) {
   // in the coach-ledger builder (src/lib/coachLedger.js) via
   // src/lib/home/firstReviewLine.js, never re-derived here. This loader
   // only reads the inputs.
-  async function loadFirstReviewFacts() {
+  async function loadFirstReviewFacts(reqId = ++loadReqRef.current) {
     try {
       if (!user?.id) { setFirstReviewFacts(null); return; }
       const [workouts, weights, edFlag, prefsRaw, wellbeing, checkinRows, intakeSummary] = await Promise.all([
@@ -635,7 +687,7 @@ export default function HomeScreen({ navigation, route }) {
           const d = Number(JSON.parse(prefsRaw)?.checkinDay);
           if (Number.isInteger(d) && d >= 0 && d <= 6) checkinDay = d;
         }
-      } catch (_) {}
+      } catch (e) { logWarn('HomeScreen.loadFirstReviewFacts.checkinDay', e?.message); }
       const completedWorkouts = workouts.filter((w) => w.isCompleted);
       const completedSessions = completedWorkouts.length;
       // Campaign 26 correction (founder device report 2026-08-17): "ever
@@ -677,6 +729,8 @@ export default function HomeScreen({ navigation, route }) {
       // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
       const safety = deriveSafetyState({ mode: wellbeing, edFlag, scoffScore: userProfile?.scoffScore });
       const edSuppressed = safety.suppressed || safety.scoffPositive;
+      // A newer load started while this one was reading: drop these results.
+      if (reqId !== loadReqRef.current) return;
       setFirstReviewFacts({
         weighIns7d,
         firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
@@ -692,7 +746,8 @@ export default function HomeScreen({ navigation, route }) {
         sessionsSinceCheckin,
         foodDays7: Number(intakeSummary?.daysLogged) || 0,
       });
-    } catch (_) {
+    } catch (e) {
+      logWarn('HomeScreen.loadFirstReviewFacts', e?.message);
       setFirstReviewFacts(null);
     }
   }
@@ -1023,9 +1078,11 @@ export default function HomeScreen({ navigation, route }) {
     }
   }
 
-  async function loadTodayWeight() {
+  async function loadTodayWeight(reqId = ++loadReqRef.current) {
     try {
       const entry = await getMorningWeightToday(user.id);
+      // A newer load started while this one was reading: drop these results.
+      if (reqId !== loadReqRef.current) return;
       // D153 (founder device verdict 2026-09-06, reversing the display half
       // of C5-P22-01): the body weight typed during setup IS today's morning
       // weight on Today. Hiding it left day 0 with an empty weigh-in strip
@@ -1040,6 +1097,7 @@ export default function HomeScreen({ navigation, route }) {
       // weight is not logged yet.
       try {
         const recent14 = await getMorningWeights(user.id, 14);
+        if (reqId !== loadReqRef.current) return;
         setRecentWeights(recent14.map(w => w.weightKg).filter(Number.isFinite));
         // Campaign 22 Phase 2 Stage 2 (§11/R1): TodayStrip's first-use
         // tutorial sentence retires once a REAL weigh-in has ever been
@@ -1047,8 +1105,12 @@ export default function HomeScreen({ navigation, route }) {
         // a morning the user weighed) never counts, mirroring the same
         // isEnrolmentSeedWeight filter used for todayWeight above.
         setHasEverLoggedWeight(recent14.some((w) => !isEnrolmentSeedWeight(w)));
-      } catch (_) {}
-    } catch (_) {}
+      } catch (e) {
+        logWarn('HomeScreen.loadTodayWeight.recentWeights', e?.message);
+      }
+    } catch (e) {
+      logWarn('HomeScreen.loadTodayWeight', e?.message);
+    }
   }
 
   // COMP-027 Part B: TodayStrip owns the draft input + parsing and hands a kg
@@ -1056,7 +1118,11 @@ export default function HomeScreen({ navigation, route }) {
   // feeds the coach) and does the optimistic write.
   async function handleLogWeight(weightKg) {
     // D214 addendum 4: the form's own floor (BODY_WEIGHT_MIN_KG), not just "above zero".
-    if (!weightKg || isNaN(weightKg) || weightKg < BODY_WEIGHT_MIN_KG || weightKg > BODY_WEIGHT_MAX_KG) return;
+    if (!weightKg || isNaN(weightKg) || weightKg < BODY_WEIGHT_MIN_KG || weightKg > BODY_WEIGHT_MAX_KG) {
+      // Said, never swallowed: the same words TodayStrip uses for its range.
+      appAlert('Check that weight', BODY_WEIGHT_RANGE_MESSAGE);
+      return;
+    }
     // Optimistic: show the logged weight immediately. SQLite write happens in
     // the background. On failure, revert.
     const previousTodayWeight = todayWeight;
@@ -1064,6 +1130,12 @@ export default function HomeScreen({ navigation, route }) {
     setSavingWeight(true);
     try {
       await logMorningWeight(user.id, { weightKg, loggedAt: Date.now() });
+      // Every figure that depends on the weight re-reads now (the strip's
+      // recent weights, "ever weighed in", this week's weigh-in count), and the
+      // fresh request id drops any slower load still in flight from before.
+      await loadTodayWeight();
+      await loadFirstReviewFacts();
+      toast.show('Weight saved.', { variant: 'success' });
       // Activation funnel: a deliberate weigh-in from Today, once per user,
       // count only, never the value (same event BodyMetricsScreen emits on
       // its own form; the onboarding auto-seed is deliberately excluded).
