@@ -35,7 +35,7 @@ function uid() {
  * Enqueue an op for cloud sync. Caller has already written to local
  * SQLite, this is the retry-on-failure fallback for the cloud push.
  *
- * @param {string} opType    one of 'workout' | 'workout_delete' | 'workout_set_delete' | 'body_metric' | 'morning_weight' | 'check_in' | 'challenge_session'
+ * @param {string} opType    one of 'workout' | 'workout_delete' | 'workout_set_delete' | 'body_metric' | 'morning_weight' | 'check_in' | 'challenge_session' | 'member_email_subscription'
  * @param {string} entityId  the local SQLite row id we want to ship
  * @param {string} userId    supabase user.id
  * @param {object} payload   optional, extra data the worker needs (most ops
@@ -278,6 +278,16 @@ async function _runOp(supabaseClient, row) {
         if (isRetryableChallengeError(e)) throw e;
         return true;
       }
+    }
+    case 'member_email_subscription': {
+      // The Settings switch "News and offers by email" (founder 2026-10-17):
+      // a choice made offline or refused is replayed to
+      // member_email_set_subscribed, oldest first so the last choice wins.
+      // The worker throws when the server cannot be reached, so the queue
+      // retries; a payload that can never be sent is dropped.
+      // eslint-disable-next-line global-require
+      const { replaySubscriptionOp } = require('./memberEmail/subscription');
+      return replaySubscriptionOp(row);
     }
     default:
       logWarn('syncQueue.unknownOp', `unknown op_type=${row.op_type}`, { id: row.id });

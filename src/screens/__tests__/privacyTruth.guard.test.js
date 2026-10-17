@@ -33,7 +33,9 @@ describe('privacy, consent, export and store-copy truth', () => {
     // RE-ANCHORED 2026-10-15 (register D229, video shares): the policy gained
     // its workout-video line (device-only, never uploaded, deleted with the
     // workout), so the date moved with it.
-    expect(privacy).toContain("LAST_UPDATED = '15 October 2026'");
+    // RE-ANCHORED 2026-10-17 (member email, founder decision the same day):
+    // the policy gained its News emails section, so the date moved with it.
+    expect(privacy).toContain("LAST_UPDATED = '17 October 2026'");
     expect(privacy).toMatch(/Volyume Score is a simple\s+progress read/);
     expect(privacy).toContain('not a DEXA scan, diagnosis, medical assessment, or medical advice');
     expect(privacy).toContain('progress photo metadata and Volyume Score analysis metadata');
@@ -41,6 +43,24 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(data).toContain('Back up app data (JSON)');
     expect(data).toContain('photo image files stay on this device');
     expect(data).toContain('Workout sets only');
+  });
+
+  // Member email (founder decision 2026-10-17): members get news, offers and
+  // the occasional survey by email unless they turn it off, in Settings or
+  // from any email. The in-app policy says so, and the Settings switch and the
+  // sign-up notice carry the same promise.
+  test('the in-app policy has a News emails section saying members can turn it off', () => {
+    const flat = readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js').replace(/\s+/g, ' ');
+    expect(flat).toContain('<Section title="News emails">');
+    expect(flat).toContain('Volyume emails members about new features, offers and the occasional short survey.');
+    expect(flat).toContain('You get these emails unless you turn them off');
+    expect(flat).toContain('in Settings, under Privacy and legal, or with the unsubscribe link in any email');
+    expect(flat).toContain('No news emails are sent while calm mode is on');
+    const settings = readRepoFile('src', 'screens', 'SettingsPrivacyScreen.js');
+    expect(settings).toContain('MEMBER_EMAIL_SWITCH_LABEL');
+    expect(settings).toContain('<SectionHeader title="Email" />');
+    const sheet = readRepoFile('src', 'components', 'auth', 'AuthSheet.js');
+    expect(sheet).toContain('MEMBER_EMAIL_SIGNUP_NOTICE');
   });
 
   // P-08 (Codex end-user-polish audit): the in-app privacy policy exposed the

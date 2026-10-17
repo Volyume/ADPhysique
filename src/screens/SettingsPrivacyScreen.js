@@ -16,13 +16,16 @@ import {
   setLockEnabled as setAppLockEnabled,
   getBiometricAvailability,
 } from '../lib/biometricLock';
+import { getSubscribed, setSubscribed } from '../lib/memberEmail/subscription';
+import { MEMBER_EMAIL_SWITCH_LABEL, MEMBER_EMAIL_SWITCH_LINE } from '../lib/memberEmail/copy';
 import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
 // Privacy & legal: health-data consent withdrawal, the two data-sharing
 // toggles (Open Food Facts, anonymous usage), and the privacy policy.
 export default function SettingsPrivacyScreen({ navigation }) {
-  const { healthConsent, privacy, setAnalyticsOptOut } = useAppStore(
+  const { userId, healthConsent, privacy, setAnalyticsOptOut } = useAppStore(
     useShallow(s => ({
+      userId: s.user?.id,
       healthConsent: s.healthConsent,
       privacy: s.privacy,
       setAnalyticsOptOut: s.setAnalyticsOptOut,
@@ -43,11 +46,16 @@ export default function SettingsPrivacyScreen({ navigation }) {
   const [appLockOn, setAppLockOn] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [checkingLock, setCheckingLock] = useState(true);
+  // Member email (founder 2026-10-17): members are subscribed unless they
+  // turn it off, so the switch starts ON and shows the last known value if
+  // the cloud read fails (getSubscribed never throws).
+  const [emailOn, setEmailOn] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       getOffWritebackConsent().then(setOffConsent);
+      if (userId) getSubscribed(userId).then((r) => { if (active) setEmailOn(r.subscribed); });
       setCheckingLock(true);
       getAppLockEnabled().then((v) => { if (active) setAppLockOn(v); });
       getBiometricAvailability().then((a) => {
@@ -56,7 +64,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
         setCheckingLock(false);
       });
       return () => { active = false; };
-    }, []),
+    }, [userId]),
   );
 
   async function toggleOffConsent(value) {
@@ -77,6 +85,12 @@ export default function SettingsPrivacyScreen({ navigation }) {
     }
     const ok = await setAppLockEnabled(value);
     if (ok) setAppLockOn(value);
+  }
+
+  async function toggleEmail(value) {
+    haptics.selection();
+    setEmailOn(value);
+    if (userId) await setSubscribed(userId, value);
   }
 
   return (
@@ -143,6 +157,35 @@ export default function SettingsPrivacyScreen({ navigation }) {
               disabled={checkingLock || (!appLockOn && !biometricAvailable)}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={appLockOn ? t.colors.primary : t.colors.textMuted}
+            />
+          }
+        />
+      </View>
+
+      {/* Member email (founder 2026-10-17). It sits here with the other
+          data-sharing choices, not under Notifications: that screen is
+          device push and reminder schedules, while this is a choice about
+          what Volyume does with your email address, next to the privacy
+          policy that describes it. ON by default; the same choice is in the
+          unsubscribe link of every email. Works under calm mode and an open
+          ED flag: turning emails off is never gated (they are withheld
+          server-side under both). */}
+      <SectionHeader title="Email" />
+      <View style={[styles.section, live.section]}>
+        <SettingRow
+          icon="mail-outline"
+          label={MEMBER_EMAIL_SWITCH_LABEL}
+          sub={MEMBER_EMAIL_SWITCH_LINE}
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={emailOn}
+              onValueChange={toggleEmail}
+              accessibilityRole="switch"
+              accessibilityLabel={MEMBER_EMAIL_SWITCH_LABEL}
+              accessibilityState={{ checked: emailOn }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={emailOn ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

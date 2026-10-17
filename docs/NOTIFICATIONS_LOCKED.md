@@ -8,6 +8,13 @@ Push, in-app, and email (where applicable) at v1. Locked 2026-05-23.
   to FCM/APNs direct if Expo Push hits limits or reliability drops.
 - **In-app:** Custom banner/toast component in `src/components/`.
 - **Email:** Not at v1 for client-facing flows (see MASTER 11.1).
+  AMENDED 2026-10-17 by founder order ("email members advising them of new
+  features ... send surveys"; decision "No consent to sign up ... they can
+  unsubscribe in settings or link"): member news, offer and survey email
+  exists, sent through Resend from the founder's private page, on by default
+  with a Settings switch and an unsubscribe in every email, and NEVER sent
+  while an ED flag is open or calm mode is on (server-side, fail closed).
+  Spec: docs/member-email-2026-10-17/SPEC.md.
   Coach-facing emails from phase 2 launch via Postmark or SendGrid
   free tier.
 

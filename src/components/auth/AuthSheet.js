@@ -13,6 +13,7 @@ import { audit } from '../../lib/observability';
 import { useToast } from '../Toast';
 import { authErrorMessage, isDuplicateSignup, isNetworkFailure, isInvalidEmailError, AUTH_COPY } from '../../lib/authErrorCopy';
 import { touchTarget } from '../../styles/layout';
+import { MEMBER_EMAIL_SIGNUP_NOTICE } from '../../lib/memberEmail/copy';
 
 
 // AuthSheet (D145, third pass, founder direction 2026-09-04): the account
@@ -486,6 +487,17 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
           </TouchableOpacity>
         </View>
 
+        {/* Member email notice (founder 2026-10-17): information at account
+            creation, not a checkbox and not a consent. Create-account mode
+            only, which is where Apple, Google and email sign-up all sit.
+            It lives here, never on the Article 9 health consent screen or
+            attached to its action. */}
+        {emailMode === 'signup' ? (
+          <Text style={[styles.emailNotice, live.emailNotice]} testID="member-email-signup-notice">
+            {MEMBER_EMAIL_SIGNUP_NOTICE}
+          </Text>
+        ) : null}
+
         {/* The one legal document the app carries in-app. Terms of use has
             no page of its own yet, so it is not linked. */}
         <TouchableOpacity
@@ -523,6 +535,7 @@ const styles = StyleSheet.create({
   textAction: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   textActionLabel: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
   textActionAccent: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.primary },
+  emailNotice: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   legal: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   legalText: { ...type.caption, color: colors.textMuted },
   eyeBtn: {
@@ -542,6 +555,7 @@ function buildLiveStyles(t) {
     noticeText: { ...t.type.bodySm, color: t.colors.textSecondary },
     textActionLabel: { ...t.type.bodySm, color: t.colors.textSecondary },
     textActionAccent: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.primary },
+    emailNotice: { ...t.type.caption, color: t.colors.textMuted },
     legalText: { ...t.type.caption, color: t.colors.textMuted },
   };
 }
