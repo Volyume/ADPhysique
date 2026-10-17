@@ -60,6 +60,7 @@ jest.mock('../../lib/community', () => ({
   publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
   flushPendingAmbientItems: jest.fn(() => Promise.resolve({ flushed: 0, dropped: 0, remaining: 0 })),
   retryPendingSharingPublish: jest.fn(() => Promise.resolve({ sent: false, reason: 'nothing_pending' })),
+  clearStaleTrainingNow: jest.fn(() => Promise.resolve(false)),
   myStatus: jest.fn(() => Promise.resolve({ status: null, reason_class: null, since: null })),
   isModeratedStatus: (status) => status === 'restricted' || status === 'suspended',
   REPORT_REASONS: {},

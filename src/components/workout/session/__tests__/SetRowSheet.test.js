@@ -271,6 +271,80 @@ describe('SetRowSheet, Edit set and Delete set', () => {
   });
 });
 
+// Founder request 2026-10-17 ("I forgot to set one as a warm-up, and changed the
+// second to warm-up"): a logged set's type can be changed from its sheet.
+describe('SetRowSheet, Set type', () => {
+  const OPTIONS = [
+    { value: 'straight', label: 'Working', description: 'Counts towards your weekly volume.' },
+    { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work.' },
+    { value: 'dropset', label: 'Drop set', description: 'Reduce the weight and keep going.' },
+  ];
+
+  test('no Set type row without typeOptions and onChangeType', () => {
+    expect(byTestId(render(), 'volyume-setrow-sheet-type')).toBeUndefined();
+    expect(byTestId(render({ typeOptions: OPTIONS }), 'volyume-setrow-sheet-type')).toBeUndefined();
+    expect(byTestId(render({ onChangeType: jest.fn() }), 'volyume-setrow-sheet-type')).toBeUndefined();
+  });
+
+  test('the row names the current type and the options stay hidden until it is tapped', () => {
+    const tree = render({ typeOptions: OPTIONS, setType: 'warmup', onChangeType: jest.fn() });
+    const row = byTestId(tree, 'volyume-setrow-sheet-type');
+    expect(row.props.accessibilityLabel).toBe('Set type, Warm-up');
+    expect(flat(row.props.style).minHeight).toBe(48);
+    expect(byTestId(tree, 'volyume-setrow-sheet-type-straight')).toBeUndefined();
+    press(tree, 'volyume-setrow-sheet-type');
+    OPTIONS.forEach((o) => expect(byTestId(tree, `volyume-setrow-sheet-type-${o.value}`)).toBeDefined());
+  });
+
+  test('choosing another type calls onChangeType with its value, then closes', () => {
+    const onChangeType = jest.fn();
+    const onClose = jest.fn();
+    const tree = render({ typeOptions: OPTIONS, setType: 'straight', onChangeType, onClose });
+    press(tree, 'volyume-setrow-sheet-type');
+    press(tree, 'volyume-setrow-sheet-type-warmup');
+    expect(onChangeType).toHaveBeenCalledWith('warmup');
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onChangeType.mock.invocationCallOrder[0]).toBeLessThan(onClose.mock.invocationCallOrder[0]);
+  });
+
+  test('choosing the current type only closes', () => {
+    const onChangeType = jest.fn();
+    const onClose = jest.fn();
+    const tree = render({ typeOptions: OPTIONS, setType: 'straight', onChangeType, onClose });
+    press(tree, 'volyume-setrow-sheet-type');
+    press(tree, 'volyume-setrow-sheet-type-straight');
+    expect(onChangeType).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test('the options are radios with the current one selected and a spoken description', () => {
+    const tree = render({ typeOptions: OPTIONS, setType: 'dropset', onChangeType: jest.fn() });
+    press(tree, 'volyume-setrow-sheet-type');
+    const drop = byTestId(tree, 'volyume-setrow-sheet-type-dropset');
+    expect(drop.props.accessibilityRole).toBe('radio');
+    expect(drop.props.accessibilityState.selected).toBe(true);
+    expect(drop.props.accessibilityLabel).toBe('Drop set. Reduce the weight and keep going.');
+    expect(byTestId(tree, 'volyume-setrow-sheet-type-straight').props.accessibilityState.selected).toBe(false);
+    expect(flat(drop.props.style).minHeight).toBe(48);
+  });
+
+  test('a missing setType reads as Working', () => {
+    const tree = render({ typeOptions: OPTIONS, setType: undefined, onChangeType: jest.fn() });
+    expect(byTestId(tree, 'volyume-setrow-sheet-type').props.accessibilityLabel).toBe('Set type, Working');
+  });
+
+  test('the list is closed again when the sheet reopens', () => {
+    const props = { typeOptions: OPTIONS, setType: 'straight', onChangeType: jest.fn() };
+    let tree;
+    act(() => { tree = create(sheet(props)); });
+    press(tree, 'volyume-setrow-sheet-type');
+    expect(byTestId(tree, 'volyume-setrow-sheet-type-warmup')).toBeDefined();
+    act(() => tree.update(sheet({ ...props, visible: false })));
+    act(() => tree.update(sheet(props)));
+    expect(byTestId(tree, 'volyume-setrow-sheet-type-warmup')).toBeUndefined();
+  });
+});
+
 describe('SetRowSheet, every prop combination renders', () => {
   const notes = [{ canEditNote: true, note: 'x' }, { canEditNote: true, note: null }, { canEditNote: false, note: 'x' }, { canEditNote: false, note: null }];
   const handlers = [

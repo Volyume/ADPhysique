@@ -454,7 +454,7 @@ describe('sharing and saving the finished video', () => {
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
     await press(buttonTitled(tree, 'Save to gallery')[0]);
     expect(mockMediaLibrary.saveToLibraryAsync).toHaveBeenCalledWith('file:///cache/volyume-share.mp4');
-    expect(mockToastShow).toHaveBeenCalledWith('Saved to your gallery.', { variant: 'success' });
+    expect(mockToastShow).toHaveBeenCalledWith('Saved to your gallery. 12 second video.', { variant: 'success' });
     mockMediaLibrary.requestPermissionsAsync.mockResolvedValueOnce({ granted: false });
     await press(buttonTitled(tree, 'Save to gallery')[0]);
     expect(mockToastShow).toHaveBeenLastCalledWith('Gallery access is needed to save the video. You can still use Share.', { variant: 'warning', duration: 5000 });

@@ -253,6 +253,20 @@ async function _runOp(supabaseClient, row) {
       // the queue retries without spending its budget.
       const payload = row.payload ? JSON.parse(row.payload) : null;
       if (!payload?.challengeId || !payload?.sessionKey || !payload?.loggedOn) return true;
+      // Community audit 2026-10-17, finding 5: the gate is read again at
+      // replay, as the ambient queue does at its flush. A session queued
+      // offline before calm mode came on or an ED flag opened is never sent
+      // under them; it is dropped, not held (it fails closed: an unreadable
+      // gate drops it too). The same gate the live path reads
+      // (challengeSession.js, consistencyGateState).
+      try {
+        // eslint-disable-next-line global-require
+        const { consistencyGateState } = require('./community/trainingConsistency');
+        const { allowed } = await consistencyGateState(row.user_id, true);
+        if (!allowed) return true;
+      } catch (_e) {
+        return true; // fail closed: never send a share the gate cannot clear
+      }
       try {
         // eslint-disable-next-line global-require
         const { logChallengeSession } = require('./community/challenges');

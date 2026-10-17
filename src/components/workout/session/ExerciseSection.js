@@ -39,6 +39,9 @@
  * A square well renders only when its callback is given, so a stage that has
  * not wired a sheet yet shows no dead control.
  *
+ * onRemoveSet  optional. When given, a "Remove set" action sits beside Add set
+ *             (the screen offers it only while the exercise has more than one
+ *             unlogged row); its spoken name carries the exercise's name
  * totalSetCount  the exercise's served set count; with doneSetCount above
  *             zero on an upcoming (partly done) section, the header shows
  *             "{done} of {total} sets" under the name
@@ -136,6 +139,7 @@ export default function ExerciseSection({
   doneSetCount = 0,
   onPressHeader,
   onAddSet,
+  onRemoveSet = null,
   onSwap,
   onFilm = null,
   onMore,
@@ -225,6 +229,17 @@ export default function ExerciseSection({
             glyphColor={t.colors.textPrimary}
             labelStyle={live.action}
           />
+          {onRemoveSet ? (
+            <FooterAction
+              testID="volyume-btn-remove-set"
+              icon="remove"
+              label="Remove set"
+              accessibilityLabel={`Remove a set from ${name}`}
+              onPress={onRemoveSet}
+              glyphColor={t.colors.textPrimary}
+              labelStyle={live.action}
+            />
+          ) : null}
           {onSwap ? (
             <FooterAction
               icon="swap-horizontal"
@@ -292,6 +307,9 @@ const styles = StyleSheet.create({
   footer: {
     minHeight: FOOTER_MIN_HEIGHT,
     flexDirection: 'row',
+    // At the largest text size Add set, Remove set, Swap and the overflow no
+    // longer fit one line; wrapping keeps every 48 dp target reachable.
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.sm,
     paddingLeft: spacing.md,

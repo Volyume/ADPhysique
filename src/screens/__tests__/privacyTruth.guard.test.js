@@ -181,6 +181,17 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry19).toContain('import your food history');
     expect(entry19).toContain("add a recipe\\'s cooked weight to log it in grams");
     expect({ bad: /\bclips?\b/i.test(entry19) }).toEqual({ bad: false });
+    // 2.20.0 (founder order 2026-10-17, high level): the logger, the videos
+    // line with its privacy line, and Community.
+    const start20 = sheet.indexOf("'2.20.0': [");
+    expect(start20).toBeGreaterThan(-1);
+    const entry20 = sheet.slice(start20, sheet.indexOf('],', start20));
+    expect(entry20).toContain('The workout logger has been completely revamped.');
+    expect(entry20).toContain('Record videos of your sets and share them');
+    expect(entry20).toContain('Videos stay on your phone and are never uploaded');
+    expect(entry20).toContain('Settings, under Privacy and legal');
+    expect(entry20).toContain('Community has been improved');
+    expect({ bad: /\bclips?\b/i.test(entry20) }).toEqual({ bad: false });
   });
   test('the running version has a What\'s new entry', () => {
     const app = JSON.parse(readRepoFile('app.json'));

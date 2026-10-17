@@ -111,7 +111,7 @@ describe('tick-all for a per-side exercise', () => {
   });
 
   test('both tick-all call sites go through the step', () => {
-    expect(SRC).toContain('tickAllRunRef.current = { exerciseId: exercise?.id ?? null, expectedLength: loggedSets.length };\n            tickAllStep();');
-    expect(SRC).toContain('if (tickAllRemainingRef.current > 0 && !saving) tickAllStep();');
+    expect(SRC).toContain('tickAllRunRef.current = { exerciseId: exercise?.id ?? null, expectedLength: loggedSets.length, total: count };\n            tickAllStep();');
+    expect(SRC).toContain('if (tickAllRemainingRef.current > 0) tickAllStep();');
   });
 });

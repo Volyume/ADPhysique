@@ -51,6 +51,7 @@ import path from 'path';
 import { create, act } from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CAMERA_TIPS } from '../../lib/clips/cameraTips';
+import { AppState } from 'react-native';
 import { CLIP_STRINGS } from '../../lib/clips/rules';
 
 let mockPermission = { granted: true, canAskAgain: true };
@@ -236,16 +237,19 @@ describe('camera access', () => {
     expect(navigation.goBack).not.toHaveBeenCalled();
   });
 
-  test('a refusal is one calm warning toast, then the screen closes: no settings link, no second prompt', async () => {
+  test('a refusal keeps the screen open on a calm card with the same words and a Back button: no toast, no settings link, no second prompt (U8)', async () => {
     mockPermission = { granted: false, canAskAgain: false };
     mockRequestPermission.mockResolvedValue({ granted: false });
-    await mount();
-    expect(mockShow).toHaveBeenCalledTimes(1);
-    expect(mockShow).toHaveBeenCalledWith("Volyume needs camera access to film a set. You can turn it on for Volyume in your phone's settings.", { variant: 'warning' });
-    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    const tree = await mount();
+    expect(navigation.goBack).not.toHaveBeenCalled();
+    expect(mockShow).not.toHaveBeenCalled();
+    expect(hostById(tree, 'clip-camera-denied')).toBeDefined();
+    expect(text(tree)).toContain("Volyume needs camera access to film a set. You can turn it on for Volyume in your phone's settings.");
     expect(mockRequestPermission).toHaveBeenCalledTimes(1);
     expect(Linking.openURL).not.toHaveBeenCalled();
     expect(mockCameraProps).toBeNull();
+    await press(tree, 'clip-camera-denied-back');
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
   });
 
   test('a build without the camera module says to update the app, in its own line (still no settings link)', () => {
@@ -1466,5 +1470,90 @@ describe('share-only mode: the video goes back to the share screen and is never 
     const block = SOURCE.slice(start, end);
     expect(block).not.toMatch(/saveClip|deleteClip|countClipsForWorkout|savedLine|toast\.show/);
     expect(SOURCE).toMatch(/if \(shareOnly\) \{\s*handBackToShare\(uri, durationMs\);\s*return;\s*\}\s*let result;/);
+  });
+});
+
+
+// Audit 2026-10-17 (E3, E9): the camera and the app closing, and a share
+// screen that is gone. Written to FAIL against the screen before.
+describe('the app closing during the countdown or a recording (E3)', () => {
+  const appStateHandler = () => {
+    const calls = AppState.addEventListener.mock.calls.filter((c) => c[0] === 'change');
+    return calls[calls.length - 1][1];
+  };
+  const send = async (state) => { await act(async () => { appStateHandler()(state); }); await flush(); };
+
+  test('going to the background during the countdown clears it, readies the camera, records nothing; coming back says one calm line', async () => {
+    const tree = await mount();
+    await press(tree, 'clip-camera-record');
+    await flush();
+    await advance(1000);
+    await send('background');
+    await advance(10000);
+    expect(mockRecordAsync).not.toHaveBeenCalled();
+    expect(hostById(tree, 'clip-camera-record')).toBeDefined();
+    expect(mockShow).not.toHaveBeenCalled();
+    await send('active');
+    expect(mockShow).toHaveBeenCalledTimes(1);
+    expect(mockShow).toHaveBeenCalledWith('Recording stopped because Volyume was closed.', { variant: 'info' });
+    await send('active');
+    expect(mockShow).toHaveBeenCalledTimes(1);
+    // It can be started again.
+    await startTapRecording(tree);
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('going to the background mid-recording stops it and throws the file away: nothing saved, ready again, one line on return', async () => {
+    const tree = await mount();
+    await startTapRecording(tree);
+    await advance(4000);
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+    await send('background');
+    expect(mockStopRecording).toHaveBeenCalled();
+    await flush();
+    expect(mockSaveClip).not.toHaveBeenCalled();
+    expect(FileSystem.deleteAsync).toHaveBeenCalledWith('file:///cache/Camera/take.mp4', { idempotent: true });
+    expect(navigation.goBack).not.toHaveBeenCalled();
+    await send('active');
+    expect(mockShow).toHaveBeenCalledTimes(1);
+    expect(mockShow).toHaveBeenCalledWith(CLIP_STRINGS.stoppedByClosing, { variant: 'info' });
+    expect(CLIP_STRINGS.stoppedByClosing).toBe('Recording stopped because Volyume was closed.');
+    // Ready for another take.
+    await startTapRecording(tree);
+    expect(mockRecordAsync).toHaveBeenCalledTimes(2);
+  });
+
+  test('the background with nothing to stop says nothing on return', async () => {
+    await mount();
+    await send('background');
+    await send('active');
+    expect(mockShow).not.toHaveBeenCalled();
+  });
+});
+
+describe('a share screen that is gone (E9)', () => {
+  const SHARE_ONLY = { mode: 'share', workoutId: undefined, exerciseId: undefined, exerciseName: undefined, setNumber: undefined, source: undefined };
+  async function recordShareOnly(extra) {
+    const tree = await mount({ ...SHARE_ONLY, ...extra });
+    await startTapRecording(tree);
+    await advance(5000);
+    await press(tree, 'clip-camera-record');
+    await flush();
+    return tree;
+  }
+
+  test('returnTo missing from the navigation state: the camera goes back and the recording is dropped', async () => {
+    navigation.getState = jest.fn(() => ({ routes: [{ key: 'Home-1' }, { key: 'ClipCamera-1' }] }));
+    await recordShareOnly({ returnTo: 'ShareCard-gone' });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    expect(FileSystem.deleteAsync).toHaveBeenCalledWith('file:///cache/Camera/take.mp4', { idempotent: true });
+  });
+
+  test('returnTo present in the navigation state: handed back by key as before', async () => {
+    navigation.getState = jest.fn(() => ({ routes: [{ key: 'ShareCard-abc' }, { key: 'ClipCamera-1' }] }));
+    await recordShareOnly({ returnTo: 'ShareCard-abc' });
+    expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    expect(navigation.goBack).not.toHaveBeenCalled();
   });
 });

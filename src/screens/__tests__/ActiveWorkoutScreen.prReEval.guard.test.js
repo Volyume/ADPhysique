@@ -162,10 +162,14 @@ describe('L07-F2 contract 2: the screen wires edit/delete back into PR state', (
     expect(window).toContain('return bestPRPerExercise([');
   });
 
-  test('handleDeleteEditedSet drops the deleted set from session PR history and clears its PR badge', () => {
-    const window = ACTIVE_WORKOUT.match(/function handleDeleteEditedSet\(\)[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(window).toContain('sessionSetsRef.current = sessionSetsRef.current.filter(s => s.id !== target.id);');
-    expect(window).toContain('setDetectedPRs(prev => prev.filter(p => p.setId !== target.id));');
+  // Re-pinned 2026-10-17: the delete is now handleDeleteSetWithUndo (the row
+  // leaves at once, the real delete waits for the Undo toast to close). The
+  // rule is the same: a deleted set leaves the session PR history and loses
+  // its PR badge immediately, and an Undo restores both.
+  test('handleDeleteSetWithUndo drops the deleted set from session PR history and clears its PR badge', () => {
+    const window = ACTIVE_WORKOUT.match(/function handleDeleteSetWithUndo\(target\)[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(window).toContain('sessionSetsRef.current = sessionSetsRef.current.filter((x) => x.id !== target.id);');
+    expect(window).toContain('setDetectedPRs((prev) => prev.filter((r) => r.setId !== target.id));');
   });
 
   test('detectPR itself is not reimplemented on the screen (reused import only)', () => {

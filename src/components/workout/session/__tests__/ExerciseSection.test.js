@@ -455,3 +455,41 @@ describe('ExerciseSection source guard (tokens only)', () => {
     expect(SRC).not.toMatch(/\b(e1rm|1rm|est\.? ?max|plate|rpe|rir)\b/i);
   });
 });
+
+// Founder request 2026-10-17 ("delete a set if you've added too many or want to
+// do less"): a Remove set action beside Add set, the same chromeless 48 dp
+// footer action, only when the screen gives onRemoveSet.
+describe('ExerciseSection footer, Remove set', () => {
+  test('absent without onRemoveSet', () => {
+    const tree = render({});
+    expect(byLabel(tree, 'Remove a set from Barbell Row (Bent Over)')).toHaveLength(0);
+    expect(joined(tree)).not.toContain('Remove set');
+  });
+
+  test('present beside Add set, named for the exercise, and calls its callback', () => {
+    const onRemoveSet = jest.fn();
+    const tree = render({ onRemoveSet });
+    const remove = one(byLabel(tree, 'Remove a set from Barbell Row (Bent Over)'));
+    expect(remove.props.testID).toBe('volyume-btn-remove-set');
+    expect(remove.props.accessibilityRole).toBe('button');
+    expect(flat(remove.props.style).minHeight).toBe(touchTarget.minimum);
+    expect(flat(remove.props.style).backgroundColor).toBeUndefined();
+    expect(textHost(tree, 'Remove set')).toBeTruthy();
+    press(remove);
+    expect(onRemoveSet).toHaveBeenCalledTimes(1);
+    // Add set comes first, then Remove set.
+    const footerWords = joined(tree);
+    expect(footerWords.indexOf('Add set')).toBeLessThan(footerWords.indexOf('Remove set'));
+  });
+
+  test('a done or upcoming section never shows it', () => {
+    expect(byLabel(render({ onRemoveSet: jest.fn(), state: 'done' }), 'Remove a set from Barbell Row (Bent Over)')).toHaveLength(0);
+    expect(byLabel(render({ onRemoveSet: jest.fn(), state: 'upcoming' }), 'Remove a set from Barbell Row (Bent Over)')).toHaveLength(0);
+  });
+
+  test('the footer wraps so four actions stay reachable at the largest text size', () => {
+    const tree = render({ onRemoveSet: jest.fn(), onSwap: jest.fn(), onFilm: jest.fn() });
+    const footer = one(hosts(tree, (p) => flat(p.style).minHeight === 52));
+    expect(flat(footer.props.style).flexWrap).toBe('wrap');
+  });
+});

@@ -162,6 +162,8 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
   let erroredCount = 0;
   let rejectedCount = 0;
   let pullCountPerTable = {};
+  let legacyPullOk = false;
+  let migratedRowsPulled = false;
   let pushCountPerTable = {};
 
   try {
@@ -308,6 +310,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
             return { count: 0, errors: 1, _err: e };
           });
           pullCountPerTable[tableName] = result?.count ?? 0;
+          if ((result?.count ?? 0) > 0) migratedRowsPulled = true;
           if (result?.skipped === 'db_deferred' || await _dbDeferredNow()) { dbDeferred = true; break; }
           if (result?.errors) {
             erroredCount += result.errors;
@@ -329,10 +332,17 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
             });
             return { _err: e };
           });
+          legacyPullOk = !(pull && typeof pull === 'object' && pull._err);
           if (pull && typeof pull === 'object' && pull.pullCountPerTable) {
             pullCountPerTable = { ...pullCountPerTable, ...pull.pullCountPerTable };
           }
         }
+        // Tell screens that read local SQLite (Home) the pull has finished, so
+        // a weigh-in made on another phone shows without leaving the screen.
+        // pullFromCloud returns only a workout count (morning weights are
+        // counted inside it but not reported), so this bumps after any pull
+        // that did not throw, not only when rows were written.
+        if (!dbDeferred && !isSignOutWiping() && userId && (legacyPullOk || migratedRowsPulled)) _markDataPulled();
       } catch (e) {
         status = 'failure';
         erroredCount += 1;
@@ -385,6 +395,17 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
     // the same cycle (status 'partial' maps to 'synced' but errors occurred).
     errored_count: erroredCount,
   };
+}
+
+/**
+ * Bump the store's dataPulledVersion (Home re-reads on it). Lazy require, like
+ * the consent read above; best-effort, so a harness without the store is fine.
+ */
+function _markDataPulled() {
+  try {
+    // eslint-disable-next-line global-require
+    require('../../store/useAppStore').default.getState()?.markDataPulled?.();
+  } catch (_) { /* best-effort: Home still reloads on focus */ }
 }
 
 /**

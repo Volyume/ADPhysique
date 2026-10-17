@@ -37,11 +37,12 @@ import { videoStripUris } from '../../lib/shareVideo/videoFrame';
 
 export const STRIP_HEIGHT = 56;
 export const FRAME_BOX = 48;
-// Each handle is drawn 24 dp wide and takes touches 10 dp beyond it on both
-// sides, a 44 dp wide target the strip's 56 dp tall (render audit
-// 2026-10-16, lead ruling 2; it was 20 dp with 8 dp outside, about 28 dp).
+// Each handle is drawn 24 dp wide and takes touches 12 dp beyond it on both
+// sides, a 48 dp wide target the strip's 56 dp tall (render audit
+// 2026-10-16, lead ruling 2; it was 20 dp with 8 dp outside, about 28 dp,
+// then 44 dp with 10 dp; 48 dp is the platform's minimum touch target).
 export const HANDLE_WIDTH = 24;
-export const HANDLE_SLOP = 10;
+export const HANDLE_SLOP = 12;
 const HANDLE_HIT_SLOP = { top: spacing.sm, bottom: spacing.sm, left: HANDLE_SLOP, right: HANDLE_SLOP };
 const STEP_MS = 1000;
 

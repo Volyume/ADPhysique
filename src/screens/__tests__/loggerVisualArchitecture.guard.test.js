@@ -178,7 +178,9 @@ describe('the phone\'s keyboard is the input, with the step bar above it (D220 a
     // 2026-10-11): leaving an edit saves it, nothing asks.
     expect(SRC).toContain("const SET_TYPE_MARKERS = Object.freeze({ warmup: 'W', dropset: 'D', myo_reps: 'M', rest_pause: 'R', amrap: 'A' });");
     expect((SRC.match(/marker: markerForSet\(/g) || []).length).toBe(2);
-    expect(SRC).toContain('if (!targetComplete) { setExtraTargetSets((n) => n + 1); return; }');
+    // Re-pinned 2026-10-17: Add set adjusts the per-exercise target map
+    // (Remove set's partner), kept for the session.
+    expect(SRC).toContain('if (!targetComplete) { adjustTargetSets(+1); return; }');
     expect(SRC).not.toContain('Discard changes?');
     expect(SRC).toContain('handleSaveEditedSet().then((saved) => { if (saved) openWellNow(field, set); });');
     expect(SRC).toContain('if (editIsDirty()) handleSaveEditedSet(); else closeEditSet();');

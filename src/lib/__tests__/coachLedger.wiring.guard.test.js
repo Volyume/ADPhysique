@@ -127,7 +127,7 @@ describe('S3 RETIRED: the Today runway is removed (founder Ruling 2)', () => {
     // loadFirstReviewFacts (the R2 readiness-line loader) now run
     // unconditionally for every account. The point this test guards (no
     // loadCoachRunway slot ever returns) still holds.
-    expect(HOME).toMatch(/loadTodayWeight\(\),\s*\n\s*loadLatestCoachOutput\(\),\s*\n\s*loadFirstReviewFacts\(\),/);
+    expect(HOME).toMatch(/loadTodayWeight\(reqId\),\s*\n\s*loadLatestCoachOutput\(\),\s*\n\s*loadFirstReviewFacts\(reqId\),/);
     expect(HOME).not.toMatch(/loadTrialBanner/);
   });
   test('the one-liner mesocycle brief stays gone too (founder call 2026-07-03)', () => {

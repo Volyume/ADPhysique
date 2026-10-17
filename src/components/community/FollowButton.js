@@ -75,6 +75,24 @@ export default function FollowButton({
         ? { ...rel, following: 'none' }
         : { ...rel, following: out?.state === 'requested' ? 'requested' : 'accepted' };
       onChange?.(next, card);
+      if (state.key === 'following') {
+        // Undo follows again (audit 2026-10-17, item c). The server decides
+        // the state: a followers-only profile receives a request.
+        toast.show(`Unfollowed @${card.handle ?? 'them'}.`, {
+          variant: 'undo',
+          action: {
+            label: 'Undo',
+            onPress: async () => {
+              try {
+                const again = await follow(card.user_id);
+                onChange?.({ ...rel, following: again?.state === 'requested' ? 'requested' : 'accepted' }, card);
+              } catch (e) {
+                toast.show(REFUSALS[e?.code] ?? 'Could not do that just now.', { variant: 'error' });
+              }
+            },
+          },
+        });
+      }
     } catch (e) {
       toast.show(REFUSALS[e?.code] ?? 'Could not do that just now.', { variant: 'error' });
     } finally {

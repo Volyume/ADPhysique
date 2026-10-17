@@ -418,7 +418,9 @@ const styles = StyleSheet.create({
   },
   weightField: {
     borderRadius: radius.sm,
-    minHeight: 40,
+    // 48 (spacing.xxxl, as AppAlert's buttons use) for a comfortable touch
+    // target on the one field a daily weigh-in is typed into.
+    minHeight: spacing.xxxl,
   },
   weightInput: {
     paddingHorizontal: spacing.md,
@@ -431,10 +433,10 @@ const styles = StyleSheet.create({
   logBtn: {
     borderRadius: radius.sm,
     minWidth: 76,
-    // Match the weight input's minHeight (40) so the button and the field it
+    // Match the weight input's minHeight (48) so the button and the field it
     // sits beside are the same height and align in the row, rather than the
     // button reading short next to the taller box.
-    minHeight: 40,
+    minHeight: spacing.xxxl,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     // Same fullWidth={false} alignSelf override as metricAction above: the

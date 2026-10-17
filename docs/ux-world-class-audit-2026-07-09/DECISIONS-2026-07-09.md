@@ -12664,3 +12664,8 @@ An Opus fresh-eyes pass walked five journeys (first video; from the logger; summ
 - Version 2.19.0. Rationale: the standing minor-version rule for a build, with its What's new entry.
 
 **FOUNDER, open:** apply migrate_196 by the phrase "run against production 196". Until then the recipe cooked weight push stays off.
+
+**Logger, Community, sharing and Home audits (2026-10-17).** Founder rulings:
+(1) manual Community posts under an open ED flag or calm mode: "Allow, with a gentle check": the person is asked "Before you share" and may post; an unreadable gate asks too (the automatic path still withholds). (2) The session share card's opt-in weekly bodyweight change (cut goal, off by default, withheld under calm mode or an ED flag): "Keep it as it is", recorded as the second exception beside the before/after card (CLAUDE.md section 2). (3) What's new 2.20.0 kept high level: the logger revamp, set videos, Community improvements.
+Lead rulings (D33): the logger's finish and missed-exercise prompts, Remove set kept per exercise, set type changeable after logging with renumbering per kind, Undo on delete as a deferred delete (the stored delete runs when the toast closes and before a finish; an app killed inside the window keeps the set, the safe direction); reordering logged sets NOT built because display order is log time and a move would rewrite a set's time (the type change covers the founder's warm-up case); a queued challenge session re-reads the calm/ED gate at replay and is dropped if withheld or unreadable; sweeping other users' clips (share audit E10) not built: one user per device and sign-out wipes (IDENTITY_AND_OWNERSHIP_LOCKED).
+

@@ -29,7 +29,7 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   View, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, AppState,
 } from 'react-native';
 import Text from '../components/Text';
 import { FlashList } from '@shopify/flash-list';
@@ -60,6 +60,7 @@ import {
   placeholderFor, getProfile, blockUser, removeConnection, respondSession,
 } from '../lib/community';
 import { restrictionLine } from '../lib/community/restriction';
+import { mergeNewestPage, appendOlderPage } from '../lib/community/groupChatState';
 
 const PAGE = 30;
 
@@ -129,6 +130,9 @@ function dayKeyOf(value) {
   return Number.isFinite(ms) ? new Date(ms).toDateString() : '';
 }
 
+export const OLDER_FAILED_LINE = 'Older messages could not be loaded. Try again in a moment.';
+const OLDER_RETRY_MS = 5000;
+
 export default function CommunityConversationScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
@@ -156,8 +160,15 @@ export default function CommunityConversationScreen({ navigation, route }) {
   const idRef = useRef(routeId);
   const refSent = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // The newest-page cursor, mirrored so a merge reads the live value.
+  const cursorRef = useRef(null);
+  const olderBusyRef = useRef(false);
+  const olderFailedAtRef = useRef(0);
+
+  // `quiet` is a refocus after the first load: no skeleton, the thread on
+  // screen is merged with the newest page, and a passing failure leaves it.
+  const load = useCallback(async ({ quiet = false } = {}) => {
+    if (!quiet) setLoading(true);
     try {
       const { row, exhausted } = await findConversation({ id: routeId, userId: routeUserId });
       const id = row?.id ?? routeId ?? null;
@@ -170,8 +181,18 @@ export default function CommunityConversationScreen({ navigation, route }) {
         rows = page.messages;
         next = page.cursor;
       }
-      setMessages(rows);
-      setCursor(next);
+      if (quiet) {
+        setMessages((prev) => {
+          const merged = mergeNewestPage(prev, cursorRef.current, { messages: rows, cursor: next });
+          cursorRef.current = merged.cursor;
+          setCursor(merged.cursor);
+          return merged.messages;
+        });
+      } else {
+        setMessages(rows);
+        setCursor(next);
+        cursorRef.current = next;
+      }
       // Spec 1.3: whether the ref has been sent is about THIS opening of
       // the screen, never about how many messages the conversation
       // already has. `refSent` starts false on every mount and is set
@@ -204,9 +225,10 @@ export default function CommunityConversationScreen({ navigation, route }) {
           .catch(() => { /* the count clears on the next read */ });
       }
     } catch (e) {
-      setErrorCode(e?.code ?? 'unavailable');
+      // A quiet reload that fails leaves the thread on screen.
+      if (!quiet) setErrorCode(e?.code ?? 'unavailable');
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [routeId, routeUserId, refreshMe]);
 
@@ -217,26 +239,47 @@ export default function CommunityConversationScreen({ navigation, route }) {
     if (!id) return;
     try {
       const page = await listMessages(id, { limit: PAGE });
-      setMessages(page.messages);
-      setCursor(page.cursor);
+      // Merged, not replaced: older pages the person scrolled to stay.
+      setMessages((prev) => {
+        const merged = mergeNewestPage(prev, cursorRef.current, page);
+        cursorRef.current = merged.cursor;
+        setCursor(merged.cursor);
+        return merged.messages;
+      });
     } catch (_e) { /* best effort: what is on screen stays */ }
   }, []);
 
+  const focusedOnceRef = useRef(false);
   useFocusEffect(useCallback(() => {
-    load();
+    // First focus shows the skeleton; every later focus reloads quietly.
+    load({ quiet: focusedOnceRef.current });
+    focusedOnceRef.current = true;
     const timer = setInterval(() => { poll(); }, POLL_MS);
-    return () => clearInterval(timer);
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') poll(); // catch up on return to the app
+    });
+    return () => { clearInterval(timer); sub?.remove?.(); };
   }, [load, poll]));
 
   const loadOlder = useCallback(async () => {
     const id = idRef.current;
-    if (!cursor || !id) return;
+    if (!cursor || !id || olderBusyRef.current) return;
+    if (Date.now() - olderFailedAtRef.current < OLDER_RETRY_MS) return;
+    olderBusyRef.current = true;
     try {
       const page = await listMessages(id, { cursor, limit: PAGE });
-      setMessages((prev) => [...prev, ...page.messages]);
+      setMessages((prev) => appendOlderPage(prev, page.messages));
+      cursorRef.current = page.cursor;
       setCursor(page.cursor);
-    } catch (_e) { setCursor(null); }
-  }, [cursor]);
+    } catch (_e) {
+      // Keep the cursor so the next scroll can try again; say so once
+      // (audit 2026-10-17, item 6).
+      olderFailedAtRef.current = Date.now();
+      toast.show(OLDER_FAILED_LINE, { variant: 'error' });
+    } finally {
+      olderBusyRef.current = false;
+    }
+  }, [cursor, toast]);
 
   const openProfile = other?.user_id
     ? () => navigation.navigate('CommunityProfile', {
@@ -357,7 +400,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
       'This conversation ends for both of you, neither of you will see the other in Community, and any follow between you is removed. You can unblock later.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Block', style: 'destructive', onPress: () => run(blockUser, 'Blocked') },
+        { text: 'Block', style: 'destructive', onPress: () => run(blockUser, 'Blocked. You can undo this in Privacy and sharing.') },
       ],
     );
   }

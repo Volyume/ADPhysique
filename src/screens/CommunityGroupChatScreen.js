@@ -82,6 +82,11 @@ function senderFirst(author) {
   return String(name).trim().split(/\s+/)[0] || null;
 }
 
+/** Codes that mean this person can no longer read the chat. */
+const REMOVED_CODES = ['not_allowed', 'not_found'];
+export const OLDER_FAILED_LINE = 'Older messages could not be loaded. Try again in a moment.';
+const OLDER_RETRY_MS = 5000;
+
 export default function CommunityGroupChatScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
@@ -97,6 +102,7 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
   const newestRef = useRef(null);
   const cursorRef = useRef(null);
   const olderBusyRef = useRef(false);
+  const olderFailedAtRef = useRef(0);
   const activeRef = useRef(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
 
   const clearUnread = useCallback((rows) => {
@@ -107,9 +113,12 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
     markGroupRead(groupId).catch(() => { /* the count clears on the next read */ });
   }, [groupId]);
 
-  const load = useCallback(async () => {
+  // `quiet` is a refocus after the first load: no skeleton, the thread on
+  // screen is merged with the newest page (as the Hub does on return), and a
+  // passing failure leaves what is there. Only a removal ends the chat view.
+  const load = useCallback(async ({ quiet = false } = {}) => {
     if (!groupId) return;
-    setLoading(true);
+    if (!quiet) setLoading(true);
     try {
       const [page, group] = await Promise.all([
         loadGroupMessages(groupId, { limit: GROUP_CHAT_PAGE_SIZE }),
@@ -117,15 +126,25 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
       ]);
       if (group?.name) setTitle(group.name);
       setIsAdmin(group?.myRole === 'admin');
-      setMessages(page.messages);
-      setCursor(page.cursor);
-      cursorRef.current = page.cursor;
+      if (quiet) {
+        setMessages((prev) => {
+          const merged = mergeNewestPage(prev, cursorRef.current, page);
+          cursorRef.current = merged.cursor;
+          setCursor(merged.cursor);
+          return merged.messages;
+        });
+      } else {
+        setMessages(page.messages);
+        setCursor(page.cursor);
+        cursorRef.current = page.cursor;
+      }
       setErrorCode(null);
       clearUnread(page.messages);
     } catch (e) {
-      setErrorCode(e?.code ?? 'unavailable');
+      const code = e?.code ?? 'unavailable';
+      if (!quiet || REMOVED_CODES.includes(code)) setErrorCode(code);
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [groupId, clearUnread]);
 
@@ -142,11 +161,19 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
         return merged.messages;
       });
       clearUnread(page.messages);
-    } catch (_e) { /* best effort */ }
+    } catch (e) {
+      // A removed member must see the removed state, not stale messages
+      // and a composer (audit 2026-10-17, item 7). Any other failure is
+      // transient: what is on screen stays.
+      if (REMOVED_CODES.includes(e?.code)) setErrorCode(e.code);
+    }
   }, [groupId, clearUnread]);
 
+  const focusedOnceRef = useRef(false);
   useFocusEffect(useCallback(() => {
-    load();
+    // First focus shows the skeleton; every later focus reloads quietly.
+    load({ quiet: focusedOnceRef.current });
+    focusedOnceRef.current = true;
     const timer = setInterval(() => { poll(); }, GROUP_CHAT_POLL_MS);
     const sub = AppState.addEventListener('change', (next) => {
       activeRef.current = next === 'active';
@@ -157,16 +184,22 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
 
   const loadOlder = useCallback(async () => {
     if (!cursor || !groupId || olderBusyRef.current) return;
+    if (Date.now() - olderFailedAtRef.current < OLDER_RETRY_MS) return;
     olderBusyRef.current = true; // F2: one page request in flight at a time
     try {
       const page = await loadGroupMessages(groupId, { cursor, limit: GROUP_CHAT_PAGE_SIZE });
       setMessages((prev) => appendOlderPage(prev, page.messages));
       cursorRef.current = page.cursor;
       setCursor(page.cursor);
-    } catch (_e) { setCursor(null); cursorRef.current = null; } finally {
+    } catch (_e) {
+      // Keep the cursor so the next scroll can try again; say so once
+      // (audit 2026-10-17, item 6).
+      olderFailedAtRef.current = Date.now();
+      toast.show(OLDER_FAILED_LINE, { variant: 'error' });
+    } finally {
       olderBusyRef.current = false;
     }
-  }, [cursor, groupId]);
+  }, [cursor, groupId, toast]);
 
   async function handleSend(body) {
     try {

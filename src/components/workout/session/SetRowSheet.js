@@ -20,7 +20,15 @@
  *                the note. Save note then calls onClose.
  *   onEdit       optional. When given, the "Edit set" row calls it, then onClose
  *   onDelete     optional. When given, the "Delete set" row (error ink) calls
- *                it, then onClose. The confirm is the screen's, not the sheet's.
+ *                it, then onClose. There is no confirm: the screen removes the
+ *                row at once and offers Undo (a toast), so the delete is
+ *                withdrawable instead of asked about.
+ *   typeOptions  optional [{ value, label, description }]. With onChangeType,
+ *                a "Set type" row shows the current type and opens the same
+ *                options the next row's type picker offers, inside this sheet.
+ *   setType      the logged set's current type value (the checked option)
+ *   onChangeType optional. Called with the chosen option's value, then onClose.
+ *                Choosing the current type just closes the list.
  *
  * The draft is seeded from `note` each time the sheet opens, so a half-typed
  * edit never comes back, and a `note` that changes while the sheet is open does
@@ -51,6 +59,9 @@ export default function SetRowSheet({
   onSaveNote,
   onEdit,
   onDelete,
+  typeOptions,
+  setType,
+  onChangeType,
 }) {
   const t = useTheme();
   const live = useMemo(() => ({
@@ -74,6 +85,13 @@ export default function SetRowSheet({
 
   const unchanged = draft.trim() === saved.trim();
 
+  // The type list opens in place of the rows and closes with the sheet, so a
+  // reopened sheet never starts on a stale list.
+  const [typeOpen, setTypeOpen] = useState(false);
+  if (!visible && typeOpen) setTypeOpen(false);
+  const currentType = setType ?? 'straight';
+  const currentTypeLabel = (typeOptions ?? []).find((o) => o.value === currentType)?.label ?? 'Working';
+
   function handleSaveNote() {
     Keyboard.dismiss();
     onSaveNote?.(draft.trim());
@@ -82,6 +100,12 @@ export default function SetRowSheet({
 
   function handleEdit() {
     onEdit?.();
+    onClose?.();
+  }
+
+  function handleChooseType(value) {
+    setTypeOpen(false);
+    if (value !== currentType) onChangeType?.(value);
     onClose?.();
   }
 
@@ -125,6 +149,46 @@ export default function SetRowSheet({
         </View>
       ) : null}
 
+      {onChangeType && typeOptions?.length ? (
+        <>
+          <TouchableOpacity
+            style={[styles.row, live.row]}
+            onPress={() => setTypeOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: typeOpen }}
+            accessibilityLabel={`Set type, ${currentTypeLabel}`}
+            testID="volyume-setrow-sheet-type"
+          >
+            <Ionicons name="swap-vertical-outline" size={ROW_GLYPH} color={t.colors.textSecondary} />
+            <Text style={[live.rowLabel, styles.rowGrow]}>Set type</Text>
+            <Text style={live.noteText}>{currentTypeLabel}</Text>
+          </TouchableOpacity>
+          {typeOpen ? (
+            <View accessibilityRole="radiogroup">
+              {typeOptions.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.row, live.row]}
+                  onPress={() => handleChooseType(opt.value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: currentType === opt.value }}
+                  accessibilityLabel={`${opt.label}. ${opt.description ?? ''}`.trim()}
+                  testID={`volyume-setrow-sheet-type-${opt.value}`}
+                >
+                  <View style={styles.rowGrow}>
+                    <Text style={live.rowLabel}>{opt.label}</Text>
+                    {opt.description ? <Text style={live.noteLabel}>{opt.description}</Text> : null}
+                  </View>
+                  {currentType === opt.value ? (
+                    <Ionicons name="checkmark" size={ROW_GLYPH} color={t.colors.primary} />
+                  ) : null}
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+        </>
+      ) : null}
+
       {onEdit ? (
         <TouchableOpacity
           style={[styles.row, live.row]}
@@ -165,4 +229,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
   },
+  rowGrow: { flex: 1 },
 });

@@ -81,7 +81,7 @@ export default function ConversationRow({ conversation, onPress, inBand = false 
           size={AVATAR}
         />
         <View style={styles.body}>
-          <Text style={[styles.name, { color: t.colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: t.colors.textPrimary }]} numberOfLines={2}>
             {name}
           </Text>
           <Text

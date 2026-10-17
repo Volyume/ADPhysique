@@ -203,6 +203,11 @@ export const CLIP_STRINGS = Object.freeze({
   permissionDenied: "Volyume needs camera access to film a set. You can turn it on for Volyume in your phone's settings.",
   // The camera module is missing from this build (a stale binary).
   cameraMissing: 'Filming a set needs a newer version of Volyume. Update the app and try again.',
+  // The camera was left (the app closed, the phone locked) during the
+  // countdown or a recording: it stopped, and nothing was kept.
+  stoppedByClosing: 'Recording stopped because Volyume was closed.',
+  // The camera card shown in place of the camera when access is refused.
+  permissionBack: 'Back',
   closeIdleA11y: 'Close camera',
   closeBusyA11y: 'Cancel recording',
   // The record control while the countdown runs, and the line under it.
