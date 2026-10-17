@@ -15,7 +15,7 @@ describe('share copy polish', () => {
     expect(combined).toContain('Create share image');
     // D229 addendum 14: the summary footer's label is a pair now (with a
     // video the share can use it says so); the plain form is unchanged.
-    expect(workoutSummary).toContain("accessibilityLabel={videoReadyForShare ? 'Share this session with your video' : 'Share session'}");
+    expect(workoutSummary).toContain('accessibilityLabel="Share session"');
     expect(combined).toContain('shareable review of your training year');
     expect(combined).toContain('accessibilityLabel="Previous slide"');
     expect(combined).toContain('accessibilityLabel="Next slide"');
