@@ -870,6 +870,39 @@ describe('schedulePlannedMealConfirm (F3)', () => {
     expect(mockScheduleAsync).not.toHaveBeenCalled();
   });
 
+  // Food audit follow-up 2026-10-16, item 2: clearing the plan takes the 20:00
+  // nudge down. clearPlannedDay (food/db.js) re-runs this scheduler after it
+  // deletes the planned rows; with none left today the scheduler must cancel
+  // the pending reminder and lay nothing. The first half proves the nudge
+  // really is laid while a planned meal exists (so the second half is not
+  // vacuous); the ED gate, quiet hours and the budget are the scheduler's own
+  // and are left exactly as they were.
+  test('planned meals today lay the 20:00 nudge; once the plan is cleared a re-check cancels it and lays nothing', async () => {
+    await setPro();
+    jest.useFakeTimers({
+      now: new Date(2026, 9, 16, 9, 0, 0),
+      doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'],
+    });
+    try {
+      mockGetFoodEntries.mockResolvedValue([{ is_planned: 1 }]);
+      await scheduler.schedulePlannedMealConfirm('user-1');
+      expect(mockScheduleAsync).toHaveBeenCalledTimes(1);
+      const laid = mockScheduleAsync.mock.calls[0][0];
+      expect(laid.identifier).toBe(ID);
+      expect(laid.trigger.date.getHours()).toBe(20);
+
+      // The plan is cleared: nothing planned is left today.
+      mockScheduleAsync.mockClear();
+      mockCancelAsync.mockClear();
+      mockGetFoodEntries.mockResolvedValue([]);
+      await scheduler.schedulePlannedMealConfirm('user-1');
+      expect(mockCancelAsync).toHaveBeenCalledWith(ID);
+      expect(mockScheduleAsync).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   afterEach(() => { mockGetFoodEntries.mockReset(); mockGetFoodEntries.mockResolvedValue([]); });
 });
 

@@ -16,7 +16,7 @@ import { microSqlColumns, microSqlPlaceholders, microSqlUpsertExcluded, microVal
 import { isValidEntryGrams } from './servingEntry';
 import { serialisePortions } from './portions';
 import { cleanFoodNote } from './entryNote';
-import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
+import { todayLocalKey, localDayKey, parseLocalDay, addLocalCalendarDays } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from './foodSwapScope';
@@ -153,11 +153,31 @@ export function notifyDiaryChanges(userId, dates) {
 // (an out-of-range legacy row, a broken time) is still skipped, as before,
 // but no longer silently: the table and the reason only, never an id, a day
 // or a figure.
+//
+// Food review D7 (2026-10-16): tallied, not logged per row. A pull with many
+// refused rows logged once per row; now the appliers only count, per table and
+// per reason, and the pull (foodDomain _doPullAll) calls flushPullRejected()
+// once at its end: one log per table, carrying the table, the count and the
+// reasons tally only.
+const _pullRejectTally = new Map(); // table -> { count, reasons: { [reason]: n } }
+
 function _pullRejected(table, reason) {
-  try {
-    // eslint-disable-next-line global-require
-    require('../errorLog').logWarn('food.pull.rejected', null, { table, reason });
-  } catch (_) { /* logging unavailable: the skip stands */ }
+  const t = _pullRejectTally.get(table) ?? { count: 0, reasons: {} };
+  t.count += 1;
+  t.reasons[reason] = (t.reasons[reason] ?? 0) + 1;
+  _pullRejectTally.set(table, t);
+}
+
+/** Log the rows the appliers refused since the last flush, once per table, then clear. Never throws. */
+export function flushPullRejected() {
+  const entries = [..._pullRejectTally.entries()];
+  _pullRejectTally.clear();
+  for (const [table, { count, reasons }] of entries) {
+    try {
+      // eslint-disable-next-line global-require
+      require('../errorLog').logWarn('food.pull.rejected', null, { table, count, reasons });
+    } catch (_) { /* logging unavailable: the skip stands */ }
+  }
 }
 
 // D230 R10: the ONE validator and the ONE insert behind logFoodEntry and
@@ -670,6 +690,15 @@ export async function deleteFoodEntry(id, userId) {
 // cloud. As `created` it is re-inserted (migrate_195 hard-deleted the row) or
 // revives the tombstone (migrate_196, whose revive requires this created_at to
 // be at or after the delete).
+//
+// updated_at is created_at + 1 ms (food review D3, 2026-10-16), so the push
+// buckets the row `created` AND `updated`. Equal stamps sent it as `created`
+// only, and when the delete had NOT synced yet (edited, deleted and restored
+// between two pushes) `created` met a live cloud row and did nothing, so the
+// edit never reached the cloud. Now the `created` record revives a tombstone
+// (or inserts a row 195 hard-deleted) and the `updated` record, whose 196
+// branch reads `AND deleted_at IS NULL`, writes the edit to the live row.
+// Both are safe to repeat.
 export async function restoreFoodEntry(id, userId) {
   const d = await db();
   const now = Date.now();
@@ -682,7 +711,7 @@ export async function restoreFoodEntry(id, userId) {
     if (!row) return null;
     await d.runAsync(
       `UPDATE food_entries SET deleted_at = NULL, created_at = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
-      [now, now, id, userId]
+      [now, now + 1, id, userId]
     );
     await recomputeRollup(userId, row.entry_date);
     if (!row.is_planned) {
@@ -729,11 +758,12 @@ async function _setEntriesDeleted(userId, ids, deleted) {
         );
       } else {
         // created_at too, as restoreFoodEntry (food data-layer audit
-        // 2026-10-16, item 1): the restored row goes up as `created`.
+        // 2026-10-16, item 1), and updated_at one ms later (food review
+        // D3): the restored row goes up as `created` AND `updated`.
         // eslint-disable-next-line no-await-in-loop
         await d.runAsync(
           `UPDATE food_entries SET deleted_at = NULL, created_at = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
-          [now, now, id, userId]
+          [now, now + 1, id, userId]
         );
       }
       changed += 1;
@@ -1103,6 +1133,37 @@ export async function getFoodFrequents(userId, limit = 20) {
      WHERE user_id = ? ORDER BY log_count DESC, last_logged_at DESC
      LIMIT ?`,
     [userId, limit],
+  );
+}
+
+/**
+ * The "Often" tab's own count (food audit follow-up 2026-10-16). The server
+ * snapshot above only knows entries that have synced and is rebuilt nightly, so
+ * a food logged today (or while offline, or on a phone not yet synced) was
+ * missing or under-counted. This counts the device's own diary: actual entries
+ * only (`is_planned = 0`: unconfirmed plan scaffolding is not eating), not
+ * deleted, never a quick add (not a food), on the last `days` local days
+ * (today included). Ranked most-logged first, ties by most recently logged,
+ * then food_ref so equal rows always come back in one fixed order.
+ *
+ * @returns {Promise<Array<{food_ref: string, log_count: number, last_logged_at: number}>>}
+ */
+export async function getLocalFoodFrequents(userId, { days = 30, limit = 20 } = {}) {
+  if (!userId) return [];
+  const span = Number.isInteger(days) && days > 0 ? days : 30;
+  const cap = Number.isInteger(limit) && limit > 0 ? limit : 20;
+  const fromDate = localDayKey(addLocalCalendarDays(parseLocalDay(todayLocalKey()), -(span - 1)).getTime());
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT food_ref, COUNT(*) AS log_count, MAX(logged_at) AS last_logged_at
+     FROM food_entries
+     WHERE user_id = ? AND entry_date >= ?
+       AND deleted_at IS NULL AND is_planned = 0
+       AND food_ref NOT LIKE 'quick:%'
+     GROUP BY food_ref
+     ORDER BY log_count DESC, last_logged_at DESC, food_ref
+     LIMIT ?`,
+    [userId, fromDate, cap],
   );
 }
 
@@ -1910,49 +1971,61 @@ export async function updateRecipe(userId, recipeId, patch = {}) {
   if (!fields.length) return;
   fields.push('updated_at = ?');
   params.push(now, recipeId, userId);
-  const write = () => d.runAsync(
+  // Food review D8 (2026-10-16): the remembered portion is no longer rescaled
+  // here. It was read before the builder saved the new ingredients, so a save
+  // that changed the ingredients AND the cooked weight rescaled on the wrong
+  // basis. The caller reads recipeBasisG before saving and calls
+  // rescaleRecipeRecents after both updateRecipe and setRecipeIngredients.
+  await d.runAsync(
     `UPDATE recipes
      SET ${fields.join(', ')}
      WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
     params
   );
-  if (patch.cookedWeightG === undefined) {
-    await write();
-    _scheduleSync();
-    return;
-  }
-  // A changed cooked weight changes what a gram of the recipe is, so the
-  // remembered portion (food_slot_recents, a one-tap usual) is rescaled to
-  // still mean the same number of servings. Basis: the cooked weight when
-  // set, else the sum of the recipe's live ingredient grams. Skipped when
-  // either basis is not above 0. Same transaction as the recipe write.
-  const basisOf = async (cooked) => {
-    if (Number(cooked) > 0) return Number(cooked);
-    const r = await d.getFirstAsync(
-      `SELECT COALESCE(SUM(quantity_g), 0) AS g FROM recipe_ingredients
-       WHERE recipe_id = ? AND user_id = ? AND deleted_at IS NULL`,
-      [recipeId, userId]
-    );
-    return Number(r?.g) || 0;
-  };
-  await _inTx(d, async () => {
-    const before = await d.getFirstAsync(
-      'SELECT cooked_weight_g FROM recipes WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
-      [recipeId, userId]
-    );
-    const nextCooked = normaliseCookedWeight(patch.cookedWeightG);
-    await write();
-    if (!before || (before.cooked_weight_g ?? null) === nextCooked) return;
-    const oldBasis = await basisOf(before.cooked_weight_g);
-    const newBasis = await basisOf(nextCooked);
-    if (!(oldBasis > 0) || !(newBasis > 0) || oldBasis === newBasis) return;
-    await d.runAsync(
-      `UPDATE food_slot_recents SET last_quantity_g = ROUND(last_quantity_g * ?, 1)
-       WHERE user_id = ? AND food_ref = 'recipe:' || ?`,
-      [newBasis / oldBasis, userId, recipeId]
-    );
-  });
   _scheduleSync();
+}
+
+/**
+ * What one gram of a recipe is measured against (food review D8): the cooked
+ * weight when set, else the sum of its live ingredient grams. 0 when the
+ * recipe is gone (or deleted) or has neither.
+ */
+export async function recipeBasisG(userId, recipeId) {
+  const d = await db();
+  const r = await d.getFirstAsync(
+    'SELECT cooked_weight_g FROM recipes WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+    [recipeId, userId]
+  );
+  if (!r) return 0;
+  if (Number(r.cooked_weight_g) > 0) return Number(r.cooked_weight_g);
+  const g = await d.getFirstAsync(
+    `SELECT COALESCE(SUM(quantity_g), 0) AS g FROM recipe_ingredients
+     WHERE recipe_id = ? AND user_id = ? AND deleted_at IS NULL`,
+    [recipeId, userId]
+  );
+  return Number(g?.g) || 0;
+}
+
+/**
+ * Rescale the recipe's remembered portion (food_slot_recents, a one-tap
+ * usual) so it still means the same number of servings after an edit changed
+ * what a gram of it is (food review D8). `oldBasisG` is recipeBasisG read
+ * BEFORE the edit; the new basis is read now, after the recipe and its
+ * ingredients are saved. Skipped when either basis is not above 0 or they are
+ * equal. Returns how many remembered portions changed.
+ */
+export async function rescaleRecipeRecents(userId, recipeId, oldBasisG) {
+  const oldBasis = Number(oldBasisG);
+  if (!(oldBasis > 0)) return 0;
+  const newBasis = await recipeBasisG(userId, recipeId);
+  if (!(newBasis > 0) || newBasis === oldBasis) return 0;
+  const d = await db();
+  const res = await d.runAsync(
+    `UPDATE food_slot_recents SET last_quantity_g = ROUND(last_quantity_g * ?, 1)
+     WHERE user_id = ? AND food_ref = 'recipe:' || ?`,
+    [newBasis / oldBasis, userId, recipeId]
+  );
+  return Number(res?.changes ?? 0);
 }
 
 /**
@@ -2906,6 +2979,39 @@ export async function getAllRecipesSince(userId, sinceMs = 0) {
     `SELECT * FROM recipes WHERE user_id = ? AND updated_at > ?`,
     [userId, sinceMs]
   );
+}
+
+/**
+ * Review finding D4 (food audit follow-up 2026-10-16): a "Not suggested"
+ * (kind 'dislike') saved before migrate_196 sits in the cloud as 'fav', because
+ * the old food_sync_push never stored `kind`. The push is watermarked on
+ * last_used_at and the cloud keeps a row only when the pushed last_used_at is
+ * strictly newer, so the unchanged row is never sent again and a new phone
+ * gets it back as a favourite. This re-stamps each live dislike's
+ * last_used_at to now (plus its rank, oldest first, so the "Not suggested"
+ * list keeps its order), which puts it above the push watermark and the
+ * cloud's comparison; the next push then stores `kind`. Run once per user per
+ * device by the push (foodDomain FOOD_DISLIKE_REPUSH_KEY). Returns the count.
+ */
+export async function restampDislikesForRepush(userId, nowMs = Date.now()) {
+  if (!userId) return 0;
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT food_ref FROM food_favourites
+     WHERE user_id = ? AND kind = 'dislike' AND deleted_at IS NULL
+     ORDER BY last_used_at ASC, food_ref ASC`,
+    [userId]
+  );
+  if (!rows || rows.length === 0) return 0;
+  await _inTx(d, async () => {
+    for (let i = 0; i < rows.length; i += 1) {
+      await d.runAsync(
+        `UPDATE food_favourites SET last_used_at = ? WHERE user_id = ? AND food_ref = ?`,
+        [nowMs + i, userId, rows[i].food_ref]
+      );
+    }
+  });
+  return rows.length;
 }
 
 export async function getAllFavouritesSince(userId, sinceMs = 0) {

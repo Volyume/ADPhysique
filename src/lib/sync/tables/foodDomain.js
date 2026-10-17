@@ -50,6 +50,10 @@ export const FOOD_DAY_REPAIR_KEY = (userId) => `@volyume_food_entry_day_repair_$
 // every successful pull (food data-layer audit 2026-10-16, item 11).
 export const FOOD_DAY_REPAIR_ATTEMPT_KEY = (userId) => `@volyume_food_entry_day_repair_attempt_${userId}`;
 export const FOOD_DAY_REPAIR_RETRY_MS = 24 * 60 * 60 * 1000;
+// Per user, per device: set once the dislikes saved before migrate_196 have
+// been re-stamped so the next push stores their `kind` (review finding D4,
+// food audit follow-up 2026-10-16; food/db.js restampDislikesForRepush).
+export const FOOD_DISLIKE_REPUSH_KEY = (userId) => `@volyume_food_dislike_repush_v1_${userId}`;
 
 // The most rows one food_sync_push call carries for one table. A large import
 // (thousands of diary rows) used to go up as ONE call: one oversized request
@@ -327,6 +331,17 @@ async function _doPushAll(sb, { userId, localUserId }) {
   // eslint-disable-next-line global-require
   const food = require('../../food/db');
   const key = FOOD_LAST_PUSHED_KEY(userId);
+  // D4: once per user per device, before this push reads its rows, lift the
+  // pre-196 dislikes above the watermark so this push carries their kind. The
+  // marker is set only after the re-stamp lands; a failure is retried on the
+  // next push and never blocks this one.
+  try {
+    const repushKey = FOOD_DISLIKE_REPUSH_KEY(userId);
+    if (!(await AsyncStorage.getItem(repushKey)) && typeof food.restampDislikesForRepush === 'function') {
+      await food.restampDislikesForRepush(localUserId);
+      await AsyncStorage.setItem(repushKey, '1');
+    }
+  } catch (_) { /* best effort: retried on the next push */ }
   const sinceStr = await AsyncStorage.getItem(key);
   const sinceMs = sinceStr ? Number(sinceStr) : 0;
 
@@ -487,6 +502,10 @@ async function _doPullAll(sb, { userId }) {
   counts.recipes = await applyGroup('recipes', food.applyRecipeFromCloud);
   counts.food_favourites = await applyGroup('food_favourites', food.applyFavouriteFromCloud);
   counts.daily_water = await applyGroup('daily_water', food.applyWaterFromCloud);
+  // Food review D7: the rows the appliers refused, logged once per table for
+  // this pull (table, count, reasons). Skipped where the food module has none
+  // (a test double); never throws.
+  if (typeof food.flushPullRejected === 'function') food.flushPullRejected();
 
   if (typeof food.recomputeRollup === 'function') {
     for (const d of datesToRecompute) {

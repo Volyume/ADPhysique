@@ -43,6 +43,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 const mockGetSlotRecents = jest.fn(() => Promise.resolve([]));
 const mockGetFavourites = jest.fn(() => Promise.resolve([]));
 const mockGetFoodFrequents = jest.fn(() => Promise.resolve([]));
+const mockGetLocalFoodFrequents = jest.fn(() => Promise.resolve([]));
 const mockResolveSlotRecentRefs = jest.fn(() => Promise.resolve(new Map()));
 const mockResolveFoodRefs = jest.fn(() => Promise.resolve(new Map()));
 
@@ -56,6 +57,8 @@ jest.mock('../../lib/food/db', () => ({
     { id: 'cf-1', name: 'My chilli', kcal_100g: 120, protein_100g: 8, carbs_100g: 10, fat_100g: 4 },
   ])),
   getFoodFrequents: (...a) => mockGetFoodFrequents(...a),
+  // Re-pinned 2026-10-16: the Often tab now merges the device's own counts.
+  getLocalFoodFrequents: (...a) => mockGetLocalFoodFrequents(...a),
   getRollupForDay: jest.fn(() => Promise.resolve(null)),
   getLoggedMealSlotsForDay: jest.fn(() => Promise.resolve([])),
   applyCuratedMealToDiary: jest.fn(),
@@ -71,7 +74,11 @@ jest.mock('../../lib/food/mealSuggest', () => ({
   rankSuggestions: jest.fn(() => ({ suggestions: [], remaining: null, perMeal: null })),
   mealsLeftToday: jest.fn(() => 1),
 }));
-jest.mock('../../lib/food/frequents', () => ({ refreshFrequentsIfStale: jest.fn(() => Promise.resolve()) }));
+// Re-pinned 2026-10-16: mergeFrequents is the real pure function (the Often tab merges local counts).
+jest.mock('../../lib/food/frequents', () => ({
+  refreshFrequentsIfStale: jest.fn(() => Promise.resolve()),
+  mergeFrequents: (...a) => jest.requireActual('../../lib/food/frequents').mergeFrequents(...a),
+}));
 jest.mock('../../lib/food/waterfall', () => ({ searchFoods: jest.fn(() => Promise.resolve([])) }));
 jest.mock('../../lib/food/sources/localCache', () => ({
   resolveFoodRefs: (...a) => mockResolveFoodRefs(...a),
@@ -87,7 +94,9 @@ function makeNav() {
 }
 
 async function flush() {
-  await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
+  // Re-pinned 2026-10-16: the Often tab now reads the local counts and the
+  // snapshot together before it resolves, which takes a few more microtask turns.
+  await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); }); // eslint-disable-line no-await-in-loop
 }
 
 beforeEach(() => {
@@ -96,6 +105,7 @@ beforeEach(() => {
   mockGetSlotRecents.mockResolvedValue([]);
   mockGetFavourites.mockResolvedValue([]);
   mockGetFoodFrequents.mockResolvedValue([]);
+  mockGetLocalFoodFrequents.mockResolvedValue([]);
   mockResolveSlotRecentRefs.mockImplementation(() => Promise.resolve(new Map()));
   mockResolveFoodRefs.mockImplementation(() => Promise.resolve(new Map()));
   useAppStore.mockImplementation((selector) => selector(store));
@@ -143,6 +153,27 @@ describe('D138 item 3: browse loaders batch their ref resolution', () => {
     const freqCall = mockResolveFoodRefs.mock.calls.find(([, refs]) => refs.includes('off:p'));
     expect(freqCall).toBeTruthy();
     expect(freqCall[1]).toEqual(['off:p', 'off:q']);
+  });
+
+  // Food audit follow-up 2026-10-16: the Often tab ranks by the device's own
+  // log counts; the server snapshot only fills the places the local list lacks.
+  // Written to fail on the old screen, which showed the server list alone.
+  // Re-pinned 2026-10-16 (lead review): ranked by the larger of the local and
+  // snapshot counts, so the snapshot's 9-count food leads the local 3 and 1.
+  test('the Often tab merges local counts with the snapshot, ranked by count', async () => {
+    mockGetLocalFoodFrequents.mockResolvedValue([
+      { food_ref: 'off:q', log_count: 3 }, { food_ref: 'off:r', log_count: 1 },
+    ]);
+    mockGetFoodFrequents.mockResolvedValue([
+      { food_ref: 'off:p', log_count: 9 }, { food_ref: 'off:q', log_count: 2 },
+    ]);
+    const nav = makeNav();
+    await act(async () => {
+      create(<FoodSearchScreen navigation={nav} route={{ params: { mealSlot: 'snack', entryDate: '2026-09-01', initialTab: 'frequents' } }} />);
+    });
+    await flush();
+    const freqCall = mockResolveFoodRefs.mock.calls.find(([, refs]) => refs.includes('off:q'));
+    expect(freqCall[1]).toEqual(['off:p', 'off:q', 'off:r']);
   });
 });
 
@@ -245,5 +276,44 @@ describe('D138 item 6: a custom food is editable from the More tab', () => {
       food_ref: 'custom:cf-1', id: 'cf-1', name: 'My chilli', source: 'custom', kcal_100g: 120,
     } } });
     expect(row.props.onEdit).toBeUndefined();
+  });
+});
+
+// Food audit follow-up 2026-10-16, item 3: "Add custom food" opened from the
+// recipe builder's food picker carries the pick mode and the return screen into
+// AddCustomFood, so its primary button can hand the new food back to the recipe
+// instead of logging it to the diary. Written to fail on the old screen, which
+// passed only { mealSlot, entryDate }.
+describe('recipe pick mode: Add custom food carries the pick mode', () => {
+  async function pressAddCustom(params) {
+    const nav = makeNav();
+    await act(async () => {
+      create(<FoodSearchScreen navigation={nav} route={{ params }} />);
+    });
+    await flush();
+    const cta = capturedListProps.renderItem({ item: {
+      type: 'cta', key: 'cta-new-custom', label: 'Add custom food', icon: 'add-circle-outline', action: 'custom',
+    } });
+    await act(async () => { cta.props.onPress(); });
+    return nav;
+  }
+
+  test('from the recipe builder: pickMode and returnTo go with the form', async () => {
+    const nav = await pressAddCustom({
+      mealSlot: 'snack', entryDate: '2026-09-01', initialTab: 'custom', pickMode: 'recipe', returnTo: 'RecipeBuilder',
+    });
+    expect(nav.navigate).toHaveBeenCalledWith('AddCustomFood', {
+      mealSlot: 'snack', entryDate: '2026-09-01', pickMode: 'recipe', returnTo: 'RecipeBuilder',
+    });
+  });
+
+  test('a pick with no returnTo falls back to RecipeBuilder, as the picked-food hand-back does', async () => {
+    const nav = await pressAddCustom({ mealSlot: 'snack', entryDate: '2026-09-01', initialTab: 'custom', pickMode: 'recipe' });
+    expect(nav.navigate).toHaveBeenCalledWith('AddCustomFood', expect.objectContaining({ pickMode: 'recipe', returnTo: 'RecipeBuilder' }));
+  });
+
+  test('the diary flow is unchanged: no pickMode, no returnTo', async () => {
+    const nav = await pressAddCustom({ mealSlot: 'snack', entryDate: '2026-09-01', initialTab: 'custom' });
+    expect(nav.navigate).toHaveBeenCalledWith('AddCustomFood', { mealSlot: 'snack', entryDate: '2026-09-01' });
   });
 });

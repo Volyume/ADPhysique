@@ -15,12 +15,17 @@
  *    nothing; a changed row (updated_at at or after the watermark) is sent;
  *  - the watermark moves only after a clean push, so a failed batch goes
  *    again next cycle.
+ *  - food review D2: a batch refused 42501/23503 (a recipe the cloud no
+ *    longer holds) is retried row by row; still-refused rows are skipped,
+ *    counted and logged once with the table and count only, and the
+ *    watermark advances past them. Other errors keep the no-advance rule.
  */
 jest.mock('../../database', () => ({
   getAllRecipeIngredientsForUser: jest.fn(),
   getTombstonedRecipeIdsForUser: jest.fn(),
 }));
 jest.mock('../telemetry', () => ({ logSyncError: jest.fn() }));
+jest.mock('../../errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 
@@ -108,6 +113,95 @@ test('a failed batch leaves the watermark, so the rows go again next cycle', asy
   const retry = makeSb();
   await pushRecipeIngredients(retry, { userId: 'u', localUserId: 'u' });
   expect(sentIds(retry)).toEqual(['a']);
+});
+
+// Food review D2: a recipe another phone hard-deleted in the cloud before
+// migrate_196 is still live here, so its ingredients are due and the cloud
+// refuses them (42501 row-level policy, or 23503 foreign key). That failed
+// the whole batch every cycle and the watermark never moved. A batch refused
+// with either code is retried row by row; still-refused rows are skipped,
+// counted, logged once (table + count only) and the watermark advances.
+describe('D2: rows of a recipe the cloud no longer holds', () => {
+  const { logWarn } = require('../../errorLog');
+  const { logSyncError } = require('../telemetry');
+  // The cloud refuses any row whose recipe_id is in `gone` with `code`; a
+  // multi-row upsert containing one is refused whole, as PostgREST does.
+  function makeCloud({ gone = new Set(), code = '42501', otherFailIds = new Set() } = {}) {
+    const calls = [];
+    const stored = [];
+    return {
+      calls, stored,
+      from: jest.fn(() => ({
+        upsert: jest.fn(async (rows) => {
+          calls.push(rows.map((r) => r.id));
+          if (rows.some((r) => otherFailIds.has(r.id))) return { error: { code: '08006', message: 'connection failure' } };
+          if (rows.some((r) => gone.has(r.recipe_id))) return { error: { code, message: 'refused' } };
+          stored.push(...rows.map((r) => r.id));
+          return { error: null };
+        }),
+      })),
+    };
+  }
+
+  test.each(['42501', '23503'])('%s: the live rows land, the refused rows are skipped, the watermark advances', async (code) => {
+    db.getTombstonedRecipeIdsForUser.mockResolvedValue([]);
+    db.getAllRecipeIngredientsForUser.mockResolvedValue([
+      ing('live-1', 'r-live', 5000), ing('orphan-1', 'r-gone', 6000),
+      ing('live-2', 'r-live', 7000), ing('orphan-2', 'r-gone', 8000),
+    ]);
+    const sb = makeCloud({ gone: new Set(['r-gone']), code });
+    const res = await pushRecipeIngredients(sb, { userId: 'u', localUserId: 'u' });
+    expect(sb.stored.sort()).toEqual(['live-1', 'live-2']);
+    expect(res).toEqual({ count: 2, errors: 0, skipped: 2 });
+    expect(await getPushWatermark('u', 'recipe_ingredients')).toBe(8000);
+    // Logged once, the table and the count only: no id, recipe or food.
+    expect(logWarn).toHaveBeenCalledTimes(1);
+    expect(logWarn).toHaveBeenCalledWith('sync.tables.recipeIngredients.pushRefused', null, { table: 'recipe_ingredients', count: 2 });
+    const logged = JSON.stringify([logWarn.mock.calls, logSyncError.mock.calls]);
+    for (const secret of ['orphan-1', 'orphan-2', 'r-gone', 'curated:oats']) expect(logged).not.toContain(secret);
+    // Next cycle: only the boundary row goes, the batch is clean.
+    const next = makeCloud({ gone: new Set(['r-gone']), code });
+    const again = await pushRecipeIngredients(next, { userId: 'u', localUserId: 'u' });
+    expect(again.errors).toBe(0);
+    expect(next.calls.flat()).not.toContain('orphan-1');
+  });
+
+  test('any other error keeps today\'s behaviour: no row-by-row retry, no advance', async () => {
+    db.getTombstonedRecipeIdsForUser.mockResolvedValue([]);
+    db.getAllRecipeIngredientsForUser.mockResolvedValue([ing('a', 'r', 5000), ing('b', 'r', 6000)]);
+    const sb = makeCloud({ otherFailIds: new Set(['a']) });
+    const res = await pushRecipeIngredients(sb, { userId: 'u', localUserId: 'u' });
+    expect(res).toEqual({ count: 0, errors: 1 });
+    expect(sb.calls).toEqual([['a', 'b']]);
+    expect(await getPushWatermark('u', 'recipe_ingredients')).toBe(0);
+    expect(logWarn).not.toHaveBeenCalled();
+  });
+
+  test('a row that fails for another reason during the row-by-row retry holds the watermark', async () => {
+    db.getTombstonedRecipeIdsForUser.mockResolvedValue([]);
+    db.getAllRecipeIngredientsForUser.mockResolvedValue([
+      ing('orphan', 'r-gone', 5000), ing('flaky', 'r', 6000), ing('ok', 'r', 7000),
+    ]);
+    // The whole batch is refused for the orphan; then 'flaky' fails on a
+    // connection error when retried alone.
+    let first = true;
+    const sb = makeCloud({ gone: new Set(['r-gone']) });
+    const base = sb.from;
+    sb.from = jest.fn(() => {
+      const t = base();
+      const up = t.upsert;
+      t.upsert = jest.fn(async (rows) => {
+        if (!first && rows.length === 1 && rows[0].id === 'flaky') return { error: { code: '08006' } };
+        first = false;
+        return up(rows);
+      });
+      return t;
+    });
+    const res = await pushRecipeIngredients(sb, { userId: 'u', localUserId: 'u' });
+    expect(res).toEqual({ count: 1, errors: 1, skipped: 1 });
+    expect(sb.stored).toEqual(['ok']);
+    expect(await getPushWatermark('u', 'recipe_ingredients')).toBe(0);
+  });
 });
 
 // Founder ruling "Add cooked weight": the recipe record carries

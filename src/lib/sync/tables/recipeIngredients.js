@@ -39,6 +39,17 @@
  *    no change can hide below the watermark. Sign-out clears it, so the next
  *    sign-in pushes everything once.
  *
+ * Food review D2 (2026-10-16): a recipe another phone hard-deleted in the
+ * cloud before migrate_196 can still be live on this device, so its
+ * ingredients are due and the cloud refuses them (42501, the row-level
+ * policy's parent check, or 23503, the foreign key). That refusal failed the
+ * whole batch every cycle and the watermark never moved. Now a batch refused
+ * with 42501 or 23503 is retried row by row; the rows that are still refused
+ * are skipped, counted, logged once per push (the table and the count only,
+ * never an id or a food), and the watermark advances past them. Any other
+ * error, on the batch or on a row, keeps the old behaviour: no advance, the
+ * rows go again next cycle.
+ *
  * Pull: read every row for the user from the cloud, including
  * tombstones. For each row, compare local updated_at against
  * cloud updated_at; only upsert when the cloud is strictly newer
@@ -47,10 +58,16 @@
 
 import { logSyncError } from '../telemetry';
 import { getPushWatermark, setPushWatermark, toMs } from '../watermark';
+import { logWarn } from '../../errorLog';
 
 const WATERMARK_TABLE = 'recipe_ingredients';
 
 const PUSH_BATCH_SIZE = 200;
+
+// The refusals a row of a recipe the cloud no longer holds meets: the
+// row-level policy's parent-recipe check (42501) and the foreign key (23503).
+const PARENT_GONE_CODES = new Set(['42501', '23503']);
+const _parentGone = (error) => !!error && PARENT_GONE_CODES.has(String(error.code ?? ''));
 
 function _toIso(ms) {
   if (!ms) return null;
@@ -93,25 +110,44 @@ export async function pushRecipeIngredients(sb, { userId, localUserId } = {}) {
 
     let pushed = 0;
     let errors = 0;
+    let refused = 0;
+    const upsert = (payload) => sb.from('recipe_ingredients').upsert(payload, { onConflict: 'user_id,id' });
     for (let i = 0; i < rows.length; i += PUSH_BATCH_SIZE) {
       const batch = rows.slice(i, i + PUSH_BATCH_SIZE);
-      const { error } = await sb
-        .from('recipe_ingredients')
-        .upsert(batch, { onConflict: 'user_id,id' });
-      if (error) {
+      const { error } = await upsert(batch);
+      if (!error) {
+        pushed += batch.length;
+      } else if (_parentGone(error)) {
+        // D2: row by row, so one recipe the cloud no longer holds does not
+        // hold back the rest of the batch.
+        for (const row of batch) {
+          const { error: rowError } = await upsert([row]);
+          if (!rowError) {
+            pushed += 1;
+          } else if (_parentGone(rowError)) {
+            refused += 1;
+          } else {
+            errors += 1;
+            logSyncError('sync.tables.recipeIngredients.pushUpsert', rowError);
+          }
+        }
+      } else {
         errors += 1;
         logSyncError('sync.tables.recipeIngredients.pushUpsert', error);
-      } else {
-        pushed += batch.length;
       }
     }
-    // Advance only after a clean push, so a failed batch is sent again.
+    if (refused > 0) {
+      logWarn('sync.tables.recipeIngredients.pushRefused', null, { table: WATERMARK_TABLE, count: refused });
+    }
+    // Advance only after a clean push, so a failed batch is sent again. Rows
+    // the cloud refused for a missing parent recipe (D2) do not count as a
+    // failure: the watermark moves past them.
     if (errors === 0) {
       let maxMs = wm;
       for (const r of due) maxMs = Math.max(maxMs, changedMs(r));
       if (maxMs > wm) await setPushWatermark(userId, WATERMARK_TABLE, maxMs);
     }
-    return { count: pushed, errors };
+    return { count: pushed, errors, ...(refused ? { skipped: refused } : {}) };
   } catch (e) {
     logSyncError('sync.tables.recipeIngredients.push', e);
     return { count: 0, errors: 1 };

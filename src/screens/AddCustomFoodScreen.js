@@ -25,6 +25,13 @@
  * how an amount is entered; grams stay the stored truth, and every portion
  * keeps the 1 to 5000 g bound.
  *
+ * Recipe pick mode (food audit follow-up 2026-10-16): FoodSearch opened by the
+ * recipe builder passes `pickMode: 'recipe'` and `returnTo`. There the primary
+ * button reads "Save and add to recipe": it saves the custom food, then hands
+ * it back to the builder as `addedIngredient` (the same shape and the same
+ * navigate() call FoodSearchScreen.confirmLog makes) and writes NOTHING to the
+ * diary and no slot recent. "Save the food" still only saves.
+ *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
 import { todayLocalKey } from '../lib/dayKey';
@@ -56,7 +63,7 @@ import { audit } from '../lib/observability';
 import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { findLocalByBarcode } from '../lib/food/sources/localCache';
+import { findLocalByBarcode, resolveFoodRef } from '../lib/food/sources/localCache';
 import { scaleMacros } from '../lib/food/macros';
 import Stepper from '../components/Stepper';
 import {
@@ -83,6 +90,9 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
+  // Recipe pick mode: the food goes back to the recipe, not to the diary.
+  const isRecipePick = route?.params?.pickMode === 'recipe';
+  const returnTo = route?.params?.returnTo ?? 'RecipeBuilder';
   // D138: opened from the More tab's edit affordance on an existing custom
   // food, rather than the create-and-log flow. Mutually exclusive with the
   // OCR prefill params below (a scan never carries editFoodId).
@@ -420,6 +430,42 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     }
   }
 
+  // Recipe pick mode: hand the saved food back to the recipe builder as an
+  // ingredient, exactly as FoodSearchScreen.confirmLog does for a picked
+  // search result. The stored row is read back so the builder sees the same
+  // shape any other custom food has; if that read fails the form's own
+  // figures stand in, so a saved food is never lost on the way back.
+  async function handBackToRecipe({ id, food: f, qty }) {
+    const ref = `custom:${id}`;
+    let row = null;
+    try {
+      row = await resolveFoodRef(userId, ref);
+    } catch (e) {
+      logError('AddCustomFood.resolveForRecipe', e);
+    }
+    const ingredientFood = row ?? {
+      food_ref: ref,
+      source: 'custom',
+      name: f.name,
+      brand: f.brand ?? null,
+      serving_g: f.servingG || null,
+      serving_label: f.servingLabel ?? null,
+      kcal_100g: f.kcal100g,
+      protein_100g: f.protein100g,
+      carbs_100g: f.carbs100g,
+      fat_100g: f.fat100g,
+      fibre_100g: f.fibre100g ?? null,
+    };
+    navigation.navigate(returnTo, {
+      addedIngredient: {
+        food_ref: ref,
+        name: ingredientFood.name ?? f.name,
+        quantity_g: qty,
+        food: ingredientFood,
+      },
+    });
+  }
+
   // `log: true` is "Save and add to diary"; `log: false` is "Save the food"
   // (D230 4.11): the same food row, the same confirms, no diary entry.
   async function saveFood({ log }) {
@@ -539,7 +585,10 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       // future edits to the custom food don't rewrite history. Shared helper
       // (food review U-M2).
       let addedMessage = null;
-      if (log) {
+      if (log && isRecipePick) {
+        // No diary write, no slot recent: the amount is the ingredient's.
+        await handBackToRecipe({ id: customId, food, qty });
+      } else if (log) {
         try {
           addedMessage = await logWithCarried({ id: customId, food, qty });
         } catch (e) {
@@ -586,13 +635,19 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         else toast.show('Saved. Next time this barcode scans instantly.');
       } else if (!log) {
         // Saving the food alone writes no diary row, so say it is kept.
-        toast.show('Food saved. You can add it to your diary any time.');
+        toast.show(isRecipePick
+          ? 'Food saved. You can add it to a recipe any time.'
+          : 'Food saved. You can add it to your diary any time.');
+      } else if (isRecipePick) {
+        toast.show(`${food.name} added to the recipe.`);
       } else if (addedMessage) {
         showAddedToast(addedMessage.text, addedMessage.ids);
       }
       // An add returns to the Diary (past the add screen, which is no longer
       // needed once its waiting foods are written); a save alone goes back.
-      if (log) navigation.navigate('Diary');
+      // (In recipe pick mode the food has already gone back to the builder.)
+      if (log && isRecipePick) { /* handed back above */ }
+      else if (log) navigation.navigate('Diary');
       else navigation.goBack();
     } catch (e) {
       logError('AddCustomFood.save', e, { logged: log, scanned: !!prefillBarcode });
@@ -703,12 +758,14 @@ export default function AddCustomFoodScreen({ navigation, route }) {
             place here. */}
         {isEditMode ? null : (
           <>
-            <SectionLabel style={styles.sectionLabelSpacing}>Quantity eaten</SectionLabel>
-            <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" error={errEaten} />
+            <SectionLabel style={styles.sectionLabelSpacing}>{isRecipePick ? 'Quantity in the recipe' : 'Quantity eaten'}</SectionLabel>
+            <NumField label={isRecipePick ? 'In the recipe (g)' : 'Eaten (g)'} value={quantityG} onChange={setQuantityG} suffix="g" error={errEaten} />
             {/* L05-ACF3 (2026-07-09 design audit): the two gram fields need
                 an explanation of which drives what. */}
             <Text style={[styles.unsureNote, live.unsureNote]}>
-              The first portion is this food's usual portion, saved for next time. Eaten is how much you had today, logged now.
+              {isRecipePick
+                ? "The first portion is this food's usual portion, saved for next time. The amount in the recipe is how much goes into this recipe."
+                : "The first portion is this food's usual portion, saved for next time. Eaten is how much you had today, logged now."}
             </Text>
             {portionPreview ? (
               <Text style={[styles.portionPreview, live.portionPreview]}>
@@ -742,8 +799,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </View>
 
         <Button
-          title={isEditMode ? 'Save changes' : (savedFood ? 'Add to diary' : 'Save and add to diary')}
-          accessibilityLabel={isEditMode ? 'Save changes to food' : (savedFood ? 'Add the saved food to the diary' : 'Save food and add to diary')}
+          title={isEditMode ? 'Save changes' : (savedFood ? 'Add to diary' : (isRecipePick ? 'Save and add to recipe' : 'Save and add to diary'))}
+          accessibilityLabel={isEditMode ? 'Save changes to food' : (savedFood ? 'Add the saved food to the diary' : (isRecipePick ? 'Save food and add to recipe' : 'Save food and add to diary'))}
           size="lg"
           loading={busyLog}
           disabled={(!savedFood && !canSave) || busyOnly}
@@ -755,7 +812,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         {isEditMode || savedFood ? null : (
           <Button
             title="Save the food"
-            accessibilityLabel="Save the food without adding it to the diary"
+            accessibilityLabel={isRecipePick ? 'Save the food without adding it to the recipe' : 'Save the food without adding it to the diary'}
             variant="secondary"
             size="lg"
             loading={busyOnly}

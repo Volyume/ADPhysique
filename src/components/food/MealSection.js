@@ -7,7 +7,7 @@ import useTheme from '../../hooks/useTheme';
 import Card from '../Card';
 import Chip from '../Chip';
 import Button from '../Button';
-import { formatEnergy, formatNumber, energyUnitLabel } from '../../lib/format';
+import { formatEnergy, formatNumber, energyUnitLabel, spokenEnergy } from '../../lib/format';
 import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
@@ -200,7 +200,10 @@ export default function MealSection({
             heading rotor walks the Diary meal by meal. */}
         <Text style={[styles.mealName, live.mealName]} accessibilityRole="header">{slot.label}</Text>
         {eatenEntries.length > 0 ? (
-          <Text style={[styles.subtotal, live.subtotal]}>
+          <Text
+            style={[styles.subtotal, live.subtotal]}
+            accessibilityLabel={`${spokenEnergy(slotKcal, energyUnit)}, ${formatNumber(slotProtein)} ${slotProtein === 1 ? 'gram' : 'grams'} of protein`}
+          >
             {formatEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {formatNumber(slotProtein)} g protein
           </Text>
         ) : null}

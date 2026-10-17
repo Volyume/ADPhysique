@@ -89,6 +89,8 @@ jest.mock('../../lib/food/db', () => ({
   cycleFoodPreference: jest.fn(),
   getAllCustomFoods: jest.fn(() => Promise.resolve([])),
   getFoodFrequents: jest.fn(() => Promise.resolve([])),
+  // Re-pinned 2026-10-16: the Often tab now merges the device's own counts.
+  getLocalFoodFrequents: jest.fn(() => Promise.resolve([])),
   getRollupForDay: jest.fn(() => Promise.resolve(null)),
   getLoggedMealSlotsForDay: jest.fn(() => Promise.resolve([])),
   applyCuratedMealToDiary: jest.fn(),
@@ -104,7 +106,11 @@ jest.mock('../../lib/food/mealSuggest', () => ({
   rankSuggestions: jest.fn(() => ({ suggestions: [], remaining: null, perMeal: null })),
   mealsLeftToday: jest.fn(() => 1),
 }));
-jest.mock('../../lib/food/frequents', () => ({ refreshFrequentsIfStale: jest.fn(() => Promise.resolve()) }));
+// Re-pinned 2026-10-16: mergeFrequents is the real pure function (the Often tab merges local counts).
+jest.mock('../../lib/food/frequents', () => ({
+  refreshFrequentsIfStale: jest.fn(() => Promise.resolve()),
+  mergeFrequents: (...a) => jest.requireActual('../../lib/food/frequents').mergeFrequents(...a),
+}));
 jest.mock('../../lib/food/waterfall', () => ({ searchFoods: jest.fn(() => Promise.resolve([])) }));
 jest.mock('../../lib/food/sources/localCache', () => ({
   resolveFoodRefs: jest.fn(() => Promise.resolve(new Map())),

@@ -44,6 +44,7 @@ import { formatEnergy, energyUnitLabel } from '../lib/format';
 import {
   createRecipe, updateRecipe, getRecipeWithIngredients,
   setRecipeIngredients, computeRecipeMacros,
+  recipeBasisG, rescaleRecipeRecents,
 } from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { importRecipeFromUrl } from '../lib/food/recipeImport';
@@ -349,6 +350,19 @@ export default function RecipeBuilderScreen({ navigation, route }) {
     setSaving(true);
     try {
       let id = recipeId;
+      // Food review D8: what a gram of the recipe meant BEFORE this save (its
+      // cooked weight, else its ingredient grams), read before anything is
+      // written, so the remembered portion can be rescaled once the recipe
+      // AND its ingredients are saved. Best effort: a failed read only skips
+      // the rescale.
+      let oldBasisG = null;
+      if (id) {
+        try {
+          oldBasisG = await recipeBasisG(userId, id);
+        } catch (e) {
+          logError('RecipeBuilder.readBasis', e);
+        }
+      }
       if (!id) {
         id = await createRecipe(userId, {
           name: name.trim(),
@@ -369,6 +383,14 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         food_ref: ing.food_ref,
         quantity_g: ing.quantity_g,
       })));
+      if (oldBasisG > 0) {
+        // Best effort, after both writes: never blocks or fails the save.
+        try {
+          await rescaleRecipeRecents(userId, id, oldBasisG);
+        } catch (e) {
+          logError('RecipeBuilder.rescaleRecents', e);
+        }
+      }
       navigation.goBack();
     } catch (e) {
       logError('RecipeBuilder.save', e, { isEdit: !!recipeId, ingredients: ingredients.length });

@@ -26,6 +26,9 @@
  *  - item 5: a legacy out-of-range row in the pull is still skipped, and is
  *    logged as food.pull.rejected with the table and reason only.
  *  - item 11: a failed one-time day repair is tried again at most once a day.
+ *  - food review D3: an edit, delete and Undo between two pushes still
+ *    carries the edit to the cloud (the restore goes `created` + `updated`).
+ *  - food review D7: refused pulled rows log once per table per pull.
  */
 const mockState = { realTx: false, inTx: false };
 jest.mock('../../dbCrypto', () => {
@@ -206,6 +209,48 @@ describe.each(['195', '196'])('against the %s server', (version) => {
     expect(rollupKcal(raw, u)).toBe(400);
   });
 
+  // Food review D3: an entry already in the cloud is edited, deleted and
+  // restored between two pushes. The delete never reached the cloud, so the
+  // cloud row is live; a restore sent as `created` only met it and did
+  // nothing (ON CONFLICT, and 196's revive needs a tombstone), losing the
+  // edit. Sent as `created` AND `updated`, the edit lands.
+  test('D3: an edit, delete and Undo between two pushes still carries the edit to the cloud', async () => {
+    const cloud = makeCloud(version);
+    const u = `d3-${version}`;
+    clock += 1000; const id = await food.logFoodEntry(u, entry());
+    clock += 2000; await cycle(cloud, u);
+    expect(cloud.entries.get(id).kcal).toBe(400);
+    clock += 1000;
+    expect(await food.updateFoodEntry(id, u, {
+      entryDate: TODAY, mealSlot: 'meal_1', foodRef: 'custom:abc', quantityG: 275,
+      kcal: 550, proteinG: 41, carbsG: 55, fatG: 14, fibreG: 3,
+    })).toBe(true);
+    clock += 1000; await food.deleteFoodEntry(id, u);
+    clock += 1000; await food.restoreFoodEntry(id, u);
+    clock += 2500; await cycle(cloud, u);
+    expect(cloud.entries.get(id).deleted_at).toBeNull();
+    expect(cloud.entries.get(id).kcal).toBe(550);
+    expect(cloud.entries.get(id).quantity_g).toBe(275);
+    expect(rollupKcal(raw, u)).toBe(550);
+  });
+
+  test('D3: the bulk Undo carries the edit too', async () => {
+    const cloud = makeCloud(version);
+    const u = `d3b-${version}`;
+    clock += 1000; const id = await food.logFoodEntry(u, entry());
+    clock += 2000; await cycle(cloud, u);
+    clock += 1000;
+    await food.updateFoodEntry(id, u, {
+      entryDate: TODAY, mealSlot: 'meal_1', foodRef: 'custom:abc', quantityG: 150,
+      kcal: 300, proteinG: 22, carbsG: 30, fatG: 8, fibreG: 1,
+    });
+    clock += 1000; await food.deleteFoodEntries(u, [id]);
+    clock += 1000; expect(await food.restoreFoodEntries(u, [id])).toBe(1);
+    clock += 2500; await cycle(cloud, u);
+    expect(cloud.entries.get(id).deleted_at).toBeNull();
+    expect(cloud.entries.get(id).kcal).toBe(300);
+  });
+
   test('P3 (item 3): "Not suggested" survives the device\'s own push and pull', async () => {
     const cloud = makeCloud(version);
     const u = `p3-${version}`;
@@ -301,12 +346,59 @@ test('item 5: a legacy out-of-range row is still skipped, and logged with the ta
   const res = await foodPullFor('food_entries')(sb, { userId: u });
   expect(res.errors).toBe(0);
   expect(raw.prepare('SELECT COUNT(*) AS n FROM food_entries WHERE id = ?').get(bad.id).n).toBe(0);
-  expect(logWarn).toHaveBeenCalledWith('food.pull.rejected', null, { table: 'food_entries', reason: 'figures' });
+  // Re-pinned for food review D7: one log per table per pull, with a count
+  // and a reasons tally.
+  expect(logWarn).toHaveBeenCalledWith('food.pull.rejected', null, { table: 'food_entries', count: 1, reasons: { figures: 1 } });
   // No id, day or figure in what is logged.
   const logged = JSON.stringify(logWarn.mock.calls);
   for (const secret of [bad.id, TODAY, '9000', '250']) expect(logged).not.toContain(secret);
   // The skip stands: the cursor still advances past it (0 such rows exist in production).
   expect(Number(await AsyncStorage.getItem(`@volyume_food_last_pulled_${u}`))).toBe(clock + 50 - 1);
+});
+
+// Food review D7: a pull with many refused rows logged once per row. Now
+// once per table per pull, with the count and the reasons tally only.
+test('D7: refused rows are logged once per table per pull, with a count and reasons, no ids', async () => {
+  const u = 'legacy-many';
+  const t = new Date(clock).toISOString();
+  const base = {
+    entry_date: TODAY, meal_slot: 'meal_1', food_ref: 'custom:x', quantity_g: 100,
+    kcal: 250, protein_g: 10, carbs_g: 20, fat_g: 5, logged_at: t, created_at: t, updated_at: t, deleted_at: null,
+  };
+  const bad = [
+    { ...base, id: 'bbbbbbbb-0000-0000-0000-00000000bad1', quantity_g: 9000 },
+    { ...base, id: 'bbbbbbbb-0000-0000-0000-00000000bad2', quantity_g: 8000 },
+    { ...base, id: 'bbbbbbbb-0000-0000-0000-00000000bad3', quantity_g: 7000 },
+    { ...base, id: 'bbbbbbbb-0000-0000-0000-00000000bad4', created_at: 'not a time', updated_at: 'nope', logged_at: 'never' },
+  ];
+  const badFavs = [{ food_ref: '', last_used_at: t }, { food_ref: null, last_used_at: t }];
+  const sb = {
+    rpc: jest.fn(async () => ({
+      data: {
+        timestamp: new Date(clock + 50).toISOString(),
+        changes: {
+          food_entries: { created: bad.slice(0, 2), updated: bad.slice(2), deleted: [] },
+          food_favourites: { created: [], updated: badFavs, deleted: [] },
+        },
+      },
+      error: null,
+    })),
+  };
+  beginRun();
+  await foodPullFor('food_entries')(sb, { userId: u });
+  const rejected = logWarn.mock.calls.filter((c) => c[0] === 'food.pull.rejected');
+  expect(rejected).toEqual([
+    ['food.pull.rejected', null, { table: 'food_entries', count: 4, reasons: { figures: 3, time: 1 } }],
+    ['food.pull.rejected', null, { table: 'food_favourites', count: 2, reasons: { values: 2 } }],
+  ]);
+  const logged = JSON.stringify(logWarn.mock.calls);
+  for (const b of bad) expect(logged).not.toContain(b.id);
+  // The next pull with nothing refused logs nothing (the tally was cleared).
+  logWarn.mockClear();
+  const empty = { rpc: jest.fn(async () => ({ data: { timestamp: new Date(clock + 100).toISOString(), changes: {} }, error: null })) };
+  beginRun();
+  await foodPullFor('food_entries')(empty, { userId: u });
+  expect(logWarn.mock.calls.filter((c) => c[0] === 'food.pull.rejected')).toEqual([]);
 });
 
 describe('item 11: a failed one-time day repair is tried again at most once a day', () => {
