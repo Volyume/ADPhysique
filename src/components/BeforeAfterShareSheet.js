@@ -453,7 +453,9 @@ export default function BeforeAfterShareSheet({
       if (!MediaLibrary) { toast.show("Saving to your gallery isn't available on your device.", { variant: 'error', duration: 5000 }); return; }
       setSavingToGallery(true);
       try {
-        const perm = await MediaLibrary.requestPermissionsAsync();
+        // Write-only: saving needs permission to add, never to read the
+        // person's gallery.
+        const perm = await MediaLibrary.requestPermissionsAsync(true);
         if (!perm.granted) { toast.show("Gallery access is needed to save. You can still share it.", { variant: 'warning', duration: 5000 }); return; }
         await MediaLibrary.saveToLibraryAsync(uri);
         toast.show('Saved to your gallery', { variant: 'success' });

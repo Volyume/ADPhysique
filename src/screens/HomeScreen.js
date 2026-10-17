@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform,
+  View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform, AppState,
 } from 'react-native';
 import Text from '../components/Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -296,6 +296,23 @@ export default function HomeScreen({ navigation, route }) {
     // Only on user change: re-running on every activeWorkout change is
     // unnecessary (the guard already prevents clobbering a live session).
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  // The keep window also runs when the app comes back to the foreground: a
+  // phone left open for days never restarts the session, so the once-per-
+  // session sweep above would not run again. The sweep's own 6 hour throttle
+  // keeps this cheap; kept and PR videos never go.
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    const uid = user.id;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      // eslint-disable-next-line global-require
+      require('../lib/clips/store').sweepExpiredClips(uid).catch(() => {
+        // Best-effort: the next foreground sweeps again.
+      });
+    });
+    return () => { sub?.remove?.(); };
   }, [user?.id]);
 
   // Cloud-sync version bumps when pullFromCloud finishes; HomeScreen

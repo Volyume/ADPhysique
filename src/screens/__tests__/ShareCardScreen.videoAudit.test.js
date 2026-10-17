@@ -309,7 +309,7 @@ beforeEach(() => {
   mockThumb.mockImplementation((uri) => Promise.resolve(`file:///cache/share-frames/thumb-${uri.split('/').pop()}.jpg`));
   mockFs.readAsStringAsync.mockImplementation((uri) => Promise.resolve(String(uri).includes('share-frames') ? 'JPEG' : 'PHOTO'));
   mockFs.readDirectoryAsync.mockImplementation(() => Promise.resolve([]));
-  mockFs.getInfoAsync.mockImplementation(() => Promise.resolve({ exists: false }));
+  mockFs.getInfoAsync.mockImplementation(() => Promise.resolve({ exists: true }));
   mockListClips.mockResolvedValue([CLIP_SET, CLIP_LONG]);
   mockGetClip.mockImplementation((_u, id) => Promise.resolve([CLIP_SET, CLIP_LONG].find((c) => c.id === id) || null));
   mockSharing.isAvailableAsync.mockResolvedValue(true);

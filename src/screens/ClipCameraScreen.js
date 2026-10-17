@@ -87,7 +87,7 @@
  * later, in case the first arrived before the recorder was running).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet, BackHandler, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, BackHandler, Platform, AppState } from 'react-native';
 import Text from '../components/Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -223,6 +223,11 @@ export default function ClipCameraScreen({ navigation, route }) {
   // ready | starting | countdown | recording | saving
   const [phase, setPhaseState] = useState('ready');
   const [countdownN, setCountdownN] = useState(0);
+  // Camera access refused: the screen stays on a calm card with a Back button
+  // instead of closing at once (U8).
+  const [denied, setDenied] = useState(false);
+  // The camera was stopped by the app closing: said once on return (E3).
+  const interruptedRef = useRef(false);
   const [recording, setRecording] = useState({ startedAtMs: 0, limitMs: MAX_CLIP_MS });
   // 'tap' or 'hold', for the hint while recording.
   const [recordMode, setRecordMode] = useState('tap');
@@ -402,7 +407,7 @@ export default function ClipCameraScreen({ navigation, route }) {
         logError('ClipCamera.permission', e);
       }
       if (!aliveRef.current) return;
-      if (result?.granted) setReady(true); else closeOnce(CLIP_STRINGS.permissionDenied);
+      if (result?.granted) setReady(true); else setDenied(true);
     })();
   }, [permission, requestPermission, workoutId, userId, closeOnce, shareOnly]);
 
@@ -468,6 +473,19 @@ export default function ClipCameraScreen({ navigation, route }) {
     const go = () => {
       if (!aliveRef.current) { dropCacheFile(uri); return; }
       closedRef.current = true;
+      // The share screen that asked may be gone (the stack was changed while
+      // filming): there is nowhere to hand the video to, so it is dropped and
+      // the camera simply closes.
+      let returnToGone = false;
+      try {
+        const routes = typeof navigation.getState === 'function' ? navigation.getState()?.routes : null;
+        returnToGone = !!returnTo && Array.isArray(routes) && !routes.some((r) => r.key === returnTo);
+      } catch (_e) { returnToGone = false; }
+      if (returnToGone) {
+        dropCacheFile(uri);
+        navigation.goBack();
+        return;
+      }
       navigation.navigate(returnTo
         ? { key: returnTo, params, merge: true }
         : { name: 'ShareCard', params, merge: true });
@@ -483,6 +501,9 @@ export default function ClipCameraScreen({ navigation, route }) {
     clearTimers();
     if (discardRef.current || !aliveRef.current) {
       dropCacheFile(uri);
+      // A recording stopped by the app closing leaves the camera ready again
+      // (a close has already left the screen).
+      if (aliveRef.current && !closedRef.current) setPhase('ready');
       return;
     }
     if (!stopFeltRef.current) haptics.selection();
@@ -701,6 +722,39 @@ export default function ClipCameraScreen({ navigation, route }) {
     return true;
   }, [toast]);
 
+  // The app going to the background (the home button, the lock screen, a
+  // call) during the countdown or a recording: the countdown is cleared and
+  // the camera is ready again; a recording is stopped and thrown away. One
+  // calm line says so when the app comes back. The saving step is left alone.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background') {
+        const p = phaseRef.current;
+        if (p === 'countdown' || p === 'starting') {
+          holdActiveRef.current = false;
+          clearTimers();
+          setTorchOn(false);
+          setScreenPulse(false);
+          setCountdownN(0);
+          setPhase('ready');
+          interruptedRef.current = true;
+        } else if (p === 'recording') {
+          holdActiveRef.current = false;
+          clearTimers();
+          discardRef.current = true;
+          try { recordingCameraRef.current?.stopRecording?.(); } catch (e) { logError('ClipCamera.backgroundStop', e); }
+          interruptedRef.current = true;
+        }
+      } else if (state === 'active' && interruptedRef.current) {
+        interruptedRef.current = false;
+        // A recording whose stop never came back is let go of here.
+        if (phaseRef.current === 'recording') setPhase('ready');
+        if (aliveRef.current && !closedRef.current) toast.show(CLIP_STRINGS.stoppedByClosing, { variant: 'info' });
+      }
+    });
+    return () => { sub?.remove?.(); };
+  }, [clearTimers, setPhase, toast]);
+
   // A tap during the countdown cancels it: the timers and the light are
   // cleared, nothing records, and the camera is ready again.
   const cancelCountdown = useCallback(() => {
@@ -842,6 +896,25 @@ export default function ClipCameraScreen({ navigation, route }) {
   const ink = greyed ? CAM.textSecondary : CAM.textPrimary;
   const innerColour = greyed ? CAM.textSecondary : CAM.primaryFill;
   const topOffset = insets.top + spacing.xs;
+
+  // Camera access refused: a calm card with the same words the toast used,
+  // and a Back button. No link to settings, no second prompt.
+  if (denied) {
+    return (
+      <View style={[styles.root, styles.deniedRoot]} testID="clip-camera-denied">
+        <Text style={[styles.deniedText, live.hint]} testID="clip-camera-denied-text">{CLIP_STRINGS.permissionDenied}</Text>
+        <Pressable
+          onPress={() => { closedRef.current = true; navigation.goBack(); }}
+          style={styles.deniedBack}
+          accessibilityRole="button"
+          accessibilityLabel={CLIP_STRINGS.permissionBack}
+          testID="clip-camera-denied-back"
+        >
+          <Text style={[styles.deniedBackText, live.value]} maxFontSizeMultiplier={fontScaleCaps.chrome}>{CLIP_STRINGS.permissionBack}</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -1057,6 +1130,14 @@ const SHADOW = {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: CAM.camera },
+  deniedRoot: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.lg },
+  deniedText: { color: CAM.textPrimary, textAlign: 'center' },
+  deniedBack: {
+    minHeight: touchTarget.minimum, minWidth: touchTarget.minimum, paddingHorizontal: spacing.xl,
+    alignItems: 'center', justifyContent: 'center', borderRadius: radius.md,
+    borderWidth: 1, borderColor: CAM.textPrimary,
+  },
+  deniedBackText: { color: CAM.textPrimary },
   topBar: {
     position: 'absolute',
     left: spacing.xs,

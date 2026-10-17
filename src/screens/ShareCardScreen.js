@@ -56,6 +56,7 @@ import SharePhotoFramer from '../components/SharePhotoFramer';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import {
   drawShareCard, cardHeight, drawSticker, stickerHeight, sessionLiftsThatFit,
 } from '../lib/shareCard/drawShareCard';
@@ -82,8 +83,8 @@ import * as shareVideoEngine from '../lib/shareVideo/engine';
 // strip's thumbnails are plain file URIs for an RN Image.
 import { grabVideoFrame, videoThumbnailUri } from '../lib/shareVideo/videoFrame';
 import { sampleClipTone, videoTier } from '../lib/shareVideo/clipTone';
-import { getClip, listClipsForWorkout, subscribeClips } from '../lib/clips/store';
-import { clipDisplayName, clipMatchesPR, formatClipDuration, CLIP_STRINGS } from '../lib/clips/rules';
+import { getClip, getKeepDays, listClipsForWorkout, subscribeClips } from '../lib/clips/store';
+import { clipDisplayName, clipMatchesPR, formatClipDuration, settingsKeepSub, CLIP_STRINGS } from '../lib/clips/rules';
 import useClipRecorder from '../components/clips/useClipRecorder';
 import useAppStore from '../store/useAppStore';
 
@@ -108,6 +109,12 @@ const BRIGHT_TIER_TONE = videoTier(null);
 // finished with them), never while anything waits on it.
 const SHARE_VIDEO_DIR = 'share-video/';
 const SHARE_VIDEO_KEEP_MS = 60 * 60 * 1000;
+// The exported card PNGs (and the video overlays) are written to the cache's
+// root as volyume-<name>.png; the same hour clears the ones a share left.
+const SHARE_PNG_PATTERN = /^volyume-.*\.png$/i;
+// The screen's own hold on the display while a video is being made. expo-keep-awake
+// tags are a set, so this can never release a hold another screen owns.
+const KEEP_AWAKE_TAG = 'volyume-share-video';
 // A second engine job while one is still finishing (for example, coming
 // back to the screen while the last video is still being stopped).
 const VIDEO_BUSY_LINE = 'A video is still being made. Try again in a moment.';
@@ -182,6 +189,29 @@ function deleteCacheFile(uri) {
   } catch (_e) { /* best effort */ }
 }
 
+// Deletes the made videos a cache holds, except the one a share sheet is
+// still reading, and forgets them. Best effort, never waited on.
+function deleteCachedVideos(cacheRef, keepUri = null) {
+  const made = cacheRef.current || {};
+  const kept = {};
+  for (const sig of Object.keys(made)) {
+    const uri = made[sig];
+    if (keepUri && uri === keepUri) { kept[sig] = uri; continue; }
+    if (uri) deleteCacheFile(uri);
+  }
+  cacheRef.current = kept;
+}
+
+// Whether a made video is still on the phone: the OS may clear the cache
+// while the screen is open. A phone that cannot say is taken as it being there.
+async function madeFileStillThere(uri) {
+  try {
+    if (!FileSystem || typeof FileSystem.getInfoAsync !== 'function') return true;
+    const info = await FileSystem.getInfoAsync(uri);
+    return info ? info.exists !== false : true;
+  } catch (_e) { return true; }
+}
+
 // Releases an SkImage the screen no longer holds; best effort.
 function disposeImage(img) {
   try { img?.dispose?.(); } catch (_e) { /* released either way */ }
@@ -209,21 +239,28 @@ function isSameVideo(a, b) {
 async function sweepOldShareVideos(FS) {
   if (!FS || !FS.cacheDirectory || typeof FS.readDirectoryAsync !== 'function'
     || typeof FS.getInfoAsync !== 'function' || typeof FS.deleteAsync !== 'function') return;
-  const dir = `${FS.cacheDirectory}${SHARE_VIDEO_DIR}`;
-  let names = [];
-  try { names = await FS.readDirectoryAsync(dir); } catch (_e) { return; }
   const now = Date.now();
-  for (const name of Array.isArray(names) ? names : []) {
-    if (typeof name !== 'string' || !/\.mp4$/i.test(name)) continue;
-    const uri = `${dir}${name}`;
-    try {
-      const info = await FS.getInfoAsync(uri);
-      // expo-file-system gives the modification time in seconds.
-      const modifiedMs = Number(info?.modificationTime) * 1000;
-      if (info?.exists && Number.isFinite(modifiedMs) && modifiedMs > 0 && now - modifiedMs > SHARE_VIDEO_KEEP_MS) {
-        await FS.deleteAsync(uri, { idempotent: true });
-      }
-    } catch (_e) { /* this one stays */ }
+  // The engine's videos (their own folder), then the exported card PNGs and
+  // overlays a share left in the cache's root.
+  const targets = [
+    [`${FS.cacheDirectory}${SHARE_VIDEO_DIR}`, /\.mp4$/i],
+    [FS.cacheDirectory, SHARE_PNG_PATTERN],
+  ];
+  for (const [dir, pattern] of targets) {
+    let names = [];
+    try { names = await FS.readDirectoryAsync(dir); } catch (_e) { continue; }
+    for (const name of Array.isArray(names) ? names : []) {
+      if (typeof name !== 'string' || !pattern.test(name)) continue;
+      const uri = `${dir}${name}`;
+      try {
+        const info = await FS.getInfoAsync(uri);
+        // expo-file-system gives the modification time in seconds.
+        const modifiedMs = Number(info?.modificationTime) * 1000;
+        if (info?.exists && Number.isFinite(modifiedMs) && modifiedMs > 0 && now - modifiedMs > SHARE_VIDEO_KEEP_MS) {
+          await FS.deleteAsync(uri, { idempotent: true });
+        }
+      } catch (_e) { /* this one stays */ }
+    }
   }
 }
 
@@ -417,6 +454,7 @@ export default function ShareCardScreen({ navigation, route }) {
   // height, so the card's outline clears them (the renderer holds the shape
   // between 16:9 and 2.3).
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const fullAspect = windowWidth > 0 && windowHeight > 0 ? windowHeight / windowWidth : null;
   const safeTopRatio = windowHeight > 0 ? (insets?.top || 0) / windowHeight : 0;
@@ -495,6 +533,20 @@ export default function ShareCardScreen({ navigation, route }) {
   // The overlay pictures written this session (J), cleared after each job
   // and again on leaving.
   const overlayFilesRef = useRef(new Set());
+  // The exported card PNGs a share left (deleted when the screen goes), and
+  // the file a share or save is reading right now (never deleted under it).
+  const exportFilesRef = useRef(new Set());
+  const inUseUriRef = useRef(null);
+  // The scratch copies of a video chosen for this share alone: the camera's
+  // share-only recording and the picker's copy of a gallery video. Both sit
+  // in the cache; they go when the video goes or the screen does. A stored
+  // workout video (it has an id and lives in the app's own folder) is never
+  // among them.
+  const scratchVideosRef = useRef(new Set());
+  const trackScratchVideo = useCallback((uri) => {
+    const cache = FileSystem && FileSystem.cacheDirectory;
+    if (typeof uri === 'string' && cache && uri.startsWith(cache)) scratchVideosRef.current.add(uri);
+  }, []);
   const userId = useAppStore((st) => st.user?.id ?? null);
   // The latest chosen video and safety state, for the async paths that must
   // read them after an await.
@@ -630,6 +682,23 @@ export default function ShareCardScreen({ navigation, route }) {
         ? { kind: 'session', workoutId }
         : null;
   const isSticker = format === 'sticker';
+  // The largest text sizes: the Background row's four segments stack, icon
+  // over word, as the Format row's always do (U10).
+  const bgStacked = (Number(fontScale) || 1) >= 1.3;
+  // The share's window in milliseconds, as the video is made (1 ms to the
+  // longest share), said in "Using: ..." and in the saved toast.
+  const shareWindowMs = Math.min(MAX_VIDEO_MS, Math.max(1, Math.round(clipEndMs - clipStartMs)));
+  // The Video segment's place is held while the safety check is read (it
+  // starts closed), so the row does not jump when the check lifts. Only a
+  // beat: a person under calm mode or an open ED flag sees the row settle
+  // without it. The check itself is untouched.
+  const [videoSlotSettled, setVideoSlotSettled] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setVideoSlotSettled(true), 900);
+    return () => clearTimeout(id);
+  }, []);
+  // The keep window, for the line under Film now (read when the sheet opens).
+  const [keepDays, setKeepDays] = useState(null);
   // The video in play: none under the Sticker (a transparent panel has no
   // background), which shares and saves the image; the chosen video is kept
   // for when another format is chosen again (finding 8).
@@ -1090,8 +1159,12 @@ export default function ShareCardScreen({ navigation, route }) {
     setClipTone(null);
     toneFramesRef.current.images.forEach(disposeImage);
     toneFramesRef.current = { key: null, images: [] };
-    videoCacheRef.current = {};
-    previewCacheRef.current = {};
+    // The made videos go with it, from the phone as well as from memory
+    // (except one a share or save is reading right now).
+    deleteCachedVideos(videoCacheRef, inUseUriRef.current);
+    deleteCachedVideos(previewCacheRef, inUseUriRef.current);
+    scratchVideosRef.current.forEach((uri) => { if (uri !== inUseUriRef.current) deleteCacheFile(uri); });
+    scratchVideosRef.current.clear();
   }, []);
 
   const clearPhoto = useCallback(() => {
@@ -1295,6 +1368,17 @@ export default function ShareCardScreen({ navigation, route }) {
     clearPhoto();
   }, [suppress, clearPhoto]);
 
+  // The keep window, read when the video sheet opens, for the quiet line
+  // under Film now. A failed read says nothing (the line stays hidden).
+  useEffect(() => {
+    if (!videoSheetOpen || !workoutId) return undefined;
+    let cancelled = false;
+    Promise.resolve().then(() => getKeepDays()).then((n) => { if (!cancelled) setKeepDays(n); }).catch(() => {
+      // Best-effort: the line stays hidden.
+    });
+    return () => { cancelled = true; };
+  }, [videoSheetOpen, workoutId]);
+
   // Film now: the one recording flow (the primer first, the camera, the
   // videos sheet at three), coming back here with the video chosen.
   const clipFlow = useClipRecorder({ navigation, userId, workoutId });
@@ -1312,21 +1396,32 @@ export default function ShareCardScreen({ navigation, route }) {
       toast.show("Video backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
+    // A denied library permission no longer ends it: the system picker
+    // needs no broad permission on newer phones, so it is tried anyway, and
+    // the permission line is said only if the picker itself cannot open.
+    let denied = false;
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      try {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        denied = !perm?.granted;
+      } catch (_e) { /* the picker below says if it cannot open */ }
       if (!mountedRef.current) return;
-      if (!perm.granted) { toast.show('Photo access is needed to choose a video.', { variant: 'warning' }); return; }
       const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'] });
       if (!mountedRef.current || res.canceled || !res.assets?.[0]?.uri) return;
+      denied = false;
       const asset = res.assets[0];
+      trackScratchVideo(asset.uri);
       // The picker's own length stands until acceptClip's probe reads the
       // real one (with the upright size) alongside the first frame.
       await acceptClip({ id: null, uri: asset.uri, durationMs: Number(asset.duration) || 0, source: 'gallery' });
     } catch (e) {
       logError('ShareCardScreen.pickVideo', e);
-      if (mountedRef.current) toast.show('That video could not be opened. Try another.', { variant: 'error' });
+      if (mountedRef.current) {
+        if (denied) toast.show('Photo access is needed to choose a video.', { variant: 'warning' });
+        else toast.show('That video could not be opened. Try another.', { variant: 'error' });
+      }
     }
-  }, [toast, acceptClip]);
+  }, [toast, acceptClip, trackScratchVideo]);
 
   // Film now with no workout to keep a video with (a PR from a lift's
   // history, a milestone, the weekly recap). Founder: "recording one in the
@@ -1352,8 +1447,13 @@ export default function ShareCardScreen({ navigation, route }) {
     const uri = routeSharedVideo?.uri;
     if (!uri || handledSharedUriRef.current === uri) return;
     handledSharedUriRef.current = uri;
+    trackScratchVideo(uri);
     navigation.setParams?.({ sharedVideo: undefined });
-    if (suppressRef.current) return; // the safety gate: never shown
+    if (suppressRef.current) { // the safety gate: never shown
+      deleteCacheFile(uri);
+      scratchVideosRef.current.delete(uri);
+      return;
+    }
     acceptClip({ id: null, uri, durationMs: Number(routeSharedVideo.durationMs) || 0, source: 'camera' })
       .catch((e) => { logError('ShareCardScreen.sharedVideo', e); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1443,12 +1543,18 @@ export default function ShareCardScreen({ navigation, route }) {
       toast.show("Photo backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
+    // As the video picker: a denied permission still tries the system picker,
+    // and the permission line is said only if the picker cannot open.
+    let denied = false;
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      try {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        denied = !perm?.granted;
+      } catch (_e) { /* the picker below says if it cannot open */ }
       if (!mountedRef.current) return;
-      if (!perm.granted) { toast.show('Photo access is needed to choose a background', { variant: 'warning' }); return; }
       const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
       if (!mountedRef.current || res.canceled || !res.assets?.[0]?.uri) return;
+      denied = false;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       if (!mountedRef.current) return;
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
@@ -1458,7 +1564,10 @@ export default function ShareCardScreen({ navigation, route }) {
       if (img) acceptPhoto(img);
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
-      if (mountedRef.current) toast.show("Couldn't open your photos, try again", { variant: 'error' });
+      if (mountedRef.current) {
+        if (denied) toast.show('Photo access is needed to choose a background', { variant: 'warning' });
+        else toast.show("Couldn't open your photos, try again", { variant: 'error' });
+      }
     }
   }, [toast, acceptPhoto, dropVideo]);
 
@@ -1751,7 +1860,18 @@ export default function ShareCardScreen({ navigation, route }) {
       return null;
     }
     const job = videoJobAt(1080);
-    if (videoCacheRef.current[job.signature]) return videoCacheRef.current[job.signature];
+    const madeBefore = videoCacheRef.current[job.signature];
+    if (madeBefore) {
+      // The phone may have cleared the cache since: a file that is gone is
+      // forgotten and the video is made again.
+      if (await madeFileStillThere(madeBefore)) return madeBefore;
+      if (!mountedRef.current) return null;
+      delete videoCacheRef.current[job.signature];
+      if (makingPreviewRef.current || makingVideoRef.current) {
+        toast.show(VIDEO_BUSY_LINE, { variant: 'info', duration: 5000 });
+        return null;
+      }
+    }
     const jobClip = clipRef.current;
     setMakingVideo(true);
     makingVideoRef.current = true;
@@ -1813,7 +1933,20 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     const job = videoJobAt(PREVIEW_VIDEO_W);
     const cached = previewCacheRef.current[job.signature];
-    if (cached) { setPreviewVideo({ uri: cached, signature: job.signature }); return; }
+    if (cached) {
+      // As the share's: a preview file the phone has cleared is forgotten
+      // and made again.
+      if (await madeFileStillThere(cached)) {
+        if (mountedRef.current) setPreviewVideo({ uri: cached, signature: job.signature });
+        return;
+      }
+      if (!mountedRef.current) return;
+      delete previewCacheRef.current[job.signature];
+      if (makingVideoRef.current || makingPreviewRef.current) {
+        toast.show(VIDEO_BUSY_LINE, { variant: 'info', duration: 5000 });
+        return;
+      }
+    }
     const jobClip = clipRef.current;
     setMakingPreview(true);
     makingPreviewRef.current = true;
@@ -1840,6 +1973,19 @@ export default function ShareCardScreen({ navigation, route }) {
   }, [liveClip, typefaces, suppress, toneReady, toast, videoJobAt, runVideoJob, engineFailed]);
 
   const pausePreview = useCallback(() => { setPreviewVideo(null); }, []);
+
+  // The preview player could not play its file: back to the still, the file
+  // forgotten (and deleted) so Play makes it again, and one calm line.
+  const previewPlayFailed = useCallback((e) => {
+    logError('ShareCardScreen.previewPlay', new Error(String(e)));
+    const failed = previewVideo;
+    setPreviewVideo(null);
+    if (failed?.signature != null && previewCacheRef.current[failed.signature]) {
+      deleteCacheFile(previewCacheRef.current[failed.signature]);
+      delete previewCacheRef.current[failed.signature];
+    }
+    if (mountedRef.current) toast.show('The preview could not be played. Try again.', { variant: 'error' });
+  }, [previewVideo, toast]);
 
   // A tap that waited for the tone (audit item 1) runs by itself once the
   // tone for this window is read; with the video gone, or the safety gate
@@ -1882,6 +2028,11 @@ export default function ShareCardScreen({ navigation, route }) {
     sweepOldShareVideos(FileSystem).catch(() => { /* best effort */ });
     const overlays = overlayFilesRef.current;
     const toneFrames = toneFramesRef;
+    const exportedFiles = exportFilesRef.current;
+    const videoCache = videoCacheRef;
+    const previewCache = previewCacheRef;
+    const inUse = inUseUriRef;
+    const scratchVideos = scratchVideosRef.current;
     return () => {
       mountedRef.current = false;
       frameReqRef.current += 1;
@@ -1895,8 +2046,32 @@ export default function ShareCardScreen({ navigation, route }) {
       } catch (_e) { /* best effort */ }
       overlays.forEach(deleteCacheFile);
       overlays.clear();
+      // Everything this session made goes from the phone with it: the made
+      // videos and previews, and the card pictures a share left. A file a
+      // share sheet is reading right now is left (the hour sweep takes it).
+      deleteCachedVideos(videoCache, inUse.current);
+      deleteCachedVideos(previewCache, inUse.current);
+      exportedFiles.forEach((uri) => { if (uri !== inUse.current) deleteCacheFile(uri); });
+      exportedFiles.clear();
+      scratchVideos.forEach((uri) => { if (uri !== inUse.current) deleteCacheFile(uri); });
+      scratchVideos.clear();
     };
   }, []);
+
+  // The phone stays awake while a video is being made or previewed, so it
+  // does not sleep (and stop the engine) with the person watching the bar.
+  const keepingAwake = makingVideo || makingPreview;
+  useEffect(() => {
+    if (!keepingAwake) return undefined;
+    activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {
+      // Best-effort: the screen may sleep on a phone that refuses the hold.
+    });
+    return () => {
+      Promise.resolve(deactivateKeepAwake(KEEP_AWAKE_TAG)).catch(() => {
+        // Best-effort release.
+      });
+    };
+  }, [keepingAwake]);
 
   const cancelVideo = useCallback(() => {
     cancelEngineJob();
@@ -1920,9 +2095,12 @@ export default function ShareCardScreen({ navigation, route }) {
     // A video is made with the tone for its window; the tap waits for it
     // and saves by itself (audit item 1).
     if (video && !toneReady) { setWaitingFor('save'); return; }
+    // The length said in the toast, read now (the window can move meanwhile).
+    const savedSeconds = Math.round(shareWindowMs / 1000);
     setSavingToGallery(true);
     try {
-      const perm = await MediaLibrary.requestPermissionsAsync();
+      // Write-only (add to the gallery, never read it).
+      const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!mountedRef.current) return;
       if (!perm.granted) {
         toast.show(video ? 'Gallery access is needed to save the video. You can still use Share.' : 'Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
@@ -1933,18 +2111,28 @@ export default function ShareCardScreen({ navigation, route }) {
         // The engine's own line, or a cancel, has already spoken; nothing
         // is saved once the screen has gone or the safety gate has closed.
         if (!videoUri || !mountedRef.current || suppressRef.current) return;
+        inUseUriRef.current = videoUri;
         await MediaLibrary.saveToLibraryAsync(videoUri);
-        if (mountedRef.current) toast.show('Saved to your gallery.', { variant: 'success' });
+        if (mountedRef.current) {
+          toast.show(savedSeconds > 0 ? `Saved to your gallery. ${savedSeconds} second video.` : 'Saved to your gallery.', { variant: 'success' });
+        }
         return;
       }
       const uri = await renderCardToFile();
       if (!mountedRef.current) return;
       if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
-      await MediaLibrary.saveToLibraryAsync(uri);
+      try {
+        await MediaLibrary.saveToLibraryAsync(uri);
+      } finally {
+        // The gallery holds its own copy now; the card picture is not kept.
+        deleteCacheFile(uri);
+      }
       if (mountedRef.current) toast.show('Saved to your gallery.', { variant: 'success' });
-    } catch (_e) {
+    } catch (e) {
+      logError('ShareCardScreen.save', e, { video });
       if (mountedRef.current) toast.show(video ? 'The video could not be saved. Try again.' : 'The image could not be saved. Try again.', { variant: 'error' });
     } finally {
+      inUseUriRef.current = null;
       if (mountedRef.current) setSavingToGallery(false);
     }
   }
@@ -1990,6 +2178,9 @@ export default function ShareCardScreen({ navigation, route }) {
         // No share sheet once the screen has gone or the safety gate has
         // closed (finding 11).
         if (!videoUri || !mountedRef.current || suppressRef.current) return;
+        // The target app may still be reading the file when the sheet
+        // returns, so the video is deleted when the screen goes, not here.
+        inUseUriRef.current = videoUri;
         await Sharing.shareAsync(videoUri, {
           mimeType: 'video/mp4', UTI: 'public.mpeg-4', dialogTitle: 'Share video',
         });
@@ -1998,6 +2189,10 @@ export default function ShareCardScreen({ navigation, route }) {
       const uri = await renderCardToFile();
       if (!mountedRef.current) return;
       if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      // The card picture is deleted when the screen goes (a target app may
+      // still be reading it when the sheet returns), or by the hour sweep.
+      exportFilesRef.current.add(uri);
+      inUseUriRef.current = uri;
       if (isIos) {
         await Share.share({ url: uri, message: 'volyume.app' });
         return;
@@ -2008,9 +2203,11 @@ export default function ShareCardScreen({ navigation, route }) {
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share to Stories',
       });
-    } catch (_e) {
+    } catch (e) {
+      logError('ShareCardScreen.share', e, { video });
       if (mountedRef.current) toast.show('The share sheet could not be opened. Try again.', { variant: 'error' });
     } finally {
+      inUseUriRef.current = null;
       if (mountedRef.current) setSharingToStories(false);
     }
   }
@@ -2047,6 +2244,7 @@ export default function ShareCardScreen({ navigation, route }) {
       const uri = await renderCardToFile();
       if (!mountedRef.current) return;
       if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      exportFilesRef.current.add(uri);
       await engine.setLockScreenWallpaper(uri);
       if (mountedRef.current) toast.show('Set as your lock screen wallpaper', { variant: 'success' });
     } catch (e) {
@@ -2210,6 +2408,11 @@ export default function ShareCardScreen({ navigation, route }) {
             covers the card's footer in any format; while a preview is made,
             the making row and its Cancel take its place. Then the preview's
             hint. Both scroll away with the page under the small header. */}
+        {makingVideo ? (
+          <Text style={[styles.photoHint, live.photoHint]} testID="share-making-video-top" accessibilityLiveRegion="polite">
+            Making your video… Keep Volyume open.
+          </Text>
+        ) : null}
         {(showPlay || showPhotoHint) ? (
           <View
             style={styles.previewControls}
@@ -2370,6 +2573,11 @@ export default function ShareCardScreen({ navigation, route }) {
               A small transparent panel to place on your own story photo.
             </Text>
           ) : null}
+          {isSticker && clip ? (
+            <Text style={[styles.formatHint, live.formatHint]} testID="share-sticker-video-hint">
+              Your video is not used on a sticker. Switch format to bring it back.
+            </Text>
+          ) : null}
         </View>
 
         {/* Theme (founder, 2026-09-27: "different share themes (light and
@@ -2418,6 +2626,7 @@ export default function ShareCardScreen({ navigation, route }) {
               active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY}
               onPress={pickGymPhoto}
               icon={<Ionicons name="images-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY ? t.colors.primary : t.colors.textMuted} />}
+              stacked={bgStacked}
             />
             <SegmentBtn
               disabled={locked}
@@ -2426,7 +2635,11 @@ export default function ShareCardScreen({ navigation, route }) {
               active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO}
               onPress={takeGymPhoto}
               icon={<Ionicons name="camera-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO ? t.colors.primary : t.colors.textMuted} />}
+              stacked={bgStacked}
             />
+            {suppress && !videoSlotSettled ? (
+              <View style={styles.segmentHeld} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden pointerEvents="none" testID="share-video-slot-held" />
+            ) : null}
             {!suppress ? (
               <SegmentBtn
                 disabled={locked}
@@ -2435,6 +2648,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 active={!!clip}
                 onPress={() => setVideoSheetOpen(true)}
                 icon={<Ionicons name="videocam-outline" size={15} color={clip ? t.colors.primary : t.colors.textMuted} />}
+                stacked={bgStacked}
               />
             ) : null}
             <SegmentBtn
@@ -2444,8 +2658,14 @@ export default function ShareCardScreen({ navigation, route }) {
               active={!bgPhoto}
               onPress={clearPhoto}
               icon={<Ionicons name="close-circle-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
+              stacked={bgStacked}
             />
           </View>
+          {liveClip && !suppress ? (
+            <Text style={[styles.formatHint, live.formatHint]} testID="share-using-video">
+              {`Using: ${(typeof liveClip.exerciseName === 'string' && liveClip.exerciseName.trim()) || 'your video'}, ${secondsWords(shareWindowMs)}`}
+            </Text>
+          ) : null}
           {/* Addendum 17 (founder: "There should still be the ability to see
               the videos created in session ... visible in the share screen"):
               this workout's videos sit on the screen itself, one tap each,
@@ -2557,6 +2777,11 @@ export default function ShareCardScreen({ navigation, route }) {
                 alone (filmShareOnly). */}
             <Button title="Film now" variant="secondary" icon="videocam-outline" onPress={workoutId ? filmNow : filmShareOnly} disabled={locked} />
           </View>
+          {workoutId && keepDays != null ? (
+            <Text style={[styles.formatHint, live.formatHint, styles.keepLine]} testID="share-film-keep-line">
+              {settingsKeepSub(keepDays)}
+            </Text>
+          ) : null}
         </BottomSheet>
 
                 {/* Look (founder, 2026-09-27: "a tint or filter to the images
@@ -2882,7 +3107,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 isLooping
                 isMuted
                 useNativeControls={false}
-                onError={(e) => { logError('ShareCardScreen.previewPlay', new Error(String(e))); }}
+                onError={previewPlayFailed}
               />
             </TouchableOpacity>
           ) : livePhoto ? (
@@ -3271,6 +3496,10 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
+  // The Video segment's held place while the safety check is read.
+  segmentHeld: { flex: 1 },
+  // The quiet keep-window line under Film now.
+  keepLine: { marginTop: spacing.sm, textAlign: 'center' },
   // The Format row's five: the icon over the word, centred.
   segmentStacked: { flexDirection: 'column', gap: spacing.xxs, paddingHorizontal: spacing.xxs },
   segmentActive: { backgroundColor: colors.surface3 },

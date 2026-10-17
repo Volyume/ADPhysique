@@ -264,15 +264,15 @@ describe('the handles\' touch targets (render audit, ruling 2)', () => {
   const flat = (style) => Object.assign({}, ...[].concat(style).flat(Infinity).filter(Boolean));
   const handle = (tree, label) => tree.root.findAll((n) => typeof n.type !== 'string' && n.props.accessibilityLabel === label)[0];
 
-  test('24 dp drawn, 10 dp slop on both sides: at least 44 dp wide and the strip\'s 56 dp tall', () => {
+  test('24 dp drawn, 12 dp slop on both sides: at least 48 dp wide and the strip\'s 56 dp tall', () => {
     expect(HANDLE_WIDTH).toBe(24);
-    expect(HANDLE_SLOP).toBe(10);
+    expect(HANDLE_SLOP).toBe(12);
     const tree = mount({});
     for (const label of ['Start handle', 'End handle']) {
       const h = handle(tree, label);
       expect(flat(h.props.style)).toMatchObject({ width: 24, height: STRIP_HEIGHT });
-      expect(h.props.hitSlop).toMatchObject({ left: 10, right: 10 });
-      expect(h.props.hitSlop.left + flat(h.props.style).width + h.props.hitSlop.right).toBeGreaterThanOrEqual(44);
+      expect(h.props.hitSlop).toMatchObject({ left: 12, right: 12 });
+      expect(h.props.hitSlop.left + flat(h.props.style).width + h.props.hitSlop.right).toBeGreaterThanOrEqual(48);
       expect(STRIP_HEIGHT).toBe(56);
     }
   });
@@ -284,7 +284,7 @@ describe('the handles\' touch targets (render audit, ruling 2)', () => {
     const detectors = tree.root.findAll((n) => n.type === 'GestureDetector');
     const [win, start, end] = detectors.map((d) => d.props.gesture);
     for (const g of [start, end]) {
-      expect(g.calls).toContainEqual(['hitSlop', expect.objectContaining({ left: 10, right: 10 })]);
+      expect(g.calls).toContainEqual(['hitSlop', expect.objectContaining({ left: 12, right: 12 })]);
     }
     expect(win.calls.some((c) => c[0] === 'hitSlop')).toBe(false);
     const wait = win.calls.find((c) => c[0] === 'requireExternalGestureToFail');
