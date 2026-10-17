@@ -219,13 +219,19 @@ describe('what crosses to native', () => {
     expect(sent.rect).toEqual(OPTIONS.rect);
   });
 
-  test('no look sends a null matrix', async () => {
+  // Sentry VOLYUME-3N: Expo's iOS bridge stores a JS null inside the options
+  // object as a boxed nil (expo-modules-core AnyDynamicType.swift,
+  // `getRaw() as Any`), which ExportSpec.parse did not read as NSNull and so
+  // refused as a malformed matrix (E_INVALID). No look must leave the key out.
+  test.each([['null', null], ['undefined', undefined]])('no look (%s) leaves the matrix key out entirely', async (_label, value) => {
     const native = makeNative();
     mockState.native = native;
     const engine = loadEngine();
     native.exportShareVideo.mockResolvedValue(RESULT);
-    await engine.exportShareVideo({ ...OPTIONS, matrix: null });
-    expect(native.exportShareVideo.mock.calls[0][0].matrix).toBeNull();
+    await engine.exportShareVideo({ ...OPTIONS, matrix: value });
+    const sent = native.exportShareVideo.mock.calls[0][0];
+    expect(Object.prototype.hasOwnProperty.call(sent, 'matrix')).toBe(false);
+    expect(Object.values(sent).some((v) => v === null || v === undefined)).toBe(false);
   });
 
   test.each([
@@ -314,5 +320,46 @@ describe('cancel, probe and wallpaper', () => {
     await expect(engine.setLockScreenWallpaper('file:///cache/card.png')).rejects.toMatchObject({ code: 'E_UNSUPPORTED' });
     native.setLockScreenWallpaper.mockRejectedValueOnce(nativeError('ERR_ODD'));
     await expect(engine.setLockScreenWallpaper('file:///cache/card.png')).rejects.toMatchObject({ code: 'E_WALLPAPER' });
+  });
+});
+
+describe('what a log may say about a failure (Sentry VOLYUME-3N)', () => {
+  test('the native message rides on the error, with paths reduced to folder kind and extension', async () => {
+    const native = makeNative();
+    mockState.native = native;
+    const engine = loadEngine();
+    const e = new Error('Cannot open file:///var/mobile/Containers/Data/Application/ABC/Documents/clips/x1y2.mov now');
+    e.code = 'E_INVALID';
+    native.exportShareVideo.mockRejectedValue(e);
+    let caught = null;
+    try { await engine.exportShareVideo(OPTIONS); } catch (err) { caught = err; }
+    const ctx = engine.errorContext(caught);
+    expect(ctx.code).toBe('E_INVALID');
+    expect(ctx.detail).toBe('E_INVALID: Cannot open documents/*.mov now');
+    expect(ctx.detail).not.toMatch(/var|mobile|Application|x1y2/);
+  });
+
+  test('a JS validation failure names the field', async () => {
+    const native = makeNative();
+    mockState.native = native;
+    const engine = loadEngine();
+    let caught = null;
+    try { await engine.exportShareVideo({ ...OPTIONS, outWidth: 1081 }); } catch (err) { caught = err; }
+    expect(engine.errorContext(caught)).toEqual({ code: 'E_INVALID', detail: 'invalid outWidth' });
+  });
+
+  test.each([
+    ['/private/var/mobile/Containers/Data/Application/A/Library/Caches/volyume-overlay-540-1.png', 'caches/*.png'],
+    ['file:///var/mobile/Containers/Data/Application/A/tmp/clip', 'tmp/*'],
+    ['content://media/external/video/media/12', 'other/*'],
+  ])('scrubDetail(%s)', (input, out) => {
+    const engine = loadEngine();
+    expect(engine.scrubDetail(`at ${input}.`)).toBe(`at ${out}.`);
+  });
+
+  test('nothing to say is null, and a non-error is safe', () => {
+    const engine = loadEngine();
+    expect(engine.errorContext(null)).toEqual({ code: null, detail: null });
+    expect(engine.scrubDetail(null)).toBeNull();
   });
 });
