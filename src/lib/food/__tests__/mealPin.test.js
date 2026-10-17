@@ -55,6 +55,8 @@ jest.mock('../db', () => ({
   getFavourites: jest.fn(async () => []),
   getDislikes: jest.fn(async () => []),
   getFoodFrequents: jest.fn(async () => []),
+  // Re-pinned 2026-10-16: the Often tab now merges the device's own counts.
+  getLocalFoodFrequents: jest.fn(() => Promise.resolve([])),
 }));
 jest.mock('../../database', () => ({ getNutritionTargets: jest.fn(async () => null) }));
 jest.mock('../../engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve()) }));

@@ -49,6 +49,7 @@ let mockAddPortionButton = null;
 let mockRemoveButtons = {};
 jest.mock('../../components/Button', () => (props) => {
   if (props.accessibilityLabel === 'Save food and add to diary'
+    || props.accessibilityLabel === 'Save food and add to recipe'
     || props.accessibilityLabel === 'Add the saved food to the diary'
     || props.accessibilityLabel === 'Save changes to food') mockSaveButton = props;
   if (props.title === 'Save the food') mockSaveOnlyButton = props;
@@ -70,7 +71,13 @@ jest.mock('../../lib/food/writeback', () => ({
   getConsent: jest.fn(() => Promise.resolve(false)),
   markScanChainCompleted: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('../../lib/food/sources/localCache', () => ({ findLocalByBarcode: jest.fn(() => Promise.resolve(null)) }));
+jest.mock('../../lib/food/sources/localCache', () => ({
+  findLocalByBarcode: jest.fn(() => Promise.resolve(null)),
+  resolveFoodRef: jest.fn((userId, ref) => Promise.resolve({
+    food_ref: ref, source: 'custom', name: 'Home granola', brand: null, serving_g: 100, serving_label: null,
+    kcal_100g: 400, protein_100g: 10, carbs_100g: 60, fat_100g: 12, fibre_100g: null,
+  })),
+}));
 
 import useAppStore from '../../store/useAppStore';
 import { insertCustomFood, updateCustomFood, getCustomFoodById, logFoodEntries as logFoodEntry } from '../../lib/food/db';
@@ -1068,6 +1075,94 @@ describe('food audit 2026-10-16: comma decimals, sugars and salt, carried foods'
     expect(logFoodEntry).toHaveBeenCalledTimes(1);
     expect(logFoodEntry.mock.calls[0][1].map((e) => e.foodRef)).toEqual(['off:egg', 'custom:custom-1']);
     expect(mockToastShow).toHaveBeenCalledWith('2 foods added to Snacks.', expect.objectContaining({ variant: 'undo' }));
+    expect(nav.navigate).toHaveBeenCalledWith('Diary');
+  });
+});
+
+
+// Food audit follow-up 2026-10-16, item 3: in recipe pick mode (FoodSearch
+// opened by the recipe builder) the primary button saves the food and hands it
+// BACK to the recipe as an ingredient, the same navigate() call and
+// `addedIngredient` shape FoodSearchScreen.confirmLog uses for a picked search
+// result. It must write nothing to the diary. Written to fail on the old
+// screen, whose only primary action was "Save and add to diary" (logFoodEntries).
+describe('AddCustomFoodScreen in recipe pick mode', () => {
+  const { resolveFoodRef } = require('../../lib/food/sources/localCache');
+  const PICK = { params: { mealSlot: 'snack', entryDate: '2026-10-16', pickMode: 'recipe', returnTo: 'RecipeBuilder' } };
+
+  async function mount(route) {
+    const nav = makeNav();
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={nav} route={route} />); });
+    await flush();
+    return { nav, tree };
+  }
+
+  test('the primary button reads "Save and add to recipe"; the diary wording is gone', async () => {
+    await mount(PICK);
+    expect(mockSaveButton.title).toBe('Save and add to recipe');
+    expect(mockSaveButton.accessibilityLabel).toBe('Save food and add to recipe');
+    expect(mockSaveOnlyButton.accessibilityLabel).toBe('Save the food without adding it to the recipe');
+  });
+
+  test('saves the food, hands it back as addedIngredient, and writes no diary entry', async () => {
+    const { nav, tree } = await mount(PICK);
+    setInput(tree, 'Name', 'Home granola');
+    setInput(tree, 'In the recipe (g), grams', '40');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+
+    expect(insertCustomFood).toHaveBeenCalledTimes(1);
+    expect(logFoodEntry).not.toHaveBeenCalled();
+    expect(resolveFoodRef).toHaveBeenCalledWith('u1', 'custom:custom-1');
+    expect(nav.navigate).toHaveBeenCalledTimes(1);
+    expect(nav.navigate).toHaveBeenCalledWith('RecipeBuilder', {
+      addedIngredient: expect.objectContaining({
+        food_ref: 'custom:custom-1',
+        name: 'Home granola',
+        quantity_g: 40,
+        food: expect.objectContaining({ food_ref: 'custom:custom-1', kcal_100g: 400 }),
+      }),
+    });
+    expect(nav.navigate).not.toHaveBeenCalledWith('Diary');
+    expect(mockToastShow).toHaveBeenCalledWith('Home granola added to the recipe.');
+  });
+
+  test('returns to whichever screen asked (returnTo), and still checks the amount', async () => {
+    const { nav, tree } = await mount({ params: { ...PICK.params, returnTo: 'OtherBuilder' } });
+    setInput(tree, 'Name', 'Home granola');
+    setInput(tree, 'In the recipe (g), grams', '0');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).not.toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalledWith(WARNING, expect.anything());
+
+    setInput(tree, 'In the recipe (g), grams', '25');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(nav.navigate).toHaveBeenCalledWith('OtherBuilder', expect.objectContaining({ addedIngredient: expect.anything() }));
+  });
+
+  test('a failed read-back still hands the saved food over, from the form figures', async () => {
+    resolveFoodRef.mockRejectedValueOnce(new Error('db busy'));
+    const { nav, tree } = await mount(PICK);
+    setInput(tree, 'Name', 'Home granola');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(nav.navigate).toHaveBeenCalledWith('RecipeBuilder', {
+      addedIngredient: expect.objectContaining({ food_ref: 'custom:custom-1', name: 'Home granola' }),
+    });
+  });
+
+  test('outside recipe pick mode nothing changes: diary wording, diary write, no hand-back', async () => {
+    const { nav, tree } = await mount({ params: { mealSlot: 'snack', entryDate: '2026-10-16' } });
+    expect(mockSaveButton.title).toBe('Save and add to diary');
+    setInput(tree, 'Name', 'Home granola');
+    setInput(tree, 'Eaten (g), grams', '40');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(logFoodEntry).toHaveBeenCalledTimes(1);
+    expect(resolveFoodRef).not.toHaveBeenCalled();
     expect(nav.navigate).toHaveBeenCalledWith('Diary');
   });
 });

@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, iconSize, fontFamily, type } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 import useTheme from '../../hooks/useTheme';
-import { toEnergy, energyUnitLabel, formatEnergy } from '../../lib/format';
+import { energyUnitLabel, formatEnergy, spokenEnergy } from '../../lib/format';
 import { resolveServingG, scaleMacros } from '../../lib/food/macros';
 import useAppStore from '../../store/useAppStore';
 
@@ -131,13 +131,15 @@ export default function FoodRow({
   // Energy DISPLAY unit (kcal | kj) is applied here, at the render sites
   // only; the maths stays in kcal.
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
-  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'kilocalories';
   const portion = rowPortion(food);
   const macros = scaleMacros(food, portion.grams);
   const kcal = Math.round(macros.kcal ?? 0);
   const p = Math.round(macros.proteinG ?? 0);
   const c = Math.round(macros.carbsG ?? 0);
   const f = Math.round(macros.fatG ?? 0);
+  // Food audit follow-up 2026-10-16: the row SPEAKS "calories" ("kilojoules" in
+  // kJ), the word EntryRow uses, never "kcal" or "kilocalories"; the visible
+  // text keeps the unit label.
   const energyText = `${formatEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}`;
   const metaLine = [food.brand || null, portion.text, energyText, sourceTag].filter(Boolean).join(' · ');
   const spokenMacros = `${p} ${p === 1 ? 'gram' : 'grams'} of protein, ${c} carbs, ${f} fat`;
@@ -156,7 +158,7 @@ export default function FoodRow({
       onPress={onPress}
       onLongPress={onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={`${food.name}${a11yBrand}, ${portion.spoken}, ${toEnergy(kcal, energyUnit)} ${energyWord}, ${spokenMacros}.${a11yPref}`}
+      accessibilityLabel={`${food.name}${a11yBrand}, ${portion.spoken}, ${spokenEnergy(kcal, energyUnit)}, ${spokenMacros}.${a11yPref}`}
       accessibilityHint={onLongPress ? (longPressHint ?? 'Long-press to cycle favourite, exclude, neutral') : undefined}
     >
       <View style={styles.rowMain}>

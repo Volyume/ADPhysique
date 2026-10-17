@@ -576,7 +576,9 @@ describe('FoodRow three-line grammar (D230 R6)', () => {
       && n.props.accessibilityLabel.startsWith('Wholemeal bread'))[0];
     expect(row.props.accessibilityLabel).toBe(
       // Re-pinned 2026-10-16: spoken energy says kilocalories and protein reads "N grams of protein".
-      'Wholemeal bread, Hovis, 1 slice, 36 grams, 89 kilocalories, 3 grams of protein, 17 carbs, 1 fat.',
+      // Re-pinned 2026-10-16 (food audit follow-up): it now says "calories", the word EntryRow
+      // speaks; "kilocalories" and "kcal" were never what a person says aloud.
+      'Wholemeal bread, Hovis, 1 slice, 36 grams, 89 calories, 3 grams of protein, 17 carbs, 1 fat.',
     );
     expect(row.props.accessibilityLabel).not.toMatch(/\b\d+ ?[PCF]\b/);
   });

@@ -65,6 +65,18 @@ export function energyUnitLabel(unit = 'kcal') {
   return unit === 'kj' ? 'kJ' : 'kcal';
 }
 
+// The energy as a screen reader should SAY it: "265 calories", "1 calorie",
+// "1,109 kilojoules" - never the letters "kcal" or "kJ" (food audit follow-up
+// 2026-10-16; the same wording EntryRow's row label has always used). For
+// accessibilityLabel strings only; the visible text keeps energyUnitLabel.
+export function spokenEnergy(kcal, unit = 'kcal') {
+  const value = toEnergy(kcal, unit);
+  const word = unit === 'kj'
+    ? (value === 1 ? 'kilojoule' : 'kilojoules')
+    : (value === 1 ? 'calorie' : 'calories');
+  return `${formatEnergy(kcal, unit)} ${word}`;
+}
+
 // The INVERSE of toEnergy: a number the user TYPED in their chosen unit, back
 // to the kcal every stored value and the whole engine works in.
 //

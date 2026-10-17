@@ -36,6 +36,8 @@ jest.mock('../../lib/food/db', () => ({
   updateRecipe: jest.fn(() => Promise.resolve()),
   getRecipeWithIngredients: jest.fn(() => Promise.resolve(null)),
   setRecipeIngredients: jest.fn(() => Promise.resolve()),
+  recipeBasisG: jest.fn(() => Promise.resolve(0)),
+  rescaleRecipeRecents: jest.fn(() => Promise.resolve(0)),
   computeRecipeMacros: jest.fn(() => ({
     total: { kcal: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 },
     perServing: { kcal: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 },
@@ -266,5 +268,71 @@ describe('RecipeBuilderScreen sentences, logged causes and the 48 dp remove icon
     const slop = remove.props.hitSlop;
     expect(glyph.props.size + slop.top + slop.bottom).toBeGreaterThanOrEqual(48);
     expect(glyph.props.size + slop.left + slop.right).toBeGreaterThanOrEqual(48);
+  });
+});
+
+// Food review D8: the remembered portion of a recipe is rescaled on the basis
+// read BEFORE the save and the basis AFTER both the recipe and its
+// ingredients are saved. updateRecipe used to rescale on its own, before the
+// new ingredients were written, so an edit that changed both used the wrong
+// basis. The rescale is best effort: a failure is logged and the save stands.
+describe('RecipeBuilderScreen edit: remembered portion rescale order (food review D8)', () => {
+  const db = require('../../lib/food/db');
+  const { logError } = require('../../lib/errorLog');
+  const LOADED = {
+    id: 'recipe-7', name: 'Dal', total_servings: 4, cooked_weight_g: null, notes: null,
+    ingredients: [{ id: 'ing-1', food_ref: 'global:f1', quantity_g: 800 }],
+  };
+
+  async function editAndSave() {
+    getRecipeWithIngredients.mockResolvedValueOnce(LOADED);
+    const nav = makeNav();
+    let tree;
+    await act(async () => {
+      tree = create(<RecipeBuilderScreen navigation={nav} route={{ params: { recipeId: 'recipe-7' } }} />);
+    });
+    await flush();
+    await act(async () => { await pressSave(tree)(); });
+    await flush();
+    return nav;
+  }
+
+  test('reads the old basis first, rescales after updateRecipe and setRecipeIngredients', async () => {
+    const order = [];
+    db.recipeBasisG.mockImplementationOnce(async () => { order.push('basis'); return 800; });
+    db.updateRecipe.mockImplementationOnce(async () => { order.push('updateRecipe'); });
+    db.setRecipeIngredients.mockImplementationOnce(async () => { order.push('setRecipeIngredients'); });
+    db.rescaleRecipeRecents.mockImplementationOnce(async () => { order.push('rescale'); return 1; });
+    const nav = await editAndSave();
+    expect(order).toEqual(['basis', 'updateRecipe', 'setRecipeIngredients', 'rescale']);
+    expect(db.recipeBasisG).toHaveBeenCalledWith('u1', 'recipe-7');
+    expect(db.rescaleRecipeRecents).toHaveBeenCalledWith('u1', 'recipe-7', 800);
+    expect(nav.goBack).toHaveBeenCalled();
+  });
+
+  test('a failed rescale is logged and never blocks the save', async () => {
+    db.recipeBasisG.mockResolvedValueOnce(800);
+    db.rescaleRecipeRecents.mockRejectedValueOnce(new Error('locked'));
+    const nav = await editAndSave();
+    expect(logError).toHaveBeenCalledWith('RecipeBuilder.rescaleRecents', expect.any(Error));
+    expect(mockToastShow).not.toHaveBeenCalledWith('That recipe was not saved. Try again in a moment.', { variant: 'error' });
+    expect(nav.goBack).toHaveBeenCalled();
+  });
+
+  test('a failed basis read skips the rescale and still saves', async () => {
+    db.recipeBasisG.mockRejectedValueOnce(new Error('read failed'));
+    const nav = await editAndSave();
+    expect(logError).toHaveBeenCalledWith('RecipeBuilder.readBasis', expect.any(Error));
+    expect(db.updateRecipe).toHaveBeenCalledTimes(1);
+    expect(db.rescaleRecipeRecents).not.toHaveBeenCalled();
+    expect(nav.goBack).toHaveBeenCalled();
+  });
+
+  test('a new recipe has no remembered portion: no basis read, no rescale', async () => {
+    await renderAndSave({
+      ingredient: { food_ref: 'global:f1', name: 'Chicken breast', quantity_g: 200, food: { name: 'Chicken breast', food_ref: 'global:f1' } },
+    });
+    expect(db.recipeBasisG).not.toHaveBeenCalled();
+    expect(db.rescaleRecipeRecents).not.toHaveBeenCalled();
   });
 });

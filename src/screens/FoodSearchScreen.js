@@ -37,7 +37,7 @@ import { SkeletonRow } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import {
   logFoodEntry, logFoodEntries, deleteFoodEntry, deleteFoodEntries, getFavourites,
-  getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
+  getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents, getLocalFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
   upsertSlotRecent, getSlotRecents, getSlotRecentQuantities, resolveSlotRecentRefs,
   getEntriesForClockWindow,
@@ -51,7 +51,7 @@ import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 // Campaign 17B job 8: one "don't suggest" instruction, obeyed everywhere the
 // app chooses food for the user.
 import { withDoNotSuggest } from '../lib/food/mealPlanService';
-import { refreshFrequentsIfStale } from '../lib/food/frequents';
+import { refreshFrequentsIfStale, mergeFrequents } from '../lib/food/frequents';
 import {
   SEARCH_TABS, selectTabRows, rankByPersonalHistory, mergePersonalMatches,
 } from '../lib/food/searchTabs';
@@ -64,7 +64,7 @@ import { audit } from '../lib/observability';
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { energyUnitLabel, formatEnergy, formatNumber, formatWithUnit } from '../lib/format';
+import { energyUnitLabel, formatEnergy, formatNumber, formatWithUnit, spokenEnergy } from '../lib/format';
 import { useToast } from '../components/Toast';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
@@ -286,7 +286,16 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (!userId) return;
     try {
       await refreshFrequentsIfStale(userId);
-      const rows = await getFoodFrequents(userId, 20);
+      // The device's own counts rank first; the server snapshot only fills the
+      // places the local diary cannot (a fresh install or a new phone).
+      const [local, server] = await Promise.all([
+        getLocalFoodFrequents(userId, { days: 30, limit: 20 }).catch((e) => {
+          logError('FoodSearchScreen.loadFrequents.local', e);
+          return [];
+        }),
+        getFoodFrequents(userId, 20).catch(() => []),
+      ]);
+      const rows = mergeFrequents(local, server, 20);
       // D138 latency ruling: one batched resolve instead of one round-trip
       // per frequent row.
       const refMap = rows.length
@@ -974,7 +983,13 @@ export default function FoodSearchScreen({ navigation, route }) {
       foodRef: it.food.food_ref, name: it.food.name ?? null, quantityG: it.quantityG,
       kcal: it.kcal, proteinG: it.proteinG, carbsG: it.carbsG, fatG: it.fatG, fibreG: it.fibreG ?? null,
     }));
-    return { mealSlot, entryDate, ...(carry.length ? { carryItems: carry } : null) };
+    // Recipe pick mode travels with the form, so "Save and add to recipe" hands
+    // the new food back to the builder through the same returnTo a picked
+    // search result uses (food audit follow-up 2026-10-16).
+    const pick = isRecipePick
+      ? { pickMode: 'recipe', returnTo: route?.params?.returnTo ?? 'RecipeBuilder' }
+      : null;
+    return { mealSlot, entryDate, ...(carry.length ? { carryItems: carry } : null), ...pick };
   }
   function gotoCustomReplace() {
     const params = customFoodParams();
@@ -1212,7 +1227,10 @@ export default function FoodSearchScreen({ navigation, route }) {
         // source), so this list carries no second copy of it.
         ListHeaderComponent={suggestMeta?.perMeal ? (
           <View>
-            <Text style={[styles.suggestHint, live.suggestHint]}>
+            <Text
+              style={[styles.suggestHint, live.suggestHint]}
+              accessibilityLabel={`Sized for this meal: around ${Math.round(suggestMeta.perMeal.protein)} grams of protein, ${spokenEnergy(suggestMeta.perMeal.kcal, energyUnit)}.`}
+            >
               Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)} g protein, {formatEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
             </Text>
           </View>
@@ -1387,7 +1405,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             style={styles.plateInfo}
             onPress={() => { haptics.selection(); setShowPlate(true); }}
             accessibilityRole="button"
-            accessibilityLabel="Review selected foods"
+            accessibilityLabel={`Review selected foods, about ${spokenEnergy(plateKcal, energyUnit)}`}
           >
             <Text style={[styles.plateCount, live.plateCount]}>{plate.length} to log</Text>
             <Text style={[styles.plateKcalLine, live.plateKcalLine]}>About {formatEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} · tap to review</Text>
@@ -1421,7 +1439,10 @@ export default function FoodSearchScreen({ navigation, route }) {
             <View key={it.key} style={[styles.plateItem, live.plateItem]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.plateItemName, live.plateItemName]} numberOfLines={1}>{it.food.name}</Text>
-                <Text style={[styles.plateItemMeta, live.plateItemMeta]}>{formatNumber(Math.round(it.quantityG))} g · {formatEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                <Text
+                  style={[styles.plateItemMeta, live.plateItemMeta]}
+                  accessibilityLabel={`${formatNumber(Math.round(it.quantityG))} grams, ${spokenEnergy(it.kcal, energyUnit)}`}
+                >{formatNumber(Math.round(it.quantityG))} g · {formatEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
               </View>
               <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
                 <Ionicons name="close-circle" size={22} color={t.colors.textMuted} />

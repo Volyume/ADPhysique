@@ -109,7 +109,11 @@ const tick = (ms = 1000) => { clock += ms; };
 
 // ─── item 1 ──────────────────────────────────────────────────────────────
 describe('item 1: an Undo goes up as `created`', () => {
-  test('restoreFoodEntry stamps created_at = updated_at = the moment of the Undo', async () => {
+  // Re-pinned for food review D3 (2026-10-16): updated_at is now the Undo
+  // moment + 1 ms, so the row goes up as `created` AND `updated` (the
+  // `updated` record carries an edit made before an unsynced delete to the
+  // live cloud row, which `created` alone left untouched).
+  test('restoreFoodEntry stamps created_at = the moment of the Undo, updated_at one ms later', async () => {
     const u = freshUser();
     const id = await food.logFoodEntry(u, entry());
     const createdAt = row(id).created_at;
@@ -118,10 +122,10 @@ describe('item 1: an Undo goes up as `created`', () => {
     const r = row(id);
     expect(r.deleted_at).toBeNull();
     expect(r.created_at).toBe(clock);
-    expect(r.updated_at).toBe(clock);
+    expect(r.updated_at).toBe(clock + 1);
     expect(r.created_at).toBeGreaterThan(createdAt);
     // A watermark past the original write (the row and its delete had synced):
-    expect(_foodRowBuckets(r, createdAt + 4000)).toEqual(['created']);
+    expect(_foodRowBuckets(r, createdAt + 4000)).toEqual(['created', 'updated']);
   });
 
   test('restoreFoodEntries (the bulk Undo) does the same for every row', async () => {
@@ -133,8 +137,8 @@ describe('item 1: an Undo goes up as `created`', () => {
       const r = row(id);
       expect(r.deleted_at).toBeNull();
       expect(r.created_at).toBe(clock);
-      expect(r.updated_at).toBe(clock);
-      expect(_foodRowBuckets(r, clock - 2500)).toEqual(['created']);
+      expect(r.updated_at).toBe(clock + 1); // D3 re-pin, as above
+      expect(_foodRowBuckets(r, clock - 2500)).toEqual(['created', 'updated']);
     }
   });
 
@@ -485,6 +489,11 @@ describe('cooked weight on a recipe (founder ruling "Add cooked weight")', () =>
   });
 });
 
+// Re-pinned for food review D8 (2026-10-16): updateRecipe no longer rescales
+// on its own (it ran before the builder saved the new ingredients, so an
+// edit that changed both used the wrong basis). The flow is now the
+// builder's: read recipeBasisG before the save, then rescaleRecipeRecents
+// after updateRecipe AND setRecipeIngredients. Same expectations as before.
 test('a changed cooked weight rescales the recipe\'s remembered portion to the same servings', async () => {
   const u = freshUser();
   const cf = await food.insertCustomFood(u, { name: 'Lentils', kcal100g: 116, protein100g: 9, carbs100g: 20, fat100g: 0.4, servingG: 100 });
@@ -492,14 +501,87 @@ test('a changed cooked weight rescales the recipe\'s remembered portion to the s
   await food.setRecipeIngredients(u, id, [{ food_ref: `custom:${cf}`, quantity_g: 800 }]);
   await food.upsertSlotRecent(u, { mealSlot: 'meal_2', foodRef: `recipe:${id}`, quantityG: 200 });
   const remembered = () => raw.prepare('SELECT last_quantity_g FROM food_slot_recents WHERE user_id = ? AND food_ref = ?').get(u, `recipe:${id}`).last_quantity_g;
+  const save = async (patch, ingredients = [{ food_ref: `custom:${cf}`, quantity_g: 800 }]) => {
+    const oldBasis = await food.recipeBasisG(u, id);
+    await food.updateRecipe(u, id, patch);
+    await food.setRecipeIngredients(u, id, ingredients);
+    return food.rescaleRecipeRecents(u, id, oldBasis);
+  };
   // No cooked weight: basis is the 800 g of ingredients; weighed at 1200 g cooked.
-  await food.updateRecipe(u, id, { cookedWeightG: 1200 });
+  expect(await food.recipeBasisG(u, id)).toBe(800);
+  await save({ cookedWeightG: 1200 });
   expect(remembered()).toBe(300);
+  // updateRecipe alone no longer touches it.
+  await food.updateRecipe(u, id, { cookedWeightG: 600 });
+  expect(remembered()).toBe(300);
+  await food.updateRecipe(u, id, { cookedWeightG: 1200 });
   // Unchanged weight: untouched. A name-only edit: untouched.
-  await food.updateRecipe(u, id, { cookedWeightG: 1200, name: 'Dal tadka' });
-  await food.updateRecipe(u, id, { name: 'Dal' });
+  expect(await save({ cookedWeightG: 1200, name: 'Dal tadka' })).toBe(0);
+  await save({ name: 'Dal' });
   expect(remembered()).toBe(300);
   // Cleared: back to the ingredient basis.
-  await food.updateRecipe(u, id, { cookedWeightG: null });
+  await save({ cookedWeightG: null });
   expect(remembered()).toBe(200);
+});
+
+// Food review D8: one save that changes the ingredients AND sets a cooked
+// weight. The old basis is the OLD ingredients (800 g); the new basis is the
+// cooked weight. Ingredient-only changes with no cooked weight rescale too.
+test('D8: changing the ingredients and the cooked weight in one save rescales on the right basis', async () => {
+  const u = freshUser();
+  const cf = await food.insertCustomFood(u, { name: 'Rice', kcal100g: 130, protein100g: 2.7, carbs100g: 28, fat100g: 0.3, servingG: 100 });
+  const id = await food.createRecipe(u, { name: 'Pilaf', totalServings: 4 });
+  await food.setRecipeIngredients(u, id, [{ food_ref: `custom:${cf}`, quantity_g: 800 }]);
+  await food.upsertSlotRecent(u, { mealSlot: 'meal_2', foodRef: `recipe:${id}`, quantityG: 200 }); // a quarter
+  const remembered = () => raw.prepare('SELECT last_quantity_g FROM food_slot_recents WHERE user_id = ? AND food_ref = ?').get(u, `recipe:${id}`).last_quantity_g;
+  const oldBasis = await food.recipeBasisG(u, id);
+  await food.updateRecipe(u, id, { cookedWeightG: 1600 });
+  await food.setRecipeIngredients(u, id, [{ food_ref: `custom:${cf}`, quantity_g: 1000 }]);
+  expect(await food.rescaleRecipeRecents(u, id, oldBasis)).toBe(1);
+  expect(remembered()).toBe(400); // still a quarter of the 1600 g pot
+  // No cooked weight: the ingredient grams are the basis, read after the new
+  // ingredients are written.
+  const id2 = await food.createRecipe(u, { name: 'Oats', totalServings: 2 });
+  await food.setRecipeIngredients(u, id2, [{ food_ref: `custom:${cf}`, quantity_g: 400 }]);
+  await food.upsertSlotRecent(u, { mealSlot: 'meal_1', foodRef: `recipe:${id2}`, quantityG: 200 });
+  const before = await food.recipeBasisG(u, id2);
+  await food.updateRecipe(u, id2, { name: 'Oats' });
+  await food.setRecipeIngredients(u, id2, [{ food_ref: `custom:${cf}`, quantity_g: 600 }]);
+  await food.rescaleRecipeRecents(u, id2, before);
+  expect(raw.prepare('SELECT last_quantity_g FROM food_slot_recents WHERE user_id = ? AND food_ref = ?').get(u, `recipe:${id2}`).last_quantity_g).toBe(300);
+  // A deleted or missing recipe has no basis.
+  expect(await food.recipeBasisG(u, 'no-such-recipe')).toBe(0);
+  expect(await food.rescaleRecipeRecents(u, 'no-such-recipe', 800)).toBe(0);
+});
+
+// ─── review finding D4 ───────────────────────────────────────────────────
+// A "Not suggested" saved before migrate_196 sits in the cloud as 'fav'; the
+// unchanged row was never pushed again (watermarked, and the cloud keeps a row
+// only for a strictly newer last_used_at). The one-time re-stamp lifts every
+// live dislike above both, keeping the list's order, and leaves favourites
+// and deleted rows alone.
+describe('D4: pre-196 dislikes are re-stamped once so their kind reaches the cloud', () => {
+  const fav = (u) => raw.prepare('SELECT food_ref, kind, last_used_at FROM food_favourites WHERE user_id = ? ORDER BY food_ref').all(u);
+  test('live dislikes move above the watermark in their old order; favourites and deleted rows do not', async () => {
+    const u = freshUser();
+    const ins = raw.prepare('INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind, deleted_at) VALUES (?, ?, ?, ?, ?)');
+    ins.run(u, 'off:old', 1000, 'dislike', null);
+    ins.run(u, 'off:new', 2000, 'dislike', null);
+    ins.run(u, 'off:liked', 1500, 'fav', null);
+    ins.run(u, 'off:gone', 1200, 'dislike', 1300);
+    const watermark = 5000;
+    expect(await food.restampDislikesForRepush(u, 10_000)).toBe(2);
+    const after = Object.fromEntries(fav(u).map((r) => [r.food_ref, r.last_used_at]));
+    expect(after['off:old']).toBe(10_000);
+    expect(after['off:new']).toBe(10_001);
+    expect(after['off:liked']).toBe(1500);
+    expect(after['off:gone']).toBe(1200);
+    const pushed = (await food.getAllFavouritesSince(u, watermark)).map((r) => r.food_ref).sort();
+    expect(pushed).toEqual(['off:new', 'off:old']);
+  });
+
+  test('nothing to re-stamp is a no-op', async () => {
+    expect(await food.restampDislikesForRepush(freshUser(), 10_000)).toBe(0);
+    expect(await food.restampDislikesForRepush(null)).toBe(0);
+  });
 });

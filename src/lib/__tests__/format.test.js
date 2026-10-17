@@ -88,3 +88,16 @@ describe('formatWithUnit / NBSP (P-15)', () => {
     expect(formatWithUnit('100', 'kg').split(' ')).toEqual(['100', 'kg']);
   });
 });
+
+// Food audit follow-up 2026-10-16, item 4: the energy as a screen reader says it.
+describe('spokenEnergy', () => {
+  const { spokenEnergy } = require('../format');
+  test('says calories (singular at one) and kilojoules, never the unit letters', () => {
+    expect(spokenEnergy(265, 'kcal')).toBe('265 calories');
+    expect(spokenEnergy(1, 'kcal')).toBe('1 calorie');
+    expect(spokenEnergy(1500, 'kcal')).toBe('1,500 calories');
+    expect(spokenEnergy(265, 'kj')).toBe('1,109 kilojoules');
+    expect(spokenEnergy(0.25, 'kj')).toBe('1 kilojoule');
+    expect(spokenEnergy(NaN)).toBe('0 calories');
+  });
+});

@@ -3034,11 +3034,11 @@ const SCHEMA_MIGRATIONS = [
   //   Applied locally: yes, on every device that reaches this migration index;
   //             ADD COLUMN only, no default and no backfill, so every existing
   //             recipe reads NULL.
-  //   Applied remotely: NO. The cloud counterpart is in
-  //             supabase/migrate_196_food_soft_deletes_and_kind.sql, WRITTEN,
-  //             HELD. Until it is applied the push omits the key
-  //             (RECIPE_COOKED_WEIGHT_PUSH in src/lib/sync/featureFlags.js is
-  //             false) and the pull keeps the local value.
+  //   Applied remotely: the cloud counterpart,
+  //             supabase/migrate_196_food_soft_deletes_and_kind.sql, was
+  //             APPLIED 2026-10-16 23:04:58 UTC, so RECIPE_COOKED_WEIGHT_PUSH
+  //             (src/lib/sync/featureFlags.js) is on: the push sends the key
+  //             and the pull reads it.
   //   Safe to re-run: yes. The benign-duplicate-column skip
   //             (isProvenBenignMigrationError) covers a second run, exactly as
   //             for custom_foods.portions_json above.
