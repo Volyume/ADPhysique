@@ -79,20 +79,16 @@ describe('SESSION RATINGS: skipped stays null, never a fabricated answer (C5-P17
   });
 });
 
-describe('ROLLBACK SWITCH: the quiz-first flow stays dark with its infrastructure intact (C5-P39-04, D96)', () => {
-  test('ONBOARDING_QUIZ_FIRST remains false', () => {
-    const flow = read('lib/onboarding/quizFlow.js');
-    expect(flow).toMatch(/export const ONBOARDING_QUIZ_FIRST = false;/);
-  });
-  test('the dark routes and rollback infrastructure remain (never delete, never wire live)', () => {
-    // Rollback infrastructure must survive: routes registered, screens
-    // present. Reachability-dark is enforced by the flag above plus the
-    // deep-link config, which names only MainTabs routes.
+describe('QUIZ-FIRST ONBOARDING: removed, and it stays removed (founder 2026-10-17)', () => {
+  test('the flag, its screens and its store slice no longer exist', () => {
+    for (const f of ['lib/onboarding/quizFlow.js', 'lib/onboarding/planPreview.js',
+      'screens/QuizScreen.js', 'screens/PlanPreviewScreen.js']) {
+      expect(fs.existsSync(SRC(f))).toBe(false);
+    }
     const nav = read('navigation/RootNavigator.js');
-    expect(nav).toMatch(/QuizTraining/);
-    expect(nav).toMatch(/PlanPreview/);
-    expect(fs.existsSync(SRC('screens/QuizScreen.js'))).toBe(true);
-    expect(fs.existsSync(SRC('screens/PlanPreviewScreen.js'))).toBe(true);
+    expect(nav).not.toMatch(/QuizTraining|PlanPreviewScreen|QuizScreen/);
+    expect(read('screens/WelcomeScreen.js')).not.toMatch(/ONBOARDING_QUIZ_FIRST|QuizTraining/);
+    expect(read('store/useAppStore.js')).not.toMatch(/onboardingQuiz/);
   });
 });
 

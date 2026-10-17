@@ -83,8 +83,6 @@ function lazyScreen(load) {
 // Auth screens
 const LoginScreen = lazyScreen(() => require('../screens/LoginScreen').default);
 const WelcomeScreen = lazyScreen(() => require('../screens/WelcomeScreen').default);
-const QuizScreen = lazyScreen(() => require('../screens/QuizScreen').default);
-const PlanPreviewScreen = lazyScreen(() => require('../screens/PlanPreviewScreen').default);
 
 // Main screens (Pro-gated screens are defined with their guard in the
 // "Pro-only screens" block further down, so each appears exactly once).
@@ -837,10 +835,6 @@ function WelcomeStack() {
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
-      {/* COMP-030: quiz-first pre-account screens. Registered always (harmless);
-          only reached when ONBOARDING_QUIZ_FIRST is on and the user picks Pro. */}
-      <Stack.Screen name="QuizTraining" component={QuizScreen} />
-      <Stack.Screen name="PlanPreview" component={PlanPreviewScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       {/* D145: the account step links to the policy in-app, so the pre-
           account stack carries the same screen the consent gate does. */}
