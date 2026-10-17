@@ -14,7 +14,23 @@ has ever been sent; no sender code exists in the repo; no in-app consent
 exists; `marketing_admins` holds one row, the founder. The old survey page
 posted the wrong column names (fixed 49b918192). 41 accounts.
 
-## Lead rulings (D33)
+## FOUNDER DECISION 2026-10-17 (supersedes ruling 1 and the consent prompt)
+
+Verbatim: "No consent to sign up. They've signed up they have been told there
+and then from then they can unsubscribe in settings or link. Going forward
+it's just in the details on consent on onboarding." Existing members: "Straight
+away" (asked: one-time notice first, or straight away). So members are emailed
+BY DEFAULT and can turn it off. Names change: `member_email_prefs`
+(subscribed DEFAULT true), `member_email_pref_events`,
+`member_email_set_subscribed` / `member_email_get_subscribed`; the audience is
+every confirmed email minus opt-outs, minus subscribed = false, minus
+`_community_consistency_withheld`. No prompt. The Settings switch is on by
+default. Sign-up shows one informational line (never inside the Article 9
+consent). Every email footer says why it was sent and how to stop. Lead
+observation, stated to the founder before the answer: the sign-up and consent
+screens as built carried no mention of news emails (searched 2026-10-17).
+
+## Lead rulings (D33) (ruling 1 SUPERSEDED above; 2 to 6 stand)
 
 1. **Explicit opt-in only.** Volyume is free, so the PECR soft opt-in (contact
    details obtained in the course of a sale) does not cover members. A member
