@@ -50,12 +50,12 @@ describe('handleApplyCalories refuses to persist a value it never showed the ath
     const guardBlock = body.slice(guardIdx, guardBlockEnd);
     expect(guardBlock).toMatch(/setCurrentTargets\(current\)/);
     expect(guardBlock).toMatch(/return;/);
-    expect(guardBlock).not.toMatch(/saveNutritionTargets/);
+    expect(guardBlock).not.toMatch(/saveNutritionTargets|applyCoachCalorieAdjustmentAtomically/);
   });
 
   test('the guard runs BEFORE the persist call, not after', () => {
     const guardIdx = body.indexOf('if (Number(caloriePreview?.newKcal)');
-    const persistIdx = body.indexOf('await saveNutritionTargets(user.id, computed.targets);');
+    const persistIdx = body.indexOf('await applyCoachCalorieAdjustmentAtomically(');
     expect(guardIdx).toBeGreaterThan(-1);
     expect(persistIdx).toBeGreaterThan(guardIdx);
   });

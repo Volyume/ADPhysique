@@ -209,7 +209,7 @@ describe('JOB 13: the chain is wired to the real Apply tap', () => {
   const SCREEN = read('../../screens/CoachOutputScreen.js');
 
   test('applying calories saves the target AND pushes it into the meal plan', () => {
-    expect(SCREEN).toMatch(/await saveNutritionTargets\(user\.id, computed\.targets\)/);
+    expect(SCREEN).toMatch(/await applyCoachCalorieAdjustmentAtomically\(\{\s*userId: user\.id,\s*targets: computed\.targets,/);
     expect(SCREEN).toMatch(/const appliedChange = computed\.newKcal - Number\(current\.targetKcal\)/);
     expect(SCREEN).toMatch(/applyCoachAdjustmentToActivePlan\(user\.id, \{[\s\S]{0,200}?adjustmentKcal: appliedChange,[\s\S]{0,200}?targetSnapshot: computed\.targets/);
   });

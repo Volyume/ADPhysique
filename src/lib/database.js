@@ -7588,24 +7588,33 @@ export async function rebuildPlanKeepingBlockV2(userId, spec) {
 
 // ─── Nutrition Targets ────────────────────────────────────
 
+// Push to cloud after the local write completes so a fresh device sign-in
+// restores the same target row. Fire-and-forget; if the user isn't signed in
+// this is a no-op.
+function _pushNutritionTargetsToCloud(userId) {
+  try {
+    // eslint-disable-next-line global-require
+    const { syncNutritionTargets } = require('./sync');
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../store/useAppStore').default;
+    const sessionUserId = useAppStore.getState().session?.user?.id;
+    if (sessionUserId) {
+      syncNutritionTargets(sessionUserId, userId).catch(() => {});
+    }
+  } catch (_) { /* offline / module load fail: best-effort only */ }
+}
+
 export async function saveNutritionTargets(userId, targets) {
   const d = await db();
+  const id = await saveNutritionTargetsInTx(d, userId, targets);
+  _pushNutritionTargetsToCloud(userId);
+  return id;
+}
+
+// The local write alone, on a caller's handle, so it can share one
+// transaction with the coach receipt (applyCoachCalorieAdjustmentAtomically).
+async function saveNutritionTargetsInTx(d, userId, targets) {
   const now = Date.now();
-  // Push to cloud after the local write completes so a fresh device
-  // sign-in restores the same target row. Fire-and-forget; if the
-  // user isn't signed in this is a no-op.
-  const pushToCloud = () => {
-    try {
-      // eslint-disable-next-line global-require
-      const { syncNutritionTargets } = require('./sync');
-      // eslint-disable-next-line global-require
-      const useAppStore = require('../store/useAppStore').default;
-      const sessionUserId = useAppStore.getState().session?.user?.id;
-      if (sessionUserId) {
-        syncNutritionTargets(sessionUserId, userId).catch(() => {});
-      }
-    } catch (_) { /* offline / module load fail: best-effort only */ }
-  };
   const existing = await d.getFirstAsync(
     'SELECT id FROM nutrition_targets WHERE user_id = ? LIMIT 1',
     [userId],
@@ -7628,7 +7637,6 @@ export async function saveNutritionTargets(userId, targets) {
         now, userId,
       ],
     );
-    pushToCloud();
     return existing.id;
   }
   const id = uid();
@@ -7649,7 +7657,6 @@ export async function saveNutritionTargets(userId, targets) {
       targets.goal ?? null, targets.proteinApproach ?? null, now, now,
     ],
   );
-  pushToCloud();
   return id;
 }
 
@@ -11018,6 +11025,34 @@ export async function applyCoachTrainingAdjustmentWithDb(d, {
     }
     return saveCoachOutputInTx(d, userId, coachOutput);
   });
+}
+
+/**
+ * C3 (final audit 2026-10-17): a coach CALORIE apply (the weekly calorie step
+ * or a diet break) and its applied receipt are one commit, like the training
+ * apply above. Written as two separate writes, an app killed between them
+ * left the target moved with no receipt, so the row offered Apply again and a
+ * second tap could stack another step onto an already-moved target. Either
+ * both land or neither does. The targets arrive already computed and
+ * floor-clamped by the caller (coachApply); nothing here computes or relaxes
+ * a calorie value.
+ */
+export async function applyCoachCalorieAdjustmentWithDb(d, { userId, targets, coachOutput }) {
+  if (!userId || !targets || !Number.isFinite(coachOutput?.weekStart)) {
+    throw new Error('Coach calorie apply identity is invalid.');
+  }
+  return runInTransaction(d, async () => {
+    await saveNutritionTargetsInTx(d, userId, targets);
+    return saveCoachOutputInTx(d, userId, coachOutput);
+  });
+}
+
+export async function applyCoachCalorieAdjustmentAtomically(args) {
+  const d = await db();
+  const receiptId = await applyCoachCalorieAdjustmentWithDb(d, args);
+  _pushNutritionTargetsToCloud(args.userId);
+  _scheduleSync();
+  return receiptId;
 }
 
 export async function applyCoachTrainingAdjustmentAtomically(args) {

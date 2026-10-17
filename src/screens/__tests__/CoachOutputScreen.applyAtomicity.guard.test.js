@@ -46,64 +46,52 @@ function handler(name) {
   return rest.slice(0, next === -1 ? rest.length : next);
 }
 
-describe('direction A: a failed authoritative write never produces a receipt', () => {
-  test.each([
-    ['handleApplyCalories', 'saveNutritionTargets'],
-    ['handleApplyDietBreak', 'saveNutritionTargets'],
-  ])('%s awaits %s before markApplied', (fn, write) => {
-    const body = handler(fn);
-    const writeAt = body.indexOf(`await ${write}(`);
-    const receiptAt = body.indexOf('markApplied(');
-    expect(writeAt).toBeGreaterThan(-1);
-    expect(receiptAt).toBeGreaterThan(-1);
-    expect(writeAt).toBeLessThan(receiptAt);
-  });
+// C3 (final audit 2026-10-17) SUPERSEDES the two-write design both
+// directions below were written for: the target and its receipt are now ONE
+// commit (database.js applyCoachCalorieAdjustmentAtomically), so a failed
+// write leaves neither and a receipt can no longer fail on its own. The
+// suites pin that shape instead.
+describe('direction A: a failed write leaves no receipt and no moved target', () => {
+  test.each(['handleApplyCalories', 'handleApplyDietBreak'])(
+    '%s writes target and receipt through the one atomic call, never separately', (fn) => {
+      // Only the handler itself (to its closing brace): the screen's weekly
+      // recompute further down saves the coach output on its own, rightly.
+      const whole = handler(fn);
+      const body = whole.slice(0, whole.indexOf('\n  }\n'));
+      expect(body).toMatch(/await applyCoachCalorieAdjustmentAtomically\(\{\s*userId: user\.id,\s*targets: computed\.targets,\s*coachOutput: \{ weekStart, \.\.\.updated \},\s*\}\);/);
+      expect(body).not.toMatch(/await saveNutritionTargets\(/);
+      expect(body).not.toMatch(/await saveCoachOutput\(/);
+    },
+  );
+
+  test.each(['handleApplyCalories', 'handleApplyDietBreak'])(
+    '%s builds the receipt before the commit and shows it only after', (fn) => {
+      const body = handler(fn);
+      const markAt = body.indexOf('markApplied(');
+      const commitAt = body.indexOf('await applyCoachCalorieAdjustmentAtomically(');
+      const targetsAt = body.indexOf('setCurrentTargets(computed.targets)');
+      const outputAt = body.indexOf('setOutput(updated);');
+      expect(markAt).toBeGreaterThan(-1);
+      expect(markAt).toBeLessThan(commitAt);
+      expect(targetsAt).toBeGreaterThan(commitAt);
+      expect(outputAt).toBeGreaterThan(commitAt);
+    },
+  );
 });
 
-describe('direction B: a failed receipt cannot enable a second application', () => {
-  test.each(['handleApplyCalories', 'handleApplyDietBreak'])(
-    '%s reflects the real target BEFORE writing the receipt', (fn) => {
-      // The ordering IS the fix. With setCurrentTargets after saveCoachOutput,
-      // a receipt failure left the preview on a stale base.
+describe('direction B: a failed apply says so and changes nothing', () => {
+  test.each([['handleApplyCalories', 'calories'], ['handleApplyDietBreak', 'dietBreak']])(
+    '%s tells the athlete plainly when the commit fails', (fn, key) => {
       const body = handler(fn);
-      const targetsAt = body.indexOf('setCurrentTargets(computed.targets)');
-      const receiptAt = body.indexOf('await saveCoachOutput(');
-      expect(targetsAt).toBeGreaterThan(-1);
-      expect(receiptAt).toBeGreaterThan(-1);
-      expect(targetsAt).toBeLessThan(receiptAt);
+      expect(body).toMatch(new RegExp(`${key}: 'That did not apply, so nothing has changed\\. Please try again\\.'`));
     },
   );
 
-  test.each(['handleApplyCalories', 'handleApplyDietBreak'])(
-    '%s isolates the receipt write so its failure cannot abandon the handler', (fn) => {
-      const body = handler(fn);
-      expect(body).toMatch(/let receiptOk = true;/);
-      expect(body).toMatch(/try \{\s*await saveCoachOutput\(/);
-      expect(body).toMatch(/receiptOk = false;/);
-    },
-  );
-
-  test.each(['handleApplyCalories', 'handleApplyDietBreak'])(
-    '%s still marks the row applied in memory when the receipt fails', (fn) => {
-      // The change DID happen. Leaving the row offering Apply would invite the
-      // second, compounding tap.
-      const body = handler(fn);
-      const receiptAt = body.indexOf('receiptOk = false;');
-      const setOutputAt = body.indexOf('setOutput(updated);');
-      expect(setOutputAt).toBeGreaterThan(receiptAt);
-    },
-  );
-
-  test.each(['handleApplyCalories', 'handleApplyDietBreak'])(
-    '%s tells the athlete the record failed rather than staying silent', (fn) => {
-      const body = handler(fn);
-      expect(body).toMatch(/We could not save the record of it/);
-    },
-  );
-
-  test('the receipt failure is logged under its own scope, not folded into the outer catch', () => {
-    expect(SRC).toMatch(/logError\('CoachOutputScreen\.applyCalories\.receipt'/);
-    expect(SRC).toMatch(/logError\('CoachOutputScreen\.applyDietBreak\.receipt'/);
+  test('the commit is one transaction over both writes', () => {
+    const DB = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'database.js'), 'utf8');
+    const fnSrc = DB.slice(DB.indexOf('export async function applyCoachCalorieAdjustmentWithDb('));
+    const bodySrc = fnSrc.slice(0, fnSrc.indexOf('\n}\n'));
+    expect(bodySrc).toMatch(/runInTransaction\(d, async \(\) => \{\s*await saveNutritionTargetsInTx\(d, userId, targets\);\s*return saveCoachOutputInTx\(d, userId, coachOutput\);/);
   });
 });
 
@@ -112,7 +100,7 @@ describe('the ED-safety floor path is untouched by this change', () => {
     const body = handler('handleApplyCalories');
     const classifyAt = body.indexOf('classifyCalorieApply(');
     const computeAt = body.indexOf('computeCalorieTargets(');
-    const writeAt = body.indexOf('await saveNutritionTargets(');
+    const writeAt = body.indexOf('await applyCoachCalorieAdjustmentAtomically(');
     expect(classifyAt).toBeGreaterThan(-1);
     expect(computeAt).toBeGreaterThan(-1);
     expect(classifyAt).toBeLessThan(writeAt);
