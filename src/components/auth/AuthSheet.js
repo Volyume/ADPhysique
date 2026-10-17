@@ -11,7 +11,7 @@ import Button from '../Button';
 import { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, resetPassword } from '../../lib/supabase';
 import { audit } from '../../lib/observability';
 import { useToast } from '../Toast';
-import { authErrorMessage, isDuplicateSignup, isNetworkFailure, AUTH_COPY } from '../../lib/authErrorCopy';
+import { authErrorMessage, isDuplicateSignup, isNetworkFailure, isInvalidEmailError, AUTH_COPY } from '../../lib/authErrorCopy';
 import { touchTarget } from '../../styles/layout';
 
 
@@ -204,6 +204,10 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
           // bug. authErrorMessage already shows them AUTH_COPY.unconfirmed
           // below either way.
           logInfo('LoginScreen.email.providerError', 'email not confirmed', { mode: emailMode });
+        } else if (isInvalidEmailError(error)) {
+          // Sentry VOLYUME-2Z (2026-10-17): the address's format was refused,
+          // a typing slip. authErrorMessage shows AUTH_COPY.invalidEmail.
+          logInfo('LoginScreen.email.providerError', 'invalid email format', { mode: emailMode });
         } else if (isNetworkFailure(error)) {
           // Sentry VOLYUME-31: the device's connection, not the app.
           // authErrorMessage already shows AUTH_COPY.network below either way.

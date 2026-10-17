@@ -132,3 +132,19 @@ describe('isDuplicateSignup: enumeration protection is read honestly (E-2)', () 
     expect(isDuplicateSignup(undefined)).toBe(false);
   });
 });
+
+// Sentry VOLYUME-2Z (2026-10-17): a refused email format is a typing slip.
+// It gets its own plain line (not the fallback) and is classed so the sign-in
+// sheet logs it at info, never as an error.
+describe('an email address the provider refuses', () => {
+  const { isInvalidEmailError } = require('../authErrorCopy');
+  test('reads as a plain request to check the address', () => {
+    expect(authErrorMessage({ message: 'Unable to validate email address: invalid format' })).toBe(AUTH_COPY.invalidEmail);
+    expect(AUTH_COPY.invalidEmail).toBe('That email address does not look right. Check it and try again.');
+  });
+  test('is classed as a typing slip, and other errors are not', () => {
+    expect(isInvalidEmailError({ message: 'Unable to validate email address: invalid format' })).toBe(true);
+    expect(isInvalidEmailError({ message: 'Invalid login credentials' })).toBe(false);
+    expect(isInvalidEmailError(null)).toBe(false);
+  });
+});

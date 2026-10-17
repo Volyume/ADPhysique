@@ -2526,7 +2526,19 @@ export async function seedRoutinesIfNeeded(userId) {
     // wiped via Clear data), clear the marker and proceed with a fresh seed.
     // If the marker is set AND plans exist, we're done, skip seeding.
     if (alreadySeeded) {
-      const existingLibrary = await getLibraryPlans().catch(() => []);
+      // Sentry VOLYUME-28 (2026-10-17): a READ that fails (the database not
+      // ready yet, e.g. a background launch before first unlock) is not an
+      // EMPTY library. Treating it as empty cleared the marker and re-seeded
+      // on hundreds of launches. A failed read now leaves the marker and
+      // stops here; the next launch checks again.
+      let existingLibrary;
+      try {
+        existingLibrary = await getLibraryPlans();
+      } catch (readErr) {
+        logInfo('seedRoutines.libraryReadDeferred', readErr?.message ?? 'library read failed');
+        return;
+      }
+      existingLibrary = Array.isArray(existingLibrary) ? existingLibrary : [];
       if (existingLibrary.length > 0) {
         // Healthy, unless an earlier run left template exercises unresolved:
         // then repair once the exercise chain has finished.
