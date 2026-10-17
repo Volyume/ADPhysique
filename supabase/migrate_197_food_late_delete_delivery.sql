@@ -66,9 +66,11 @@
 --                       shape and the signature are unchanged.
 -- Applied locally:  NOT APPLICABLE (the change is the cloud's two food RPCs;
 --                   the local tables are untouched).
--- Applied remotely: NO. NOT APPLIED. HELD for the founder's exact phrase
---                   "run against production" naming 197. The app never
---                   applies it.
+-- Applied remotely: YES, 2026-10-17 02:49:39 UTC, under the founder's
+--                   "run against production 197" (checksum-verified apply;
+--                   the live food_sync_pull was first proved identical to
+--                   this file's apart from the six filters; the read-only
+--                   verification below, all true). The app never applies it.
 -- Safe to re-run:   YES. The guard only reads the catalogue; ADD COLUMN IF
 --                   NOT EXISTS is a no-op the second time; the DROP FUNCTION
 --                   loop then CREATE OR REPLACE FUNCTION leave the same single

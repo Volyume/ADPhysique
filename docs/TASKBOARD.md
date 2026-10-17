@@ -168,6 +168,7 @@ the decision rounds and every landed section were retired to
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
 - ~~**Apply migrate_196 (food soft deletes, favourites kind, recipe cooked weight)**~~ DONE 2026-10-16 23:04:58 UTC under 'run against production 196'.
+- ~~**Apply migrate_197 (food deletes pushed late reach every device)**~~ DONE 2026-10-17 02:49:39 UTC under 'run against production 197'.
 - **A build carrying the Community level-up and the typed-set push.** Migrations 189, 190 and 191 are APPLIED and `community-notify` version 5 and `community-public` version 4 are DEPLOYED (2026-10-08, your "Deploy all and run all migrations remaining against production"; record in `supabase/README.md`). The builds already in the stores keep working (the server kept every old signature and the old push types). What a new build carries: the Community tab and Hub, scopes and sort, presence, group chat, challenges, link previews, and the typed-or-kept set fact now syncing (ENTRY_TYPED_PUSH on). You run the build when you are ready; the device checklist is `docs/audit/community-level-up-2026-10-08/12-BUILD-SPEC.md` section 5.
 - **Scratch table `public.claude_apply_scratch` left in place** after the 2026-10-08 applies: the connector refuses a DROP in a non-interactive session. It holds only the applied SQL text, RLS on, no client grants. Dropped at the next interactive apply, or by you in the SQL editor: `DROP TABLE IF EXISTS public.claude_apply_scratch;`.
 

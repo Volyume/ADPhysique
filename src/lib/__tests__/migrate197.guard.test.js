@@ -15,9 +15,9 @@
  *       changing ONLY the six `deleted` filters to the server-stamped column.
  * Everything else equals 196 / 090 BYTE FOR BYTE, pinned branch by branch,
  * so a later edit cannot slip a change into a part the header says is
- * untouched. The header is pinned to the schema rule (purpose, NOT APPLIED
- * and HELD, safe to re-run, rollback, depends on 196) and to its old-build
- * reasoning and known limits; the README row to WRITTEN, HELD.
+ * untouched. The header is pinned to the schema rule (purpose, APPLIED
+ * 2026-10-17, safe to re-run, rollback, depends on 196) and to its old-build
+ * reasoning and known limits; the README row to APPLIED.
  *
  * Behaviour was proved separately on PostgreSQL 16 with stub tables (090's
  * pull, 195, 196, 197 applied twice): a late tombstone is delivered on the
@@ -174,11 +174,12 @@ describe('migrate_197: guard, column, header and README', () => {
     expect(code).not.toMatch(/DROP (TABLE|COLUMN)|TRUNCATE|DELETE FROM (?!recipe_ingredients)/);
   });
 
-  test('the header carries every field of the schema rule, HELD', () => {
+  // Re-pinned 2026-10-17: applied to production under the founder's phrase.
+  test('the header carries every field of the schema rule, APPLIED', () => {
     const header = SQL197.slice(0, SQL197.indexOf('DO $$'));
     expect(header).toMatch(/-- Purpose:/);
     expect(header).toMatch(/-- Applied locally:\s+NOT APPLICABLE/);
-    expect(header).toMatch(/-- Applied remotely: NO\. NOT APPLIED\. HELD for the founder's exact phrase\n--\s+"run against production" naming 197\./);
+    expect(header).toMatch(/-- Applied remotely: YES, 2026-10-17 02:49:39 UTC, under the founder's\n--\s+"run against production 197"/);
     expect(header).toMatch(/-- Safe to re-run:\s+YES/);
     expect(header).toMatch(/-- Rollback:\s+Re-apply migrate_196_food_soft_deletes_and_kind\.sql's/);
     expect(header).toMatch(/migrate_090_food_delete_tombstones\.sql's\n--\s+food_sync_pull definition/);
@@ -186,16 +187,14 @@ describe('migrate_197: guard, column, header and README', () => {
     expect(header).toContain('WHY THIS IS SAFE FOR THE BUILDS IN THE STORES (2.17.0, 2.18.0, 2.19.0)');
     expect(header).toMatch(/D5, a known regression of 196 on 2\.17\.0 and 2\.18\.0/);
     expect(header).toMatch(/2\.19\.0\n--\s+fixes it client-side/);
-    expect(header).not.toMatch(/Applied remotely:\s+YES/);
   });
 
-  test('the README row follows 196 and reads WRITTEN, HELD', () => {
+  test('the README row follows 196 and reads APPLIED', () => {
     const rows = README.split('\n');
     const i196 = rows.findIndex((r) => r.startsWith('| 196 | `migrate_196_food_soft_deletes_and_kind.sql`'));
     expect(i196).toBeGreaterThan(0);
     const row = rows[i196 + 1];
     expect(row.startsWith('| 197 | `migrate_197_food_late_delete_delivery.sql` |')).toBe(true);
-    expect(row).toMatch(/\| \*\*WRITTEN, HELD\*\*/);
-    expect(row).not.toMatch(/APPLIED 20/);
+    expect(row).toMatch(/\| \*\*APPLIED 2026-10-17 02:49:39 UTC\*\*/);
   });
 });
