@@ -89,7 +89,7 @@ describe('house migration shape', () => {
 
   test('the guard refuses without migrate_180, migrate_123, migrate_120 and pgcrypto', () => {
     const guard = BODY.slice(0, BODY.indexOf('-- ─── Part 1'));
-    expect(guard).toContain("to_regprocedure('public._community_consistency_withheld(uuid)') IS NULL");
+    expect(guard).toContain("to_regprocedure('public._community_ed_flag_open(uuid)') IS NULL");
     expect(guard).toContain("to_regclass('public.marketing_email_optout') IS NULL");
     expect(guard).toContain("to_regclass('public.marketing_admins') IS NULL");
     expect(guard).toContain("to_regprocedure('extensions.gen_random_bytes(integer)') IS NULL");
@@ -207,10 +207,10 @@ describe('who is emailed: the roster and the audience', () => {
   });
 
   test('the wellbeing gate fails closed in the roster AND is re-checked in the audience', () => {
-    expect(ROSTER).toContain("WHEN public._community_consistency_withheld(u.id) IS DISTINCT FROM false THEN 'paused'");
+    expect(ROSTER).toContain("WHEN public._community_ed_flag_open(u.id) IS DISTINCT FROM false THEN 'paused'");
     expect(AUDIENCE).toContain('FROM public._member_email_roster() r');
     expect(AUDIENCE).toContain("WHERE r.status = 'receives'");
-    expect(AUDIENCE).toContain('AND public._community_consistency_withheld(r.user_id) IS NOT DISTINCT FROM false');
+    expect(AUDIENCE).toContain('AND public._community_ed_flag_open(r.user_id) IS NOT DISTINCT FROM false');
     // No consent row is required: the audience never reads a yes.
     expect(AUDIENCE).not.toMatch(/subscribed = true/);
   });
@@ -245,8 +245,8 @@ describe('acceptance block', () => {
     expect(ACCEPT).toContain("has_function_privilege('authenticated', 'public.member_email_audience()', 'EXECUTE')");
     expect(ACCEPT).toContain("has_function_privilege('anon', 'public.member_email_set_subscribed(boolean, text, text)', 'EXECUTE')");
     expect(ACCEPT).toContain("NOT ('search_path=public, pg_temp' = ANY (p.proconfig))");
-    expect(ACCEPT).toContain("'_community_consistency_withheld(u.id) IS DISTINCT FROM false'");
-    expect(ACCEPT).toContain("'_community_consistency_withheld(r.user_id) IS NOT DISTINCT FROM false'");
+    expect(ACCEPT).toContain("'_community_ed_flag_open(u.id) IS DISTINCT FROM false'");
+    expect(ACCEPT).toContain("'_community_ed_flag_open(r.user_id) IS NOT DISTINCT FROM false'");
     expect(ACCEPT).toContain("value ~ '^[0-9a-f]{64}$'");
     expect(ACCEPT).toContain("RAISE NOTICE 'migrate_198 acceptance: OK';");
     // Counts only, never an address.

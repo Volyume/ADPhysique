@@ -72,7 +72,7 @@ We use a small number of processors to run the app:
 | Sentry | Crash and performance reporting | Scrubbed diagnostic events |
 | Apple App Store / Google Play | Subscription purchases | Store receipt and transaction metadata |
 | Expo push | Push notification delivery | Device push token |
-| Resend (Ireland region) | Sending the news emails | Your email address and the email itself |
+| Resend (sends from Ireland, records kept in the United States under the standard contract clauses) | Sending the news emails | Your email address and the email itself |
 | Open Food Facts / USDA FoodData Central | Food lookup data | Search terms and barcode values only |
 
 We do not pass data to advertising networks or third-party analytics providers.
@@ -83,9 +83,9 @@ When you create an account you are told that Volyume will email you about new fe
 
 **Your choice.** You can turn them off at any time, in the app under Settings with the "News and offers by email" switch, or with the Unsubscribe link in every email. Turning them off does not change anything else in the app, and you can turn them back on in Settings.
 
-**When we do not send.** We do not send news emails while calm mode is on, or while Volyume's safety check has paused your calorie changes.
+**When we do not send.** We do not send news emails while Volyume's safety check has paused your calorie changes.
 
-**Who sends them.** Resend sends these emails for us, from its Ireland region. It receives your email address and the email itself, and only for that purpose.
+**Who sends them.** Resend sends these emails for us from Ireland and keeps its email records in the United States under the standard contract clauses. It receives your email address and the email itself, and only for that purpose. We measure whether each news email is opened and which of its links are clicked.
 
 **What we keep.** Your email address, a record of each time you turned them on or off and the wording you saw, a log of which news emails were sent to you, and your answers to any survey you take. A survey opened from one of our emails links your answers to your account, so a second answer replaces the first.
 

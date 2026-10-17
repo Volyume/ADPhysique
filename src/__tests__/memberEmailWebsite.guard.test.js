@@ -208,7 +208,7 @@ describe('member email website pages', () => {
       expect(text).toMatch(/When you create an account you are told that Volyume will email you about new features, offers and the occasional short survey/);
       expect(text).toMatch(/News and offers by email/);
       expect(text).toMatch(/Unsubscribe link in every email/);
-      expect(text).toMatch(/Resend sends these emails for us, from its Ireland region/);
+      expect(text).toMatch(/Resend sends these emails for us from Ireland and keeps its email records in the United States/);
       expect(text).toMatch(/Deleting your account deletes all of this/);
       expect(text).toMatch(/consent history|record of each time you turned them on or off/);
       expect(/\u2014/.test(text)).toBe(false);

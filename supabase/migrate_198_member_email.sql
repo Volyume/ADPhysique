@@ -36,10 +36,15 @@
 --                                   a `marketing_email_optout` row names the
 --                                   user id or the email (case-insensitive)
 --                      unconfirmed  no email, or the email is not confirmed
---                      paused       `public._community_consistency_withheld`
---                                   (migrate_180: an open ED-pattern flag OR
---                                   calm mode, both arms fail closed) is
---                                   anything but false. The admin page shows
+--                      paused       `public._community_ed_flag_open`
+--                                   (migrate_180: an open ED-pattern flag,
+--                                   fails closed) is anything but false.
+--                                   Founder 2026-10-17: "Forget calm mode
+--                                   restricting emails it shouldn't. Only
+--                                   actual hold", so calm mode does not
+--                                   pause email, and no app version is
+--                                   required ("Emails should still work to
+--                                   old users"). The admin page shows
 --                                   only the word "paused", never the reason.
 --                      receives     everyone else
 --                    `member_email_audience()` is the roster's `receives`
@@ -125,7 +130,7 @@
 --                    person's opt-out and must be honoured).
 -- Transaction:       no explicit BEGIN/COMMIT; the runner supplies one.
 -- Depends on:        123 (marketing_email_optout, marketing_admins via
---                    120), 180 (`_community_consistency_withheld(uuid)`,
+--                    120), 180 (`_community_ed_flag_open(uuid)`,
 --                    owned by postgres, EXECUTE revoked from the client
 --                    roles: callable from these SECURITY DEFINER functions,
 --                    which run as their owner, postgres; verified read-only
@@ -139,8 +144,8 @@
 
 DO $$
 BEGIN
-  IF to_regprocedure('public._community_consistency_withheld(uuid)') IS NULL THEN
-    RAISE EXCEPTION 'migrate_198 refused: public._community_consistency_withheld(uuid) (migrate_180) is missing';
+  IF to_regprocedure('public._community_ed_flag_open(uuid)') IS NULL THEN
+    RAISE EXCEPTION 'migrate_198 refused: public._community_ed_flag_open(uuid) (migrate_180) is missing';
   END IF;
   IF to_regclass('public.marketing_email_optout') IS NULL THEN
     RAISE EXCEPTION 'migrate_198 refused: public.marketing_email_optout (migrate_123) is missing';
@@ -464,7 +469,7 @@ AS $$
                  OR (o.email IS NOT NULL AND u.email IS NOT NULL AND lower(o.email) = lower(u.email::text))
            ) THEN 'turned_off'
            WHEN u.email IS NULL OR btrim(u.email::text) = '' OR u.email_confirmed_at IS NULL THEN 'unconfirmed'
-           WHEN public._community_consistency_withheld(u.id) IS DISTINCT FROM false THEN 'paused'
+           WHEN public._community_ed_flag_open(u.id) IS DISTINCT FROM false THEN 'paused'
            ELSE 'receives'
          END
     FROM auth.users u
@@ -488,7 +493,7 @@ AS $$
     FROM public._member_email_roster() r
    WHERE r.status = 'receives'
      AND r.email IS NOT NULL
-     AND public._community_consistency_withheld(r.user_id) IS NOT DISTINCT FROM false;
+     AND public._community_ed_flag_open(r.user_id) IS NOT DISTINCT FROM false;
 $$;
 
 REVOKE ALL ON FUNCTION public.member_email_audience() FROM PUBLIC, anon, authenticated;
@@ -724,13 +729,13 @@ BEGIN
   END IF;
 
   v_def := pg_get_functiondef(to_regprocedure('public._member_email_roster()'));
-  IF strpos(v_def, '_community_consistency_withheld(u.id) IS DISTINCT FROM false') = 0
+  IF strpos(v_def, '_community_ed_flag_open(u.id) IS DISTINCT FROM false') = 0
      OR strpos(v_def, 'marketing_email_optout') = 0
      OR strpos(v_def, 'member_email_exclusions') = 0 THEN
     RAISE EXCEPTION 'acceptance failed: the roster does not apply the wellbeing gate, the opt-out and the exclusions';
   END IF;
   v_def := pg_get_functiondef(to_regprocedure('public.member_email_audience()'));
-  IF strpos(v_def, '_community_consistency_withheld(r.user_id) IS NOT DISTINCT FROM false') = 0
+  IF strpos(v_def, '_community_ed_flag_open(r.user_id) IS NOT DISTINCT FROM false') = 0
      OR strpos(v_def, 'r.status = ''receives''') = 0 THEN
     RAISE EXCEPTION 'acceptance failed: the audience does not re-check the wellbeing gate on the receives rows';
   END IF;

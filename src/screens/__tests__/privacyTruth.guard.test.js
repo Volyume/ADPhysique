@@ -55,7 +55,7 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(flat).toContain('Volyume emails members about new features, offers and the occasional short survey.');
     expect(flat).toContain('You get these emails unless you turn them off');
     expect(flat).toContain('in Settings, under Privacy and legal, or with the unsubscribe link in any email');
-    expect(flat).toContain('No news emails are sent while calm mode is on');
+    expect(flat).toContain("No news emails are sent while Volyume's safety check has paused your calorie changes");
     const settings = readRepoFile('src', 'screens', 'SettingsPrivacyScreen.js');
     expect(settings).toContain('MEMBER_EMAIL_SWITCH_LABEL');
     expect(settings).toContain('<SectionHeader title="Email" />');

@@ -185,11 +185,11 @@ export default function PrivacyPolicyScreen() {
             legal, or with the unsubscribe link in any email.
           </Body>
           <Body>
-            No news emails are sent while calm mode is on, or while Volyume's safety check has paused your
-            calorie changes.
+            No news emails are sent while Volyume's safety check has paused your calorie changes. We
+            measure whether each news email is opened and which of its links are clicked.
           </Body>
           <Body>
-            We send them through Resend, from its Ireland region. We keep your email address, your choice and
+            We send them through Resend, which sends from Ireland and keeps its email records in the United States under the standard contract clauses. We keep your email address, your choice and
             when you made it, a log of the emails sent to you and any survey answers you give. All of it is
             deleted with your account.
           </Body>
