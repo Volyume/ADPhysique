@@ -17,7 +17,7 @@ import { BLOCK as PLAN_BLOCK } from './plan/science';
 import { resolveRecoveryState } from './recoveryState';
 import { compareSessionResolutionVersions } from './blockProgression';
 import { compareEffectiveMaintenanceVersions, isValidEffectiveMaintenanceMemo } from './effectiveMaintenance';
-import { normaliseEntryTyped } from './workoutHelpers';
+import { normaliseEntryTyped, renumberSetsByKind } from './workoutHelpers';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -4786,6 +4786,10 @@ const _SET_EDIT_COLUMNS = {
   rir: 'rir',
   rpe: 'rpe',
   setType: 'set_type',
+  // A set whose type is changed in session takes the evidence class it would
+  // have been logged with as that type (none for a warm-up), so it reads as a
+  // set logged that way from the start. null clears it.
+  evidenceClass: 'evidence_class',
   notes: 'notes',
   failed: 'failed',
   leftReps: 'left_reps',
@@ -4851,6 +4855,42 @@ export async function deleteWorkoutSet(userId, setId) {
   if (!row) return false;
   await d.runAsync('DELETE FROM workout_sets WHERE id = ? AND user_id = ?', [setId, userId]);
   return true;
+}
+
+// Renumber one exercise's sets inside one workout after a delete or a type
+// change, so set_number stays 1, 2, 3 within each kind (warm-ups on their own,
+// every other type together: the same split as workoutHelpers.setNumberForKind
+// uses for the next set) and the next logged set can never collide with an
+// existing number. Order is the order the logger shows the sets in, which is
+// the order they were logged: created_at, then insertion order for a tie.
+// Only a row whose number actually changes is written, with updated_at bumped
+// so the per-set sync pushes it. Idempotent and additive (no schema change);
+// returns the { id, setNumber } list of the rows it changed.
+export async function renumberWorkoutSets(workoutId, exerciseId) {
+  if (!workoutId || !exerciseId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT id, set_type, set_number FROM workout_sets
+      WHERE workout_id = ? AND exercise_id = ?
+      ORDER BY created_at ASC, rowid ASC`,
+    [workoutId, exerciseId],
+  );
+  const wanted = renumberSetsByKind(rows.map((r) => ({ id: r.id, setType: r.set_type })));
+  const changed = [];
+  rows.forEach((r, i) => {
+    if (r.set_number !== wanted[i].setNumber) changed.push(wanted[i]);
+  });
+  if (!changed.length) return [];
+  const now = Date.now();
+  await queuedWrite(async () => {
+    for (const c of changed) {
+      await d.runAsync(
+        'UPDATE workout_sets SET set_number = ?, updated_at = ? WHERE id = ?',
+        [c.setNumber, now, c.id],
+      );
+    }
+  });
+  return changed;
 }
 
 // Returns the most recent post-set pump and connection scores grouped by primary muscle,

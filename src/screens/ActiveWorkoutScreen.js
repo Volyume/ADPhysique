@@ -62,7 +62,7 @@ import {
   restAfterSwap, carriedSetCount, slotMuscleOf,
   swapMuscleDoneNote,
 } from '../lib/exercise/swapCarry';
-import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup, updateRoutineExercise, uid } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, renumberWorkoutSets, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup, updateRoutineExercise, uid } from '../lib/database';
 import { buildSessionReport } from '../lib/sessionReport';
 import { localDayKey } from '../lib/dayKey';
 import { styleKeyFromTags, stylePoolFor } from '../lib/exercise/stylePools';
@@ -108,6 +108,11 @@ import {
   setNumberForKind,
   validateSetEntryValue,
   shouldConfirmBeforeFinish,
+  missedExercises,
+  missedNamesPhrase,
+  everyExerciseHasWorkingSet,
+  canRemovePendingSet,
+  renumberSetsByKind,
   deriveEntryTyped,
   formatSeconds,
   parseTimeToSeconds,
@@ -454,9 +459,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [useLastRunId, setUseLastRunId] = useState(null);
   // Founder ruling 2026-10-09 (D220 addendum 28, 2a): Add set BEFORE the
   // target is met adds a pending row to this session's target for the
-  // exercise (it did nothing visible until the target was met). Reset on
-  // an exercise change.
-  const [extraTargetSets, setExtraTargetSets] = useState(0);
+  // exercise (it did nothing visible until the target was met). Founder
+  // request 2026-10-17: Remove set takes one away again. The adjustment is
+  // kept PER EXERCISE id for as long as this screen is mounted (a map, not a
+  // single number reset on every exercise change), so returning to an
+  // exercise finds its rows as it left them. Positive = added, negative =
+  // removed; targetSets below clamps the result.
+  const [targetAdjustments, setTargetAdjustments] = useState({});
   useEffect(() => {
     setExtraSetArmed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1414,10 +1423,32 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // cancels any running auto-advance countdown, returning the bar's single
   // primary to "Log set". This replaces the old "tap the ever-present
   // primary past target" path - past target the primary IS the advance now.
+  // Add set (+1) and Remove set (-1) both move THIS exercise's target in the
+  // per-exercise map; the clamp on targetSets and canRemovePendingSet keep it
+  // from ever dropping below the sets already logged plus the next row.
+  function adjustTargetSets(delta) {
+    const id = exercise?.id;
+    if (id == null) return;
+    setTargetAdjustments((m) => ({ ...m, [id]: (m[id] ?? 0) + delta }));
+  }
+
+  // Founder request 2026-10-17 ("delete a set if you've added too many or want
+  // to do less"): drops one UNLOGGED row from this exercise's target. Logged
+  // sets are never touched here (their own sheet deletes them, with Undo).
+  function handleRemoveSet() {
+    cancelAutoAdvance();
+    if (!canRemovePendingSet(targetSets, workingLogged)) return;
+    hapticsVocab.selection();
+    adjustTargetSets(-1);
+    try {
+      AccessibilityInfo.announceForAccessibility(`One set removed from ${exercise?.name ?? 'this exercise'}.`);
+    } catch (_) { /* announcement is best-effort */ }
+  }
+
   function armExtraSet() {
     cancelAutoAdvance();
     hapticsVocab.selection();
-    if (!targetComplete) { setExtraTargetSets((n) => n + 1); return; }
+    if (!targetComplete) { adjustTargetSets(+1); return; }
     setExtraSetArmed(true);
   }
 
@@ -3498,7 +3529,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // per-set celebration above still fires each time a new best lands.
         // L07-F2: setId tags which logged set earned this PR, so an edit or
         // delete of that exact set (below, handleSaveEditedSet /
-        // handleDeleteEditedSet) can correct a now-stale badge without
+        // handleDeleteSetWithUndo) can correct a now-stale badge without
         // touching detectPR itself.
         setDetectedPRs(prev => bestPRPerExercise([
           ...prev,
@@ -3698,6 +3729,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (currentSet.setType !== 'warmup' && targetSets && workingLogged >= targetSets && !extraSetArmed) {
         setExtraSetArmed(true);
       }
+      // Founder request 2026-10-17: the set that finishes the session's work
+      // asks whether to finish, and the set that finishes the LAST exercise
+      // while another was never started asks whether to go back for it. The
+      // list is the store's with THIS set in it (the closure's list was read
+      // before the log). A prompt cancels any auto-advance the lines below
+      // armed (promptAfterFinalExercise): moving the person on to an exercise
+      // that is already done would only talk over it.
+      const afterLog = workoutExercises.map((entry, i) => (
+        i === currentExerciseIndex ? { ...entry, sets: newLoggedSets } : entry
+      ));
+      const missedAfterLog = missedExercises(afterLog);
+      const everythingDone = !!justHitTarget && missedAfterLog.length === 0 && everyExerciseHasWorkingSet(afterLog);
+      const leftSomething = !!justHitTarget && isLastExercise && missedAfterLog.length > 0;
       if (justHitTarget && !isLastExercise) {
         if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
         autoAdvanceRef.current = setTimeout(() => {
@@ -3731,6 +3775,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           scrollToActiveSection(true);
           announceGroupFocusChange(firstIdx, sgi);
         }
+      }
+
+      if (everythingDone || leftSomething) {
+        promptAfterFinalExercise(everythingDone ? 'done' : 'left', missedAfterLog);
       }
 
       // Clear ghost, will be re-computed for the next set index on the next render cycle
@@ -3811,7 +3859,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // the store's current-exercise sets array, and the on-screen receipt; the
   // cloud copy ships on the next per-set push (updated_at is bumped by
   // updateWorkoutSet). PR detection IS re-run on an edit/delete (L07-F2, in
-  // handleSaveEditedSet / handleDeleteEditedSet below) so an edited-up set can
+  // handleSaveEditedSet / handleDeleteSetWithUndo below) so an edited-up set can
   // still earn its celebration and an edited-down one clears a now-stale badge;
   // derived analytics recompute from the DB on next view.
 
@@ -3840,35 +3888,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setEditField(null);
   }, []);
 
-  // Campaign item 14 (D25): the zeego long-press menu's "Delete set" item
-  // reuses this SAME confirm-then-remove flow, not a new one. handleDeleteEditedSet
-  // is pinned zero-arg (ActiveWorkoutScreen.prReEval.guard.test.js), and it
-  // reads `editingSet` by closure, so it cannot take a target set directly.
-  // openDeleteFromMenu opens the edit sheet's state exactly like a row tap
-  // (openEditSet) and records which set id it was for; the effect below
-  // fires the real, unmodified handleDeleteEditedSet() once editingSet
-  // reflects that id, so the user sees the existing "Delete set?" confirm —
-  // no new deletion path, no bypassed confirmation.
-  const menuDeleteTargetIdRef = useRef(null);
+  // Delete set from the logged row's sheet (Campaign item 14, D25, then the
+  // founder request of 2026-10-17): no confirm any more, the set goes at once
+  // and an Undo toast gives it back (handleDeleteSetWithUndo below).
   function openDeleteFromMenu(set) {
-    // Already the row being edited: editingSet will not change, so the
-    // effect below would never fire and the armed delete would surprise
-    // the next tap on that row (audit D3). Confirm directly instead.
-    if (editingSet && editingSet.id === set.id) {
-      menuDeleteTargetIdRef.current = null;
-      handleDeleteEditedSet();
-      return;
-    }
-    menuDeleteTargetIdRef.current = set.id;
-    openEditSet(set);
+    handleDeleteSetWithUndo(set);
   }
-  useEffect(() => {
-    if (menuDeleteTargetIdRef.current != null && editingSet && editingSet.id === menuDeleteTargetIdRef.current) {
-      menuDeleteTargetIdRef.current = null;
-      handleDeleteEditedSet();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingSet]);
 
   // Leaving an edit saves it (founder report 2026-10-11), so a save can be
   // asked for by a box tap and by the keyboard going away at nearly the same
@@ -3982,61 +4007,234 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
   }
 
-  function handleDeleteEditedSet() {
-    if (!editingSet) return;
-    appAlert(
-      'Delete set?',
-      'This set is removed and your session totals update. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => closeEditSet() },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const target = editingSet;
-            try {
-              const ok = await deleteWorkoutSet(user.id, target.id);
-              if (!ok) {
-                appAlert('Couldn\'t delete set', 'That set couldn\'t be removed. Please try again.');
-                return;
-              }
-              // Pair the cloud delete exactly like WorkoutHistoryScreen: remove
-              // the cloud row, queueing a retry op on failure so a restore
-              // cannot resurrect it.
-              const supabaseUserId = session?.user?.id;
-              if (supabaseUserId) {
-                // eslint-disable-next-line global-require
-                const { deleteWorkoutSetFromCloud } = require('../lib/sync');
-                deleteWorkoutSetFromCloud(supabaseUserId, target.id)
-                  .then((cloudOk) => { if (!cloudOk) return enqueueSyncOp('workout_set_delete', target.id, supabaseUserId); })
-                  .catch(() => enqueueSyncOp('workout_set_delete', target.id, supabaseUserId));
-              }
-              removeSetFromCurrentExercise(target.id);
-              setLoggedSets(prev => prev.filter(s => s.id !== target.id));
-              // L07-F2: drop this set from the session PR-detection ref so a
-              // later set in the same exercise never compares against a
-              // deleted set, and clear any PR badge this exact set earned so
-              // it doesn't linger stale for the rest of the session (derived
-              // analytics elsewhere recompute correctly from the DB anyway).
-              sessionSetsRef.current = sessionSetsRef.current.filter(s => s.id !== target.id);
-              setDetectedPRs(prev => prev.filter(p => p.setId !== target.id));
-              setEditingSet(null);
-              setEditValue(null);
-              updateLastActivity();
-              // Spoken like a log and an edit are (audit P5).
-              try { AccessibilityInfo.announceForAccessibility('Set deleted'); } catch (_) { /* best-effort */ }
-            } catch (e) {
-              logError('ActiveWorkoutScreen.handleDeleteEditedSet', e, {
-                userId: user?.id,
-                workoutId: activeWorkout?.id,
-                setId: target?.id,
-              });
-              appAlert('Couldn\'t delete set', 'That set couldn\'t be removed. Please try again.');
-            }
-          },
-        },
-      ],
-    );
+  // ─── Delete set with Undo (founder request 2026-10-17) ───────────────
+  //
+  // The row leaves the screen and the totals at once (local state and the
+  // store), and a toast offers Undo. NOTHING is deleted yet: Undo puts the row
+  // straight back. The real delete (the local row, the cloud row or its queued
+  // tombstone, then a renumber) runs only when the toast closes without Undo,
+  // and always BEFORE a finish or when the screen goes, so a finished workout
+  // never holds a set the person removed. Each entry carries everything the
+  // commit needs (user, workout, exercise ids), so it never reads a stale
+  // render. A process kill inside the toast's window leaves the row stored (it
+  // was never deleted); the next finish counts it, which is the cost of an
+  // Undo that cannot lose a set.
+  const pendingDeletesRef = useRef(new Map());
+
+  // Renumber one exercise's local rows after the database renumber, with the
+  // same rule (renumberSetsByKind), in the store and, when the person is on
+  // that exercise, on the screen.
+  function renumberLocalSets(exerciseId) {
+    const apply = (sets) => {
+      const wanted = new Map(renumberSetsByKind(sets).map((n) => [n.id, n.setNumber]));
+      let changed = false;
+      const next = sets.map((x) => {
+        const n = wanted.get(x.id);
+        if (n === undefined || x.setNumber === n) return x;
+        changed = true;
+        return { ...x, setNumber: n };
+      });
+      return changed ? next : sets;
+    };
+    useAppStore.getState().setWorkoutExercises((list) => list.map((e) => (
+      e?.exercise?.id === exerciseId ? { ...e, sets: apply(e.sets || []) } : e
+    )));
+    const st = useAppStore.getState();
+    if (st.workoutExercises[st.currentExerciseIndex]?.exercise?.id === exerciseId) {
+      setLoggedSets((prev) => apply(prev));
+    }
+  }
+
+  // Put a removed row back where it was: the store entry for its exercise and,
+  // when the person is looking at that exercise, the screen's list; the PR
+  // entries and the PR-history row it carried come back with it.
+  function restoreRemovedSet(p) {
+    useAppStore.getState().setWorkoutExercises((list) => {
+      let at = p.entryIndex;
+      if (list[at]?.exercise?.id !== p.exerciseId) at = list.findIndex((e) => e?.exercise?.id === p.exerciseId);
+      if (at < 0) return list;
+      return list.map((e, i) => {
+        if (i !== at || (e.sets || []).some((x) => x.id === p.set.id)) return e;
+        const sets = [...(e.sets || [])];
+        sets.splice(Math.min(p.position, sets.length), 0, p.set);
+        return { ...e, sets };
+      });
+    });
+    const st = useAppStore.getState();
+    if (st.currentExerciseIndex === p.entryIndex && st.workoutExercises[p.entryIndex]?.exercise?.id === p.exerciseId) {
+      setLoggedSets((prev) => {
+        if (prev.some((x) => x.id === p.set.id)) return prev;
+        const next = [...prev];
+        next.splice(Math.min(p.position, next.length), 0, p.set);
+        return next;
+      });
+      if (p.sessionEntry && !sessionSetsRef.current.some((x) => x.id === p.set.id)) {
+        sessionSetsRef.current = [...sessionSetsRef.current, p.sessionEntry];
+      }
+    }
+    if (p.prs.length) setDetectedPRs((prev) => [...prev, ...p.prs.filter((r) => !prev.some((x) => x === r))]);
+  }
+
+  function undoDeleteSet(setId) {
+    const p = pendingDeletesRef.current.get(setId);
+    if (!p) return; // already committed (the screen closed first): nothing to give back
+    pendingDeletesRef.current.delete(setId);
+    restoreRemovedSet(p);
+    hapticsVocab.selection();
+    try { AccessibilityInfo.announceForAccessibility('Set restored'); } catch (_) { /* best-effort */ }
+  }
+
+  async function commitPendingDelete(setId) {
+    const p = pendingDeletesRef.current.get(setId);
+    if (!p) return;
+    pendingDeletesRef.current.delete(setId);
+    try {
+      // false = the row is already gone from this device, which is what was
+      // asked; the cloud delete below still runs so it cannot be resurrected.
+      await deleteWorkoutSet(p.userId, setId);
+      // Pair the cloud delete exactly like WorkoutHistoryScreen: remove the
+      // cloud row, queueing a retry op on failure so a restore cannot
+      // resurrect it.
+      if (p.supabaseUserId) {
+        // eslint-disable-next-line global-require
+        const { deleteWorkoutSetFromCloud } = require('../lib/sync');
+        deleteWorkoutSetFromCloud(p.supabaseUserId, setId)
+          .then((cloudOk) => { if (!cloudOk) return enqueueSyncOp('workout_set_delete', setId, p.supabaseUserId); })
+          .catch(() => enqueueSyncOp('workout_set_delete', setId, p.supabaseUserId));
+      }
+      // The remaining sets close the gap (1, 2, 3 per kind), so the next set
+      // logged can never repeat a number.
+      await renumberWorkoutSets(p.workoutId, p.exerciseId);
+      renumberLocalSets(p.exerciseId);
+    } catch (e) {
+      logError('ActiveWorkoutScreen.commitPendingDelete', e, {
+        userId: p.userId,
+        workoutId: p.workoutId,
+        setId,
+      });
+      // Nothing was removed: the row comes back rather than hiding a set that
+      // is still stored.
+      restoreRemovedSet(p);
+      appAlert('Could not delete set', 'That set could not be removed, so it is back in your workout. Please try again.');
+    }
+  }
+
+  function flushPendingDeletes() {
+    return Promise.all([...pendingDeletesRef.current.keys()].map((id) => commitPendingDelete(id)));
+  }
+  const flushPendingDeletesRef = useRef(flushPendingDeletes);
+  flushPendingDeletesRef.current = flushPendingDeletes;
+  // The screen going away (back to the bar, the finish, a discard) commits any
+  // delete still inside its Undo window.
+  useEffect(() => () => { flushPendingDeletesRef.current(); }, []);
+
+  function handleDeleteSetWithUndo(target) {
+    if (!target?.id || pendingDeletesRef.current.has(target.id)) return;
+    const position = loggedSets.findIndex((x) => x.id === target.id);
+    pendingDeletesRef.current.set(target.id, {
+      set: target,
+      position: position >= 0 ? position : loggedSets.length,
+      entryIndex: currentExerciseIndex,
+      exerciseId: exercise?.id,
+      workoutId: activeWorkout?.id,
+      userId: user?.id,
+      supabaseUserId: session?.user?.id ?? null,
+      prs: detectedPRs.filter((r) => r.setId === target.id),
+      sessionEntry: sessionSetsRef.current.find((x) => x.id === target.id) ?? null,
+    });
+    removeSetFromCurrentExercise(target.id);
+    setLoggedSets((prev) => prev.filter((x) => x.id !== target.id));
+    // L07-F2: drop this set from the session PR-detection ref so a later set
+    // in the same exercise never compares against a deleted set, and clear any
+    // PR badge this exact set earned so it doesn't linger stale (an Undo
+    // brings both back).
+    sessionSetsRef.current = sessionSetsRef.current.filter((x) => x.id !== target.id);
+    setDetectedPRs((prev) => prev.filter((r) => r.setId !== target.id));
+    if (editingSet?.id === target.id) closeEditSet();
+    updateLastActivity();
+    // Spoken like a log and an edit are (audit P5).
+    try { AccessibilityInfo.announceForAccessibility('Set deleted'); } catch (_) { /* best-effort */ }
+    toast.show('Set deleted.', {
+      variant: 'undo',
+      action: { label: 'Undo', onPress: () => undoDeleteSet(target.id) },
+      onTimeout: () => { commitPendingDelete(target.id); },
+    });
+  }
+
+  // ─── Change a logged set's type (founder request 2026-10-17: "I forgot to
+  // set one as a warm-up") ──────────────────────────────────────────────────
+  //
+  // Writes set_type through updateWorkoutSet (with the evidence class the set
+  // would have been logged with as that type: none for a warm-up), renumbers
+  // the exercise's sets, and judges the set's record again exactly as the edit
+  // path does: a set that stops being a working set loses its badge, a set
+  // that becomes one is checked against the history without itself.
+  async function handleChangeLoggedSetType(target, newType) {
+    if (!target?.id || !newType) return;
+    const oldType = target.setType ?? target.set_type ?? 'straight';
+    if (oldType === newType) return;
+    const newEvidenceClass = newType === 'warmup' ? null : currentEvidenceClass;
+    try {
+      await updateWorkoutSet(target.id, { setType: newType, evidenceClass: newEvidenceClass });
+      const fields = { setType: newType, evidenceClass: newEvidenceClass };
+      updateSetInCurrentExercise(target.id, fields);
+      setLoggedSets((prev) => prev.map((x) => (x.id === target.id ? { ...x, ...fields } : x)));
+      sessionSetsRef.current = sessionSetsRef.current.map((x) => (x.id === target.id ? { ...x, ...fields } : x));
+
+      // Record re-check (mirrors handleSaveEditedSet's, which this does not
+      // replace): history is past sessions plus today's other working sets.
+      const exType = exercise?.exerciseType || exercise?.exercise_type || 'weight_reps';
+      const isWeightReps = exType === 'weight_reps' || exType === 'weighted_bodyweight';
+      const weight = target.weight;
+      const actualReps = target.actualReps ?? target.reps;
+      let prs = [];
+      let prHistoryLength = 0;
+      if (isWeightReps && isWorkingSetRow({ setType: newType })) {
+        const history = [
+          ...allTimeSets.filter(isWorkingSetRow),
+          ...loggedSets.filter((x) => x.id !== target.id && isWorkingSetRow(x)),
+        ];
+        prHistoryLength = history.length;
+        if (history.length > 0) {
+          prs = detectPR({ weight, actualReps, setType: newType, evidenceClass: newEvidenceClass }, history, exercise, units);
+        }
+      }
+      const at = loggedSets.findIndex((x) => x.id === target.id);
+      const shownNumber = at >= 0 ? countProgressSets(loggedSets.slice(0, at)) + 1 : undefined;
+      if (prs.length > 0 && prHistoryLength > 0) {
+        noteRecord(exercise.id, { ...prs[0], units, setId: target.id, setNumber: shownNumber });
+      } else {
+        setExerciseRecords((prev) => {
+          const cur = prev[exercise.id];
+          if (!cur || cur.setId !== target.id) return prev;
+          const next = { ...prev };
+          delete next[exercise.id];
+          return next;
+        });
+      }
+      setDetectedPRs((prev) => {
+        const without = prev.filter((r) => r.setId !== target.id);
+        if (prs.length === 0 || prHistoryLength === 0) return without;
+        return bestPRPerExercise([
+          ...without,
+          ...prs.map((r) => ({ ...r, exerciseId: exercise.id, exerciseName: exercise.name, units, setId: target.id, setNumber: shownNumber })),
+        ]);
+      });
+
+      await renumberWorkoutSets(activeWorkout.id, exercise.id);
+      renumberLocalSets(exercise.id);
+      updateLastActivity();
+      hapticsVocab.setLogged();
+      const label = SET_TYPE_OPTIONS.find((o) => o.value === newType)?.label ?? 'that type';
+      try { AccessibilityInfo.announceForAccessibility(`Set changed to ${label}`); } catch (_) { /* best-effort */ }
+    } catch (e) {
+      logError('ActiveWorkoutScreen.handleChangeLoggedSetType', e, {
+        userId: user?.id,
+        workoutId: activeWorkout?.id,
+        setId: target?.id,
+      });
+      appAlert('Could not change set type', 'That change was not saved. Please try again.');
+    }
   }
 
   // ─── Cluster sets (myo-reps / rest-pause) ───────────────────────────
@@ -4363,7 +4561,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // the toolbar's spinner was never driven). Mirrors finishingRef.
   const [finishing, setFinishing] = useState(false);
   function setFinishingFlag(v) { finishingRef.current = v; setFinishing(v); }
+  // Founder request 2026-10-17. Both prompts are offered at the moment a set
+  // brings an exercise to its target, never on a timer and never twice for the
+  // same state: after "Keep going" the next prompt waits for another exercise
+  // to reach its target (the key names the exercise and what was missed).
+  // 'done'  every exercise has a working set: "That is everything".
+  // 'left'  the last exercise is done but others were never started.
+  // The buttons call through refs (finishRef, jumpRef) because this closure
+  // was made before the set landed; the ref holds the current render's
+  // handler, so the finish sees the set that was just logged.
+  const endPromptKeyRef = useRef(null);
+  const finishRef = useRef(null);
+  const jumpRef = useRef(null);
+  const skipEndedEarlyConfirmRef = useRef(false);
+  finishRef.current = handleFinishWorkout;
+  jumpRef.current = handleJumpToExercise;
+  function promptAfterFinalExercise(kind, missed) {
+    const key = `${kind}|${exercise?.id ?? ''}|${missed.map((m) => m.id).join(',')}`;
+    if (endPromptKeyRef.current === key) return;
+    endPromptKeyRef.current = key;
+    cancelAutoAdvance();
+    if (kind === 'done') {
+      appAlert(
+        'That is everything',
+        'Every exercise is done. Would you like to finish the workout?',
+        [
+          { text: 'Keep going', style: 'cancel' },
+          { text: 'Finish', onPress: () => { finishRef.current?.(); } },
+        ],
+      );
+      return;
+    }
+    appAlert(
+      'Something left',
+      `You have not done ${missedNamesPhrase(missed)} yet.`,
+      [
+        { text: 'Keep going', style: 'cancel' },
+        { text: 'Go back', onPress: () => { jumpRef.current?.(missed[0].index); } },
+        {
+          text: 'Finish anyway',
+          onPress: () => {
+            // Already asked: the ended-early confirm is not shown a second time.
+            skipEndedEarlyConfirmRef.current = true;
+            finishRef.current?.();
+          },
+        },
+      ],
+    );
+  }
+
   async function handleFinishWorkout() {
+    // A "Finish anyway" has already been confirmed once; read the flag and
+    // clear it at once so it can never carry over to a later Finish tap.
+    const skipEndedEarlyConfirm = skipEndedEarlyConfirmRef.current;
+    skipEndedEarlyConfirmRef.current = false;
     if (!activeWorkout) { navigation.goBack(); return; }
     // A set save in flight has not reached the database yet: finishing now
     // would total the workout without it. Do nothing; the button works again
@@ -4371,6 +4622,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (saving) return;
     if (finishingRef.current) return; // double-tap guard
     setFinishingFlag(true);
+    // A set deleted a moment ago is still inside its Undo window: delete it
+    // for real first, so the finish counts (and the cloud holds) exactly the
+    // sets the person kept.
+    await flushPendingDeletes();
     audit('workout.finish.tap', {
       workoutId: activeWorkout?.id ?? null,
       loggedSetCount: loggedSets.length,
@@ -4771,6 +5026,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const endedEarlyRoutineId = activeWorkout?.routineId ?? null;
     const canResolveEndedEarly = !!user?.id && !!endedEarlyWeekId && !!endedEarlyRoutineId;
 
+    // "Finish anyway" from the Something left prompt was the confirmation, so
+    // it closes the session as ended early without asking again. An unlogged
+    // entry still gets the ordinary confirm: it would be lost silently.
+    if (isEndedEarly && skipEndedEarlyConfirm && !hasInProgressSetEntry()) {
+      if (canResolveEndedEarly) {
+        await runFinish({
+          mesocycleWeekId: endedEarlyWeekId,
+          routineId: endedEarlyRoutineId,
+          mesocycleId: activeWorkout?.mesocycleId ?? progressionBlockId,
+          resolution: 'ended_early',
+          workoutId: activeWorkout.id,
+        });
+      } else {
+        await runFinish();
+      }
+      return;
+    }
+
+    // The exercises never started, by name, so the confirm says what would be
+    // left behind and offers the way back (founder request 2026-10-17).
+    const missedAtFinish = missedExercises(snapshotExercises);
+
     if (isEndedEarly && canResolveEndedEarly) {
       // eslint-disable-next-line global-require
       const { endEarlyConfirmation } = require('../lib/blockProgression');
@@ -4784,9 +5061,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       );
       appAlert(
         copy.title,
-        `${copy.body}${inProgressNote}`,
+        `${missedAtFinish.length ? `You have not done ${missedNamesPhrase(missedAtFinish)} yet. ` : ''}${copy.body}${inProgressNote}`,
         [
           { text: copy.cancel, style: 'cancel', onPress: () => { setFinishingFlag(false); } },
+          ...(missedAtFinish.length ? [{
+            text: 'Go back',
+            onPress: () => { setFinishingFlag(false); handleJumpToExercise(missedAtFinish[0].index); },
+          }] : []),
           {
             text: copy.confirm,
             onPress: async () => {
@@ -4869,6 +5150,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // (blank workout, or an exercise added mid-session) still resolves to a
   // real number instead of undefined. See DEFAULT_FREEFORM_TARGET_SETS above
   // for the full root-cause note.
+  // This exercise's own Add set / Remove set adjustment (see
+  // targetAdjustments), floored so the target is never below one set.
+  const extraTargetSets = Math.max(
+    targetAdjustments[exercise?.id] ?? 0,
+    1 - (adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS),
+  );
   const targetSets = (adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS) + extraTargetSets;
   const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
@@ -4932,7 +5219,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // Campaign 20 Phase 2 Stage 15 (restore/replay verification): keep the
   // LIVE (not-yet-logged) box in step with a mid-session edit or delete of
-  // an EARLIER logged set. handleSaveEditedSet/handleDeleteEditedSet already
+  // an EARLIER logged set. handleSaveEditedSet/handleDeleteSetWithUndo already
   // update loggedSets/workoutExercises, which the packet/prescriptions memo
   // above already reacts to (the upcoming-preview rows and the provenance
   // line pick this up for free) - but the box's actual weight/reps VALUE
@@ -5109,7 +5396,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setEditField(null);
     setEditingSet(null);
     setEditValue(null);
-    setExtraTargetSets(0);
     setRowSheet(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExerciseIndex, exercise?.id]);
@@ -5901,6 +6187,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             groupLabel={null}
             onPressHeader={handleOpenExerciseDetails}
             onAddSet={armExtraSet}
+            onRemoveSet={canRemovePendingSet(targetSets, workingLogged) ? handleRemoveSet : null}
             onSwap={handleOpenSwap}
             onMore={handleOpenOverflow}
             onFilm={clipsSuppressed === false ? handleRecordClip : null}
@@ -6477,6 +6764,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           }}
           onEdit={rowSheet?.kind === 'logged' ? () => openWell((setTableKind === 'weight_reps' || setTableKind === 'distance') ? 'weight' : 'reps', rowSheet.set) : undefined}
           onDelete={rowSheet?.kind === 'logged' ? () => openDeleteFromMenu(rowSheet.set) : undefined}
+          typeOptions={rowSheet?.kind === 'logged' ? SET_TYPE_OPTIONS : undefined}
+          setType={rowSheet?.set?.setType ?? rowSheet?.set?.set_type ?? 'straight'}
+          onChangeType={rowSheet?.kind === 'logged' ? (value) => handleChangeLoggedSetType(rowSheet.set, value) : undefined}
         />
 
         {/* Exercise Picker Modal, shared by Add and Swap (see pickerMode) */}

@@ -60,7 +60,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   test('finish-workout confirmation and retry copy use the same action name', () => {
     expect(ACTIVE_WORKOUT).toContain("text: 'Finish workout'");
     expect(ACTIVE_WORKOUT).toContain('tap Finish workout again');
-    expect(ACTIVE_WORKOUT).not.toContain("text: 'Finish',");
+    // Re-pinned 2026-10-17: the finish CONFIRMATION never labels its button a
+    // bare 'Finish'. The end-of-session prompt ("That is everything", founder
+    // request) does, by spec, and it is not the confirmation.
+    const finishFn = ACTIVE_WORKOUT.slice(
+      ACTIVE_WORKOUT.indexOf('async function handleFinishWorkout()'),
+      ACTIVE_WORKOUT.indexOf('// COMP-015: session-adjusted working-set target'),
+    );
+    expect(finishFn.length).toBeGreaterThan(1000);
+    expect(finishFn).not.toContain("text: 'Finish',");
     expect(ACTIVE_WORKOUT).not.toContain('tap Finish again');
   });
 

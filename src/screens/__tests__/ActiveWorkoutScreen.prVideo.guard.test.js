@@ -55,8 +55,9 @@ describe('the threshold line stays gone (D220 addendum 9)', () => {
     expect(offer.split('detectPR(').length - 1).toBe(1);
     expect(offer).toContain('return detectPR({ ...offerSet, weight: entry.weight, actualReps: entry.actualReps }, recordOfferHistory, exercise, units).length > 0;');
     expect(offer).not.toMatch(/calculate1RM|Math\.|previousValue|\.value\b/);
-    // The screen as a whole: the log, the edit and the offer, nothing more.
-    expect(SRC.split('detectPR(').length - 1).toBe(3);
+    // The screen as a whole: the log, the edit, the offer and (2026-10-17) the
+    // re-check after a logged set's type changes, nothing more.
+    expect(SRC.split('detectPR(').length - 1).toBe(4);
   });
 
   test('the offer renders no number of its own: its words are the rule\'s, nothing computed', () => {

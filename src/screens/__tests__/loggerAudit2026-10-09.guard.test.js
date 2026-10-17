@@ -48,15 +48,23 @@ describe('the second logger audit stays fixed', () => {
     expect(SRC).toMatch(/if \(set && editingSet && set\.id === editingSet\.id\) \{[\s\S]{0,400}?setEditField\(field\);\s*setEntryField\(null\);\s*\} else if \(set\) \{\s*openEditSet\(set\);/);
   });
 
-  test('D3: delete from the sheet on the open row confirms directly', () => {
-    expect(SRC).toMatch(/function openDeleteFromMenu\(set\) \{[\s\S]{0,400}?if \(editingSet && editingSet\.id === set\.id\) \{\s*menuDeleteTargetIdRef\.current = null;\s*handleDeleteEditedSet\(\);\s*return;/);
+  // Re-pinned 2026-10-17: Delete set no longer opens an edit state and then a
+  // confirm (the armed-effect path D3 guarded). It removes the row at once with
+  // an Undo toast, so it does not depend on whether that row is being edited.
+  test('D3: delete from the sheet acts on the row itself, open or not (deferred delete with Undo)', () => {
+    expect(SRC).toMatch(/function openDeleteFromMenu\(set\) \{\s*handleDeleteSetWithUndo\(set\);\s*\}/);
+    expect(SRC).not.toContain('menuDeleteTargetIdRef');
+    expect(SRC).toContain('if (editingSet?.id === target.id) closeEditSet();');
   });
 
   // The hold that opened a logged set's sheet is gone (founder, 2026-10-11:
   // notes popped up unasked); the set's tick opens it, and still cancels a
   // pending auto-advance.
   test('D4, D15: the reset is keyed on the exercise and closes the sheet; opening a set\'s sheet cancels the advance', () => {
-    expect(SRC).toMatch(/setExtraTargetSets\(0\);\s*setRowSheet\(null\);\s*\/\/ eslint-disable-next-line react-hooks\/exhaustive-deps\s*\}, \[currentExerciseIndex, exercise\?\.id\]\);/);
+    // Re-pinned 2026-10-17: the reset no longer zeroes a single extra-set count
+    // (Add set / Remove set are kept per exercise in a map and survive a
+    // change); it still closes the sheet on every exercise change.
+    expect(SRC).toMatch(/setEditValue\(null\);\s*setRowSheet\(null\);\s*\/\/ eslint-disable-next-line react-hooks\/exhaustive-deps\s*\}, \[currentExerciseIndex, exercise\?\.id\]\);/);
     expect(SRC).toContain("onCheck: () => { Keyboard.dismiss(); cancelAutoAdvance(); setRowSheet({ kind: 'logged'");
     expect(SRC).not.toContain('onLongPressRow:');
   });

@@ -11,9 +11,12 @@
  *      exercise changes or the screen goes.
  *   7. A refused keystroke gives a light haptic from the existing vocabulary.
  *   8. A finished tick-all run gives one beat and one spoken line.
- *   9. Delete set stays a confirmed hard delete (no Undo): the row is hard
- *      deleted locally and in the cloud, or a queued tombstone, and the queue
- *      has no way to withdraw one, so an Undo is not safe to build.
+ *   9. Delete set is a DEFERRED hard delete with an Undo toast (re-pinned
+ *      2026-10-17 on the founder's request and the lead's ruling; it was a
+ *      confirm with no Undo). The queue still cannot withdraw a tombstone, so
+ *      the Undo is safe only because nothing is deleted until the toast closes
+ *      without it: Undo is local state, the real hard delete + cloud delete +
+ *      queued tombstone run at close, a finish or unmount.
  */
 const fs = require('fs');
 const path = require('path');
@@ -99,9 +102,17 @@ describe('logger finish and save safety (audit 2026-10-17)', () => {
     expect(SRC).toContain('total: count };');
   });
 
-  test('9. Delete set stays confirmed (no Undo is built: the delete is a hard delete with an unwithdrawable tombstone)', () => {
-    const fn = between('function handleDeleteEditedSet()', '// ─── Cluster sets');
-    expect(fn).toContain('This cannot be undone.');
-    expect(fn).toContain("enqueueSyncOp('workout_set_delete'");
+  test('9. Delete set is deferred behind an Undo toast; the hard delete and its tombstone run only at close', () => {
+    // Re-pinned 2026-10-17: the old pin (a confirm, "no Undo is built") held
+    // while the delete ran at once. The delete now waits for the toast to
+    // close, so an Undo has nothing to withdraw.
+    const start = between('function handleDeleteSetWithUndo(target)', 'async function handleChangeLoggedSetType');
+    expect(start).not.toContain('deleteWorkoutSet(');
+    expect(start).toContain("variant: 'undo'");
+    expect(start).toContain('onTimeout: () => { commitPendingDelete(target.id); },');
+    const commit = between('async function commitPendingDelete(setId)', 'function flushPendingDeletes()');
+    expect(commit).toContain('await deleteWorkoutSet(p.userId, setId);');
+    expect(commit).toContain("enqueueSyncOp('workout_set_delete'");
+    expect(SRC).not.toContain('This cannot be undone.');
   });
 });

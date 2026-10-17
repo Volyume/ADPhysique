@@ -36,6 +36,85 @@ export function setNumberForKind(loggedSets, isWarmup) {
   ).length + 1;
 }
 
+/**
+ * The set numbers a list of sets should carry, numbered WITHIN each kind in the
+ * order given (the same split setNumberForKind uses for the next set): warm-ups
+ * read 1, 2, 3 on their own, every other type reads 1, 2, 3 together. Pure: the
+ * database renumber (database.renumberWorkoutSets) and the screen's local state
+ * both read this one rule, so a delete, a type change or a reorder can never
+ * leave the screen and the stored rows numbering differently.
+ *
+ * @param {Array} sets  one exercise's sets in display order ({ id, setType|set_type })
+ * @returns {Array<{ id: *, setNumber: number }>} one entry per set, same order
+ */
+export function renumberSetsByKind(sets) {
+  let warm = 0;
+  let work = 0;
+  return (sets ?? []).map((s) => {
+    const isWarm = (s.setType ?? s.set_type ?? 'straight') === 'warmup';
+    return { id: s.id, setNumber: isWarm ? ++warm : ++work };
+  });
+}
+
+/**
+ * Exercises the person has not touched: not dropped by Time Crunch
+ * (`_timeCrunchSkipped`) and with no logged set at all, in session order.
+ * Reads the same entries shouldConfirmBeforeFinish reads, so the finish
+ * prompts and the ended-early confirm agree on what "missed" means.
+ *
+ * @param {Array} workoutExercises  session entries ({ exercise, sets, _timeCrunchSkipped })
+ * @returns {Array<{ index: number, id: *, name: string }>}
+ */
+export function missedExercises(workoutExercises) {
+  const out = [];
+  (workoutExercises ?? []).forEach((e, index) => {
+    if (!e || e._timeCrunchSkipped) return;
+    if ((e.sets?.length ?? 0) > 0) return;
+    out.push({ index, id: e.exercise?.id ?? null, name: e.exercise?.name ?? 'an exercise' });
+  });
+  return out;
+}
+
+/**
+ * Whether every exercise the session intends to work (not Time Crunch
+ * dropped) has at least one non-warm-up set (a warm-up alone is not "done").
+ * Drives the "That is everything" finish prompt.
+ */
+export function everyExerciseHasWorkingSet(workoutExercises) {
+  const planned = (workoutExercises ?? []).filter((e) => e && !e._timeCrunchSkipped);
+  return planned.length > 0 && planned.every((e) => (e.sets ?? []).some(
+    (s) => (s.setType ?? s.set_type ?? 'straight') !== 'warmup',
+  ));
+}
+
+/**
+ * The names of the missed exercises as one calm phrase: "A", "A and B",
+ * "A, B and N more".
+ *
+ * @param {Array<{ name: string }>} missed  output of missedExercises
+ * @returns {string}
+ */
+export function missedNamesPhrase(missed) {
+  const names = (missed ?? []).map((m) => m.name);
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names[0]}, ${names[1]} and ${names.length - 2} more`;
+}
+
+/**
+ * Whether the "Remove set" control is offered: the exercise must keep at least
+ * one unlogged row after the next one, i.e. the target is more than one
+ * working set above what is already logged. Removing never takes the target
+ * below the logged working count plus one.
+ *
+ * @param {number} targetSets     the exercise's current target
+ * @param {number} workingLogged  working sets already logged
+ */
+export function canRemovePendingSet(targetSets, workingLogged) {
+  return Number.isFinite(targetSets) && targetSets - (workingLogged ?? 0) > 1;
+}
+
 // getBestAnchorSet (best-working-set seed) and prefillRepsForTarget
 // (beat-anchor-by-one-rep) were RETIRED in Campaign 20 Phase 2 Stage 12
 // (docs/live-prescription-campaign-20-2026-08-16/
