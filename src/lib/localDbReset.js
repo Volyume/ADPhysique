@@ -90,6 +90,10 @@ function defaultDeps() {
       seedExercises.LIBRARY_VERSION_KEY,
       foodSeed.OFF_SNAPSHOT_FLAG_KEY,
       foodSeed.COFID_SNAPSHOT_FLAG_KEY,
+      // A surviving progress marker would resume the import part-way into
+      // the new, empty database and leave its first rows missing.
+      foodSeed.OFF_SNAPSHOT_PROGRESS_KEY,
+      foodSeed.COFID_SNAPSHOT_PROGRESS_KEY,
       libraryDelta.CURSOR_KEY,
       libraryDelta.THROTTLE_KEY,
     ],

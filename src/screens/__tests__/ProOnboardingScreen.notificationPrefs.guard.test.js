@@ -61,3 +61,61 @@ describe('ProOnboardingScreen notification-prefs writer (#13, #14)', () => {
     expect(SOURCE).not.toMatch(/const prefs = \{\s*\n\s*morningEnabled: true,/);
   });
 });
+
+describe('finishing setup never waits on the permission prompt or the reminder lay (Android spinner report, 2026-10-18)', () => {
+  // Both cross into native code whose promises settle only on a platform
+  // reply, with no timeout or error path: the permission answer through the
+  // activity, and every Android schedule/cancel as a broadcast to the app's
+  // own receiver (about 75 here). Awaiting them held Continue on a spinner.
+  const apply = SOURCE.slice(SOURCE.indexOf('async function applyReminderPreferences()'), SOURCE.indexOf('async function askAndLayReminders()'));
+  const ask = SOURCE.slice(SOURCE.indexOf('async function askAndLayReminders()'), SOURCE.indexOf('function planProfileNow('));
+
+  test('setup awaits only the local preference writes, then starts the ask and lay without awaiting', () => {
+    expect(apply).toMatch(/await AsyncStorage\.setItem\(NOTIF_PREFS_KEY/);
+    expect(apply).toMatch(/\n\s*askAndLayReminders\(\)\.catch\(/);
+    expect(apply).not.toMatch(/await askAndLayReminders/);
+    expect(apply).not.toMatch(/requestNotificationPermissions/);
+    expect(apply).not.toMatch(/await schedule[A-Z]/);
+  });
+
+  test('scheduling still happens only on a grant, and every reminder onboarding laid before is still laid', () => {
+    expect(ask).toMatch(/const status = await requestNotificationPermissions\(\);\s*\n\s*if \(status === 'granted'\) \{/);
+    expect(ask).toMatch(/scheduleMorningWeightNotification\(morningHour, 0\)/);
+    expect(ask).toMatch(/scheduleEveningWeightReminder\(\)/);
+    expect(ask).toMatch(/scheduleCheckinReminder\(checkinDay, 18, 0, \{\s*earliestMs: Date\.now\(\) \+ FIRST_CHECKIN_MIN_DAYS \* 86400000,/);
+    expect(ask).toMatch(/scheduleMissedCheckinFollowups\(/);
+  });
+
+  test('no timeout stands in for the fix', () => {
+    expect(SOURCE).not.toMatch(/REMINDER_STEP_CEILING_MS|FIT_CEILING|Promise\.race/);
+  });
+});
+
+describe('finishing setup reports a stalled stage to Sentry, and only reports (Android spinner report, 2026-10-18)', () => {
+  // A wait that never returns throws nothing, so a phone stuck on Continue
+  // sent Sentry nothing. Every stage of finishing setup is watched.
+  const watchStart = SOURCE.indexOf('function watchSetupStage(');
+  const watcher = SOURCE.slice(watchStart, SOURCE.indexOf('\n}\n', watchStart) + 2);
+
+  test('a stalled stage sends one warning naming the stage reached, and changes nothing else', () => {
+    expect(watcher).toMatch(/logWarn', 'ProOnboarding\.stageStalled'/);
+    expect(watcher).toMatch(/done\(\) \{ clearTimeout\(timer\); \}/);
+    // Reports only: no state, navigation or promise is touched by the watcher.
+    expect(watcher).not.toMatch(/\bset(?!Timeout)[A-Z]\w*\(|navigation|resolve\(|reject\(/);
+  });
+
+  test('every stage between Continue and the end of setup is watched', () => {
+    for (const stage of ["'fit'", "'fit_full'", "'reminder_prefs'", "'build', 90000", "'notification_permission', 120000", "'reminder_lay', 60000"]) {
+      expect(SOURCE).toContain(`watchSetupStage(${stage})`);
+    }
+    for (const at of ['profile', 'targets', 'plan', 'capability_choice', 'plan_generate', 'community']) {
+      expect(SOURCE).toContain(`buildWatch.at('${at}')`);
+    }
+  });
+
+  test('the build watch is closed on every exit: bad baseline, thrown error, and normal finish', () => {
+    expect(SOURCE).toMatch(/buildWatch\.done\(\);\s*\n\s*endSequence\(\);\s*\n\s*setBusy\(false\);\s*\n\s*submittingRef\.current = false;\s*\n\s*setAttempted2\(true\);/);
+    expect(SOURCE).toMatch(/appAlert\('That did not work'[^\n]*\n\s*buildWatch\.done\(\);/);
+    expect(SOURCE).toMatch(/buildWatch\.done\(\);\s*\n\s*if \(draftTimerRef\.current\) clearTimeout\(draftTimerRef\.current\);\s*\n\s*if \(user\?\.id\) clearDraft/);
+  });
+});

@@ -1073,6 +1073,9 @@ const linking = {
 // beyond any healthy resolution, because the escape it grants is the gate
 // itself, never the app.
 const CONSENT_LATCH_FAILSAFE_MS = 15000;
+// A start-up wait still unresolved after this long is reported once to
+// Sentry, naming the wait. Report only: nothing is routed or released by it.
+const BOOT_STALL_REPORT_MS = 30000;
 
 // CODE-001: route bootstrap fire-and-forget rejections through the error log,
 // not raw console.*, so every fault is captured with a scope and shipped like
@@ -1085,6 +1088,46 @@ function _bootLog(level, scope, err) {
     if (level === 'error') log.logError(scope, err);
     else log.logWarn(scope, err?.message ?? String(err ?? ''));
   } catch (_) { /* never let logging break boot */ }
+}
+
+// The first-launch food work: the bundled OFF and CoFID snapshot imports and
+// the cloud food-library delta pull. Started only once first-run setup is
+// complete (Android spinner report, 2026-10-18): on a fresh install these are
+// about 80,000 sequential SQLite calls on the one thread every Expo native
+// call shares, and each 5,000-row delta page holds the app-wide transaction
+// queue that the plan build writes through. Running them during setup held
+// the wizard's Continue behind them, and an app restart began them again.
+// Food logging is not reachable before setup completes, and food search falls
+// back to live lookups until the cache is filled. Each call is idempotent and
+// self-deduping (version flags, an in-flight map, a 6-hour throttle).
+function startFoodLibraryWork() {
+  // OpenFoodFacts UK snapshot import. Idempotent + safe;
+  // logs to errorLog at every fault boundary. Fire-and-
+  // forget -- doesn't block app boot. On failure, the food
+  // layer falls back to live OFF / USDA / manual.
+  // eslint-disable-next-line global-require
+  require('../lib/food/seed').importOffSnapshotIfNeeded()
+    // Surface a RESOLVED failure (asset missing, load_failed, etc.): it
+    // was previously ignored, so a non-importing snapshot was invisible
+    // (food audit D-4).
+    .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot.failed', res.reason); })
+    .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot', err));
+  // CoFID UK generic foods (~3k rows). Static dataset, runs
+  // once per snapshot version. Fills the gap OFF leaves on
+  // raw/unbranded items (chicken breast raw, plain oats, etc.).
+  // eslint-disable-next-line global-require
+  require('../lib/food/seed').importCofidSnapshotIfNeeded()
+    .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot.failed', res.reason); })
+    .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot', err));
+  // Food library delta pull (step 3): refresh local foods
+  // cache against cloud foods that were updated since the
+  // last pull. Throttled to once per 6 hours by default;
+  // skipped silently if no session. Same fire-and-forget
+  // pattern as the snapshot import.
+  // eslint-disable-next-line global-require
+  require('../lib/food/libraryDelta').pullFoodLibraryDelta()
+    .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta.failed', res.reason); })
+    .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta', err));
 }
 
 export default function RootNavigator() {
@@ -1156,6 +1199,9 @@ export default function RootNavigator() {
   // a successful retry - a transient failure must stay visible until it is
   // actually fixed, not disappear on the next unrelated re-render.
   const [dbInitFailed, setDbInitFailed] = useState(false);
+  // Bumped on every successful database open, so the food work below starts
+  // (again) after a reopen exactly as the inline calls did.
+  const [dbReadyTick, setDbReadyTick] = useState(0);
   const [dbRetrying, setDbRetrying] = useState(false);
   // Reset and restore (founder answer 2026-10-17): how many opens have failed
   // in this launch (a deferred open is not a failure and is not counted); the
@@ -1332,33 +1378,9 @@ export default function RootNavigator() {
       runExerciseSeedChain()
         .catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.seedExercises', e));
       cleanupOrphanRoutineExercises().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.cleanupOrphanRoutines', e));
-      // OpenFoodFacts UK snapshot import. Idempotent + safe;
-      // logs to errorLog at every fault boundary. Fire-and-
-      // forget -- doesn't block app boot. On failure, the food
-      // layer falls back to live OFF / USDA / manual.
-      // eslint-disable-next-line global-require
-      require('../lib/food/seed').importOffSnapshotIfNeeded()
-        // Surface a RESOLVED failure (asset missing, load_failed, etc.): it
-        // was previously ignored, so a non-importing snapshot was invisible
-        // (food audit D-4).
-        .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot.failed', res.reason); })
-        .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot', err));
-      // CoFID UK generic foods (~3k rows). Static dataset, runs
-      // once per snapshot version. Fills the gap OFF leaves on
-      // raw/unbranded items (chicken breast raw, plain oats, etc.).
-      // eslint-disable-next-line global-require
-      require('../lib/food/seed').importCofidSnapshotIfNeeded()
-        .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot.failed', res.reason); })
-        .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot', err));
-      // Food library delta pull (step 3): refresh local foods
-      // cache against cloud foods that were updated since the
-      // last pull. Throttled to once per 6 hours by default;
-      // skipped silently if no session. Same fire-and-forget
-      // pattern as the snapshot import.
-      // eslint-disable-next-line global-require
-      require('../lib/food/libraryDelta').pullFoodLibraryDelta()
-        .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta.failed', res.reason); })
-        .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta', err));
+      // The food snapshot imports and library delta pull start from the
+      // effect below once setup is complete (startFoodLibraryWork).
+      setDbReadyTick((n) => n + 1);
       if (dbOpenFailedRef.current) {
         dbOpenFailedRef.current = false;
         runRestoreSyncAfterReopen();
@@ -1393,6 +1415,14 @@ export default function RootNavigator() {
   // a self-reference inside useCallback.
   const attemptDbInitRef = useRef(null);
   attemptDbInitRef.current = attemptDbInit;
+
+  // First-launch food work waits for both an open database and a finished
+  // setup (see startFoodLibraryWork). A returning user's setup is already
+  // complete, so for them this runs at boot as before.
+  useEffect(() => {
+    if (!dbReadyTick || !firstRunComplete) return;
+    startFoodLibraryWork();
+  }, [dbReadyTick, firstRunComplete]);
 
   const handleDbRetry = useCallback(async () => {
     setDbRetrying(true);
@@ -2383,6 +2413,27 @@ export default function RootNavigator() {
       require('expo-splash-screen').hideAsync().catch(() => {});
     } catch (_) { /* tolerate */ }
   }, [nativeFrameLifts]);
+
+  // Report only (Android spinner report, 2026-10-18): new Android accounts
+  // relaunched dozens of times without finishing the first setup step, and
+  // nothing reached Sentry because a wait that never ends throws nothing.
+  // The two splash waits below each send one warning, naming what they still
+  // wait on, if unresolved after BOOT_STALL_REPORT_MS. Nothing is routed,
+  // released or granted here: the consent latch keeps its own fail-safe.
+  const bootWaits = [
+    !freshInstallOpen && !splashReady && 'splash',
+    !freshInstallOpen && !firstRunChecked && 'first_run',
+    !freshInstallOpen && !tierChecked && 'tier',
+    !freshInstallOpen && !initialAuthResolved && 'auth',
+    !!user && !user.isLocal && !firstRunComplete && !healthConsentChecked && 'consent',
+  ].filter(Boolean).join(',');
+  useEffect(() => {
+    if (!bootWaits) return undefined;
+    const timer = setTimeout(() => {
+      _bootLog('warn', 'RootNavigator.bootStalled', `still waiting on ${bootWaits}`);
+    }, BOOT_STALL_REPORT_MS);
+    return () => clearTimeout(timer);
+  }, [bootWaits]);
 
   // Splash gate fires ONLY during initial bootstrap, before splashReady,
   // firstRunChecked, tierChecked and the ONE-SHOT initialAuthResolved

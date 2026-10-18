@@ -48,3 +48,18 @@ test('D228 item 5: the final-build failure alert carries the refusal sentence an
   expect(SRC).toMatch(/planResult\.error === 'structure_refused' && typeof planResult\.refusal\?\.text === 'string'/);
   expect(SRC).toMatch(/\$\{planResult\.refusal\.text\} Open Today to choose how to go on\.`,\s*\[\{ text: 'Open Today' \}\]/);
 });
+
+describe('Continue on step 8 runs one engine build for the fit check, not five (Android spinner report, 2026-10-18)', () => {
+  // The fit check ran the structure engine five times on the JS thread before
+  // any progress overlay appeared; four of those builds fed only the review's
+  // length chips. Light and full passes agree on state, focus questions,
+  // refusal and alternatives (checked over 60 answer sets, 2026-10-18).
+  test('the first pass is the light one: one engine build, no per-length builds', () => {
+    expect(SRC).toMatch(/const fit = await runFitAssessment\(\{\}, \{ withDurations: false \}\);/);
+    expect(SRC).toMatch(/durationOptions: withDurations \? SESSION_LENGTH_OPTIONS\.map\(o => o\.value\) : \[\],/);
+  });
+
+  test('the full pass runs only for a person who is shown the review', () => {
+    expect(SRC).toMatch(/const full = await runFitAssessment\(\);\s*\n\s*fullWatch\.done\(\);\s*\n\s*setFitReview\(full \?\? fit\);/);
+  });
+});

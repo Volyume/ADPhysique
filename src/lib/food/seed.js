@@ -121,6 +121,15 @@ const _inFlight = new Map();
 export const OFF_SNAPSHOT_FLAG_KEY = '@volyume_off_snapshot_loaded_v1';
 export const COFID_SNAPSHOT_FLAG_KEY = '@volyume_cofid_snapshot_loaded_v1';
 
+// Where an unfinished import got to, as { version, next } (Android spinner
+// report, 2026-10-18). The flag above is written only after the last chunk,
+// so an import cut short by the app closing used to begin again at row 0 on
+// every launch; a phone closed and reopened often enough never finished it.
+// A run now resumes at the first chunk not yet committed for the same
+// snapshot version. Cleared on completion and by the local-database reset.
+export const OFF_SNAPSHOT_PROGRESS_KEY = '@volyume_off_snapshot_progress_v1';
+export const COFID_SNAPSHOT_PROGRESS_KEY = '@volyume_cofid_snapshot_progress_v1';
+
 /**
  * OFF UK snapshot importer (branded products, ~100k+ rows).
  */
@@ -128,6 +137,7 @@ export function importOffSnapshotIfNeeded() {
   return _importIfNeeded({
     scopeKey: 'off',
     flagKey: OFF_SNAPSHOT_FLAG_KEY,
+    progressKey: OFF_SNAPSHOT_PROGRESS_KEY,
     expectedVersion: OFF_SNAPSHOT_VERSION,
     sourceLabel: 'off',
     loadModule: () => require('../../../assets/seed/off_uk_snapshot.dat'),
@@ -141,6 +151,7 @@ export function importCofidSnapshotIfNeeded() {
   return _importIfNeeded({
     scopeKey: 'cofid',
     flagKey: COFID_SNAPSHOT_FLAG_KEY,
+    progressKey: COFID_SNAPSHOT_PROGRESS_KEY,
     expectedVersion: COFID_SNAPSHOT_VERSION,
     sourceLabel: 'cofid',
     loadModule: () => require('../../../assets/seed/cofid_uk.dat'),
@@ -154,7 +165,7 @@ function _importIfNeeded(spec) {
   return p;
 }
 
-async function _run({ scopeKey, flagKey, expectedVersion, sourceLabel, loadModule }) {
+async function _run({ scopeKey, flagKey, progressKey, expectedVersion, sourceLabel, loadModule }) {
   const t0 = Date.now();
   let meta = null;
   let rows = null;
@@ -240,7 +251,20 @@ async function _run({ scopeKey, flagKey, expectedVersion, sourceLabel, loadModul
   let skippedRows = 0;
   const now = Date.now();
 
-  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+  // Resume an import of THIS version that an earlier launch left unfinished.
+  // Every row is an upsert, so starting a chunk early is harmless; only a
+  // start past the end or a different version is refused.
+  let start = 0;
+  try {
+    const saved = JSON.parse(await AsyncStorage.getItem(progressKey));
+    if (saved && saved.version === version && Number.isInteger(saved.next)
+      && saved.next > 0 && saved.next < rows.length && saved.next % CHUNK_SIZE === 0) {
+      start = saved.next;
+      logInfo(`food.seed.${scopeKey}.import.resume`, `resuming at row ${start} of ${rows.length}`);
+    }
+  } catch (_) { /* no usable progress: start at row 0 */ }
+
+  for (let i = start; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
     let result;
     try {
@@ -306,6 +330,10 @@ async function _run({ scopeKey, flagKey, expectedVersion, sourceLabel, loadModul
     }
     importedRows += result.imp;
     skippedRows += result.skp;
+    // Past this chunk whatever its outcome, exactly as the loop itself moves
+    // on: a resumed run skips the same chunks one uninterrupted run would.
+    await AsyncStorage.setItem(progressKey, JSON.stringify({ version, next: i + CHUNK_SIZE }))
+      .catch(() => { /* progress is a convenience; a lost write only means more re-import */ });
   }
 
   // ── 4. Persist the version flag ───────────────────────────────────
@@ -314,6 +342,7 @@ async function _run({ scopeKey, flagKey, expectedVersion, sourceLabel, loadModul
   } catch (e) {
     logWarn(`food.seed.${scopeKey}.flag.persist`, e?.message ?? 'unknown', { version });
   }
+  await AsyncStorage.removeItem(progressKey).catch(() => { /* a stale marker is refused by version or bounds */ });
 
   const ms = Date.now() - t0;
   logInfo(`food.seed.${scopeKey}.import.done`,
