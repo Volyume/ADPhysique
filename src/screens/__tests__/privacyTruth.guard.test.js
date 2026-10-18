@@ -215,6 +215,15 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry20).toContain('Settings, under Privacy and legal');
     expect(entry20).toContain('Community has been improved');
     expect({ bad: /\bclips?\b/i.test(entry20) }).toEqual({ bad: false });
+    // 3.1.0: the Android setup fix, with the same three founder lines.
+    const start31 = sheet.indexOf("'3.1.0': [");
+    expect(start31).toBeGreaterThan(-1);
+    const entry31 = sheet.slice(start31, sheet.indexOf('],', start31));
+    expect(entry31).toContain('The workout logger has been completely revamped.');
+    expect(entry31).toContain('Videos stay on your phone and are never uploaded');
+    expect(entry31).toContain('Settings, under Privacy and legal');
+    expect(entry31).toContain('Community has been improved');
+    expect({ bad: /\bclips?\b|email|plan again/i.test(entry31) }).toEqual({ bad: false });
     // 3.0.0: the same three founder lines.
     const start22 = sheet.indexOf("'3.0.0': [");
     expect(start22).toBeGreaterThan(-1);
