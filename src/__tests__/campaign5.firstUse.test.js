@@ -1875,11 +1875,18 @@ describe('NOTIFICATIONS: a denied permission produces no fake scheduled state (C
       .toMatch(/const status = await getNotificationPermissionStatus\(\);\s*\n\s*if \(status !== 'granted'\) return;/);
   });
 
-  test('the OS prompt no longer lands under the build animation', () => {
+  // Re-pinned 2026-10-18 (Android spinner report): C5-P27-02 had moved the
+  // OS prompt ahead of the build animation by AWAITING it, which tied setup
+  // to a native promise with no timeout and held Continue on a spinner. The
+  // preferences are still saved before the animation; the prompt and the
+  // schedules now run alongside the build and are never awaited by it.
+  test('the preferences are saved before the build animation, and the prompt never blocks it', () => {
     const src = read('screens/ProOnboardingScreen.js');
     const fn = src.slice(src.indexOf('async function advanceFrom8'));
     expect(fn.indexOf('await applyReminderPreferences()'))
       .toBeLessThan(fn.indexOf('if (useSequence) startSequence();'));
+    const apply = src.slice(src.indexOf('async function applyReminderPreferences()'), src.indexOf('async function askAndLayReminders()'));
+    expect(apply).not.toMatch(/await requestNotificationPermissions|await askAndLayReminders/);
   });
 
   test('every surface that says "turn it on in Settings" can get there', () => {

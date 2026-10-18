@@ -243,6 +243,31 @@ const SESSION_LENGTH_OPTIONS = [
 // full-body week at two sessions and no longer quietly promotes it to three.
 const DAYS_PER_WEEK_OPTIONS = [2, 3, 4, 5, 6];
 
+// Finishing setup reports where it is, and never changes what it does
+// (Android spinner report, 2026-10-18). A wait that never returns throws
+// nothing, so a phone stuck on the Continue spinner sent Sentry nothing at
+// all. Each stage leaves a breadcrumb; a stage still unsettled after its
+// window sends ONE warning naming the stage reached. Stage names and timings
+// only, nothing about the person.
+function watchSetupStage(stage, reportAfterMs = 30000) {
+  const startedAt = Date.now();
+  let current = stage;
+  const log = (fn, ...args) => {
+    // eslint-disable-next-line global-require
+    try { require('../lib/errorLog')[fn](...args); } catch (_) { /* reporting is best-effort */ }
+  };
+  log('logInfo', 'ProOnboarding.stage', `start ${stage}`);
+  const timer = setTimeout(() => {
+    log('logWarn', 'ProOnboarding.stageStalled', `stage=${stage} at=${current}`, {
+      stage, at: current, waitedMs: Date.now() - startedAt,
+    });
+  }, reportAfterMs);
+  return {
+    at(next) { current = next; log('logInfo', 'ProOnboarding.stage', `${stage} at ${next}`); },
+    done() { clearTimeout(timer); },
+  };
+}
+
 // D228 Q5-A (2026-10-15): onboarding no longer asks the recovery-level question.
 // The structure engine never reads it (its inputs are goal, days, length,
 // equipment, experience, focus). The profile field stays: the muscle recovery
@@ -1499,10 +1524,10 @@ export default function ProOnboardingScreen({ navigation }) {
   // Tidy the stage timers if the screen unmounts mid-sequence.
   useEffect(() => cancelSequenceTimers, []);
 
-  // The reminder half of finishing setup: the preference blob, the SQLite
-  // mirror, the OS permission prompt and the day-0 schedules. Extracted from
-  // advanceFrom8 under C5-P27-02 (D96) so it can run BEFORE the build
-  // animation; the body and its order are otherwise unchanged.
+  // The reminder half of finishing setup: the preference blob and the SQLite
+  // mirror are written here, before the build; the OS permission prompt and
+  // the day-0 schedules are started here and run alongside it
+  // (askAndLayReminders, see below for why they are not awaited).
   async function applyReminderPreferences() {
     // Flat schema: CoachingReminders, WeeklyCheckIn and the Coach tab
     // all read these top-level keys. The coaching loop needs both
@@ -1564,45 +1589,58 @@ export default function ProOnboardingScreen({ navigation }) {
         });
       }
     } catch (_) { /* tolerate; the blob write already succeeded */ }
-    const status = await requestNotificationPermissions();
-    if (status === 'granted') {
-      // Laid in the background, never awaited by setup (Android spinner
-      // report, 2026-10-18). On Android every expo-notifications schedule and
-      // cancel is a broadcast to the app's own receiver, and its promise
-      // settles only when that receiver replies: no timeout, no error if the
-      // broadcast is held. This block makes about 75 of those round trips in
-      // a row (the morning and evening 14-day runs are each cancelled and
-      // re-laid), so awaiting it tied finishing setup to platform delivery.
-      // Nothing is lost by not waiting: each helper self-gates (ED flag,
-      // stand-down, tier), and restoreNotifications re-lays the lot at every
-      // launch.
-      layOnboardingReminders().catch((e) => {
-        // eslint-disable-next-line global-require
-        try { require('../lib/errorLog').logError('ProOnboarding.layReminders', e, { userId: user?.id }); } catch (_) {}
-      });
-    }
+    // The permission request and the reminder lay run alongside the build,
+    // never ahead of it (Android spinner report, 2026-10-18). Both cross into
+    // native code whose promises settle only on a reply from the platform: the
+    // permission answer comes back through the activity, and on Android every
+    // expo-notifications schedule and cancel is a broadcast to the app's own
+    // receiver (about 75 round trips here, the morning and evening 14-day runs
+    // each cancelled and re-laid). None of them has a timeout or an error path
+    // if the reply never comes, so awaiting them tied finishing setup to the
+    // platform, and setup sat on the Continue spinner. The preferences above
+    // are already saved, each scheduling helper self-gates (ED flag,
+    // stand-down, tier), and restoreNotifications re-lays everything at every
+    // launch, so nothing is lost by not waiting. The cost is cosmetic: the OS
+    // dialog can now appear over the build card (C5-P27-02 had moved it ahead).
+    askAndLayReminders().catch((e) => {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('ProOnboarding.askAndLayReminders', e, { userId: user?.id }); } catch (_) {}
+    });
   }
 
-  async function layOnboardingReminders() {
-    await scheduleMorningWeightNotification(morningHour, 0);
-    await scheduleEveningWeightReminder();
-    // Audit finding 2 (2026-07-13): the first check-in unlocks only
-    // after FIRST_CHECKIN_MIN_DAYS of data, so the first reminder must
-    // never fire before then -- a day-0 schedule could invite a brand
-    // new user into a locked "wait a few days" screen.
-    await scheduleCheckinReminder(checkinDay, 18, 0, {
-      earliestMs: Date.now() + FIRST_CHECKIN_MIN_DAYS * 86400000,
-    });
-    // OPP-C03: pre-lay the missed check-in follow-up pair for the
-    // first check-in cycle (reads the prefs blob just saved; the
-    // helper self-guards on tier, toggle and ED flag).
+  async function askAndLayReminders() {
+    // A person may sit on the OS dialog for a while, hence the longer window.
+    const askWatch = watchSetupStage('notification_permission', 120000);
+    let layWatch = null;
     try {
-      // eslint-disable-next-line global-require
-      const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
-      // eslint-disable-next-line global-require
-      const { default: store } = require('../store/useAppStore');
-      await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
-    } catch (_) {}
+      const status = await requestNotificationPermissions();
+      if (status === 'granted') {
+        askWatch.done();
+        layWatch = watchSetupStage('reminder_lay', 60000);
+        await scheduleMorningWeightNotification(morningHour, 0);
+        await scheduleEveningWeightReminder();
+        // Audit finding 2 (2026-07-13): the first check-in unlocks only
+        // after FIRST_CHECKIN_MIN_DAYS of data, so the first reminder must
+        // never fire before then -- a day-0 schedule could invite a brand
+        // new user into a locked "wait a few days" screen.
+        await scheduleCheckinReminder(checkinDay, 18, 0, {
+          earliestMs: Date.now() + FIRST_CHECKIN_MIN_DAYS * 86400000,
+        });
+        // OPP-C03: pre-lay the missed check-in follow-up pair for the
+        // first check-in cycle (reads the prefs blob just saved; the
+        // helper self-guards on tier, toggle and ED flag).
+        try {
+          // eslint-disable-next-line global-require
+          const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
+          // eslint-disable-next-line global-require
+          const { default: store } = require('../store/useAppStore');
+          await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
+        } catch (_) {}
+      }
+    } finally {
+      askWatch.done();
+      layWatch?.done();
+    }
   }
 
   /**
@@ -1748,13 +1786,17 @@ export default function ProOnboardingScreen({ navigation }) {
       // Light pass first: one engine build, not five. The per-length labels
       // are read only by the review, so only a person who is shown it pays
       // for the full pass below.
+      const fitWatch = watchSetupStage('fit');
       const fit = await runFitAssessment({}, { withDurations: false });
+      fitWatch.done();
       // D222 phase 7 (R83): a focus pick the structure engine asks about is
       // answered here too, before the plan is saved.
       if (fit && (fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN
         || fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED
         || (Array.isArray(fit.focusQuestions) && fit.focusQuestions.length > 0))) {
+        const fullWatch = watchSetupStage('fit_full');
         const full = await runFitAssessment();
+        fullWatch.done();
         setFitReview(full ?? fit);
         return;
       }
@@ -1773,23 +1815,24 @@ export default function ProOnboardingScreen({ navigation }) {
     // effect-run time only, so kill the pending timer at the source.
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
 
-    // C5-P27-02 (D96): the reminder preferences and the OS permission dialog
-    // are settled BEFORE the build animation starts. They used to run after
-    // startSequence(), so the system dialog appeared over a running
-    // "Building your first plan" overlay whose stage timers kept advancing
-    // behind it. Nothing about what is written or scheduled changes, and the
-    // OB-2 order inside the block (preference first, prompt second) is
-    // preserved. Wrapped in its own try so a permission throw cannot skip
-    // the build below, exactly as the surrounding try did before.
+    // The reminder preferences are saved BEFORE the build animation starts;
+    // the OS permission dialog and the schedules then run alongside the
+    // build (Android spinner report, 2026-10-18: awaiting them held setup on
+    // the Continue spinner; see applyReminderPreferences). The OB-2 order
+    // (preference first, prompt second) is preserved. Wrapped in its own try
+    // so a storage throw cannot skip the build below.
+    const prefsWatch = watchSetupStage('reminder_prefs');
     try {
       await applyReminderPreferences();
     } catch (_) { /* reminders are best-effort; setup continues */ }
+    prefsWatch.done();
 
     // D147: the staged card runs for everyone; under Reduce Motion every
     // transition inside it is instant. The real work below is identical.
     const useSequence = true;
     const startedAt = Date.now();
     if (useSequence) startSequence();
+    const buildWatch = watchSetupStage('build', 90000);
 
     let planFailed = false;
     // D147: the id of the plan this run wrote (or reused), for the payoff.
@@ -1811,6 +1854,7 @@ export default function ProOnboardingScreen({ navigation }) {
       const ageNum = parseInt(age, 10) || null;
 
       if (!ACCEPTED_SEX_VALUES.includes(sex) || !Number.isFinite(bwKg) || bwKg <= 0 || !isValidHeightCm(hcm) || !ageNum || ageNum < 13 || ageNum > 100) {
+        buildWatch.done();
         endSequence();
         setBusy(false);
         submittingRef.current = false;
@@ -1904,6 +1948,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // than writing a blank over it.
       if (firstName.trim()) merged.firstName = firstName.trim();
 
+      buildWatch.at('profile');
       if (user?.id) await saveLocalProfile(user.id, merged);
 
       // (Health Connect / Apple Health connect-on-enrolment was removed with the
@@ -1976,6 +2021,7 @@ export default function ProOnboardingScreen({ navigation }) {
         });
       }
 
+      buildWatch.at('targets');
       let maintenanceAuthority = null;
       if (user?.id) {
         // First enrolment is a cold formula start. Re-onboarding, interrupted
@@ -2013,6 +2059,7 @@ export default function ProOnboardingScreen({ navigation }) {
         }
       }
 
+      buildWatch.at('plan');
       // Auto-generate the training plan so the user lands on a ready-to-train
       // home screen rather than a "build me a plan" empty state.
       if (user?.id) {
@@ -2060,6 +2107,7 @@ export default function ProOnboardingScreen({ navigation }) {
           // generation. A hold falls into the existing plan-recovery path
           // (HomeScreen CTA) rather than blocking onboarding completion.
           const preflight = await capabilityPreflight(user.id);
+          if (!preflight.proceed) buildWatch.at('capability_choice');
           const goAhead = preflight.proceed || await new Promise((resolve) => {
             offerCapabilityPreflightChoice({
               onHold: () => resolve(false),
@@ -2067,6 +2115,7 @@ export default function ProOnboardingScreen({ navigation }) {
             });
           });
           if (goAhead) {
+            buildWatch.at('plan_generate');
             try { planResult = await generateAndSavePlan(user.id, planProfile); }
             catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
           } else {
@@ -2190,6 +2239,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // and the body profile are written. Best effort and queued offline
       // (performCommunityJoin never throws); it never changes the sequence,
       // the payoff or the alert path, and a minor never reaches it.
+      buildWatch.at('community');
       if (user?.id && !skipGymStep) {
         try {
           if (communityJoin === 'join') {
@@ -2223,6 +2273,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // eslint-disable-next-line global-require
       try { require('../lib/errorLog').logError('ProOnboardingScreen.finish', e, { userId: user?.id }); } catch (_) {}
       appAlert('That did not work', 'We could not finish setting up your account. Check your connection and try again.');
+      buildWatch.done();
       endSequence();
       setBusy(false);
       submittingRef.current = false;
@@ -2236,6 +2287,7 @@ export default function ProOnboardingScreen({ navigation }) {
     // correctly. Stranding the user on the step-5 form would not.
     // OB-3: the wizard is complete either way from here, so drop the resume
     // draft (and any queued save) before leaving the screen.
+    buildWatch.done();
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     if (user?.id) clearDraft(user.id).catch(() => {});
 

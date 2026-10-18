@@ -60,6 +60,6 @@ describe('Continue on step 8 runs one engine build for the fit check, not five (
   });
 
   test('the full pass runs only for a person who is shown the review', () => {
-    expect(SRC).toMatch(/const full = await runFitAssessment\(\);\s*\n\s*setFitReview\(full \?\? fit\);/);
+    expect(SRC).toMatch(/const full = await runFitAssessment\(\);\s*\n\s*fullWatch\.done\(\);\s*\n\s*setFitReview\(full \?\? fit\);/);
   });
 });
