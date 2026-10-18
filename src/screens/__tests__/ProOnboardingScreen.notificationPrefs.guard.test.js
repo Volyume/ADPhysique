@@ -61,3 +61,29 @@ describe('ProOnboardingScreen notification-prefs writer (#13, #14)', () => {
     expect(SOURCE).not.toMatch(/const prefs = \{\s*\n\s*morningEnabled: true,/);
   });
 });
+
+describe('finishing setup never waits on laying reminders (Android spinner report, 2026-10-18)', () => {
+  // On Android each expo-notifications schedule/cancel is a broadcast to the
+  // app's own receiver whose promise settles only on its reply, with no
+  // timeout. Awaiting about 75 of them held Continue on a spinner.
+  const block = SOURCE.slice(SOURCE.indexOf('async function applyReminderPreferences()'), SOURCE.indexOf('async function layOnboardingReminders()'));
+
+  test('the permission answer is still awaited, the lay is not', () => {
+    expect(block).toMatch(/const status = await requestNotificationPermissions\(\);\s*\n\s*if \(status === 'granted'\) \{/);
+    expect(block).toMatch(/\n\s*layOnboardingReminders\(\)\.catch\(/);
+    expect(block).not.toMatch(/await layOnboardingReminders/);
+    expect(block).not.toMatch(/await schedule[A-Z]/);
+  });
+
+  test('every reminder onboarding laid before is still laid', () => {
+    const lay = SOURCE.slice(SOURCE.indexOf('async function layOnboardingReminders()'));
+    expect(lay).toMatch(/scheduleMorningWeightNotification\(morningHour, 0\)/);
+    expect(lay).toMatch(/scheduleEveningWeightReminder\(\)/);
+    expect(lay).toMatch(/scheduleCheckinReminder\(checkinDay, 18, 0, \{\s*earliestMs: Date\.now\(\) \+ FIRST_CHECKIN_MIN_DAYS \* 86400000,/);
+    expect(lay).toMatch(/scheduleMissedCheckinFollowups\(/);
+  });
+
+  test('no timeout stands in for the fix', () => {
+    expect(SOURCE).not.toMatch(/REMINDER_STEP_CEILING_MS|FIT_CEILING/);
+  });
+});

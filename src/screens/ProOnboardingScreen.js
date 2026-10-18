@@ -1566,26 +1566,43 @@ export default function ProOnboardingScreen({ navigation }) {
     } catch (_) { /* tolerate; the blob write already succeeded */ }
     const status = await requestNotificationPermissions();
     if (status === 'granted') {
-      await scheduleMorningWeightNotification(morningHour, 0);
-      await scheduleEveningWeightReminder();
-      // Audit finding 2 (2026-07-13): the first check-in unlocks only
-      // after FIRST_CHECKIN_MIN_DAYS of data, so the first reminder must
-      // never fire before then -- a day-0 schedule could invite a brand
-      // new user into a locked "wait a few days" screen.
-      await scheduleCheckinReminder(checkinDay, 18, 0, {
-        earliestMs: Date.now() + FIRST_CHECKIN_MIN_DAYS * 86400000,
+      // Laid in the background, never awaited by setup (Android spinner
+      // report, 2026-10-18). On Android every expo-notifications schedule and
+      // cancel is a broadcast to the app's own receiver, and its promise
+      // settles only when that receiver replies: no timeout, no error if the
+      // broadcast is held. This block makes about 75 of those round trips in
+      // a row (the morning and evening 14-day runs are each cancelled and
+      // re-laid), so awaiting it tied finishing setup to platform delivery.
+      // Nothing is lost by not waiting: each helper self-gates (ED flag,
+      // stand-down, tier), and restoreNotifications re-lays the lot at every
+      // launch.
+      layOnboardingReminders().catch((e) => {
+        // eslint-disable-next-line global-require
+        try { require('../lib/errorLog').logError('ProOnboarding.layReminders', e, { userId: user?.id }); } catch (_) {}
       });
-      // OPP-C03: pre-lay the missed check-in follow-up pair for the
-      // first check-in cycle (reads the prefs blob just saved; the
-      // helper self-guards on tier, toggle and ED flag).
-      try {
-        // eslint-disable-next-line global-require
-        const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
-        // eslint-disable-next-line global-require
-        const { default: store } = require('../store/useAppStore');
-        await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
-      } catch (_) {}
     }
+  }
+
+  async function layOnboardingReminders() {
+    await scheduleMorningWeightNotification(morningHour, 0);
+    await scheduleEveningWeightReminder();
+    // Audit finding 2 (2026-07-13): the first check-in unlocks only
+    // after FIRST_CHECKIN_MIN_DAYS of data, so the first reminder must
+    // never fire before then -- a day-0 schedule could invite a brand
+    // new user into a locked "wait a few days" screen.
+    await scheduleCheckinReminder(checkinDay, 18, 0, {
+      earliestMs: Date.now() + FIRST_CHECKIN_MIN_DAYS * 86400000,
+    });
+    // OPP-C03: pre-lay the missed check-in follow-up pair for the
+    // first check-in cycle (reads the prefs blob just saved; the
+    // helper self-guards on tier, toggle and ED flag).
+    try {
+      // eslint-disable-next-line global-require
+      const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
+      // eslint-disable-next-line global-require
+      const { default: store } = require('../store/useAppStore');
+      await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
+    } catch (_) {}
   }
 
   /**
@@ -1621,14 +1638,19 @@ export default function ProOnboardingScreen({ navigation }) {
    * Read-only: assessScheduleFit runs the pure generator and persists
    * nothing, so this can be called as often as the athlete taps.
    */
-  async function runFitAssessment(overrides = {}) {
+  async function runFitAssessment(overrides = {}, { withDurations = true } = {}) {
     if (fitInFlightRef.current) return null;
     fitInFlightRef.current = true;
     setFitBusy(true);
     try {
+      // One tick so the spinner paints before the engine takes the JS thread.
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+      // withDurations: false skips the per-length builds, which only the fit
+      // review's length chips read. Continue needs the state and the focus
+      // questions only, and neither depends on them (structureFit).
       const fit = await assessScheduleFit(planProfileNow(overrides), {
         userId: user?.id ?? null,
-        durationOptions: SESSION_LENGTH_OPTIONS.map(o => o.value),
+        durationOptions: withDurations ? SESSION_LENGTH_OPTIONS.map(o => o.value) : [],
         dayOptions: DAYS_PER_WEEK_OPTIONS,
       });
       return fit?.ok ? fit : null;
@@ -1723,13 +1745,17 @@ export default function ProOnboardingScreen({ navigation }) {
     // about a plan they are never going to receive.
     if (!fitAccepted && !libraryKitForEquipment(equipment)) {
       if (fitInFlightRef.current) return;
-      const fit = await runFitAssessment();
+      // Light pass first: one engine build, not five. The per-length labels
+      // are read only by the review, so only a person who is shown it pays
+      // for the full pass below.
+      const fit = await runFitAssessment({}, { withDurations: false });
       // D222 phase 7 (R83): a focus pick the structure engine asks about is
       // answered here too, before the plan is saved.
       if (fit && (fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN
         || fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED
         || (Array.isArray(fit.focusQuestions) && fit.focusQuestions.length > 0))) {
-        setFitReview(fit);
+        const full = await runFitAssessment();
+        setFitReview(full ?? fit);
         return;
       }
       setFitAccepted(true);
