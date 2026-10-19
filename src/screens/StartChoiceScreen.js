@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fontWeight, spacing } from '../styles/theme';
+import { fontWeight, spacing, radius, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -71,14 +72,21 @@ export default function StartChoiceScreen({ navigation }) {
           You can change your mind later.
         </Text>
 
-        {/* Founder brief 2026-10-19: say plainly that everything is free and
-            that nothing is held back, without repeating "free" in other
-            words. */}
-        <Card borderless style={[styles.card, { backgroundColor: t.colors.primaryBg }]} testID="start-choice-free">
-          <Text style={[t.type.h3, { color: t.colors.textPrimary }]}>Free. All of it.</Text>
-          <Text style={[t.type.body, styles.point, { color: t.colors.textPrimary }]}>
-            Full coaching, food logging, meal plans and Community. There is no paid version and no ads, so you get the whole app.
-          </Text>
+        {/* Founder brief 2026-10-19: say plainly that everything is free. The
+            app's note pattern (PlanRebuildNote): a plain card, an icon tile,
+            a title and a supporting line, in full sentences. */}
+        <Card style={styles.card} testID="start-choice-free">
+          <View style={styles.noteHead}>
+            <View style={[styles.noteIcon, { backgroundColor: t.colors.primaryBg }]}>
+              <Ionicons name="lock-open-outline" size={iconSize.md} color={t.colors.primary} />
+            </View>
+            <View style={styles.noteCopy}>
+              <Text style={[t.type.h3, { color: t.colors.textPrimary }]}>The whole app is free</Text>
+              <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                Coaching, food logging, meal plans and Community are all included. There is no paid version and there are no adverts.
+              </Text>
+            </View>
+          </View>
         </Card>
 
         <Card tone="primary" style={styles.card}>
@@ -137,4 +145,7 @@ const styles = StyleSheet.create({
   cta: { marginTop: spacing.md },
   ctaGap: { marginTop: spacing.sm },
   reassure: { marginTop: spacing.sm, textAlign: 'center' },
+  noteHead: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  noteIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  noteCopy: { flex: 1, minWidth: 0, gap: spacing.xs },
 });
