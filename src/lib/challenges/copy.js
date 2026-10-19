@@ -25,7 +25,7 @@ export const COACHING_SCORING = Object.freeze([
   { label: 'Weekly weigh-in', points: 4 },
 ]);
 
-export const COACHING_NOTE = 'For the challenge: coaching adds up to 20 more points.';
+export const COACHING_NOTE = 'In the challenge, coaching adds up to 20 more points.';
 
 // Founder decision 2026-10-19 (SPEC sections 0 and 5). Worded so that nobody
 // else is said to pay today.
