@@ -147,14 +147,20 @@ describe('source guards', () => {
 describe('the free band (founder brief 2026-10-19)', () => {
   const SRC = fs.readFileSync(path.join(__dirname, '../StartChoiceScreen.js'), 'utf8');
 
-  it('says everything is free and nothing is held back', async () => {
+  it('says everything is free, in full sentences', async () => {
     const r = await mount();
     const text = r.root.findAll((n) => typeof n.props?.children === 'string').map((n) => n.props.children).join(' | ');
-    expect(text).toContain('Free. All of it.');
-    expect(text).toContain('There is no paid version and no ads, so you get the whole app.');
+    expect(text).toContain('The whole app is free');
+    expect(text).toContain('Coaching, food logging, meal plans and Community are all included. There is no paid version and there are no adverts.');
+  });
+
+  it('uses the app note pattern, never amber spent on decoration (styling.md)', () => {
+    expect(SRC).not.toMatch(/Free\. All of it\./);
+    expect(SRC).not.toMatch(/backgroundColor: t\.colors\.primaryBg \}\]\} testID="start-choice-free"/);
+    expect(SRC).toMatch(/<Card style=\{styles\.card\} testID="start-choice-free">/);
   });
 
   it('never repeats free in other words (founder: no card, no trial, no subscription, data lines)', () => {
-    expect(SRC).not.toMatch(/no card|card details|no trial|no subscription|never sold|sell your data/i);
+    expect(SRC).not.toMatch(/no card|card details|no trial|no subscription|never sold|sell your data|all of it/i);
   });
 });
