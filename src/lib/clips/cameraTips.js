@@ -34,22 +34,25 @@ export const CAMERA_TIP_KEYS = Object.freeze([
   'row', 'lunge', 'machine', 'arms', 'raise', 'olympic', 'swing', 'general',
 ]);
 
+// Founder report 2026-10-19 (camera hard to read): each tip is now one short
+// plain line that fits a single pill; the meaning (side or front, height,
+// distance) is unchanged.
 export const CAMERA_TIPS = Object.freeze({
-  squat: 'Film from slightly to one side with the phone at hip height, a few steps back so your whole body fits.',
-  hinge: 'Film from the side with the phone between knee and hip height, a few steps back so your whole body fits.',
-  hip_thrust: 'Film from the side with the phone at bench height, a few steps back so your whole body fits.',
-  bench: 'Film from the side with the phone at bench height, far enough back to fit your whole body.',
-  push_up: 'Film from the side with the phone about knee height, far enough back to fit you from head to heels.',
-  overhead: 'Film from the side with the phone at chest height, far enough back to keep your hands in shot overhead.',
-  vertical_pull: 'Film from the side with the phone at waist height, far enough back to fit the bar and your feet.',
-  row: 'Film from the side with the phone around hip height, a few steps back so your whole body fits.',
-  lunge: 'Film from the side with the phone around hip height, a few steps back so both feet stay in shot.',
-  machine: 'Film from the side with the phone around hip height, far enough back to see you and the part that moves.',
-  arms: 'Film from the side with the phone around waist height, a few steps back so your whole body fits.',
-  raise: 'Film from the front with the phone around waist height, a few steps back so both arms fit when raised.',
-  olympic: 'Film from the side with the phone at chest height, far enough back to keep the bar in shot overhead.',
-  swing: 'Film from the side with the phone around hip height, a few steps back so the bell stays in shot.',
-  general: 'Set the phone upright around hip height, a few steps back and slightly to one side, so your whole body fits.',
+  squat: 'Phone at hip height, slightly to one side, a few steps back.',
+  hinge: 'Film from the side, phone between knee and hip height, a few steps back.',
+  hip_thrust: 'Film from the side, phone at bench height, a few steps back.',
+  bench: 'Film from the side, phone at bench height, far enough back to fit you.',
+  push_up: 'Film from the side, phone at knee height, far enough back to fit head to heels.',
+  overhead: 'Film from the side, phone at chest height, far enough back for your hands overhead.',
+  vertical_pull: 'Film from the side, phone at waist height, far enough back to fit the bar.',
+  row: 'Film from the side, phone at hip height, a few steps back.',
+  lunge: 'Film from the side, phone at hip height, a few steps back to keep both feet in.',
+  machine: 'Film from the side, phone at hip height, far enough back to see the moving part.',
+  arms: 'Film from the side, phone at waist height, a few steps back.',
+  raise: 'Film from the front, phone at waist height, far enough back to fit both arms raised.',
+  olympic: 'Film from the side, phone at chest height, far enough back to keep the bar in shot.',
+  swing: 'Film from the side, phone at hip height, a few steps back to keep the bell in shot.',
+  general: 'Phone upright at hip height, a few steps back, slightly to one side.',
 });
 
 // Name rules, in order: the first match wins. Each is a signal a person

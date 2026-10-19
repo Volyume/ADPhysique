@@ -628,11 +628,21 @@ export const letterSpacing = {
 // resolved fontSize table (resolveTheme() above) — one definition, two live
 // bindings, never two copies to keep in sync. Usage unchanged:
 // style={{ ...type.body, color: ... }}.
+const HERO_FONT_SIZE = 120;
 function buildTypeRoles(fontSizeTable) {
   const roles = {
     get display() {
       return { fontFamily: fontFamily.displayBold, fontSize: fontSizeTable.display,
         lineHeight: Math.round(fontSizeTable.display * lineHeight.tight), letterSpacing: letterSpacing.display };
+    },
+    // The one-numeral-on-screen size: 120px, fixed (not a step of the
+    // fontSize table, so Larger text and the narrow bucket leave it alone;
+    // call sites cap it with fontScaleCaps.numeral). Founder report
+    // 2026-10-19: the camera countdown asked for a role that did not exist and
+    // fell back to body (16px). Use it through type.num('hero').
+    get hero() {
+      return { fontFamily: fontFamily.displayBold, fontSize: HERO_FONT_SIZE,
+        lineHeight: Math.round(HERO_FONT_SIZE * lineHeight.tight), letterSpacing: letterSpacing.display };
     },
     get h1() {
       return { fontFamily: fontFamily.displayBold, fontSize: fontSizeTable.xxxl,
