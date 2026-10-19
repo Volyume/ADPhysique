@@ -44,7 +44,7 @@ import {
   SESSION_LIMITS, REP_RANGES, REST_TRIM_ORDER, TIME_MODEL,
   PROGRESSION, TEMPLATES, DAY_COUNTS, OPT_IN_MUSCLES, SIBLING_MUSCLES, CREDIT_FRACTION, rulebookCategory,
   restSecondsFor, restClassFor, orderKindFor, PER_SESSION, LIGHT_DOSE, REP_RANGE_UNLOADED_COMPOUND,
-  regionOf, LEGS_ONCE, ARCHETYPES, archetypeOfCategory, STRENGTH_REP_RANGE,
+  regionOf, LEGS_ONCE, ARCHETYPES, archetypeOfCategory, STRENGTH_REP_RANGE, STRENGTH_PATTERNS,
 } from './rulebook';
 import { structureChoices, variantOf } from './patterns';
 import { checkPlan, weeklyMax, weeklyMin } from './checker';
@@ -86,6 +86,13 @@ const CATEGORY_ORDER = Object.freeze({
   // may overrule (round 4 audits: a flat press won the second slot on the
   // credits it brings, so men's physique chest was two presses and no fly).
   mens_physique: { chest: { main: ['press_incline', 'fly', 'press_flat'], fallback: [], strict: true } },
+  // Founder answer 2 (2026-10-19): powerbuilding leads triceps with
+  // close-grip pressing for the bench lockout (a preference, not strict).
+  // The barbell row stays the fallback it is everywhere: it spends the
+  // week's heavy-hinge budget the deadlift needs.
+  general_powerbuilder: {
+    triceps: { main: ['close_grip_press', 'pushdown', 'tri_overhead'], fallback: ['skull'] },
+  },
 });
 // Muscles that take the least fatiguing name in a category even above
 // maintenance: men's physique presses on a machine or dumbbells before a
@@ -444,7 +451,7 @@ function buildWith(args, strategy) {
       extraJoints: [...choice.extraJoints],
       restSec: restSecondsFor(choice.kind, pattern).default,
       repRange: [...(choice.repRange || (choice.unloaded ? REP_RANGE_UNLOADED_COMPOUND
-        : (strengthReps && choice.kind === 'heavy_compound') ? STRENGTH_REP_RANGE : REP_RANGES[choice.kind]))],
+        : (strengthReps && choice.kind === 'heavy_compound' && STRENGTH_PATTERNS.includes(pattern)) ? STRENGTH_REP_RANGE : REP_RANGES[choice.kind]))],
       peak: sets,
       nextDayException: light,
       solePattern: solePattern(m),

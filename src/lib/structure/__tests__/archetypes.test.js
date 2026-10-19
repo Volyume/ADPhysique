@@ -10,10 +10,14 @@
  *  3. Every archetype builds at 2 to 6 days and passes the checker, so every
  *     hard safety limit holds.
  *  4. Its priority muscles get more weekly work than under balanced.
- *  5. V-taper and upper-body density train on the upper-biased rotation with
- *     one leg day a week, glutes on it.
- *  6. Powerbuilder loads heavy compounds at 3 to 6 reps (never for a
- *     beginner); minimalist aims every muscle at its minimum.
+ *  5. V-taper and upper-body density keep one leg day a week, glutes on it
+ *     (founder answer 1b); upper-body density trains chest and back twice a
+ *     week from 4 days; powerbuilder has no Shoulders & Arms day.
+ *  6. Powerbuilder loads its main lifts (squat, bench, deadlift, barbell
+ *     row) at 3 to 6 reps, never for a beginner, with size work at normal
+ *     ranges (founder answer 2); minimalist aims every muscle at its minimum.
+ *  Refusals at 2 or 3 days for styles with many priority muscles stay
+ *  honest, as for bodybuilding and classic physique (founder answer 3a).
  *  7. A competing category ignores an archetype; an unknown one is refused.
  *  8. A stored plan reads the same targets (so the weekly coach does).
  */
@@ -21,7 +25,7 @@ import { buildStructurePlan, weeklyTargets } from '../engine';
 import { checkPlan } from '../checker';
 import {
   ARCHETYPES, ARCHETYPE_KEYS, ARCHETYPE_CATEGORIES, TIERS, TEMPLATES, LEGS_ONCE, DAY_COUNTS,
-  STRENGTH_REP_RANGE, REP_RANGES, rulebookCategory, archetypeCategory,
+  STRENGTH_REP_RANGE, STRENGTH_PATTERNS, REP_RANGES, rulebookCategory, archetypeCategory,
 } from '../rulebook';
 
 const { LIBRARY } = require('../../__tests__/campaign16.helpers');
@@ -44,6 +48,7 @@ describe('the approved table (1a)', () => {
   test('the re-tiered muscles, as approved', () => {
     const tier = (a, m) => TIERS[m][archetypeCategory(a)];
     expect(['lats', 'side_delts', 'upper_back'].map((m) => tier('v_taper', m))).toEqual(['P', 'P', 'P']);
+    expect(['quads', 'hamstrings', 'glute_max', 'calves'].map((m) => tier('v_taper', m))).toEqual(['M', 'M', 'M', 'M']);
     expect(['lats', 'side_delts', 'quads', 'hamstrings'].map((m) => tier('x_frame', m))).toEqual(['P', 'P', 'P', 'P']);
     expect(['chest', 'upper_back', 'lats'].map((m) => tier('upper_density', m))).toEqual(['P', 'P', 'P']);
     expect(['quads', 'hamstrings', 'glute_max', 'calves'].map((m) => tier('upper_density', m))).toEqual(['M', 'M', 'M', 'M']);
@@ -81,14 +86,25 @@ describe('category resolution', () => {
   });
 });
 
-describe('every archetype builds and passes the checker at 2 to 6 days', () => {
+// Where a style with many priority muscles cannot reach its minimums in too
+// few days, it is refused honestly with a suggestion, as bodybuilding and
+// classic physique are at 2 and 3 days (founder answer 3a).
+const REFUSED = Object.freeze({ x_frame: [2, 3], powerbuilder: [2] });
+
+describe('every archetype builds and passes the checker, or is refused honestly', () => {
   for (const a of ARCHETYPE_KEYS) {
     for (const days of DAY_COUNTS) {
-      test(`${a}, ${days} days`, () => {
+      const refused = (REFUSED[a] || []).includes(days);
+      test(`${a}, ${days} days: ${refused ? 'refused with a suggestion' : 'builds'}`, () => {
         const r = build({ days, archetype: a });
+        if (refused) {
+          expect(r.ok).toBe(false);
+          expect(r.refusal.reason).toBe('minimum_unreachable');
+          expect(r.refusal.suggestedDays).toBeGreaterThan(days);
+          return;
+        }
         expect([a, days, r.ok, r.refusal?.reason]).toEqual([a, days, true, undefined]);
-        const verdict = checkPlan(r.plan);
-        expect([a, days, verdict.errors ?? verdict.failures ?? []]).toEqual([a, days, []]);
+        expect([a, days, checkPlan(r.plan).failures]).toEqual([a, days, []]);
       });
     }
   }
@@ -105,6 +121,19 @@ describe('what each style changes', () => {
     }
   });
 
+  test('upper_density trains chest and back twice a week from 4 days', () => {
+    const c = archetypeCategory('upper_density');
+    for (const days of [4, 5, 6]) {
+      const count = (m) => TEMPLATES[c][days].filter((s) => s.muscles.includes(m)).length;
+      expect([days, count('chest') >= 2, count('lats') >= 2, count('upper_back') >= 2]).toEqual([days, true, true, true]);
+    }
+  });
+
+  test('powerbuilder has no Shoulders & Arms day', () => {
+    const c = archetypeCategory('powerbuilder');
+    for (const days of DAY_COUNTS) expect(TEMPLATES[c][days].map((s) => s.key)).not.toContain('shoulders_arms');
+  });
+
   test('v_taper and upper_density train legs once a week, glutes on that day', () => {
     for (const a of ['v_taper', 'upper_density']) {
       const c = archetypeCategory(a);
@@ -117,11 +146,15 @@ describe('what each style changes', () => {
     }
   });
 
-  test('powerbuilder loads heavy compounds at 3 to 6 reps, never for a beginner', () => {
-    const heavy = (plan) => plan.sessions.flatMap((s) => s.exercises).filter((ex) => ex.kind === 'heavy_compound');
+  test('powerbuilder loads its main lifts at 3 to 6 reps, never for a beginner', () => {
+    const all = (plan) => plan.sessions.flatMap((s) => s.exercises);
+    const heavy = (plan) => all(plan).filter((ex) => ex.kind === 'heavy_compound');
     const pb = build({ days: 4, archetype: 'powerbuilder' }).plan;
-    expect(heavy(pb).length).toBeGreaterThan(0);
-    for (const ex of heavy(pb)) expect(ex.repRange).toEqual([...STRENGTH_REP_RANGE]);
+    const main = all(pb).filter((ex) => ex.kind === 'heavy_compound' && STRENGTH_PATTERNS.includes(ex.pattern));
+    expect(main.length).toBeGreaterThan(0);
+    for (const ex of main) expect(ex.repRange).toEqual([...STRENGTH_REP_RANGE]);
+    // Size work around the main lifts keeps its normal range.
+    for (const ex of all(pb).filter((e) => !STRENGTH_PATTERNS.includes(e.pattern))) expect(ex.repRange).not.toEqual([...STRENGTH_REP_RANGE]);
     const beginner = build({ days: 4, archetype: 'powerbuilder', experience: 'beginner' }).plan;
     for (const ex of heavy(beginner)) expect(ex.repRange).not.toEqual([...STRENGTH_REP_RANGE]);
     // Other styles keep the normal range.

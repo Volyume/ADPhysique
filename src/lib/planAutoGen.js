@@ -138,6 +138,10 @@ export function buildPlanInputs(profile, nowMs = Date.now()) {
     // calorie/volume tuning math.
     phase,
     weakPoints: migrated.planWeakPoints ?? [],
+    // Founder ruling 2026-10-19: the training style a not-competing person
+    // picked (structure/rulebook.js ARCHETYPES); null for everyone else and
+    // ignored by the engine under a competing category.
+    archetype: migrated.trainingArchetype ?? null,
     recoveryRating: migrated.recoveryRating ?? 'average',
     nutritionPhase: phaseToNutritionKey(phase),
     // The engine's landmarks have carried an age adjustment since the

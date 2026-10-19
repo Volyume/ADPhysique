@@ -19,6 +19,8 @@ import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
+import ArchetypePicker from '../components/ArchetypePicker';
+import { archetypeApplies, normaliseArchetype } from '../lib/trainingArchetypes';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
@@ -199,6 +201,8 @@ export default function ProGoalSetupScreen({ navigation }) {
   // Weak points, only meaningful for goals that bias volume towards priority
   // muscles. Hidden in the UI otherwise but the value is preserved across edits.
   const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
+  // Founder ruling 2026-10-19: the training style (see PlanUpdateScreen).
+  const [trainingArchetype, setTrainingArchetype] = useState(normaliseArchetype(userProfile?.trainingArchetype) ?? 'balanced');
   // B4: optional show date for competition divisions, stored on the user's
   // active peak_week_plans row (its only writer). Feeds the ED-gated
   // countdown on CoachOutput (docs/b4-contest-countdown-ed-review).
@@ -475,6 +479,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       proteinApproach,
       goalStartDate,
       planWeakPoints: nextWeakPoints,
+      trainingArchetype: archetypeApplies(selectedGoal) ? trainingArchetype : (normaliseArchetype(userProfile?.trainingArchetype) ?? null),
       // Training setup fields, picking up changes the user made to
       // experience / schedule / equipment / recovery. generateAndSavePlan
       // reads these from the profile to drive plan generation.
@@ -790,6 +795,17 @@ export default function ProGoalSetupScreen({ navigation }) {
           onChange={setSelectedGoal}
           placeholder="Not competing, General"
         />
+
+        {/* ── Training style (founder ruling 2026-10-19): not competing only ── */}
+        {archetypeApplies(selectedGoal) ? (
+          <>
+            <SectionLabel style={styles.sectionLabelSpaced}>Your training style</SectionLabel>
+            <Text style={[styles.sectionSub, live.sectionSub]}>
+              How your plan shares out its work. The muscle map shows where the extra work goes.
+            </Text>
+            <ArchetypePicker value={trainingArchetype} onChange={setTrainingArchetype} />
+          </>
+        ) : null}
 
         {/* ── Weak points (only for goals that support them) ── */}
         {weakPointsApplicable && (
