@@ -143,3 +143,18 @@ describe('source guards', () => {
     expect(body.indexOf('name="StartChoice"')).toBeLessThan(body.indexOf('name="ProOnboarding"'));
   });
 });
+
+describe('the free band (founder brief 2026-10-19)', () => {
+  const SRC = fs.readFileSync(path.join(__dirname, '../StartChoiceScreen.js'), 'utf8');
+
+  it('says everything is free and nothing is held back', async () => {
+    const r = await mount();
+    const text = r.root.findAll((n) => typeof n.props?.children === 'string').map((n) => n.props.children).join(' | ');
+    expect(text).toContain('Free. All of it.');
+    expect(text).toContain('There is no paid version and no ads, so you get the whole app.');
+  });
+
+  it('never repeats free in other words (founder: no card, no trial, no subscription, data lines)', () => {
+    expect(SRC).not.toMatch(/no card|card details|no trial|no subscription|never sold|sell your data/i);
+  });
+});
