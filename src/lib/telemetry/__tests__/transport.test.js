@@ -19,12 +19,27 @@ jest.mock('../../supabase', () => ({
 
 jest.mock('../../errorLog', () => ({
   logWarn: jest.fn(),
+  logInfo: jest.fn(),
 }));
+
+// Telemetry brief 2026-10-19: the transport reads Article 9 consent from the
+// store. Consented unless a test says otherwise.
+const mockStoreState = { healthConsent: true };
+jest.mock('../../../store/useAppStore', () => ({
+  __esModule: true,
+  default: { getState: () => mockStoreState },
+}));
+jest.mock('expo-application', () => ({ nativeApplicationVersion: '3.2.0' }));
 
 const db = require('../../database');
 const sb = require('../../supabase');
 const errorLog = require('../../errorLog');
-const { postEvent, flushPending, setTelemetryEnabled, isTelemetryEnabled } = require('../transport');
+const { postEvent, flushPending, setTelemetryEnabled, isTelemetryEnabled, __resetBatchProbe } = require('../transport');
+
+// The per-row tests below describe the path used until migrate_200 is
+// applied: the batch function answers "does not exist" once, and the session
+// falls back to one row per call.
+const MISSING_BATCH = { error: { code: 'PGRST202', message: 'Could not find the function public.record_engine_telemetry_batch' } };
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -33,6 +48,8 @@ beforeEach(() => {
   db.markEngineTelemetryPushed.mockReset().mockResolvedValue(undefined);
   sb.getSupabaseClient.mockReset().mockReturnValue(null);
   errorLog.logWarn.mockReset();
+  mockStoreState.healthConsent = true;
+  __resetBatchProbe();
 });
 
 afterEach(() => {
@@ -94,10 +111,11 @@ describe('telemetry/transport.postEvent', () => {
   test('persists a known event and returns the local row id', async () => {
     const id = await postEvent('user-1', 'sign_in', { tier: 'pro' });
     expect(id).toBe('local-row-id-1');
+    // The app version and platform are stamped on every event.
     expect(db.recordEngineTelemetry).toHaveBeenCalledWith(
       'user-1',
       'sign_in',
-      { tier: 'pro' },
+      expect.objectContaining({ tier: 'pro', app_version: '3.2.0' }),
     );
   });
 
@@ -156,7 +174,7 @@ describe('telemetry/transport.flushPending', () => {
   });
 
   test('pushes pending rows and marks them shipped', async () => {
-    const rpc = jest.fn().mockResolvedValue({ error: null });
+    const rpc = jest.fn().mockResolvedValueOnce(MISSING_BATCH).mockResolvedValue({ error: null });
     sb.getSupabaseClient.mockReturnValueOnce(clientWith(rpc));
     db.getUnpushedEngineTelemetry.mockResolvedValueOnce([
       { id: 'r1', event: 'sign_in', payload_json: '{"tier":"pro"}', occurred_at: 1234 },
@@ -165,12 +183,13 @@ describe('telemetry/transport.flushPending', () => {
 
     const result = await flushPending();
 
-    expect(rpc).toHaveBeenCalledTimes(2);
-    expect(rpc).toHaveBeenNthCalledWith(1, 'record_engine_telemetry', expect.objectContaining({
+    expect(rpc).toHaveBeenCalledTimes(3);
+    expect(rpc).toHaveBeenNthCalledWith(1, 'record_engine_telemetry_batch', expect.anything());
+    expect(rpc).toHaveBeenNthCalledWith(2, 'record_engine_telemetry', expect.objectContaining({
       _event: 'sign_in',
       _payload: { tier: 'pro' },
     }));
-    expect(rpc).toHaveBeenNthCalledWith(2, 'record_engine_telemetry', expect.objectContaining({
+    expect(rpc).toHaveBeenNthCalledWith(3, 'record_engine_telemetry', expect.objectContaining({
       _event: 'sign_out',
       _payload: null,
     }));
@@ -180,6 +199,7 @@ describe('telemetry/transport.flushPending', () => {
 
   test('skips a bad row and continues with the rest', async () => {
     const rpc = jest.fn()
+      .mockResolvedValueOnce(MISSING_BATCH)
       .mockResolvedValueOnce({ error: { message: 'bad payload' } })
       .mockResolvedValueOnce({ error: null });
     sb.getSupabaseClient.mockReturnValueOnce(clientWith(rpc));
@@ -223,3 +243,59 @@ describe('engineTelemetry shim', () => {
     expect(shim.flushPendingTelemetry).toBe(transport.flushPending);
   });
 });
+
+describe('growth telemetry rules (founder brief 2026-10-19)', () => {
+  test('before Article 9 consent, health-touching events are dropped; failure and performance events go', async () => {
+    mockStoreState.healthConsent = null;
+    expect(await postEvent('user-1', 'food_logged', { food_ref_source: 'off' })).toBeNull();
+    expect(await postEvent('user-1', 'workout_discarded', { sets: '1' })).toBeNull();
+    expect(db.recordEngineTelemetry).not.toHaveBeenCalled();
+    expect(await postEvent('user-1', 'error_shown', { screen: 'Article9Consent', kind: 'toast' })).toBe('local-row-id-1');
+    expect(await postEvent('user-1', 'screen_ready', { screen: 'AppStart', ms: '1-2s' })).toBe('local-row-id-1');
+    expect(await postEvent('user-1', 'account_created', null)).toBe('local-row-id-1');
+  });
+
+  test('an unreadable consent state counts as not given', async () => {
+    mockStoreState.healthConsent = undefined;
+    expect(await postEvent('user-1', 'checkin_completed', { first: true, duration: '1-5m' })).toBeNull();
+  });
+
+  test('a declared event keeps only its declared, valid fields', async () => {
+    await postEvent('user-1', 'workout_discarded', { sets: '2-3', duration: '5-15m', weightKg: 82, note: 'sore knee', sets_raw: 3 });
+    const payload = db.recordEngineTelemetry.mock.calls[0][2];
+    expect(payload).toEqual({ sets: '2-3', duration: '5-15m', app_version: '3.2.0', platform: expect.any(String) });
+    expect(errorLog.logWarn).toHaveBeenCalledWith('telemetry.transport.droppedFields', expect.stringContaining('weightKg'), { event: 'workout_discarded' });
+  });
+
+  test('an invalid value is dropped, never sent', async () => {
+    await postEvent('user-1', 'screen_viewed', { screen: 'john@example.com', from_screen: 'Home' });
+    expect(db.recordEngineTelemetry.mock.calls[0][2]).not.toHaveProperty('screen');
+  });
+
+  test('a batch goes in one call and leaves rejected rows queued', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: { inserted: 1, rejected: [1] }, error: null });
+    sb.getSupabaseClient.mockReturnValueOnce(clientWith(rpc));
+    db.getUnpushedEngineTelemetry.mockResolvedValueOnce([
+      { id: 'r1', event: 'sign_in', payload_json: '{"a":"b"}', occurred_at: 1 },
+      { id: 'r2', event: 'from_a_newer_build', payload_json: null, occurred_at: 2 },
+    ]);
+    const result = await flushPending();
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('record_engine_telemetry_batch', { _events: [
+      { event: 'sign_in', payload: { a: 'b' }, occurred_at: new Date(1).toISOString() },
+      { event: 'from_a_newer_build', payload: null, occurred_at: new Date(2).toISOString() },
+    ] });
+    expect(db.markEngineTelemetryPushed).toHaveBeenCalledWith(['r1']);
+    expect(result).toEqual({ pushed: 1, total: 2, batched: true });
+  });
+
+  test('a failed batch keeps every row queued', async () => {
+    const rpc = jest.fn().mockResolvedValue({ error: { message: 'timeout' } });
+    sb.getSupabaseClient.mockReturnValueOnce(clientWith(rpc));
+    db.getUnpushedEngineTelemetry.mockResolvedValueOnce([{ id: 'r1', event: 'sign_in', payload_json: null, occurred_at: 1 }]);
+    const result = await flushPending();
+    expect(db.markEngineTelemetryPushed).not.toHaveBeenCalled();
+    expect(result).toEqual({ pushed: 0, total: 1 });
+  });
+});
+
