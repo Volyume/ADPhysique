@@ -479,7 +479,8 @@ export default function BodyDiagramHeatmap({
       ? { stroke: t.colors.textPrimary, strokeWidth: SELECTED_STROKE, strokeDasharray: undefined }
       : null),
     strokeLinejoin: 'round',
-    onPress: handle(muscleKey),
+    // A compact figure is a picture only: no taps (the card around it owns them).
+    ...(compact ? {} : { onPress: handle(muscleKey) }),
     testID: `muscle-${muscleKey}`,
   });
 
@@ -493,7 +494,7 @@ export default function BodyDiagramHeatmap({
     return (
       <G x={offsetX} y={0}>
         <Silhouette paths={silhouette} c={t.colors} />
-        {hits.map(h => (
+        {!compact && hits.map(h => (
           <Path
             key={`h${h.i}`}
             d={h.d}

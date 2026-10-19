@@ -25,8 +25,10 @@ import { buildStructurePlan, weeklyTargets } from '../engine';
 import { checkPlan } from '../checker';
 import {
   ARCHETYPES, ARCHETYPE_KEYS, ARCHETYPE_CATEGORIES, TIERS, TEMPLATES, LEGS_ONCE, DAY_COUNTS,
-  STRENGTH_REP_RANGE, STRENGTH_PATTERNS, REP_RANGES, rulebookCategory, archetypeCategory,
+  STRENGTH_REP_RANGE, STRENGTH_PATTERNS, REP_RANGES, rulebookCategory, archetypeCategory, ruleKeyOf, strengthRangeFor,
 } from '../rulebook';
+import { planFromFacts } from '../stored';
+import { structureFacts } from '../adapt';
 
 const { LIBRARY } = require('../../__tests__/campaign16.helpers');
 
@@ -170,9 +172,40 @@ describe('what each style changes', () => {
     expect(total(build({ days: 4, archetype: 'minimalist' }).plan)).toBeLessThan(total(build({ days: 4 }).plan));
   });
 
-  test('the plan records its archetype as its rulebook category, so a stored plan reads the same targets', () => {
+  test('a plan stores its category and style apart, and a stored plan reads the same targets', () => {
     const r = build({ days: 4, archetype: 'x_frame' });
-    expect(r.plan.category).toBe('general_x_frame');
-    expect(weeklyTargets(r.plan.category, 4, 'intermediate', []).quads.tier).toBe('P');
+    // An older build reading this synced plan sees an ordinary general plan.
+    expect(r.plan.category).toBe('general');
+    expect(r.plan.archetype).toBe('x_frame');
+    expect(ruleKeyOf(r.plan)).toBe('general_x_frame');
+    expect(weeklyTargets(ruleKeyOf(r.plan), 4, 'intermediate', []).quads.tier).toBe('P');
+    const factsOf = (res) => structureFacts(res, { lengthMinutes: 75 }, { routineIds: res.plan.sessions.map((_, i) => `r${i}`) });
+    const facts = factsOf(r);
+    expect(facts.structure.category).toBe('general');
+    expect(facts.structure.archetype).toBe('x_frame');
+    const back = planFromFacts(facts);
+    expect(back.archetype).toBe('x_frame');
+    expect(checkPlan(back).failures).toEqual([]);
+    // A balanced plan carries no style field at all, exactly as before.
+    expect(build({ days: 4, archetype: 'balanced' }).plan).not.toHaveProperty('archetype');
+  });
+
+  test('a stored style a build does not know is dropped, never guessed', () => {
+    const r = build({ days: 4, archetype: 'x_frame' });
+    const facts = structureFacts(r, { lengthMinutes: 75 }, { routineIds: r.plan.sessions.map((_, i) => `r${i}`) });
+    facts.structure.archetype = 'from_a_newer_build';
+    expect(planFromFacts(facts)).not.toHaveProperty('archetype');
+  });
+
+  test('the weekly coach opens powerbuilder main lifts at the strength range', () => {
+    expect(strengthRangeFor({ archetype: 'powerbuilder', experience: 'advanced' })).toBe(true);
+    expect(strengthRangeFor({ archetype: 'powerbuilder', experience: 'beginner' })).toBe(false);
+    expect(strengthRangeFor({ archetype: 'x_frame', experience: 'advanced' })).toBe(false);
+    expect(strengthRangeFor(null)).toBe(false);
+  });
+
+  test('upper_density at 2 days keeps the legs and abs session core', () => {
+    const legs = TEMPLATES.general_upper_density[2].find((x) => x.key === 'legs_abs');
+    expect(legs.core.length).toBeGreaterThan(0);
   });
 });

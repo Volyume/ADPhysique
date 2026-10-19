@@ -63,7 +63,7 @@ import {
   isStructureFacts, planFromFacts, structureCheckin, refreshStructureFacts,
 } from './structure/stored';
 import { structureChoices } from './structure/patterns';
-import { restSecondsFor, REP_RANGES, REP_RANGE_UNLOADED_COMPOUND } from './structure/rulebook';
+import { restSecondsFor, REP_RANGES, REP_RANGE_UNLOADED_COMPOUND, STRENGTH_REP_RANGE, STRENGTH_PATTERNS, strengthRangeFor } from './structure/rulebook';
 import { structureCheckinCard } from './structure/messages';
 import { muscleDisplayName, VOLUME_LANDMARKS } from './algorithms';
 
@@ -420,7 +420,11 @@ function structureKind(signal, withheld) {
  * the shape a structure plan holds. Fails CLOSED like loadCatalogue: anything
  * that cannot be read opens nothing.
  */
-async function loadStructureCandidates({ userId, profile }) {
+async function loadStructureCandidates({ userId, profile, plan = null }) {
+  // Founder answer 2 (2026-10-19): an exercise the coach opens on a
+  // powerbuilder plan's main-lift pattern takes the strength range, as the
+  // engine gives it (adversarial review, round 1).
+  const strength = strengthRangeFor(plan);
   try {
     const all = await getAllExercises();
     const block = await getActiveBlock(userId).catch(() => null);
@@ -447,7 +451,8 @@ async function loadStructureCandidates({ userId, profile }) {
             kind: c.kind,
             extraJoints: [...(c.extraJoints || [])],
             restSec: rest ? rest.default : null,
-            repRange: [...(c.repRange || (c.unloaded ? REP_RANGE_UNLOADED_COMPOUND : REP_RANGES[c.kind]))],
+            repRange: [...(c.repRange || (c.unloaded ? REP_RANGE_UNLOADED_COMPOUND
+              : (strength && c.kind === 'heavy_compound' && STRENGTH_PATTERNS.includes(pattern)) ? STRENGTH_REP_RANGE : REP_RANGES[c.kind]))],
           });
         }
       }
@@ -505,7 +510,7 @@ async function resolveStructureCheckin({ context, userId, profile, signal, withh
     const plan = planFromFacts(context.facts);
     const heldRaw = typeof holdMuscles === 'function' && kind === 'raise' ? await holdMuscles() : holdMuscles;
     const held = heldRaw instanceof Set ? heldRaw : new Set(Array.isArray(heldRaw) ? heldRaw : []);
-    const candidates = kind === 'raise' ? await loadStructureCandidates({ userId, profile }) : null;
+    const candidates = kind === 'raise' ? await loadStructureCandidates({ userId, profile, plan }) : null;
     result = structureCheckin(plan, { kind, fromWeek: nextWeek.index, held, candidates });
     card = structureCheckinCard(result);
     if (result.changed) {

@@ -17,7 +17,7 @@ import {
   TEMPLATES, TIERS, VOLUME, FOCUS, PER_SESSION, FAST_MUSCLES, LARGE_MUSCLES, EXPERIENCE_MINIMUM,
   SESSION_LIMITS, restSecondsFor, orderKindFor, JOINT_RULES, TIME_MODEL, PROGRESSION,
   OHP_PATTERNS, KNEE_COMPOUND_PATTERNS, ELBOW_ISOLATION_PATTERNS,
-  SKULL_OVERHEAD_PATTERNS, REAR_DELT_HEALTH_PATTERNS, orderRanks, regionOf, PATTERNS,
+  SKULL_OVERHEAD_PATTERNS, REAR_DELT_HEALTH_PATTERNS, orderRanks, regionOf, PATTERNS, ruleKeyOf,
 } from './rulebook';
 import {
   patternOf, setsIn, rirIn, jointsOf, sessionLoad, isTrained, isLightDose,
@@ -77,10 +77,10 @@ export function checkPlan(plan, opts = {}) {
   const beginner = plan.experience === 'beginner';
 
   // C1: the session list is the template, up to a cyclic shift.
-  const template = ((TEMPLATES[plan.category] || {})[plan.days] || []).map((s) => s.key);
+  const template = ((TEMPLATES[ruleKeyOf(plan)] || {})[plan.days] || []).map((s) => s.key);
   const keys = sessions.map((s) => s.key);
   const shiftOk = template.length === keys.length && template.some((_, k) => template.every((t, i) => t === keys[(i + k) % keys.length]));
-  if (!shiftOk) fail('C1', `sessions ${keys.join(',')} are not the ${plan.category} ${plan.days}-day template ${template.join(',')}`);
+  if (!shiftOk) fail('C1', `sessions ${keys.join(',')} are not the ${ruleKeyOf(plan)} ${plan.days}-day template ${template.join(',')}`);
 
   // opts.weeks limits the per-week checks (the engine checks its peak week
   // while it builds, and every week once the plan is complete).
@@ -164,7 +164,7 @@ export function checkPlan(plan, opts = {}) {
 
     // J1 (C8) and J6 (C13): sessions a week with overhead pressing, and heavy hinges.
     const ohpSessions = sessions.filter((s) => (s.exercises || []).some((ex) => usesPattern(ex, OHP_PATTERNS, w))).length;
-    const ohpMax = JOINT_RULES.ohpSessionsMaxByCategory[plan.category] ?? JOINT_RULES.ohpSessionsMax;
+    const ohpMax = JOINT_RULES.ohpSessionsMaxByCategory[ruleKeyOf(plan)] ?? JOINT_RULES.ohpSessionsMax;
     if (ohpSessions > ohpMax) fail('C8', `overhead pressing in ${ohpSessions} sessions (limit ${ohpMax})`, { week: w });
     const hingeSessions = sessions.filter((s) => (s.exercises || []).some((ex) => usesPattern(ex, ['hinge'], w) && jointsOf(ex).includes('spinal_axial'))).length;
     if (hingeSessions > JOINT_RULES.heavyHingeSessionsPerWeek) fail('C13', `heavy hinges in ${hingeSessions} sessions (limit ${JOINT_RULES.heavyHingeSessionsPerWeek})`, { week: w });
@@ -174,14 +174,14 @@ export function checkPlan(plan, opts = {}) {
   const peak = Math.min(PROGRESSION.peakWeek, weeks);
   const weekly = weeklyLoad(plan, peak);
   for (const m of Object.keys(TIERS)) {
-    const t = tierOf(plan.category, m);
+    const t = tierOf(ruleKeyOf(plan), m);
     const v = weekly[m] || { direct: 0, credited: 0, fractional: 0 };
     if (t === 'I') {
       if (v.direct > VOLUME.I.maxDirect) fail('C4', `${m} ${v.direct} direct sets on an indirect-only muscle (limit ${VOLUME.I.maxDirect})`, { week: peak, muscle: m });
       continue;
     }
-    const lo = weeklyMin(plan.category, m, plan.days, plan.experience);
-    const hi = weeklyMax(plan.category, m, plan.focus);
+    const lo = weeklyMin(ruleKeyOf(plan), m, plan.days, plan.experience);
+    const hi = weeklyMax(ruleKeyOf(plan), m, plan.focus);
     // 09 s7 (R17): a muscle the kit has no pattern for is reported, not
     // failed; it is trained only through other exercises' credits.
     // R32: a muscle the kit gives one exercise of its own is held to what
@@ -234,7 +234,7 @@ export function checkPlan(plan, opts = {}) {
   // C17: compound tiers first (heavy, moderate, machine, isolation), within
   // the session's own work and within the other half's visiting work, a hip
   // thrust after a hinge ranking with the hinge (orderRanks).
-  const plannedFor = (key) => new Set(((TEMPLATES[plan.category] || {})[plan.days] || []).find((t) => t.key === key)?.muscles || []);
+  const plannedFor = (key) => new Set(((TEMPLATES[ruleKeyOf(plan)] || {})[plan.days] || []).find((t) => t.key === key)?.muscles || []);
   for (const s of sessions) {
     const exs = s.exercises || [];
     const named = plannedFor(s.key);
@@ -287,14 +287,14 @@ export function checkFocusAgainstBaseline(plan, baseline) {
   const withFocus = weeklyLoad(plan, peak);
   const without = weeklyLoad(baseline, peak);
   const focus = plan.focus || [];
-  const rank = (m) => ['P', 'S', 'M', 'I'].indexOf(tierOf(plan.category, m));
+  const rank = (m) => ['P', 'S', 'M', 'I'].indexOf(tierOf(ruleKeyOf(plan), m));
   const topFocus = focus.length ? Math.min(...focus.map(rank)) : -1;
   for (const [m, v] of Object.entries(without)) {
     if (focus.includes(m)) continue;
     const now = withFocus[m] || { direct: 0, fractional: 0 };
     if (now.direct >= v.direct) continue;
-    const min = weeklyMin(plan.category, m, plan.days, plan.experience);
-    const t = tierOf(plan.category, m);
+    const min = weeklyMin(ruleKeyOf(plan), m, plan.days, plan.experience);
+    const t = tierOf(ruleKeyOf(plan), m);
     if (now.fractional < min) failures.push({ code: 'C5', muscle: m, detail: `${m} ${v.direct} to ${now.direct} direct sets when focus was added, below its minimum of ${min}` });
     else if ((t === 'P' || t === 'S') && now.direct < Math.ceil(min / 2)) failures.push({ code: 'C5', muscle: m, detail: `${m} ${now.direct} own sets when focus was added, below half its minimum` });
     else if (rank(m) < topFocus) failures.push({ code: 'C5', muscle: m, detail: `${m} gave ${v.direct - now.direct} sets to a focus of a lower tier` });

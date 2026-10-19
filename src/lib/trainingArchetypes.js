@@ -16,7 +16,7 @@ export const ARCHETYPE_OPTIONS = Object.freeze([
   Object.freeze({ value: 'v_taper', label: 'V-taper', description: 'More back and shoulder work for width, with one leg day a week.' }),
   Object.freeze({ value: 'x_frame', label: 'X-frame', description: 'Shoulders, back and legs all at priority, for proportion top to bottom.' }),
   Object.freeze({ value: 'upper_density', label: 'Upper-body density', description: 'Chest and back trained two or three times a week, with one leg day.' }),
-  Object.freeze({ value: 'powerbuilder', label: 'Powerbuilder', description: 'Squat, bench, deadlift and rows heavy at 3 to 6 reps, with size work around them.' }),
+  Object.freeze({ value: 'powerbuilder', label: 'Powerbuilder', description: 'Squat, bench and deadlift-style lifts heavy at 3 to 6 reps, with size work around them.' }),
   Object.freeze({ value: 'minimalist', label: 'Minimalist', description: 'Each muscle at its weekly minimum, for shorter sessions.' }),
 ]);
 

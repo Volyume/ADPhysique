@@ -11,7 +11,7 @@ import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Text from './Text';
 import PressableCard from './PressableCard';
 import BodyDiagramHeatmap from './BodyDiagramHeatmap';
-import { spacing, radius, withAlpha } from '../styles/theme';
+import { spacing, radius, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { ARCHETYPE_OPTIONS, archetypeEmphasis, archetypeEmphasisLabel } from '../lib/trainingArchetypes';
 
@@ -31,7 +31,7 @@ export default function ArchetypePicker({ value = null, onChange, error = null }
           const selected = value === opt.value;
           const emphasis = archetypeEmphasis(opt.value);
           const paint = Object.fromEntries(Object.entries(emphasis).map(([m, e]) => [m, {
-            color: e === 'priority' ? t.colors.primary : withAlpha(t.colors.primary, 0.3),
+            color: e === 'priority' ? t.colors.primary : withAlpha(t.colors.primary, alpha.mid),
           }]));
           return (
             <PressableCard
@@ -39,7 +39,7 @@ export default function ArchetypePicker({ value = null, onChange, error = null }
               onPress={() => onChange && onChange(opt.value)}
               style={[styles.card, live.card, oneColumn ? styles.cardFull : styles.cardHalf, selected && [styles.cardSelected, live.cardSelected]]}
               accessibilityRole="radio"
-              accessibilityState={{ selected }}
+              accessibilityState={{ checked: selected }}
               accessibilityLabel={`${opt.label}. ${opt.description} ${archetypeEmphasisLabel(opt.value)}`}
               testID={`archetype-${opt.value}`}
             >
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    cardSelected: { borderColor: t.colors.primary, backgroundColor: withAlpha(t.colors.primary, 0.08) },
+    cardSelected: { borderColor: t.colors.primary, backgroundColor: withAlpha(t.colors.primary, alpha.ghost) },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     desc: { ...t.type.caption, color: t.colors.textSecondary },
     error: { ...t.type.caption, color: t.colors.error },

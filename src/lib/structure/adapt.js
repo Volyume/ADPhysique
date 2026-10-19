@@ -292,6 +292,7 @@ export function structureFacts(result, args, { routineIds, routineExerciseIds = 
     structure: {
       version: 3,
       category: plan.category,
+      ...(plan.archetype ? { archetype: plan.archetype } : {}),
       days: plan.days,
       lengthMinutes: plan.lengthMinutes,
       equipment: plan.equipment,

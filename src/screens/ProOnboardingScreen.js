@@ -3129,7 +3129,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   muscle map is filled from the rulebook's own tiers. Hidden
                   for a competing category, which ignores it. */}
               {archetypeApplies(trainingGoal) ? (
-                <View style={styles.section}>
+                <View style={styles.section} onLayout={markY('archetype')}>
                   <Text style={[styles.wpLabel, live.wpLabel]}>Your training style</Text>
                   <Text style={[styles.wpHint, live.wpHint]}>
                     How your plan shares out its work. The muscle map shows where the extra work goes. You can change it later.

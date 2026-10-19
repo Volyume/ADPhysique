@@ -371,8 +371,10 @@ function buildWith(args, strategy) {
   const ownFloor = (m) => Math.ceil(targets[m].min / 2);
 
   const offer = kitOffer(kit);
+  // The plan keeps its research category and its archetype apart (ruleKeyOf).
   const plan = {
-    category, days, equipment, experience, focus: [],
+    category: rulebookCategory(args.goal), ...(category !== rulebookCategory(args.goal) ? { archetype: args.archetype } : {}),
+    days, equipment, experience, focus: [],
     lengthMinutes: args.lengthMinutes,
     untrainable: kit.untrainable.filter((m) => targets[m]),
     // S11 reads what the kit offers; set from the start so every sense

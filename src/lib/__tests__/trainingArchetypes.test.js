@@ -95,7 +95,7 @@ describe('onboarding step 7', () => {
   });
 
   test('the cards show only for not competing, and a competing category saves no style', () => {
-    expect(src).toMatch(/\{archetypeApplies\(trainingGoal\) \? \(\s*<View style=\{styles\.section\}>\s*<Text[^>]*>Your training style/);
+    expect(src).toMatch(/\{archetypeApplies\(trainingGoal\) \? \(\s*<View style=\{styles\.section\} onLayout=\{markY\('archetype'\)\}>\s*<Text[^>]*>Your training style/);
     expect(src).toMatch(/const effectiveArchetype = archetypeApplies\(trainingGoal\) \? trainingArchetype : null;/);
     expect(src).toMatch(/trainingArchetype: effectiveArchetype,/);
   });

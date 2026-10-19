@@ -170,11 +170,20 @@ export const ARCHETYPE_KEYS = Object.freeze(Object.keys(ARCHETYPES));
 export const archetypeCategory = (archetype) => (archetype === 'balanced' ? 'general' : `general_${archetype}`);
 /** Every archetype rulebook key other than 'general' itself. */
 export const ARCHETYPE_CATEGORIES = Object.freeze(ARCHETYPE_KEYS.filter((a) => a !== 'balanced').map(archetypeCategory));
+/**
+ * The rulebook key a plan is judged by. A plan stores its research category
+ * ('general') and its archetype separately, so a build that predates
+ * archetypes reads a synced plan as an ordinary general plan, never an
+ * unknown key (adversarial review, round 1).
+ */
+export const ruleKeyOf = (plan) => (plan && plan.archetype ? rulebookCategory(plan.category, plan.archetype) : plan?.category);
 /** The archetype a rulebook key was built from, or null for a research category. */
 export const archetypeOfCategory = (category) => ARCHETYPE_KEYS.find((a) => a !== 'balanced' && archetypeCategory(a) === category) ?? null;
 // Reps for a loaded heavy compound under a strength archetype (09 B11's
 // strength band; the week's RIR still applies).
 export const STRENGTH_REP_RANGE = Object.freeze([3, 6]);
+/** True when a plan's heavy main lifts take STRENGTH_REP_RANGE (never a beginner's). */
+export const strengthRangeFor = (plan) => !!(plan && ARCHETYPES[plan.archetype]?.strength) && plan.experience !== 'beginner';
 // The main lifts a strength archetype loads heavy.
 export const STRENGTH_PATTERNS = Object.freeze(['squat_barbell', 'press_flat', 'hinge', 'row_barbell']);
 
@@ -682,7 +691,8 @@ const DENSITY_TEMPLATES = Object.freeze({
 const POWERBUILDER_TEMPLATES = Object.freeze({ ...GENERAL_TEMPLATES, 5: BODYBUILDING_TEMPLATES[5] });
 const ARCHETYPE_SPLITS = Object.freeze({
   upper: withCore(UPPER_BIASED_TEMPLATES, SESSION_CORE.mens_physique),
-  density: withCore(DENSITY_TEMPLATES, SESSION_CORE.general),
+  // The 2-day rotation reuses men's physique's Legs & Abs, so its core comes too.
+  density: withCore(DENSITY_TEMPLATES, { ...SESSION_CORE.general, legs_abs: SESSION_CORE.mens_physique.legs_abs }),
   power: withCore(POWERBUILDER_TEMPLATES, SESSION_CORE.general),
 });
 
@@ -778,6 +788,8 @@ export const EVIDENCE = Object.freeze({
   archetypeCategory: 'A: founder ruling 2026-10-19; balanced is the general rulebook itself.',
   ARCHETYPE_CATEGORIES: 'A: founder ruling 2026-10-19.',
   archetypeOfCategory: 'A: founder ruling 2026-10-19.',
+  strengthRangeFor: 'A: founder answer 2 (2026-10-19); intermediate and advanced only.',
+  ruleKeyOf: 'A: founder ruling 2026-10-19; D: lead ruling, a plan stores its category and archetype apart so older builds read it safely.',
   STRENGTH_PATTERNS: 'A: founder answer 2 (2026-10-19), powerbuilding loads the main lifts heavy; D: practitioner consensus, back squat, bench press, deadlift and barbell row as the main lifts, size work around them at normal ranges.',
   STRENGTH_REP_RANGE: 'A: founder ruling 2026-10-19 (powerbuilder, 2b); B: Schoenfeld 2017 heavy-load band (1 to 6 reps near failure builds strength more than moderate loads); D: 09 B11 strength band, intermediate and advanced only.',
 });
