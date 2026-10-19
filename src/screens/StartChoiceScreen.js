@@ -71,6 +71,16 @@ export default function StartChoiceScreen({ navigation }) {
           You can change your mind later.
         </Text>
 
+        {/* Founder brief 2026-10-19: say plainly that everything is free and
+            that nothing is held back, without repeating "free" in other
+            words. */}
+        <Card borderless style={[styles.card, { backgroundColor: t.colors.primaryBg }]} testID="start-choice-free">
+          <Text style={[t.type.h3, { color: t.colors.textPrimary }]}>Free. All of it.</Text>
+          <Text style={[t.type.body, styles.point, { color: t.colors.textPrimary }]}>
+            Full coaching, food logging, meal plans and Community. There is no paid version and no ads, so you get the whole app.
+          </Text>
+        </Card>
+
         <Card tone="primary" style={styles.card}>
           <Text style={[t.type.caption, styles.badge, { color: t.colors.primary }]}>Recommended</Text>
           <Text style={[t.type.h3, { color: t.colors.textPrimary }]}>Set up coaching</Text>
@@ -79,9 +89,6 @@ export default function StartChoiceScreen({ navigation }) {
           </Text>
           <Text style={[t.type.body, styles.point, { color: t.colors.textSecondary }]}>
             Weekly volume and nutrition adjustments from your real progress.
-          </Text>
-          <Text style={[t.type.body, styles.point, { color: t.colors.textSecondary }]}>
-            Everything is free.
           </Text>
           <Button
             title="Set up coaching"
