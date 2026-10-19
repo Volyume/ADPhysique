@@ -69,6 +69,10 @@ describe('the emphatic set is curated: committing actions only', () => {
       // Save to gallery, Set as wallpaper and Post to Community are
       // `secondary` beside it.
       'screens/ShareCardScreen.js',
+      // Gym challenge (SPEC section 2, 2026-10-19): "Join" is the one
+      // committing action on the join screen, as Create profile is on
+      // CommunityJoinScreen.
+      'screens/ChallengeJoinScreen.js',
     ]);
     for (const [file] of emphatic) expect(allowed.has(file)).toBe(true);
     expect(emphatic.length).toBeGreaterThan(10);

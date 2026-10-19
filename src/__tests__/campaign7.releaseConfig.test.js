@@ -71,7 +71,9 @@ describe('C7 release-config laws', () => {
     const pathPrefixes = https.map((d) => d.pathPrefix).sort();
     // "/g/" with its slash: a bare "/g" is a prefix match and would claim
     // the public install page at /get as well (review fix 5).
-    expect(pathPrefixes).toEqual(['/g/', '/p', '/partner', '/s', '/u']);
+    // /c/ (the gym challenge poster link, SPEC section 2, 2026-10-19) keeps
+    // its slash for the same reason.
+    expect(pathPrefixes).toEqual(['/c/', '/g/', '/p', '/partner', '/s', '/u']);
   });
 
   test('package-visibility query actions are BARE names (the plugin prepends the prefix)', () => {

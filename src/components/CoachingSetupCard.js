@@ -17,9 +17,11 @@ import { COACHING_SETUP_COPY } from '../lib/coachingSetup';
 import { spacing, fontSize, fontWeight } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
-export default function CoachingSetupCard({ variant = 'coach', onPress }) {
+// `body` replaces the variant's sentence for a surface that has its own reason
+// to set coaching up (the gym challenge screen); the title and action stay.
+export default function CoachingSetupCard({ variant = 'coach', onPress, body: bodyOverride }) {
   const { colors } = useTheme();
-  const body = variant === 'nutrition' ? COACHING_SETUP_COPY.nutritionBody : COACHING_SETUP_COPY.body;
+  const body = bodyOverride ?? (variant === 'nutrition' ? COACHING_SETUP_COPY.nutritionBody : COACHING_SETUP_COPY.body);
   return (
     <Card testID="coaching-setup-card" style={styles.card}>
       <View style={styles.text}>

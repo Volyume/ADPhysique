@@ -20,9 +20,11 @@ describe('Universal Links migration preparation', () => {
       // invite page (/g) joined them 2026-09-13 (26-EARLY-DAYS-SPEC.md 1.7).
       paths: expect.arrayContaining([
         '/partner/*', '/auth/callback', '/auth/callback/', '/u/*', '/p/*', '/s/*', '/g/*',
+        // The gym challenge poster link (SPEC section 2, 2026-10-19).
+        '/c/*',
       ]),
     })]);
-    expect(aasa.applinks.details[0].paths).toHaveLength(7);
+    expect(aasa.applinks.details[0].paths).toHaveLength(8);
   });
 
   test.each([

@@ -88,6 +88,8 @@ import {
 import { readJoinReceiptSeen, markJoinReceiptSeen } from '../lib/community/joinReceipt';
 import { todayLocalKey } from '../lib/dayKey';
 import { composeAudienceLine, composeDefaultVisibility } from './CommunityComposeScreen';
+import { myChallenges, challengeForMyGym } from '../lib/challenges/api';
+import { daysLeftLine, scoreLine } from '../lib/challenges/display';
 
 const PAGE = 20;
 
@@ -243,6 +245,11 @@ export default function CommunityHubScreen({ navigation, route }) {
   // D228 item 1 (option C): the one-time receipt, { sentence } or null.
   const [joinReceipt, setJoinReceipt] = useState(null);
   const [invites, setInvites] = useState([]);
+  // Gym challenge (SPEC section 2, steps 7 and 8): the caller's challenges
+  // and the invite to the one at their gym. Both best effort, both empty on
+  // any failure (the server returns nothing to anyone it withholds).
+  const [challengeRows, setChallengeRows] = useState([]);
+  const [gymInvite, setGymInvite] = useState(null);
   const [inviteBusy, setInviteBusy] = useState(null);
   // Chat unread counts by group id (D221 3b), from the same `listMyGroups`
   // read the invites use.
@@ -346,6 +353,23 @@ export default function CommunityHubScreen({ navigation, route }) {
       setUnreadById({});
     }
   }, []);
+
+  // The gym challenge entries: re-read on every focus, so a join or a leave on
+  // the challenge screens shows here at once.
+  useFocusEffect(useCallback(() => {
+    let alive = true;
+    myChallenges()
+      .then((rows) => { if (alive) setChallengeRows(rows); })
+      .catch(() => { if (alive) setChallengeRows([]); });
+    if (joined && !isMinor) {
+      challengeForMyGym()
+        .then((row) => { if (alive) setGymInvite(row); })
+        .catch(() => { if (alive) setGymInvite(null); });
+    } else {
+      setGymInvite(null);
+    }
+    return () => { alive = false; };
+  }, [joined, isMinor]));
 
   // Pending group invites sit on the Groups segment; one read when it opens.
   useEffect(() => {
@@ -957,6 +981,37 @@ export default function CommunityHubScreen({ navigation, route }) {
     )
   ) : null;
 
+  // ─── Gym challenge ──────────────────────────────────────────────────
+
+  // The entrant's row and the gym invite for a same-gym non-entrant. Nobody
+  // else sees anything (founder 2026-10-19: the challenge is not visible to
+  // people at other gyms); a code reaches the join screen through its link.
+  const challengeBand = (challengeRows.length || gymInvite) ? (
+    <>
+      <Band>
+        <SectionHeader title="Challenge" />
+        {challengeRows.map((c) => (
+          <EntryRow
+            key={c.id}
+            icon="trophy-outline"
+            title={c.title}
+            subtitle={`${scoreLine(c)} · ${daysLeftLine(c)}`}
+            onPress={() => navigation.navigate('Challenge', { id: c.id })}
+          />
+        ))}
+        {gymInvite && !challengeRows.some((c) => c.code === gymInvite.code) ? (
+          <EntryRow
+            icon="trophy-outline"
+            title="Challenge at your gym"
+            subtitle={gymInvite.title}
+            onPress={() => navigation.navigate('ChallengeJoin', { code: gymInvite.code })}
+          />
+        ) : null}
+      </Band>
+      <BandGap />
+    </>
+  ) : null;
+
   // ─── Feed ───────────────────────────────────────────────────────────
 
   const sortLabel = SORT_LABELS[sort] ?? SORT_LABELS.newest;
@@ -966,6 +1021,7 @@ export default function CommunityHubScreen({ navigation, route }) {
     <View>
       {notices}
       {hero}
+      {challengeBand}
       {offline ? (
         <Text style={[styles.offline, t.type.caption, { color: t.colors.textMuted }]}>
           Showing what you last saw. You are offline.

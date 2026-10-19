@@ -148,6 +148,7 @@ const ImportScreen = lazyScreen(() => require('../screens/ImportScreen').default
 const ProOnboardingScreen = lazyScreen(() => require('../screens/ProOnboardingScreen').default);
 const StartChoiceScreen = lazyScreen(() => require('../screens/StartChoiceScreen').default);
 const ChallengeJoinScreen = lazyScreen(() => require('../screens/ChallengeJoinScreen').default);
+const ChallengeScreen = lazyScreen(() => require('../screens/ChallengeScreen').default);
 const ProSetupCompleteScreen = lazyScreen(() => require('../screens/ProSetupCompleteScreen').default);
 const CoachHeldHistoryScreen = lazyScreen(() => require('../screens/CoachHeldHistoryScreen').default);
 const CoachReviewScreen = lazyScreen(() => require('../screens/CoachReviewScreen').default);
@@ -547,6 +548,7 @@ function CommunityStack({ navigation }) {
           code or the gym invite card. Onboarding has its own registration in
           ProOnboardingStack, after the Article 9 gate. */}
       <Stack.Screen name="ChallengeJoin" component={ChallengeJoinScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Challenge" component={ChallengeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityEditProfile" component={CommunityEditProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityProfile" component={CommunityProfileScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="CommunitySearch" component={CommunitySearchScreen} options={{ headerShown: false }} />
