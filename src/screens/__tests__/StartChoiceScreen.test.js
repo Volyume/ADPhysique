@@ -32,6 +32,9 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 jest.mock('../../lib/errorLog', () => ({ logError: (...a) => mockLogError(...a) }));
 jest.mock('../../lib/proOnboardingDraft', () => ({ loadDraft: (...a) => mockLoadDraft(...a) }));
+let mockInChallenge = false;
+const mockHasFlag = jest.fn(async () => mockInChallenge);
+jest.mock('../../lib/challenges/pending', () => ({ hasChallengeActiveFlag: (...a) => mockHasFlag(...a) }));
 jest.mock('../../components/BrandMark', () => ({ VolyumeIcon: () => null }));
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), error: jest.fn() }));
 jest.mock('../../components/Button', () => (props) => {
@@ -130,6 +133,17 @@ describe('StartChoiceScreen', () => {
     expect(mockLogError).toHaveBeenCalledWith('StartChoiceScreen.quickStart', expect.any(Error));
     expect(mockToastShow).toHaveBeenCalled();
     expect(mockStore.completeFirstRun).not.toHaveBeenCalled();
+  });
+
+  it('a challenge entrant reads that coaching adds points; nobody else does', async () => {
+    const descOf = (r) => byId(r.root, 'start-choice-coaching').props.accessibilityLabel;
+    mockInChallenge = false;
+    expect(descOf(await mount())).not.toContain('In the challenge');
+    mockInChallenge = true;
+    expect(descOf(await mount())).toContain('In the challenge, coaching adds up to 20 more points.');
+    // The flag is kept per person: it is read for the signed-in user only.
+    expect(mockHasFlag).toHaveBeenCalledWith('u1');
+    mockInChallenge = false;
   });
 
   it('an existing draft replaces straight to ProOnboarding', async () => {

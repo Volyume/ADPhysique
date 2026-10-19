@@ -199,6 +199,36 @@ export default function PrivacyPolicyScreen() {
           </Body>
         </Section>
 
+        {/* Gym challenges (docs/gym-challenge-2026-10-19/SPEC.md, migrate_201,
+            review round 1). Every sentence matches the build: opt-in and
+            adults only, what the score reads (never amounts or weight), the
+            gate, top-10 names to entrants only, the recorded draw, leaving,
+            the draw record kept for checking, deletion with the account. */}
+        <Section title="Gym challenges">
+          <Body>
+            A gym challenge is optional and runs at one gym for up to a month. You only take part if you join it
+            yourself, and only adults can join.
+          </Body>
+          <Body>
+            To score you, the challenge reads your training, your check-ins and Community posts, whether you
+            logged food, whether you weighed in, and whether calm mode is on or Volyume's safety check has paused
+            your calorie changes, so it never asks you to log food or weigh in at those times. It never reads what
+            you ate or what you weigh.
+          </Body>
+          <Body>
+            If you are in the top 10, the name you choose and your score are shown to the other people in that
+            challenge. Nobody else sees them. Winners are picked by a recorded computer draw. If you win, we use
+            your email address to tell you, and your name and county are published unless you object.
+          </Body>
+          <Body>
+            You can leave a challenge at any time. After you leave, your records are not read for it again and you
+            are taken off its board. We use this data with your explicit consent, which you give when you join.
+            Joining a challenge also keeps Volyume free for you for life. Deleting your account deletes all of it,
+            except the record of each prize draw, which is kept so the draw can be checked and no longer links to
+            you once your account is gone.
+          </Body>
+        </Section>
+
         <Section title="Your rights">
           <Body>
             You can export your workout sets as CSV from Settings &gt; Your data &gt; Export workout log.

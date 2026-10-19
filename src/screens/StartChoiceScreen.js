@@ -12,6 +12,8 @@ import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { loadDraft } from '../lib/proOnboardingDraft';
 import { logError } from '../lib/errorLog';
+import { hasChallengeActiveFlag } from '../lib/challenges/pending';
+import { COACHING_NOTE } from '../lib/challenges/copy';
 
 // Founder brief 2026-10-19: coaching-first onboarding with an optional quick
 // start. After the Article 9 consent gate the person chooses between the full
@@ -54,6 +56,15 @@ export default function StartChoiceScreen({ navigation }) {
   const [checked, setChecked] = useState(false);
   const [choice, setChoice] = useState(null);
   const [attempted, setAttempted] = useState(false);
+  // Gym challenge: set by the join screen. It adds one sentence to the
+  // coaching option's description; nothing else depends on it.
+  const [inChallenge, setInChallenge] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    hasChallengeActiveFlag(userId).then((on) => { if (alive) setInChallenge(!!on); }).catch(() => {});
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,6 +127,7 @@ export default function StartChoiceScreen({ navigation }) {
         <View style={styles.options} accessibilityRole="radiogroup" accessibilityLabel="How do you want to start?">
           {OPTIONS.map((o) => {
             const active = choice === o.key;
+            const desc = o.key === 'coaching' && inChallenge ? `${o.desc} ${COACHING_NOTE}` : o.desc;
             return (
               <TouchableOpacity
                 key={o.key}
@@ -128,7 +140,7 @@ export default function StartChoiceScreen({ navigation }) {
                 activeOpacity={0.85}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
-                accessibilityLabel={`${o.label}${o.recommended ? ', recommended' : ''}. ${o.desc}`}
+                accessibilityLabel={`${o.label}${o.recommended ? ', recommended' : ''}. ${desc}`}
                 testID={`start-choice-${o.key}`}
               >
                 <View style={styles.optCopy}>
@@ -140,7 +152,7 @@ export default function StartChoiceScreen({ navigation }) {
                       </View>
                     ) : null}
                   </View>
-                  <Text style={[styles.optDesc, { ...t.type.captionTight, color: t.colors.textSecondary }]}>{o.desc}</Text>
+                  <Text style={[styles.optDesc, { ...t.type.captionTight, color: t.colors.textSecondary }]}>{desc}</Text>
                 </View>
                 {active ? <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} /> : null}
               </TouchableOpacity>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -39,6 +39,10 @@ import { getSupabaseClient, hasStoredAuthSession } from '../lib/supabase';
 // startup auth-hydration flash fix — see the give-up branch in the render).
 import { classifyAuthBoot, classifyFreshInstall, classifySessionRead } from '../lib/authBootGate';
 import { readHealthConsentStatus } from '../lib/consent/healthConsentRead';
+import {
+  setPendingChallenge, takePendingChallenge, peekPendingChallenge,
+  subscribePendingChallenge, readInstallReferrerOnce,
+} from '../lib/challenges/pending';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { runExerciseSeedChain } from '../lib/seedExercises';
 import { DB_RESET_COPY, shouldOfferDbReset, runDbResetAndReopen } from '../lib/localDbReset';
@@ -143,6 +147,8 @@ const CreditsScreen = lazyScreen(() => require('../screens/CreditsScreen').defau
 const ImportScreen = lazyScreen(() => require('../screens/ImportScreen').default);
 const ProOnboardingScreen = lazyScreen(() => require('../screens/ProOnboardingScreen').default);
 const StartChoiceScreen = lazyScreen(() => require('../screens/StartChoiceScreen').default);
+const ChallengeJoinScreen = lazyScreen(() => require('../screens/ChallengeJoinScreen').default);
+const ChallengeScreen = lazyScreen(() => require('../screens/ChallengeScreen').default);
 const ProSetupCompleteScreen = lazyScreen(() => require('../screens/ProSetupCompleteScreen').default);
 const CoachHeldHistoryScreen = lazyScreen(() => require('../screens/CoachHeldHistoryScreen').default);
 const CoachReviewScreen = lazyScreen(() => require('../screens/CoachReviewScreen').default);
@@ -537,6 +543,12 @@ function CommunityStack({ navigation }) {
           own BackHeader. */}
       <Stack.Screen name="Community" component={CommunityHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityJoin" component={CommunityJoinScreen} options={{ headerShown: false }} />
+      {/* Gym challenge (SPEC section 2): the join screen for an onboarded
+          person, reached by link (https://volyume.app/c/<code>), a typed
+          code or the gym invite card. Onboarding has its own registration in
+          ProOnboardingStack, after the Article 9 gate. */}
+      <Stack.Screen name="ChallengeJoin" component={ChallengeJoinScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Challenge" component={ChallengeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityEditProfile" component={CommunityEditProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityProfile" component={CommunityProfileScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="CommunitySearch" component={CommunitySearchScreen} options={{ headerShown: false }} />
@@ -876,9 +888,20 @@ function Article9ConsentStack() {
   );
 }
 
+// Gym challenge (SPEC section 2 step 5): this stack is only ever mounted by
+// renderNavigator AFTER the Article 9 gate has passed, so a pending challenge
+// code opens the join screen here, before StartChoice, and never earlier.
+// The flag rides a context so the stack keeps its zero-argument signature.
+const ChallengePendingContext = createContext(false);
+
 function ProOnboardingStack() {
+  const challengePending = useContext(ChallengePendingContext);
   return (
-    <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator
+      initialRouteName={challengePending ? 'ChallengeJoin' : 'StartChoice'}
+      screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}
+    >
+      <Stack.Screen name="ChallengeJoin" component={ChallengeJoinScreen} />
       {/* Founder brief 2026-10-19: coaching-first onboarding with an optional
           quick start. The choice screen is the initial route. */}
       <Stack.Screen name="StartChoice" component={StartChoiceScreen} />
@@ -967,7 +990,25 @@ export function rewriteLegacyCommunityPath(path) {
   return code ? `community?legacyPartnerCode=${encodeURIComponent(code)}` : 'community';
 }
 
+// A challenge link also keeps its code on the device. A link opened before
+// sign-in cannot resolve (no Community tab is mounted), so the code is held
+// until sign-in and the Article 9 gate are done and the join screen opens.
+const CHALLENGE_PATH = /^\/?c\/([^/?#]+)/i;
+// The query form the website's 404 forward produces: /c/?code=<code>.
+const CHALLENGE_QUERY_PATH = /^\/?c\/?\?(?:[^#]*&)?code=([^&#]+)/i;
+
+export function stashChallengePath(path) {
+  if (typeof path !== 'string') return null;
+  const match = CHALLENGE_PATH.exec(path) || CHALLENGE_QUERY_PATH.exec(path);
+  if (!match) return null;
+  let code = match[1];
+  try { code = decodeURIComponent(code); } catch (_) { return null; }
+  setPendingChallenge(code).catch(() => { /* best effort, logged inside */ });
+  return code;
+}
+
 export function getStateFromPathWithLegacy(path, options) {
+  stashChallengePath(path);
   return safeGetStateFromPath(rewriteLegacyCommunityPath(path), options);
 }
 
@@ -1025,6 +1066,9 @@ const linking = {
           CommunityConversation: 'm',
           // volyume://g/?id=<groupId> (community product audit 60 §3).
           CommunityGroup: 'g',
+          // volyume://c/<code> and https://volyume.app/c/<code> (gym
+          // challenge SPEC section 2). The path carries the code.
+          ChallengeJoin: 'c/:code',
         },
       },
       DiaryTab: {
@@ -1165,6 +1209,10 @@ export default function RootNavigator() {
   const checkTier = useAppStore(s => s.checkTier);
   const refreshTierFromCloud = useAppStore(s => s.refreshTierFromCloud);
   const [splashReady, setSplashReady] = useState(false);
+  // Gym challenge: whether a challenge code is waiting on this device, and
+  // whether the one-off start-up look for it (install referrer) has finished.
+  const [challengePending, setChallengePending] = useState(false);
+  const [challengeBooted, setChallengeBooted] = useState(false);
   // Founder defect (2026-07-12, TestFlight): every cold launch flashed the
   // Welcome (free/Pro) page for a beat even when signed in. The splash gate
   // waited on the two fast AsyncStorage flags but NOT on the initial
@@ -1229,6 +1277,59 @@ export default function RootNavigator() {
   // + memoization live in ./navTheme (a standalone module for testability --
   // see its header comment).
   const navTheme = useNavTheme();
+
+  // Gym challenge (SPEC section 2 steps 4 and 5). Read the Play install
+  // referrer once (App.js starts the same shared read), give it a short
+  // grace, then look at what is pending. Later changes (a link while the app
+  // is open, the join screen clearing it) arrive through the subscription.
+  useEffect(() => {
+    let alive = true;
+    // Hard ceiling: onboarding never waits on this look for more than 3
+    // seconds, whatever the storage or referrer reads do.
+    const ceiling = setTimeout(() => { if (alive) setChallengeBooted(true); }, 3000);
+    const unsubscribe = subscribePendingChallenge((code) => {
+      if (alive) setChallengePending(!!code);
+    });
+    (async () => {
+      try {
+        await Promise.race([
+          readInstallReferrerOnce(),
+          new Promise((resolve) => setTimeout(resolve, 2500)),
+        ]);
+        const code = await peekPendingChallenge();
+        if (alive) setChallengePending(!!code);
+      } catch (_) { /* best effort; the gate below must never wait on this */ }
+      if (alive) setChallengeBooted(true);
+    })();
+    return () => { alive = false; clearTimeout(ceiling); unsubscribe(); };
+  }, []);
+
+  // An already-onboarded person (consent granted, setup done) with a waiting
+  // code gets the join screen over the current stack. The code is taken as
+  // it is used so it opens once. Strictly gated on healthConsent === true:
+  // nothing here can reach the app before the Article 9 gate has passed.
+  const challengeReady = !!user && !user.isLocal && firstRunComplete && healthConsent === true;
+  useEffect(() => {
+    if (!challengeReady || !challengePending) return;
+    // Taking the code clears it, which re-runs this effect with nothing
+    // pending; the navigation below must therefore not be tied to cleanup.
+    (async () => {
+      const code = await takePendingChallenge();
+      if (!code) return;
+      const go = (attempts = 0) => {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('CommunityTab', {
+            screen: 'ChallengeJoin',
+            params: { code },
+            initial: false,
+          });
+        } else if (attempts < 20) {
+          setTimeout(() => go(attempts + 1), 150);
+        }
+      };
+      go();
+    })();
+  }, [challengeReady, challengePending]);
 
   // E8 (founder decision 2026-07-02): a returning, already-onboarded user is
   // released the moment the bootstrap checks resolve. The old 350ms
@@ -2612,6 +2713,10 @@ export default function RootNavigator() {
     if (user && !user.isLocal && healthConsentChecked && (healthConsent === false || consentUnresolvedForNewUser)) {
       return <Article9ConsentStack />;
     }
+    // Gym challenge: onboarding waits one short, one-off frame for the install
+    // referrer look, so its first screen is chosen once, with the answer.
+    // (After the Article 9 gate above, which has already returned.)
+    if (!firstRunComplete && !challengeBooted) return <SplashScreen />;
     if (!firstRunComplete) {
       // Founder decision (fully-free product, no Free/Pro split): the
       // ProOnboardingScreen six-step wizard is now THE setup path for
@@ -2647,7 +2752,9 @@ export default function RootNavigator() {
         }}
         theme={navTheme}
       >
-        {renderNavigator()}
+        <ChallengePendingContext.Provider value={challengePending}>
+          {renderNavigator()}
+        </ChallengePendingContext.Provider>
       </NavigationContainer>
     </SheetIsolationBoundary>
   );

@@ -31,6 +31,7 @@ import { ensureNotifChannels } from './src/lib/notifications/channels';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
 import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
 import { captureFirstTouch, warmFirstTouch } from './src/lib/attribution';
+import { readInstallReferrerOnce } from './src/lib/challenges/pending';
 
 // Campaign item 15 (D25): keep the native splash on screen past its default
 // autohide-on-first-render point so it can fade smoothly into the app instead
@@ -556,6 +557,11 @@ export default function App() {
   // mealSlotLabel reads, before the diary renders its meal headers. Device-local
   // + cosmetic; empty by default so existing users see the standard labels.
   useEffect(() => { loadMealLabelOverrides(); }, []);
+
+  // Gym challenge (SPEC section 2 step 4): on the first Android launch only,
+  // read the Play install referrer once and keep a challenge=<code> value as
+  // the pending challenge code. Failures are logged inside and ignored.
+  useEffect(() => { readInstallReferrerOnce(); }, []);
 
   // End any iOS Live Activity left over from a previous launch. If the
   // app was force-closed mid-rest or crashed during a workout, the
