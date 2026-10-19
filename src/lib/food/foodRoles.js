@@ -155,6 +155,12 @@ const STATE = Object.freeze({
   white_rice: 'cooked', brown_rice: 'cooked', quinoa: 'cooked',
   noodles: 'cooked', white_potato: 'cooked', lentils: 'cooked',
   chickpeas: 'cooked', kidney_beans: 'cooked', black_beans: 'cooked',
+  // Founder ruling 2026-10-19 (cookYield.js): the meat, fish and sweet potato
+  // staples are stated per 100 g cooked (their names say so) and each has a
+  // CoFID raw/cooked pair, so they carry the cooked state too.
+  sweet_potato: 'cooked', chicken_breast: 'cooked', turkey_breast: 'cooked',
+  steak_lean: 'cooked', beef_mince_5: 'cooked', cod: 'cooked', salmon: 'cooked',
+  bacon_medallions: 'cooked',
 });
 
 // ─── FSA allergen tags (the 14-allergen vocabulary, where present) ──────

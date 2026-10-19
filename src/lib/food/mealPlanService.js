@@ -48,6 +48,19 @@ import { CURATED_MEALS, dietAllows } from './curatedMeals';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
 import { track } from '../engineTelemetry';
 
+import { curatedKeyOfRef, nativeState, convertCookGrams } from './cookYield';
+import { kitchenRound } from './gramSolve';
+
+// A plan item's stored grams are on the food's own basis; in another weight
+// state they are the same amount of food converted (kitchen-rounded).
+function gramsAsWeighed(foodRef, grams, weightState) {
+  const key = curatedKeyOfRef(foodRef);
+  const native = key ? nativeState(key) : null;
+  if (!native || (weightState !== 'raw' && weightState !== 'cooked') || weightState === native) return grams;
+  const g = convertCookGrams(key, grams, native, weightState);
+  return g == null ? grams : Math.max(1, kitchenRound(g));
+}
+
 // Observability for plan assembly (food audit P-7). Best-effort, aggregate-only
 // (counts + kind, never food or user data), never blocks a plan. Surfaces days
 // that only just fit (high close-out iterations) or could not be filled.
@@ -898,7 +911,10 @@ function plannedEntriesForDay(day, entryDate) {
         entryDate,
         mealSlot,
         foodRef: it.foodRef,
-        quantityG: q,
+        // Founder ruling 2026-10-19: grams go in as weighed in the item's
+        // weight state (a plate shown raw logs its raw grams); the plan's
+        // own figures below are for the same amount of food either way.
+        quantityG: gramsAsWeighed(it.foodRef, q, it.weightState),
         kcal: Number(it.kcal) || 0,
         proteinG: Number(it.proteinG) || 0,
         carbsG: Number(it.carbsG) || 0,

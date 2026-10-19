@@ -78,6 +78,7 @@ import SearchBar from '../components/SearchBar';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
+import { scaleMacrosAsWeighed } from '../lib/food/cookYield';
 import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
 import { parseFoodLine, isFoodLine, portionFor, matchFoodLineParts } from '../lib/food/foodLine';
 
@@ -821,7 +822,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     const pending = pendingItems();
     if (pending.length > 0) {
       await writeItems([...pending, {
-        food, quantityG, ...scaleMacros(food, quantityG),
+        food, quantityG, ...scaleMacrosAsWeighed(food, quantityG, weightState),
         entryDate: chosenDate, mealSlot: chosenSlot, weightState, note, // D230 R20
       }], clearPending, { rethrow: true });
       return;

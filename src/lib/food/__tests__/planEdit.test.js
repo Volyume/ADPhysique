@@ -317,14 +317,17 @@ describe('floor-safe quantisation: rounding never crosses the floor downward', (
     // by 20 kcal, because the solver works in whole grams. That freedom is the
     // pre-existing behaviour and the safety rule must not take it away - the
     // rule bounds the FLOOR distance, never the request.
+    // Kitchen rounding (founder ruling 2026-10-19): items under 15 g now move
+    // in 1 g steps, not 5 g, so the same cut lands at -302, nearer the
+    // request and still past it.
     const { plan: out, change } = applyMacroDeltaToPlan({
       plan, adjustmentKcal: -300, floorKcal: 100,
     });
     expect(change.floorHeld).toBe(false);
-    expect(change.adjustmentKcalApplied).toBe(-320);
+    expect(change.adjustmentKcalApplied).toBe(-302);
     expect(change.adjustmentKcalApplied).toBeLessThan(-300); // still free to overshoot
     expect(change.edits.length).toBeGreaterThan(0);
-    expect(out.totals.kcal).toBe(startKcal - 320);
+    expect(out.totals.kcal).toBe(startKcal - 302);
   });
 
   test('a floor-CLAMPED cut now lands exactly ON the floor, not under it', () => {

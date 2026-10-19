@@ -70,8 +70,9 @@ import {
 } from '../lib/food/db';
 // Campaign 17A job 3: what a food swap MEANS, in the user's own words.
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from '../lib/food/foodSwapScope';
-import { defaultWeightStateFor } from '../lib/food/foodRoles';
-import { buildGroceryList, formatGroceryListForShare } from '../lib/food/groceryList';
+import { hasCookToggle, nativeState, convertCookGrams, uncookedWord } from '../lib/food/cookYield';
+import { kitchenRound } from '../lib/food/gramSolve';
+import { buildGroceryList, formatGroceryListForShare, GROCERY_REPEAT_DAYS } from '../lib/food/groceryList';
 import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
 import { logError } from '../lib/errorLog';
@@ -312,6 +313,24 @@ function MealPreferencesControls({
   );
 }
 
+// Founder ruling 2026-10-19 (cookYield.js): a plan item with a CoFID
+// raw/cooked pair can be shown in either weight. Stored grams are on the
+// food's own basis; another state shows the same amount of food converted
+// and kitchen-rounded, named for the state it is in.
+const COOK_STATE_SUFFIX = /\s*\((cooked|boiled|baked|dry)\)\s*$/i;
+function planItemWeight(it, foodKey) {
+  const native = foodKey && hasCookToggle(foodKey) ? nativeState(foodKey) : null;
+  const state = native ? (it.weightState === 'raw' || it.weightState === 'cooked' ? it.weightState : native) : null;
+  if (!native || state === native) return { native, state, grams: it.quantityG, name: it.name };
+  const g = convertCookGrams(foodKey, Number(it.quantityG) || 0, native, state);
+  const word = state === 'raw' ? uncookedWord(foodKey) : 'cooked';
+  return {
+    native, state,
+    grams: g == null ? it.quantityG : Math.max(1, kitchenRound(g)),
+    name: `${String(it.name || '').replace(COOK_STATE_SUFFIX, '')}, ${word}`,
+  };
+}
+
 export default function MealPlanScreen({ navigation, route }) {
   const user = useAppStore((s) => s.user);
   const userProfile = useAppStore((s) => s.userProfile);
@@ -355,6 +374,10 @@ export default function MealPlanScreen({ navigation, route }) {
   // { slotKey, foodKeyOut, options: [{ foodIn, name, totals }] } when open.
   const [foodSwapSheet, setFoodSwapSheet] = useState(null);
   const [grocerySheet, setGrocerySheet] = useState(null); // built grocery list or null
+  // Founder ruling 2026-10-19: the list opens at shop weight (raw or dry) for
+  // one day; meal prep weight and 3, 5 or 7 days are one tap each.
+  const [groceryBasis, setGroceryBasis] = useState('shop');
+  const [groceryRepeat, setGroceryRepeat] = useState(1);
   const [repeatSheet, setRepeatSheet] = useState(false); // "repeat this day" target picker
   // Inline dietary preferences + allergies (founder ask 2026-07-10): the
   // selection UI itself now opens INLINE in this sheet rather than linking
@@ -639,7 +662,16 @@ export default function MealPlanScreen({ navigation, route }) {
   // explicitly clear.
   const [groceryTicks, setGroceryTicks] = useState({}); // { [sectionLabel::itemName]: true }
   const groceryTickKey = (label, name) => `${label}::${name}`;
+  const rebuildGroceryList = useCallback((patch) => {
+    const basis = patch.basis ?? groceryBasis;
+    const repeat = patch.repeat ?? groceryRepeat;
+    setGroceryBasis(basis);
+    setGroceryRepeat(repeat);
+    setGrocerySheet(buildGroceryList(plan, { basis, repeat }));
+  }, [plan, groceryBasis, groceryRepeat]);
   const openGroceryList = useCallback(() => {
+    setGroceryBasis('shop');
+    setGroceryRepeat(1);
     setGrocerySheet(buildGroceryList(plan));
     const planId = record?.id;
     if (!planId) { setGroceryTicks({}); return; }
@@ -869,6 +901,28 @@ export default function MealPlanScreen({ navigation, route }) {
   // exists anywhere in the app), so the day's totals never move when this is
   // set. Persists the same way a swap does: rewrite the slot's items array in
   // the stored plan JSON and push it through updateMealPlan.
+  // The day-wide switch: every paired item in the day to one weight state,
+  // in one write. Items without a CoFID pair are left as they are.
+  const handleSetDayWeightState = useCallback(async (value) => {
+    if (!user?.id || !record || !day) return;
+    const newSlots = day.slots.map((s) => (Array.isArray(s.items) ? {
+      ...s,
+      items: s.items.map((it) => {
+        const key = (it.foodRef || '').startsWith('curated:') ? it.foodRef.slice(8) : null;
+        return key && hasCookToggle(key) ? { ...it, weightState: value } : it;
+      }),
+    } : s));
+    const days = plan.days.map((d, i) => (i === dayIndex ? { ...day, slots: newSlots } : d));
+    const nextPlan = { ...plan, days };
+    try {
+      await updateMealPlan(user.id, record.id, nextPlan);
+      setRecord({ ...record, plan: nextPlan });
+    } catch (e) {
+      logError('MealPlanScreen.setDayWeightState', e, {});
+      toast.show('That raw or cooked choice was not saved. Try again in a moment.', { variant: 'error' });
+    }
+  }, [user?.id, record, plan, day, dayIndex, toast]);
+
   const handleSetItemWeightState = useCallback(async (slotKey, itemIndex, value) => {
     if (!user?.id || !record || !day) return;
     const slot = day.slots.find((s) => s.slot === slotKey);
@@ -1092,6 +1146,15 @@ export default function MealPlanScreen({ navigation, route }) {
   // Feature A "Plan my day": a single-day plan renders without the week picker
   // and adds to today rather than logging an abstract "Day N".
   const isDayPlan = plan?.kind === 'day' || (plan?.days?.length === 1);
+  // The weight state of every paired item in the day, for the day-wide switch.
+  const dayWeightStates = [];
+  for (const s of day?.slots || []) {
+    for (const it of s.items || []) {
+      const key = (it.foodRef || '').startsWith('curated:') ? it.foodRef.slice(8) : null;
+      const w = planItemWeight(it, key);
+      if (w.native) dayWeightStates.push(w.state);
+    }
+  }
   const activeDayLabel = isDayPlan ? (planStartDate === todayLocalKey() ? 'Today' : planStartLabel) : (dayLabels[dayIndex]?.date || `Day ${dayIndex + 1}`);
 
   const dayReason = useMemo(() => explainDay(day?.slots), [day]);
@@ -1237,6 +1300,33 @@ export default function MealPlanScreen({ navigation, route }) {
               the meal names. */}
           {dayReason ? <Text style={[styles.dayReason, live.dayReason]}>{dayReason}</Text> : null}
           {honestyLine ? <Text style={[styles.honesty, live.honesty]}>{honestyLine}</Text> : null}
+          {dayWeightStates.length ? (
+            <View style={styles.weightChoiceRow}>
+              <Text style={[styles.weightChoiceLabel, live.weightChoiceLabel]}>Show weights</Text>
+              <Chip
+                label="Raw or dry"
+                selected={dayWeightStates.every((w) => w === 'raw')}
+                onPress={() => handleSetDayWeightState('raw')}
+                disabled={busy}
+                style={styles.weightChoiceChip}
+                labelStyle={[styles.weightChoiceChipText, live.weightChoiceChipText]}
+                selectedLabelStyle={[styles.weightChoiceChipTextActive, live.weightChoiceChipTextActive]}
+                accessibilityRole="radio"
+                accessibilityLabel="Show every weight raw or dry"
+              />
+              <Chip
+                label="Cooked"
+                selected={dayWeightStates.every((w) => w === 'cooked')}
+                onPress={() => handleSetDayWeightState('cooked')}
+                disabled={busy}
+                style={styles.weightChoiceChip}
+                labelStyle={[styles.weightChoiceChipText, live.weightChoiceChipText]}
+                selectedLabelStyle={[styles.weightChoiceChipTextActive, live.weightChoiceChipTextActive]}
+                accessibilityRole="radio"
+                accessibilityLabel="Show every weight cooked"
+              />
+            </View>
+          ) : null}
 
           {/* Campaign 1 P0-3: dietary-needs staleness notice. Renders only
               when the STORED plan contains foods the CURRENT exclusions ban
@@ -1345,13 +1435,13 @@ export default function MealPlanScreen({ navigation, route }) {
                     {(slot.items || []).map((it, i) => {
                       const foodKey = (it.foodRef || '').startsWith('curated:') ? it.foodRef.slice(8) : null;
                       const canSwap = !!foodKey && !!slot.components;
-                      // Ultimate-Audit item 12 (raw/cooked basis toggle, founder
-                      // ruling NA-nutrition-1): only a food with a real dry/cooked
-                      // distinction gets the choice; a 'ready'-state food (cooked
-                      // meat, fruit, dairy) shows none. A pure label -- grams and
-                      // macros never change when it's set.
-                      const nativeWeightState = foodKey ? defaultWeightStateFor(foodKey) : null;
-                      const weightState = it.weightState ?? nativeWeightState;
+                      // Ultimate-Audit item 12, founder ruling 2026-10-19
+                      // (superseding NA-nutrition-1 for paired foods): only a
+                      // food with a CoFID raw/cooked pair gets the choice, and
+                      // it converts the grams shown; the macros never change.
+                      const shown = planItemWeight(it, foodKey);
+                      const nativeWeightState = shown.native;
+                      const weightState = shown.state;
                       // Campaign 17B job 5, "why did you use this food": read
                       // from the CODE the engine stamped on the component that
                       // changed, never inferred from the food's name. Items and
@@ -1366,9 +1456,9 @@ export default function MealPlanScreen({ navigation, route }) {
                             onLongPress={() => canSwap && handleFlagFood(slot.slot, foodKey, it.name)}
                             hitSlop={hitSlop}
                             accessibilityRole={canSwap ? 'button' : 'text'}
-                            accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap, long press to leave it out for good.` : `${it.quantityG} grams ${it.name}`}
+                            accessibilityLabel={canSwap ? `${shown.grams} grams ${shown.name}. Tap to swap, long press to leave it out for good.` : `${shown.grams} grams ${shown.name}`}
                           >
-                            <Text style={[styles.itemLine, live.itemLine]} numberOfLines={1} ellipsizeMode="tail">{`${formatNumber(it.quantityG)} g ${it.name}`}</Text>
+                            <Text style={[styles.itemLine, live.itemLine]} numberOfLines={1} ellipsizeMode="tail">{`${formatNumber(shown.grams)} g ${shown.name}`}</Text>
                             {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={t.colors.textSecondary} /> : null}
                           </TouchableOpacity>
                           {foodWhy ? (
@@ -1723,8 +1813,9 @@ export default function MealPlanScreen({ navigation, route }) {
       </BottomSheet>
 
       {/* Auto grocery list (ULTIMATE-NUT-02): the week's plan aggregated into a
-          grouped, read-only shopping list. Numbers-first; grams are the plan's
-          stored figures as-is (cooked-weight foods say so in their name). */}
+          grouped, read-only shopping list. Founder ruling 2026-10-19: paired
+          foods at shop weight (raw or dry) with the cooked weight muted beside
+          it, or the other way round; a one-day plan repeats for 3, 5 or 7 days. */}
       <BottomSheet
         visible={!!grocerySheet}
         onClose={() => setGrocerySheet(null)}
@@ -1756,9 +1847,48 @@ export default function MealPlanScreen({ navigation, route }) {
               <>
                 <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
                   {grocerySheet.dayCount === 1
-                    ? "Everything in today's plan."
+                    ? (grocerySheet.repeat === 1 ? "Everything in today's plan." : `Today's plan, ${grocerySheet.repeat} days of it.`)
                     : `Totals for the whole week across ${grocerySheet.dayCount} days.`}
                 </Text>
+                <View style={styles.weightChoiceRow}>
+                  <Chip
+                    label="Shop weight"
+                    selected={grocerySheet.basis === 'shop'}
+                    onPress={() => rebuildGroceryList({ basis: 'shop' })}
+                    style={styles.weightChoiceChip}
+                    labelStyle={[styles.weightChoiceChipText, live.weightChoiceChipText]}
+                    selectedLabelStyle={[styles.weightChoiceChipTextActive, live.weightChoiceChipTextActive]}
+                    accessibilityRole="radio"
+                    accessibilityLabel="Shop weight, raw or dry"
+                  />
+                  <Chip
+                    label="Meal prep weight"
+                    selected={grocerySheet.basis === 'prep'}
+                    onPress={() => rebuildGroceryList({ basis: 'prep' })}
+                    style={styles.weightChoiceChip}
+                    labelStyle={[styles.weightChoiceChipText, live.weightChoiceChipText]}
+                    selectedLabelStyle={[styles.weightChoiceChipTextActive, live.weightChoiceChipTextActive]}
+                    accessibilityRole="radio"
+                    accessibilityLabel="Meal prep weight, cooked"
+                  />
+                </View>
+                {grocerySheet.dayCount === 1 ? (
+                  <View style={styles.weightChoiceRow}>
+                    {GROCERY_REPEAT_DAYS.map((n) => (
+                      <Chip
+                        key={`repeat-${n}`}
+                        label={n === 1 ? '1 day' : `${n} days`}
+                        selected={grocerySheet.repeat === n}
+                        onPress={() => rebuildGroceryList({ repeat: n })}
+                        style={styles.weightChoiceChip}
+                        labelStyle={[styles.weightChoiceChipText, live.weightChoiceChipText]}
+                        selectedLabelStyle={[styles.weightChoiceChipTextActive, live.weightChoiceChipTextActive]}
+                        accessibilityRole="radio"
+                        accessibilityLabel={n === 1 ? 'Shop for 1 day' : `Shop for ${n} days`}
+                      />
+                    ))}
+                  </View>
+                ) : null}
                 <ScrollView
                   style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
                   contentContainerStyle={styles.swapListContent}
@@ -1777,7 +1907,7 @@ export default function MealPlanScreen({ navigation, route }) {
                             onPress={() => toggleGroceryTick(tickKey)}
                             accessibilityRole="checkbox"
                             accessibilityState={{ checked: ticked }}
-                            accessibilityLabel={`${item.name}${item.count ? ` x${item.count}` : ''}${item.grams != null ? `, ${formatNumber(item.grams)} g` : ''}`}
+                            accessibilityLabel={`${item.name}${item.count ? ` x${item.count}` : ''}${item.grams != null ? `, ${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : ''}${item.alt ? `, ${formatNumber(item.alt.grams)} g ${item.alt.state}` : ''}` : ''}`}
                           >
                             <Ionicons
                               name={ticked ? 'checkbox' : 'square-outline'}
@@ -1792,7 +1922,10 @@ export default function MealPlanScreen({ navigation, route }) {
                             </Text>
                             {item.grams != null ? (
                               <Text style={[styles.groceryQty, live.groceryQty, ticked && [styles.groceryQtyTicked, live.groceryQtyTicked]]}>
-                                {formatNumber(item.grams)} g
+                                {`${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : ''}`}
+                                {item.alt ? (
+                                  <Text style={[styles.groceryQtyTicked, live.groceryQtyTicked]}>{` (${formatNumber(item.alt.grams)} g ${item.alt.state})`}</Text>
+                                ) : null}
                               </Text>
                             ) : null}
                           </TouchableOpacity>
@@ -2031,7 +2164,7 @@ const styles = StyleSheet.create({
   itemLine: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], flex: 1 },
   // Ultimate-Audit item 12: the per-item raw/cooked basis choice, a quiet
   // sub-row under the food line so it reads as a detail, not a new decision.
-  weightChoiceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.xxs },
+  weightChoiceRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.xxs },
   weightChoiceLabel: { color: colors.textMuted, fontSize: fontSize.xs },
   weightChoiceChip: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, minHeight: 0 },
   weightChoiceChipText: { fontSize: fontSize.xs },

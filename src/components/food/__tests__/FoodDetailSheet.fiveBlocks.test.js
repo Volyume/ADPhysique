@@ -219,7 +219,7 @@ describe('(a) five blocks at open, the rest on demand', () => {
   });
 
   test('"More about this food" content is absent until the row is pressed, in its stated order', async () => {
-    const { tree } = render({ food: bagel({ food_ref: 'curated:oats', source: 'off' }) });
+    const { tree } = render({ food: bagel({ food_ref: 'curated:pasta', source: 'off' }) });
     const closed = allText(tree);
     for (const s of MORE_CONTENT) expect(closed).not.toContain(s);
     expect(closed).not.toContain('Weighed');

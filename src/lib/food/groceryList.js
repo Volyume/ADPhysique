@@ -8,12 +8,16 @@
 //    map and the register forbids inventing one, so sections key off the
 //    existing macro roles (roleOf, foodRoles.js) — Proteins / Carbs / Veg /
 //    Fats / Other, exactly the blueprint's LOADED STATE.
-//  - NA-nutrition-5 (which weight): the raw/cooked toggle (NUT-01) is blocked —
-//    there is no cooked->raw conversion factor in code — so the list shows the
-//    plan's STORED grams as-is and never fabricates a converted figure. Foods
-//    the plan stores as cooked weight already say so in their curated name
-//    (e.g. "White rice (cooked)", "Potato (boiled)"), so the shopper is told the
-//    figure is a cooked weight without any added label or invented conversion.
+//  - NA-nutrition-5 (which weight), SUPERSEDED for paired foods by the
+//    founder ruling of 2026-10-19: a curated food with a CoFID raw/cooked pair
+//    (cookYield.js) is listed at its supermarket weight, raw or dry, with the
+//    cooked weight beside it ("Chicken breast fillet, 595 g raw (445 g
+//    cooked)"), or the other way round for meal prep. Every ratio is CoFID
+//    data; a food with no pair keeps the plan's stored grams and its curated
+//    name exactly as before, and no converted figure is ever invented for it.
+//  - Repeat (same ruling): a one-day plan can be bought for 1, 3, 5 or 7 days
+//    of eating it; the totals scale and the share text says how many days.
+//  - Grams are kitchen-rounded (gramSolve.kitchenRound).
 //
 // Plan shape consumed (mealPlanAssembler.js): plan.days[] -> day.slots[] ->
 // each slot { name, items: [{ foodRef, name, quantityG }] | null,
@@ -22,6 +26,8 @@
 
 import { CURATED_FOODS } from './curatedFoods';
 import { roleOf } from './foodRoles';
+import { hasCookToggle, nativeState, convertCookGrams, uncookedWord } from './cookYield';
+import { kitchenRound } from './gramSolve';
 
 // Macro role -> quiet section label. 'free' and any unknown role fall to Other.
 const ROLE_SECTION = {
@@ -33,6 +39,11 @@ const ROLE_SECTION = {
 };
 const SECTION_ORDER = ['Proteins', 'Carbs', 'Veg', 'Fats', 'Other'];
 
+// The repeat choices for a one-day plan.
+export const GROCERY_REPEAT_DAYS = Object.freeze([1, 3, 5, 7]);
+
+const COOK_STATE_SUFFIX = /\s*\((cooked|boiled|baked|dry)\)\s*$/i;
+
 const foodKeyFromRef = (ref) =>
   (typeof ref === 'string' && ref.startsWith('curated:')) ? ref.slice(8) : null;
 
@@ -40,15 +51,23 @@ const foodKeyFromRef = (ref) =>
  * Aggregate a stored meal-plan into a grouped grocery list.
  *
  * @param {{ days?: Array }} plan  the active plan object (record.plan)
+ * @param {{ basis?: 'shop'|'prep', repeat?: number }} [opts]  basis 'shop'
+ *   (the default) lists paired foods at their raw or dry weight, 'prep' at
+ *   their cooked weight; `repeat` multiplies the totals (one-day plans).
  * @returns {{
  *   sections: Array<{ label: string, items: Array<{
- *     name: string, grams?: number, count?: number }> }>,
+ *     name: string, grams?: number, count?: number,
+ *     state?: 'raw'|'dry'|'cooked', alt?: { grams: number, state: string } }> }>,
  *   dayCount: number,
+ *   repeat: number,
+ *   basis: 'shop'|'prep',
  *   isEmpty: boolean,
  * }}
  */
-export function buildGroceryList(plan) {
-  const empty = { sections: [], dayCount: 0, isEmpty: true };
+export function buildGroceryList(plan, { basis = 'shop', repeat = 1 } = {}) {
+  const times = GROCERY_REPEAT_DAYS.includes(repeat) ? repeat : 1;
+  const view = basis === 'prep' ? 'prep' : 'shop';
+  const empty = { sections: [], dayCount: 0, repeat: times, basis: view, isEmpty: true };
   if (!plan || !Array.isArray(plan.days) || plan.days.length === 0) return empty;
 
   // Curated foods aggregate by key (grams sum); everything without a known
@@ -62,7 +81,7 @@ export function buildGroceryList(plan) {
     const g = Number(grams) || 0;
     if (g <= 0) return;
     const row = curated.get(key)
-      || { name: food.name, role: roleOf(key), grams: 0 };
+      || { key, name: food.name, role: roleOf(key), grams: 0 };
     row.grams += g;
     curated.set(key, row);
   };
@@ -95,15 +114,29 @@ export function buildGroceryList(plan) {
   const bySection = {};
   for (const row of curated.values()) {
     const label = ROLE_SECTION[row.role] || 'Other';
+    const grams = row.grams * times;
+    const native = hasCookToggle(row.key) ? nativeState(row.key) : null;
+    if (!native) {
+      (bySection[label] ||= []).push({ name: row.name, grams: kitchenRound(grams) });
+      continue;
+    }
+    const raw = native === 'raw' ? grams : convertCookGrams(row.key, grams, 'cooked', 'raw');
+    const cooked = native === 'cooked' ? grams : convertCookGrams(row.key, grams, 'raw', 'cooked');
+    const rawItem = { grams: kitchenRound(raw), state: uncookedWord(row.key) };
+    const cookedItem = { grams: kitchenRound(cooked), state: 'cooked' };
+    const [main, alt] = view === 'prep' ? [cookedItem, rawItem] : [rawItem, cookedItem];
     (bySection[label] ||= []).push({
-      name: row.name,
-      grams: Math.round(row.grams),
+      name: row.name.replace(COOK_STATE_SUFFIX, ''),
+      grams: main.grams,
+      state: main.state,
+      alt,
     });
   }
   for (const row of other.values()) {
+    const count = row.count * times;
     (bySection.Other ||= []).push({
       name: row.name,
-      ...(row.count > 1 ? { count: row.count } : {}),
+      ...(count > 1 ? { count } : {}),
     });
   }
 
@@ -116,7 +149,14 @@ export function buildGroceryList(plan) {
     sections.push({ label, items });
   }
 
-  return { sections, dayCount: plan.days.length, isEmpty: sections.length === 0 };
+  return { sections, dayCount: plan.days.length, repeat: times, basis: view, isEmpty: sections.length === 0 };
+}
+
+/** "595 g raw (445 g cooked)", or "120 g" for a food with no pair. */
+export function groceryQuantityText(item) {
+  if (item?.grams == null) return '';
+  if (!item.state) return `${item.grams} g`;
+  return `${item.grams} g ${item.state}${item.alt ? ` (${item.alt.grams} g ${item.alt.state})` : ''}`;
 }
 
 /**
@@ -132,12 +172,13 @@ export function formatGroceryListForShare(list) {
   if (!list || list.isEmpty || !Array.isArray(list.sections) || list.sections.length === 0) {
     return '';
   }
-  const heading = list.dayCount === 1 ? 'Shopping list, 1 day' : `Shopping list, ${list.dayCount} days`;
+  const days = (list.dayCount || 0) * (list.repeat || 1);
+  const heading = days === 1 ? 'Shopping list, 1 day' : `Shopping list, ${days} days`;
   const lines = [heading];
   list.sections.forEach((section) => {
     lines.push('', section.label);
     section.items.forEach((item) => {
-      const qty = item.grams != null ? `${item.grams} g` : (item.count > 1 ? `x${item.count}` : '');
+      const qty = item.grams != null ? groceryQuantityText(item) : (item.count > 1 ? `x${item.count}` : '');
       lines.push(qty ? `- ${item.name}, ${qty}` : `- ${item.name}`);
     });
   });

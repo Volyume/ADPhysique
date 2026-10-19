@@ -81,6 +81,35 @@ describe('applyPlanDayToDiary: carries the per-item weight-state label (Ultimate
     const entry = batchedEntries().find((e) => e.foodRef === 'curated:white_rice');
     expect(entry.weightState).toBeUndefined();
   });
+
+  // Founder ruling 2026-10-19 (cookYield.js), superseding NA-nutrition-1 for
+  // paired foods: a plate shown raw logs its raw grams, with the plan's own
+  // figures for the same amount of food.
+  test('a paired item set to raw logs its raw grams, kitchen-rounded, with the same macros', async () => {
+    const day = {
+      slots: [{
+        slot: 'meal_1',
+        items: [{ foodRef: 'curated:chicken_breast', quantityG: 150, kcal: 248, proteinG: 46.5, carbsG: 0, fatG: 5.4, weightState: 'raw' }],
+      }],
+    };
+    await applyPlanDayToDiary('u1', day, { entryDate: '2026-07-05' });
+    const entry = batchedEntries().find((e) => e.foodRef === 'curated:chicken_breast');
+    expect(entry.quantityG).toBe(200); // 150 g cooked = 200 g raw (CoFID protein 32 / 24)
+    expect(entry.kcal).toBe(248);
+    expect(entry.proteinG).toBe(46.5);
+    expect(entry.weightState).toBe('raw');
+  });
+
+  test('an item without a CoFID pair keeps its grams whatever its label', async () => {
+    const day = {
+      slots: [{
+        slot: 'meal_1',
+        items: [{ foodRef: 'curated:oats', quantityG: 60, kcal: 227, proteinG: 8, carbsG: 40, fatG: 4, weightState: 'cooked' }],
+      }],
+    };
+    await applyPlanDayToDiary('u1', day, { entryDate: '2026-07-05' });
+    expect(batchedEntries()[0].quantityG).toBe(60);
+  });
 });
 
 describe('storedTargetToEngineTarget', () => {

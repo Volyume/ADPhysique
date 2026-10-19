@@ -335,7 +335,8 @@ describe('MealPlanScreen — shopping-list share (audit §15 item 6)', () => {
     const { message } = Share.share.mock.calls[0][0];
     expect(message).toContain('Shopping list, 1 day');
     expect(message).toContain('Proteins');
-    expect(message).toContain('Chicken breast fillet (cooked), 150 g');
+    // Founder ruling 2026-10-19: shop weight first, cooked weight beside it.
+    expect(message).toContain('Chicken breast fillet, 200 g raw (150 g cooked)');
     Share.share.mockRestore();
   });
 });
@@ -773,8 +774,14 @@ describe('MealPlanScreen — calm failures with a logged cause, sheet headings (
 
   test('a failed raw or cooked choice is told, not dropped', async () => {
     updateMealPlan.mockRejectedValueOnce(new Error('disk'));
-    const tree = await mountWithOats();
-    const raw = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Weigh Porridge oats cooked' && typeof n.props.onPress === 'function')[0];
+    // Founder ruling 2026-10-19: only a food with a CoFID raw/cooked pair
+    // has the choice, so this uses pasta (oats has none).
+    const plan = makePlan();
+    plan.days[0].slots[0].items = [{ foodRef: 'curated:pasta', name: 'Pasta (dry)', quantityG: 70 }];
+    loadActiveMealPlan.mockResolvedValue({ id: 'rec1', plan });
+    let tree;
+    await act(async () => { tree = create(<MealPlanScreen navigation={nav} />); });
+    const raw = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Weigh Pasta (dry) cooked' && typeof n.props.onPress === 'function')[0];
     expect(raw).toBeTruthy();
     await act(async () => { await raw.props.onPress(); });
 

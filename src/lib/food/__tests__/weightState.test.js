@@ -44,10 +44,12 @@ describe('foodRoles: defaultWeightStateFor / hasWeightChoice (NA-nutrition-1)', 
     expect(hasWeightChoice('white_rice')).toBe(true);
   });
 
-  test('a ready-state food (eaten as weighed, e.g. cooked meat) has no choice at all', () => {
-    expect(stateOf('chicken_breast')).toBe('ready');
-    expect(defaultWeightStateFor('chicken_breast')).toBeNull();
-    expect(hasWeightChoice('chicken_breast')).toBe(false);
+  // Founder ruling 2026-10-19: cooked meat now carries the cooked state
+  // (cookYield.js); a ready-state food is one eaten as bought, like eggs.
+  test('a ready-state food (eaten as weighed, e.g. eggs) has no choice at all', () => {
+    expect(stateOf('eggs')).toBe('ready');
+    expect(defaultWeightStateFor('eggs')).toBeNull();
+    expect(hasWeightChoice('eggs')).toBe(false);
   });
 
   test('a key outside the curated table (global/custom/quick-add) has no choice', () => {

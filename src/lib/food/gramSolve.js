@@ -11,10 +11,39 @@
  */
 import { gramRangeOf } from './foodRoles';
 
-/** Clamp grams to the food's sane range and round to the nearest 5 g. */
+/**
+ * Kitchen-scale step for a weight (founder ruling 2026-10-19): under 15 g
+ * (oil, butter) to the nearest 1 g, from 15 g upwards to the nearest 5 g.
+ * Nobody weighs 444 g on a kitchen scale.
+ */
+export function kitchenStep(grams) {
+  return grams < 15 ? 1 : 5;
+}
+
+/** Grams rounded to the kitchen-scale step for their size. */
+export function kitchenRound(grams) {
+  const step = kitchenStep(grams);
+  return Math.round(grams / step) * step;
+}
+
+/**
+ * The kitchen-rounded value of `grams` inside [lo, hi]: the nearest step,
+ * moved one step inwards when rounding crossed a bound, and the bound itself
+ * only when the box is narrower than one step (a bound is never crossed).
+ */
+export function kitchenRoundWithin(grams, lo, hi) {
+  let x = kitchenRound(Math.min(Math.max(grams, lo), hi));
+  if (x > hi) x = Math.floor(hi / kitchenStep(hi)) * kitchenStep(hi);
+  if (x < lo) x = Math.ceil(lo / kitchenStep(lo)) * kitchenStep(lo);
+  if (x > hi) x = hi;
+  if (x < lo) x = lo;
+  return x;
+}
+
+/** Clamp grams to the food's sane range and round to the kitchen-scale step. */
 export function clampRoundGrams(grams, foodKey) {
   const [lo, hi] = gramRangeOf(foodKey);
-  return Math.round(Math.min(Math.max(grams, lo), hi) / 5) * 5;
+  return kitchenRoundWithin(grams, lo, hi);
 }
 
 /**
