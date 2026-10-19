@@ -707,6 +707,11 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WeeklyCheckIn" component={WeeklyCheckInScreen} options={{ headerShown: false }} />
+      {/* Coaching-first onboarding (founder brief 2026-10-19): the streamlined
+          setup a quick-start person reaches from any coach-owned surface's
+          "Set up coaching" card. The same wizard in its coaching mode: only
+          the missing required pieces, then keep the plan or build a new one. */}
+      <Stack.Screen name="CoachingSetup" component={ProOnboardingScreen} options={{ headerShown: false }} initialParams={{ mode: 'coaching' }} />
       <Stack.Screen name="CoachOutput" component={CoachOutputScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WeeklyStory" component={WeeklyStoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
