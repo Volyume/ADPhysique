@@ -410,6 +410,7 @@ BEGIN
   SELECT * INTO v_e FROM public.gym_challenge_entrants
    WHERE challenge_id = v_c.id AND user_id = v_uid;
   RETURN public._gym_challenge_json(v_c) || jsonb_build_object(
+    'gym_id', v_c.gym_id,
     'joined', FOUND AND v_e.withdrawn_at IS NULL,
     'withdrawn', FOUND AND v_e.withdrawn_at IS NOT NULL);
 END $$;

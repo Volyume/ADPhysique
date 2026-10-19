@@ -318,3 +318,34 @@ describe('linking config — the conversation deep link (discovery section 10)',
     expect(config.screens.CommunityTab.screens.CommunityConversation).toBe('m');
   });
 });
+
+describe('linking config — gym challenge links (gym challenge SPEC section 2)', () => {
+  test.each([
+    'volyume://c/volt-nov',
+    'https://volyume.app/c/volt-nov',
+  ])('%s opens the join screen in the Community tab with the code', (url) => {
+    expect(routeFor(url)).toEqual({
+      tab: 'CommunityTab',
+      name: 'ChallengeJoin',
+      params: { code: 'volt-nov' },
+    });
+  });
+
+  test('the path is stashed as a pending code before resolving', () => {
+    expect(source).toMatch(/stashChallengePath\(path\);\s*\n\s*return safeGetStateFromPath/);
+    expect(source).toMatch(/const CHALLENGE_PATH = /);
+  });
+
+  test('the Android intent filter and the Apple association carry /c/', () => {
+    const appJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'app.json'), 'utf8'));
+    const filters = appJson.expo.android.intentFilters;
+    const prefixes = filters.flatMap((f) => f.data.map((d) => d.pathPrefix));
+    expect(prefixes).toContain('/c/');
+    const c = filters.find((f) => f.data.some((d) => d.pathPrefix === '/c/'));
+    expect(c.autoVerify).toBe(true);
+    expect(c.data[0]).toMatchObject({ scheme: 'https', host: 'volyume.app' });
+    const aasa = JSON.parse(fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'public', '.well-known', 'apple-app-site-association'), 'utf8'));
+    expect(aasa.applinks.details[0].paths).toContain('/c/*');
+  });
+});

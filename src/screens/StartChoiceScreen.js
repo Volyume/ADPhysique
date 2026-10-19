@@ -10,6 +10,8 @@ import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { loadDraft } from '../lib/proOnboardingDraft';
 import { logError } from '../lib/errorLog';
+import { hasChallengeActiveFlag } from '../lib/challenges/pending';
+import { COACHING_NOTE } from '../lib/challenges/copy';
 
 // Founder brief 2026-10-19: coaching-first onboarding with an optional quick
 // start. After the Article 9 consent gate the person chooses between the full
@@ -23,6 +25,15 @@ export default function StartChoiceScreen({ navigation }) {
   // Hold a blank screen until the draft check settles, so a person who already
   // chose coaching never sees the choice flash.
   const [checked, setChecked] = useState(false);
+  // Gym challenge: set by the join screen. Only adds one line; nothing else
+  // on this screen depends on it.
+  const [inChallenge, setInChallenge] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    hasChallengeActiveFlag().then((on) => { if (alive) setInChallenge(!!on); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +94,11 @@ export default function StartChoiceScreen({ navigation }) {
           <Text style={[t.type.body, styles.point, { color: t.colors.textSecondary }]}>
             Everything is free.
           </Text>
+          {inChallenge ? (
+            <Text style={[t.type.body, styles.point, { color: t.colors.textSecondary }]}>
+              {COACHING_NOTE}
+            </Text>
+          ) : null}
           <Button
             title="Set up coaching"
             onPress={() => navigation.replace('ProOnboarding')}
