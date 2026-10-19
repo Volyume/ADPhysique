@@ -150,11 +150,15 @@ export const CLIP_STRINGS = Object.freeze({
   // the line is the exercise's own camera tip (cameraTips.js) when the
   // camera knows the exercise; this is the general line it falls back to.
   setupHint: CAMERA_TIPS.general,
-  recordHint: 'Tap the button to start after a countdown, or press and hold it to record for as long as you hold.',
+  // Founder report 2026-10-19: one action per line, short, on a pill.
+  recordHint: 'Tap to start, or press and hold to film.',
+  // The second, smaller line under the idle hint: see autoStopLine().
+  savingHint: 'Saving your video',
+  getIntoPosition: 'Get into position',
   // The hint while recording: after a tap, the square stops it early; during
   // a hold, letting go stops it.
-  recordingHintTap: 'Tap the square when you want to stop.',
-  recordingHintHold: 'Let go when you want to stop.',
+  recordingHintTap: 'Tap to stop.',
+  recordingHintHold: 'Let go to stop.',
   // The small controls each carry a word, so nobody has to guess what a bare
   // "3 s", "15 s" or "On" changes.
   countdownCaption: 'Countdown',
@@ -212,7 +216,7 @@ export const CLIP_STRINGS = Object.freeze({
   closeBusyA11y: 'Cancel recording',
   // The record control while the countdown runs, and the line under it.
   cancelCountdownA11y: 'Cancel the countdown',
-  countdownHint: 'Tap the button again to cancel.',
+  countdownHint: 'Tap to cancel.',
   stopA11y: 'Stop recording',
   flipA11y: 'Flip camera',
   // Addendum 14 (founder: "make it clear when they record a video on set
@@ -282,6 +286,11 @@ export function leadInA11yLabel(leadInSeconds) {
 export function lengthLabel(lengthSeconds) {
   const n = Number(lengthSeconds) || DEFAULT_LENGTH_SECONDS;
   return n >= 120 && n % 60 === 0 ? `${n / 60} min` : `${n} s`;
+}
+
+/** The idle hint's second line: "Stops by itself at 90 s" (the length control's own text). */
+export function autoStopLine(lengthSeconds) {
+  return `Stops by itself at ${lengthLabel(lengthSeconds)}`;
 }
 
 /** The length control's accessibility label. */

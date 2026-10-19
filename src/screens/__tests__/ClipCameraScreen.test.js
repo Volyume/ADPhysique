@@ -25,7 +25,7 @@
  *   - the video is 6 Mbps (addendum 13, G) and the front camera's preview is
  *     mirrored;
  *   - the two small controls each carry a word ("Countdown", "Length"), and the
- *     line "Tap the button to start after a countdown, or press and hold it to record for as long as you hold." is
+ *     line "Tap to start, or press and hold to film." (2026-10-19) is
  *     always shown;
  *   - the amber line fills over the chosen length;
  *   - a recording under 1 s is discarded silently; closing mid-recording
@@ -267,16 +267,17 @@ describe('camera access', () => {
 describe('what the screen says, in plain words', () => {
   test('one line under the button, always shown: before it says how to start; during the countdown how to cancel; while recording what stops it', async () => {
     const tree = await mount();
-    const line = 'Tap the button to start after a countdown, or press and hold it to record for as long as you hold.';
+    // Founder report 2026-10-19: one action per line, short (rules.js).
+    const line = 'Tap to start, or press and hold to film.';
     expect(text(tree)).toContain(line);
     await press(tree, 'clip-camera-record');
     await flush();
     expect(text(tree)).not.toContain(line);
-    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap the button again to cancel.');
+    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap to cancel.');
     await advance(3000);
     await flush();
     expect(text(tree)).not.toContain(line);
-    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap the square when you want to stop.');
+    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap to stop.');
   });
 
   test('each small control carries a word above its value: "Countdown" above 3 s, "Length" above 90 s, "Cues" above its state', async () => {
@@ -349,7 +350,7 @@ describe('TAP: the countdown, then it records for the chosen length and stops by
     await flush();
     expect(text(tree)).not.toContain('clip-camera-countdown');
     expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 3 seconds');
-    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap the button to start after a countdown, or press and hold it to record for as long as you hold.');
+    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap to start, or press and hold to film.');
     expect(mockCameraProps.enableTorch).toBe(false);
     // The old countdown is gone: nothing records, however long we wait.
     await advance(10000);
@@ -562,8 +563,10 @@ describe('the Countdown and Length controls', () => {
     await press(tree, 'clip-camera-length');
     await advance(3000);
     await flush();
-    await press(tree, 'clip-camera-leadin');
-    await press(tree, 'clip-camera-length');
+    // Founder report 2026-10-19: the setting chips are hidden while recording
+    // (they used to be dimmed), so they cannot be pressed at all.
+    expect(hostById(tree, 'clip-camera-leadin')).toBeUndefined();
+    expect(hostById(tree, 'clip-camera-length')).toBeUndefined();
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
   });
 });
@@ -657,7 +660,7 @@ describe('HOLD: records while held, no countdown, stops on release, capped at tw
     const tree = await mount();
     await startHold(tree);
     await flush();
-    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Let go when you want to stop.');
+    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Let go to stop.');
   });
 
   test('a hold let go before the recorder has begun keeps asking it to stop until it ends, never a fixed number of times', async () => {
@@ -824,7 +827,8 @@ describe('the cues (addendum 13, A): sound and light for a phone propped away fr
     await press(tree, 'clip-camera-cues');
     await advance(3000);
     await flush();
-    await press(tree, 'clip-camera-cues');
+    // Founder report 2026-10-19: hidden while recording, so it cannot be pressed.
+    expect(hostById(tree, 'clip-camera-cues')).toBeUndefined();
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
     expect(text(tree)).not.toContain('"Light only"');
   });
@@ -1298,10 +1302,10 @@ describe('source rules', () => {
     expect(SOURCE).not.toMatch(/restCountdown|from 'expo-haptics'|require\('expo-haptics'\)/);
   });
 
-  test('the top line is the rest timer\'s drain line: 2 dp, primaryFill', () => {
+  test('the top line is the rest timer\'s drain line colour (primaryFill), 4 dp since the founder report of 2026-10-19 (was 2 dp)', () => {
     const rest = fs.readFileSync(path.join(DIR, 'components', 'RestTimer.js'), 'utf8');
     expect(rest).toMatch(/drainFill: \{[^}]*height: 2,[^}]*backgroundColor: colors\.primaryFill/s);
-    expect(PROGRESS).toMatch(/const LINE_HEIGHT = 2;/);
+    expect(PROGRESS).toMatch(/const LINE_HEIGHT = 4;/);
     expect(PROGRESS).toMatch(/lineFill: \{[^}]*height: LINE_HEIGHT,[^}]*backgroundColor: CAM\.primaryFill/s);
     expect(PROGRESS).toMatch(/lineTrack: \{[^}]*height: LINE_HEIGHT,/s);
   });
