@@ -20,6 +20,8 @@
  * to `deferred: false` once a track() call site lands.
  */
 
+import { EVENT_SCHEMAS } from './schema';
+
 export const TELEMETRY_EVENTS = Object.freeze([
   // Panel 2: engine health
   { name: 'ed_pattern_flag_fired',           deferred: false, panel: 2 },
@@ -327,6 +329,10 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'manual_plan_started',             deferred: false, panel: 1 },
   { name: 'manual_plan_saved',               deferred: false, panel: 1 },
   { name: 'plan_replaced',                   deferred: false, panel: 1 },
+
+  // Growth and performance catalogue (founder brief 2026-10-19): every
+  // event in schema.js, with its fields, description and consent rule.
+  ...EVENT_SCHEMAS.map((e) => ({ name: e.name, deferred: false, panel: 7 })),
 
   // No signup_started event: it would fire before an account exists, and
   // this pipeline attributes rows to auth.uid() only (no anonymous install

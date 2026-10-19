@@ -25,8 +25,46 @@ import {
 import { logWarn, logInfo } from '../errorLog';
 import { isDeletedAccountFkError } from '../sync/telemetry';
 import { ALLOWED_EVENTS } from './events';
+import { sanitisePayload, allowedBeforeConsent, isDebugLoggedSignal } from './schema';
+import { noteSessionEvent } from './session';
+
+// Founder decision 2026-10-19 (telemetry brief, answer 4): nothing that
+// touches health leaves the device before Article 9 consent; failure and
+// performance events (schema `preConsent`) do, so a fault before consent
+// is still seen. Fails closed: an unreadable consent state is "not given".
+function consentGiven() {
+  try {
+    // eslint-disable-next-line global-require
+    return require('../../store/useAppStore').default.getState()?.healthConsent === true;
+  } catch (_) {
+    return false;
+  }
+}
+
+// Stamped on every event so a regression shows by release and platform.
+let _appVersion;
+function appStamp() {
+  if (_appVersion === undefined) {
+    try {
+      // eslint-disable-next-line global-require
+      _appVersion = require('expo-application').nativeApplicationVersion ?? null;
+    } catch (_) { _appVersion = null; }
+  }
+  let platform = null;
+  try {
+    // eslint-disable-next-line global-require
+    platform = require('react-native').Platform?.OS ?? null;
+  } catch (_) { platform = null; }
+  return { ...(_appVersion ? { app_version: String(_appVersion) } : {}), ...(platform ? { platform } : {}) };
+}
 
 const FLUSH_DEBOUNCE_MS = 5000;
+// True once this session learns the batch function is not deployed yet.
+let _batchMissing = false;
+const isMissingFunction = (error) => error?.code === 'PGRST202' || error?.code === '42883'
+  || /could not find the function|does not exist/i.test(String(error?.message || ''));
+/** Test seam: forget what the session learned about the batch function. */
+export function __resetBatchProbe() { _batchMissing = false; }
 let _flushTimer = null;
 
 // LB-9: product telemetry runs under legitimate interest with a user
@@ -71,7 +109,20 @@ export async function postEvent(userId, event, payload = null) {
     logWarn('telemetry.transport.unknownEvent', `unknown event "${event}", check the allow-list`, { event });
     return null;
   }
-  const id = await dbRecord(userId, event, payload).catch((e) => {
+  if (!allowedBeforeConsent(event) && !consentGiven()) return null;
+  // A declared event keeps only its declared, valid fields (schema.js).
+  const { payload: clean, dropped } = sanitisePayload(event, payload);
+  if (dropped.length) logWarn('telemetry.transport.droppedFields', `"${event}" dropped ${dropped.join(', ')}`, { event });
+  const stamped = clean && typeof clean === 'object' && !Array.isArray(clean)
+    ? { ...clean, ...appStamp() }
+    : (clean == null ? appStamp() : clean);
+  noteSessionEvent(event);
+  // Development builds also put friction, performance and confusion events
+  // in the on-device debug log (Settings, Debug logs).
+  if (typeof __DEV__ !== 'undefined' && __DEV__ && isDebugLoggedSignal(event)) {
+    logWarn('telemetry.signal', event, stamped);
+  }
+  const id = await dbRecord(userId, event, stamped).catch((e) => {
     logWarn('telemetry.transport.persist', e?.message ?? 'unknown', { event });
     return null;
   });
@@ -105,6 +156,37 @@ export async function flushPending() {
   if (!rows.length) return { pushed: 0 };
 
   const pushedIds = [];
+  // Founder decision 2026-10-19 (answer 2a): one request carries the batch
+  // (migrate_200). Until that migration is applied the batch function does
+  // not exist, so the rows go one at a time exactly as before.
+  if (!_batchMissing) {
+    const batch = rows.map((row) => {
+      let payload = null;
+      if (row.payload_json) {
+        try { payload = JSON.parse(row.payload_json); } catch (_) { payload = null; }
+      }
+      return { event: row.event, payload, occurred_at: new Date(row.occurred_at).toISOString() };
+    });
+    const { data, error } = await sb.rpc('record_engine_telemetry_batch', { _events: batch });
+    if (!error) {
+      // The server returns the indexes it rejected (an unknown name); those
+      // stay queued for a build that knows them, everything else is done.
+      const rejected = new Set(Array.isArray(data?.rejected) ? data.rejected : []);
+      const ids = rows.filter((_, i) => !rejected.has(i)).map((r) => r.id);
+      if (ids.length) await markEngineTelemetryPushed(ids);
+      return { pushed: ids.length, total: rows.length, batched: true };
+    }
+    if (isMissingFunction(error)) {
+      _batchMissing = true;
+    } else {
+      if (isDeletedAccountFkError(error)) {
+        logInfo('telemetry.transport.batch.deletedAccountResidual', 'benign user_id FK rejection from a deleted-account device; session will clear', {});
+      } else {
+        logWarn('telemetry.transport.batch', error.message ?? 'unknown', { rows: rows.length });
+      }
+      return { pushed: 0, total: rows.length };
+    }
+  }
   for (const row of rows) {
     let payload = null;
     if (row.payload_json) {

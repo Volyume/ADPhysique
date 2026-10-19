@@ -855,6 +855,16 @@ export default function App() {
       // (the iOS "phone call" / control-center pull-down state),
       // which would otherwise overstate sessions.
       if (coldStartFired && (state === 'active' || state === 'background')) {
+        // Telemetry brief 2026-10-19: a visit runs from foreground to
+        // background; its summary (length, screens, errors, what it
+        // achieved) is taken the moment it ends, before any await.
+        let visit = null;
+        try {
+          // eslint-disable-next-line global-require
+          const telemetrySession = require('./src/lib/telemetry/session');
+          if (state === 'active') telemetrySession.startSession();
+          else visit = telemetrySession.endSession();
+        } catch (_) { visit = null; }
         try {
           const sb = getSupabaseClient();
           sb?.auth.getSession().then(({ data: { session: s } = {} } = {}) => {
@@ -864,6 +874,7 @@ export default function App() {
             const { track } = require('./src/lib/engineTelemetry');
             const event = state === 'active' ? 'app_foregrounded' : 'app_backgrounded';
             track(uid, event, { platform: Platform.OS }).catch(() => {});
+            if (visit) track(uid, 'session_ended', visit).catch(() => {});
           }).catch(() => {});
         } catch (_) {}
       }
