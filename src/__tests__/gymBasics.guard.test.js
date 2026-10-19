@@ -18,6 +18,14 @@
  *    explicit tap in the exercise overflow sheet. If setShowWarmupRamp(true)
  *    ever appears outside an onPress handler, the decision has been
  *    quietly reversed and this fails.
+ *
+ * 3. Founder decision 2026-10-19 overturns B8 for compound exercises only:
+ *    an "Add warm-up sets" chip on the card lines up the whole ramp as
+ *    warm-up rows ahead of the working sets. It is still a tap, never an
+ *    automatic suggestion, and still logs nothing: each warm-up is logged by
+ *    its own tick, and the working entry comes back after the last one. It
+ *    never shows in a superset, a cluster or per-side work (why the old chip
+ *    was removed), and it is gone once anything is logged on the exercise.
  */
 import fs from 'fs';
 import path from 'path';
@@ -103,5 +111,45 @@ describe('B8 warm-up helper stays pull-only', () => {
     expect(SCREEN).not.toContain('Plate calculator');
     expect(SCREEN).not.toContain('showPlates');
     expect(SCREEN).not.toContain('calculatePlates');
+  });
+});
+
+describe('Add warm-up sets chip (founder decision 2026-10-19)', () => {
+  const at = SCREEN.indexOf('const canAddWarmups =');
+  const gate = SCREEN.slice(at, SCREEN.indexOf(';', at));
+  const handler = SCREEN.slice(SCREEN.indexOf('function handleAddWarmups()'), SCREEN.indexOf('// The bar\'s last action on the next row'));
+  const advance = SCREEN.slice(SCREEN.indexOf("} else if (warmupQueue && warmupQueue.exerciseId"), SCREEN.indexOf('} catch (postSaveError)'));
+
+  test('compound weighted work only, before anything is logged on the exercise', () => {
+    expect(gate).toMatch(/exercise\.compoundIsolation === 'compound'/);
+    expect(gate).toMatch(/setTableKind === 'weight_reps'/);
+    expect(gate).toMatch(/loggedSets\.length === 0/);
+  });
+
+  test('never in a superset, a cluster or per-side work', () => {
+    expect(gate).toMatch(/currentSGI == null && !cluster && !perSide/);
+    expect(gate).toMatch(/!isClusterType\(currentSet\.setType\)/);
+    expect(gate).toMatch(/!unilateralExercises\.has\(exercise\.id\)/);
+  });
+
+  test('it opens only from a tap', () => {
+    expect(SCREEN).toMatch(/<Chip\s+label="Add warm-up sets"[\s\S]{0,80}onPress=\{handleAddWarmups\}/);
+    expect(SCREEN.match(/handleAddWarmups\(\)/g)).toHaveLength(1); // its definition; no other caller
+  });
+
+  test('the chip and each step only fill the entry as a warm-up; nothing is logged for the user', () => {
+    expect(handler).toMatch(/setType: 'warmup'/);
+    expect(handler).not.toMatch(/handleCompleteSetPress|createWorkoutSet|addSetToCurrentExercise/);
+    expect(advance).toMatch(/setType: 'warmup'/);
+    expect(advance).not.toMatch(/handleCompleteSetPress|createWorkoutSet|addSetToCurrentExercise/);
+  });
+
+  test('after the last warm-up the working entry returns as it was seeded', () => {
+    expect(advance).toMatch(/setType: 'straight', isGhost: resume\.isGhost/);
+  });
+
+  test('a working set or a new exercise clears the lined-up warm-ups', () => {
+    expect(SCREEN).toMatch(/if \(currentSet\.setType !== 'warmup'\) \{\s*\/\/[^\n]*\n\s*if \(warmupQueue\) setWarmupQueue\(null\);/);
+    expect(SCREEN).toMatch(/rampAnchorRef\.current = null;\s*setWarmupQueue\(null\);\s*\}, \[currentExerciseIndex\]\);/);
   });
 });

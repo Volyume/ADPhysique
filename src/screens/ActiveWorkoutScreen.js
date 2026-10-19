@@ -53,6 +53,8 @@ import ExerciseRestSheet from '../components/workout/session/ExerciseRestSheet';
 import HistorySheet from '../components/workout/session/HistorySheet';
 import RecordLine, { recordText, celebrateRecord } from '../components/workout/session/RecordLine';
 import { buildExerciseHistory } from '../lib/exerciseHistory';
+import { warmupRamp, DEFAULT_BAR_KG } from '../lib/warmupRamp';
+import Chip from '../components/Chip';
 import { stepValue, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } from '../lib/keypadEntry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -250,6 +252,7 @@ const IS_JEST = typeof process !== 'undefined'
 
 // Barbell test for the warm-up ramp's empty-bar row, same custom-spelling
 // caveat as above ('barbell' seeded, 'Barbell' custom).
+const BARBELL_EQUIPMENT = /barbell/i;
 
 
 
@@ -650,6 +653,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // while the entry holds a working (non-warm-up) weight; cleared on
   // exercise change and whenever the entry shows a working weight again.
   const rampAnchorRef = useRef(null);
+  // Founder decision 2026-10-19 (B8 overturned, option b): "Add warm-up
+  // sets" on a compound exercise's card lines up the whole ramp as warm-up
+  // rows ahead of the working sets, each logged by its own tick. Nothing is
+  // logged for the user. { exerciseId, rows: [{ weight, reps }] still to
+  // come after the entry, resume: the working entry to restore after the
+  // last warm-up }. Cleared on exercise change and on any working set.
+  const [warmupQueue, setWarmupQueue] = useState(null);
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
@@ -858,6 +868,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // A ramp anchored to one exercise means nothing for the next.
   useEffect(() => {
     rampAnchorRef.current = null;
+    setWarmupQueue(null);
   }, [currentExerciseIndex]);
 
   // C3: a countdown armed on one exercise must never fire against another,
@@ -3567,6 +3578,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // has a genuine reason (back-off position, fatigue adjust, overshoot
       // add, senior recovery), and the provenance line then explains why.
       if (currentSet.setType !== 'warmup') {
+        // A working set ends any lined-up warm-ups (the user moved on).
+        if (warmupQueue) setWarmupQueue(null);
         // The ordinal position the just-logged set occupies among eligible
         // working rows (design section 15's NEVER_ELIGIBLE_TYPES) - matches
         // `presented.pos` exactly whenever the just-logged set is the
@@ -3661,6 +3674,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         if (useLastRunId != null && useLastRunId === (exercise?.id ?? null) && !isClusterType(currentSet.setType)) {
           const lc = lastCellFor(seedPosForCompletedSet);
           if (lc) applyLastSetToEntry(lc);
+        }
+      } else if (warmupQueue && warmupQueue.exerciseId === (exercise?.id ?? null)) {
+        // A lined-up warm-up was logged: the next one loads, and after the
+        // last the working entry comes back exactly as it was seeded.
+        const [nextWarmup, ...rest] = warmupQueue.rows;
+        if (nextWarmup) {
+          setCurrentSet(cs => ({ ...cs, weight: nextWarmup.weight, reps: nextWarmup.reps, setType: 'warmup', isGhost: false }));
+          seededEntryRef.current = { weight: nextWarmup.weight, reps: nextWarmup.reps };
+          setWarmupQueue({ ...warmupQueue, rows: rest });
+        } else {
+          const { resume } = warmupQueue;
+          setCurrentSet(cs => ({ ...cs, weight: resume.weight, reps: resume.reps, setType: 'straight', isGhost: resume.isGhost }));
+          seededEntryRef.current = { weight: resume.weight, reps: resume.reps };
+          setWarmupQueue(null);
         }
       }
 
@@ -5817,6 +5844,43 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     && !isWarmupEntry && !cluster && !perSide
     && !isClusterType(currentSet.setType)
     && !(exercise && unilateralExercises.has(exercise.id));
+  // Founder decision 2026-10-19 (B8 overturned, option b): "Add warm-up
+  // sets" on a compound weighted exercise before anything is logged on it.
+  // Never in a superset, a cluster or per-side work (the reasons the old
+  // chip was removed), and never once a warm-up is lined up or logged.
+  // Shown only while the entry is still a warm-up: a user who flips the
+  // marker back to a working set has left the ramp.
+  const warmupQueued = !!warmupQueue && warmupQueue.exerciseId === (exercise?.id ?? null) && isWarmupEntry;
+  const warmupEntryWeight = parseDecimalInput(currentSet.weight);
+  const warmupBarbell = BARBELL_EQUIPMENT.test(exercise?.equipment || '');
+  const canAddWarmups = !!exercise?.id
+    && exercise.compoundIsolation === 'compound'
+    && setTableKind === 'weight_reps'
+    && loggedSets.length === 0
+    && !isWarmupEntry
+    && currentSGI == null && !cluster && !perSide
+    && !isClusterType(currentSet.setType)
+    && !unilateralExercises.has(exercise.id)
+    && Number.isFinite(warmupEntryWeight) && warmupEntryWeight > 0;
+  function handleAddWarmups() {
+    if (!canAddWarmups) return;
+    const rows = warmupRamp(warmupEntryWeight, { isBarbell: warmupBarbell, barKg: barWeight || DEFAULT_BAR_KG });
+    hapticsVocab.selection();
+    if (rows.length === 0) {
+      toast.show(`This is light enough to start at ${warmupEntryWeight} ${units}. You can begin with your working set today.`, { variant: 'info' });
+      return;
+    }
+    const [first, ...rest] = rows;
+    rampAnchorRef.current = warmupEntryWeight;
+    setWarmupQueue({
+      exerciseId: exercise.id,
+      rows: rest.map((r) => ({ weight: r.weight, reps: r.reps })),
+      resume: { weight: currentSet.weight, reps: currentSet.reps, isGhost: !!currentSet.isGhost },
+    });
+    setGhostSet(null);
+    setCurrentSet((cs) => ({ ...cs, weight: first.weight, reps: first.reps, setType: 'warmup', isGhost: false }));
+    seededEntryRef.current = { weight: first.weight, reps: first.reps };
+  }
   // The bar's last action on the next row names what it does (audit C11).
   const barLogLabel = cluster ? 'Finish'
     : perSide ? 'Other side'
@@ -5890,6 +5954,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     onCheck: cluster ? finishCluster : handleCompleteSetPress,
     testIDs: { row: 'volyume-next-set-row', marker: 'volyume-set-type-btn', last: 'volyume-last-cell', weight: 'volyume-well-weight', reps: 'volyume-well-reps' },
   });
+  // The lined-up warm-ups still to come, ahead of the working rows.
+  if (warmupQueued) {
+    warmupQueue.rows.forEach((row, i) => {
+      setTableRows.push({
+        id: `pending-warmup-${i}`,
+        marker: markerForSet('warmup', i + 1),
+        last: null,
+        wells: { weight: String(row.weight), reps: String(row.reps), state: 'pending' },
+        check: 'pending',
+        testIDs: { row: `volyume-pending-warmup-row-${i}` },
+      });
+    });
+  }
   for (let n = (isWarmupEntry ? workingLogged + 1 : workingLogged + 2); n <= targetSets; n += 1) {
     const p = prescriptions[n - 1] ?? null;
     const lc = lastCellFor(n - 1);
@@ -6529,7 +6606,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               of three or more logged rows lives inside the table.
               Warm-ups are no longer auto-suggested (recorded decision, B8):
               a warm-up is chosen on the next row's marker or pulled from
-              exercise options. */}
+              exercise options. Founder decision 2026-10-19 overturns B8 for
+              compound exercises only: the "Add warm-up sets" chip below lines
+              up the ramp, and still logs nothing until the user ticks. */}
+          {canAddWarmups ? (
+            <Chip
+              label="Add warm-up sets"
+              icon="flame-outline"
+              onPress={handleAddWarmups}
+              style={styles.warmupChip}
+              accessibilityLabel={`Add warm-up sets before ${exercise?.name ?? 'this exercise'}`}
+            />
+          ) : null}
           <View onLayout={(e) => { tableYRef.current = e?.nativeEvent?.layout?.y ?? 0; }}>
           <SetTable
             rows={setTableRows}
@@ -6925,6 +7013,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 // re-export to keep here -- the import above is the only call site.
 
 const styles = StyleSheet.create({
+  warmupChip: { alignSelf: 'flex-start', marginBottom: spacing.sm },
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center',
