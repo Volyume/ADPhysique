@@ -22,6 +22,8 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import CoachingSetupCard from '../components/CoachingSetupCard';
+import useCoachingSetUp, { openCoachingSetup } from '../hooks/useCoachingSetUp';
 import Chip from '../components/Chip';
 import DietaryPreferencesEditor from '../components/food/DietaryPreferencesEditor';
 import EmptyState from '../components/EmptyState';
@@ -334,6 +336,10 @@ function planItemWeight(it, foodKey) {
 export default function MealPlanScreen({ navigation, route }) {
   const user = useAppStore((s) => s.user);
   const userProfile = useAppStore((s) => s.userProfile);
+  // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
+  // start): the meal builder stays closed until coaching is set up. Hooks all
+  // run; the card is returned after the last one (reads only, nothing written).
+  const coachingSetUp = useCoachingSetUp();
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const addMealPlanExcludedFood = useAppStore((s) => s.addMealPlanExcludedFood);
   const setMealPlanPrefs = useAppStore((s) => s.setMealPlanPrefs);
@@ -1167,6 +1173,18 @@ export default function MealPlanScreen({ navigation, route }) {
     if (day.diagnosis?.hint) return day.diagnosis.hint;
     return 'This day is close to your target but not exact. Your preferences make it hard to hit exactly, and the totals below are honest.';
   }, [day]);
+
+  // Founder brief 2026-10-19: the card replaces the meal builder (after all hooks).
+  if (!coachingSetUp) {
+    return (
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+        <BackHeader title="Meal builder" onBack={() => navigation.goBack()} />
+        <View style={{ paddingHorizontal: t.screenPadding }}>
+          <CoachingSetupCard variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>

@@ -112,6 +112,8 @@ import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
+import CoachingSetupCard from '../components/CoachingSetupCard';
+import useCoachingSetUp, { openCoachingSetup } from '../hooks/useCoachingSetUp';
 import FeatureRow from '../components/food/FeatureRow';
 import WaterRow from '../components/food/WaterRow';
 import DiaryMoveSheet from '../components/food/DiaryMoveSheet';
@@ -212,6 +214,11 @@ export function editFoodFromEntry(entry, currentFood) {
 
 export default function DiaryScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
+  // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
+  // start): until coaching is set up the Nutrition tab shows only the setup
+  // card. Every hook still runs; the card view is returned after the last one,
+  // and the data effects below stand down so nothing is read or written.
+  const coachingSetUp = useCoachingSetUp();
   const {
     user, calorieBank, sex, energyUnit, periWorkoutSlots,
     dietPreference, mealPlanExcludeFoods, mealPlanExcludeTags,
@@ -692,6 +699,7 @@ export default function DiaryScreen({ navigation, route }) {
   // to one attempt per stored bank.
   const bankCancelRef = useRef(null);
   useEffect(() => {
+    if (!coachingSetUp) return; // 2026-10-19 brief: no bank writes before coaching is set up
     if (!calorieBank || !userId) return;
     // A bank whose days have all gone changes nothing still to come (and is
     // already not shown while it breaches), so only a live bank is cancelled.
@@ -717,7 +725,7 @@ export default function DiaryScreen({ navigation, route }) {
         logError('DiaryScreen.cancelBankBelowFloor', e, { userId });
       }
     })();
-  }, [calorieBank, userId, targets?.targetKcal, floorKcal, setCalorieBank, load, toast, edFlagOpen]);
+  }, [coachingSetUp, calorieBank, userId, targets?.targetKcal, floorKcal, setCalorieBank, load, toast, edFlagOpen]);
 
   // BUG-1: this used to also fire from a plain `useEffect(() => { load(); },
   // [load])` alongside the useFocusEffect below. useFocusEffect already
@@ -1845,6 +1853,13 @@ export default function DiaryScreen({ navigation, route }) {
     [bottomInset, t],
   );
 
+  // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
+  // start): the card replaces the diary. No food logging, rings, targets or
+  // calorie number is rendered. Placed after every hook above.
+  if (!coachingSetUp) {
+    return <CoachingSetupGate navigation={navigation} screenPadding={t.screenPadding} liveSafe={live.safe} />;
+  }
+
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       {/* C5: GestureDetector wraps the day content so a horizontal swipe
@@ -2504,6 +2519,19 @@ const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';
 // planned-meals teach). Same once-ever convention; the two never render at
 // once (see the mutually-exclusive gating where showMarkEatenHint is read).
 const DIARY_PLANADDED_HINT_KEY = '@volyume_seen_diary_planadded_hint';
+
+// Founder brief 2026-10-19: the Nutrition tab's setup-only view (its own
+// component so the diary's ScrollView markup stays untouched).
+function CoachingSetupGate({ navigation, screenPadding, liveSafe }) {
+  return (
+    <SafeAreaView style={[styles.safe, liveSafe]} edges={['top']}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: screenPadding }]}>
+        <ScreenHeader title="Nutrition" />
+        <CoachingSetupCard variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
   // D148: the one floating action is a raised charcoal disc with an amber

@@ -306,6 +306,13 @@ export default function PlansScreen({ navigation }) {
       loadData();
       loadAvoidedMovementsCount();
       loadHowYouTrainSummary();
+      // Founder brief 2026-10-19 (quick start): consume the one-shot route the
+      // start-choice screen left, once, then open it.
+      const openRoute = useAppStore.getState().postSetupOpen;
+      if (openRoute) {
+        useAppStore.getState().setPostSetupOpen(null);
+        navigation.navigate(openRoute);
+      }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]),
   );

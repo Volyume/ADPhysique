@@ -135,6 +135,8 @@ import { GLOSSARY } from '../lib/coachGlossary';
 // idle → loading → success morph; the settle wrappers below animate the
 // swap into the settled row state (Applied chip, or the NU-3 hold line).
 import Button from '../components/Button';
+import CoachingSetupCard from '../components/CoachingSetupCard';
+import useCoachingSetUp from '../hooks/useCoachingSetUp';
 import SectionLabel from '../components/SectionLabel';
 import { appAlert } from '../components/AppAlert';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
@@ -935,6 +937,10 @@ export function scanAssessmentAccessibilityLabel(packet) {
 
 export default function CoachOutputScreen({ navigation, route }) {
   const toast = useToast();
+  // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
+  // start): until coaching is set up this screen shows the setup card only,
+  // and the weekly coach run below never starts.
+  const coachingSetUp = useCoachingSetUp();
   // Default to the current local week when no week is passed. The weekly
   // "your plan is ready" notification routes here with no params; without this
   // weekStart was undefined, which made getWeeklySessionStats build a NaN
@@ -2529,6 +2535,13 @@ export default function CoachOutputScreen({ navigation, route }) {
 
       setLoading(false);
     }
+    // Founder brief 2026-10-19: a quick-start person has no baseline or
+    // targets, so runWeeklyCoach (and the coach_outputs write it feeds) must
+    // not run at all. The setup card is rendered instead, below.
+    if (!coachingSetUp) {
+      setLoading(false);
+      return;
+    }
     // Re-run when user.id flips from null → real (post-auth bootstrap)
     // so the screen doesn't get stuck in "no data" if the auth race lost.
     if (!user?.id) {
@@ -2546,7 +2559,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // PM-01(a): redirectWeekStart is in the dependency list so the one-shot
   // redirect to the reviewed week re-runs the load against it.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, reloadKey, redirectWeekStart]);
+  }, [user?.id, reloadKey, redirectWeekStart, coachingSetUp]);
 
   // D219 lane A3 (design 4.10): the check-in card for a plan the new planner
   // built. Read only, and any failure leaves today's card: the preview must
@@ -2679,6 +2692,18 @@ export default function CoachOutputScreen({ navigation, route }) {
   // the in-screen "Got it" button (popToTop to the You root, not a literal
   // goBack onto the WeeklyCheckIn screen just submitted), so both read as
   // one consistent "back" across every state of this screen.
+
+  // ── Setup gate (founder brief 2026-10-19) ─────────────────────────────────
+  if (!coachingSetUp) {
+    return (
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+        <BackHeader title="Coaching decision" onBack={handleClose} />
+        <View style={{ paddingHorizontal: t.screenPadding }}>
+          <CoachingSetupCard onPress={() => navigation.navigate('CoachingSetup')} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {

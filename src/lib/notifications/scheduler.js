@@ -445,6 +445,20 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30, { us
  * Best-effort and never throws; if it cannot run, the next launch re-lay
  * (restoreNotifications) covers the same ground.
  */
+/**
+ * Coaching-first onboarding (founder brief 2026-10-19): the weigh-in prompts
+ * and the check-in reminder are coaching. They ride the existing tier gate
+ * and also stay off while a quick-start person has not set up coaching, so
+ * a finished workout never starts daily weight reminders for someone who
+ * has given no baseline. Stricter only; nothing here can turn one on.
+ */
+function coachingRemindersAllowed(state) {
+  if (state?.tier !== 'pro') return false;
+  // eslint-disable-next-line global-require
+  const { isCoachingSetUp } = require('../coachingSetup');
+  return isCoachingSetUp(state?.userProfile);
+}
+
 export async function relayWeighInAfterTrainingReturn() {
   if (Platform.OS === 'web') return;
   try {
@@ -469,7 +483,7 @@ export async function relayWeighInAfterTrainingReturn() {
     let isPro = false;
     try {
       // eslint-disable-next-line global-require
-      isPro = require('../../store/useAppStore').default.getState()?.tier === 'pro';
+      isPro = coachingRemindersAllowed(require('../../store/useAppStore').default.getState());
     } catch (_) { /* store unavailable: fail closed (no coaching re-lay) */ }
     if (!isPro) return;
     await scheduleMorningWeightNotification(prefs?.morningHour ?? 7, prefs?.morningMinute ?? 0);
@@ -1920,7 +1934,7 @@ export async function restoreNotifications(prefs, userId = null) {
   let isPro = false;
   try {
     // eslint-disable-next-line global-require
-    isPro = require('../../store/useAppStore').default.getState()?.tier === 'pro';
+    isPro = coachingRemindersAllowed(require('../../store/useAppStore').default.getState());
   } catch (_) { /* store unavailable: fail closed (no coaching re-lays) */ }
 
   if (isPro && prefs.morningEnabled) {

@@ -142,6 +142,7 @@ const NotificationSettingsScreen = lazyScreen(() => require('../screens/Notifica
 const CreditsScreen = lazyScreen(() => require('../screens/CreditsScreen').default);
 const ImportScreen = lazyScreen(() => require('../screens/ImportScreen').default);
 const ProOnboardingScreen = lazyScreen(() => require('../screens/ProOnboardingScreen').default);
+const StartChoiceScreen = lazyScreen(() => require('../screens/StartChoiceScreen').default);
 const ProSetupCompleteScreen = lazyScreen(() => require('../screens/ProSetupCompleteScreen').default);
 const CoachHeldHistoryScreen = lazyScreen(() => require('../screens/CoachHeldHistoryScreen').default);
 const CoachReviewScreen = lazyScreen(() => require('../screens/CoachReviewScreen').default);
@@ -707,6 +708,11 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WeeklyCheckIn" component={WeeklyCheckInScreen} options={{ headerShown: false }} />
+      {/* Coaching-first onboarding (founder brief 2026-10-19): the streamlined
+          setup a quick-start person reaches from any coach-owned surface's
+          "Set up coaching" card. The same wizard in its coaching mode: only
+          the missing required pieces, then keep the plan or build a new one. */}
+      <Stack.Screen name="CoachingSetup" component={ProOnboardingScreen} options={{ headerShown: false }} initialParams={{ mode: 'coaching' }} />
       <Stack.Screen name="CoachOutput" component={CoachOutputScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WeeklyStory" component={WeeklyStoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
@@ -873,6 +879,9 @@ function Article9ConsentStack() {
 function ProOnboardingStack() {
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
+      {/* Founder brief 2026-10-19: coaching-first onboarding with an optional
+          quick start. The choice screen is the initial route. */}
+      <Stack.Screen name="StartChoice" component={StartChoiceScreen} />
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
       {/* Same pre-B2 residue as FirstRunStack (D95, AUDIT-ROUTES 5.7):
           ProOnboarding only ever replaces into ProSetupComplete, so the

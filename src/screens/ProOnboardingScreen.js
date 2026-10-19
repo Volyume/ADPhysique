@@ -13,6 +13,7 @@ import SegmentedControl from '../components/SegmentedControl';
 import Chip from '../components/Chip';
 import ArchetypePicker from '../components/ArchetypePicker';
 import { archetypeApplies, normaliseArchetype } from '../lib/trainingArchetypes';
+import { canFinishCoachingSetup } from '../lib/coachingSetup';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import FieldError from '../components/FieldError';
@@ -47,8 +48,10 @@ import { generateAndSavePlan, planShortfallNote, assessScheduleFit } from '../li
 // (generation, swaps) reading a value it understands.
 import {
   installLibraryPlanForKit, libraryKitForEquipment, generationEquipmentFor,
-  libraryKitInstalledLine,
+  libraryKitInstalledLine, prepareStartWithPlan, commitStartWithPlan,
 } from '../lib/startWithPlan';
+import PlanPreviewSheet from '../components/PlanPreviewSheet';
+import { logError } from '../lib/errorLog';
 // The equipment answers themselves live in ONE shared list, so this screen
 // and Adjust training (PlanUpdateScreen) can never offer different answers or
 // different wording for the same answer.
@@ -349,7 +352,9 @@ function ProOnboardingProgressBar({ step, skipGym = false }) {
   );
 }
 
-function ProOnboardingHeader({ step, title, sub, onBack, skipGym = false }) {
+// Coaching mode (founder brief 2026-10-19) asks five of the eight steps.
+const COACHING_STEPS = Object.freeze([2, 3, 4, 7, 8]);
+function ProOnboardingHeader({ step, title, sub, onBack, skipGym = false, coaching = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const stepLabel = STEP_LABELS[step - 1] || 'Setup';
@@ -370,8 +375,12 @@ function ProOnboardingHeader({ step, title, sub, onBack, skipGym = false }) {
         ) : null}
         <VolyumeIcon size={22} />
       </View>
-      <ProOnboardingProgressBar step={step} skipGym={skipGym} />
-      <Text style={[styles.stepCount, live.stepCount]}>Step {displayStepOf(step, skipGym).n} of {displayStepOf(step, skipGym).total} - {stepLabel}</Text>
+      {coaching ? null : <ProOnboardingProgressBar step={step} skipGym={skipGym} />}
+      <Text style={[styles.stepCount, live.stepCount]}>
+        {coaching
+          ? `Step ${COACHING_STEPS.indexOf(step) + 1} of ${COACHING_STEPS.length} - ${stepLabel}`
+          : `Step ${displayStepOf(step, skipGym).n} of ${displayStepOf(step, skipGym).total} - ${stepLabel}`}
+      </Text>
       <Text style={[styles.stepTitle, live.stepTitle]}>{title}</Text>
       {sub ? <Text style={[styles.stepSub, live.stepSub]}>{sub}</Text> : null}
       {outcomes.length ? (
@@ -458,8 +467,22 @@ function capabilityBlockedNote(n) {
     : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
-export default function ProOnboardingScreen({ navigation }) {
+export default function ProOnboardingScreen({ navigation, route }) {
   const toast = useToast();
+  // Coaching-first onboarding (founder brief 2026-10-19): the same wizard,
+  // opened from a "Set up coaching" card by a quick-start person whose first
+  // run is already complete. It asks only what coaching needs (baseline,
+  // body composition, training week, focus, check-in rhythm), never skips or
+  // defaults a required field, then asks whether to keep the current plan
+  // or build a new one. It never completes first run or builds a plan
+  // unasked; the rebuild goes through the same preview every rebuild uses.
+  const coachingMode = route?.params?.mode === 'coaching';
+  const [planChoice, setPlanChoice] = useState(null); // coaching mode: 'keep' | 'rebuild'
+  const [planChoiceAttempted, setPlanChoiceAttempted] = useState(false);
+  const [planPreview, setPlanPreview] = useState(null);
+  const [planCommitting, setPlanCommitting] = useState(false);
+  const planPreviewResolveRef = useRef(null);
+  const coachingProfileRef = useRef(null);
   const {
     user, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
     proOnboardingAccountCreated, setProOnboardingAccountCreated,
@@ -1062,6 +1085,8 @@ export default function ProOnboardingScreen({ navigation }) {
     // re-edited schedule skip the check it was never run against.
     setFitAccepted(false);
     setFitReview(null);
+    // Coaching mode skips the gym and injuries steps (7 goes back to 4).
+    if (coachingMode && step === 7) { setStep(4); return; }
     // CR-15 ruling f: a minor steps straight over the Community step.
     setStep(s => (s === 6 && skipGymStep ? 4 : s - 1));
   }
@@ -1321,6 +1346,9 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     emitStepDone(4);
+    // Coaching mode: the gym (Community) and injuries steps are not part of
+    // coaching setup; injuries stay editable from How you train.
+    if (coachingMode) { setStep(7); return; }
     // CR-15 ruling f: under 18 there is no Community step.
     setStep(skipGymStep ? 6 : 5);
   }
@@ -1782,6 +1810,8 @@ export default function ProOnboardingScreen({ navigation }) {
 
   async function advanceFrom8() {
     Keyboard.dismiss();
+    // Coaching mode: keeping or rebuilding the plan is an explicit answer.
+    if (coachingMode && !planChoice) { setPlanChoiceAttempted(true); haptics.error(); return; }
     // D228 Q5-A: step 8 has no required answer any more (the reminders carry
     // their own defaults), so there is no gate to surface here.
     // Schedule fit, checked ONCE, with every answer in hand. A schedule that
@@ -1792,7 +1822,8 @@ export default function ProOnboardingScreen({ navigation }) {
     // library plan, so there is no generated plan for the fit resolver to
     // describe. Running it here would interrupt the athlete with a verdict
     // about a plan they are never going to receive.
-    if (!fitAccepted && !libraryKitForEquipment(equipment)) {
+    // Keeping the current plan builds nothing, so there is no fit to check.
+    if (!fitAccepted && !libraryKitForEquipment(equipment) && !(coachingMode && planChoice === 'keep')) {
       if (fitInFlightRef.current) return;
       // Light pass first: one engine build, not five. The per-length labels
       // are read only by the review, so only a person who is shown it pays
@@ -1840,9 +1871,11 @@ export default function ProOnboardingScreen({ navigation }) {
 
     // D147: the staged card runs for everyone; under Reduce Motion every
     // transition inside it is instant. The real work below is identical.
-    const useSequence = true;
+    // Coaching mode builds no plan here, so there is no build sequence.
+    const useSequence = !coachingMode;
     const startedAt = Date.now();
     if (useSequence) startSequence();
+    coachingProfileRef.current = null;
     const buildWatch = watchSetupStage('build', 90000);
 
     let planFailed = false;
@@ -1953,6 +1986,10 @@ export default function ProOnboardingScreen({ navigation }) {
         // userProfile.goal (Nutrition Targets summary) show the right phase
         // instead of defaulting to lean_gain.
         goal: phaseToNutritionKey(trainingPhase),
+        // Coaching-first onboarding (src/lib/coachingSetup.js): a full
+        // onboarding is set up; coaching mode keeps the marker until the
+        // targets below are written (adversarial review, round 1).
+        coachingDeferred: coachingMode,
       };
       // RA-4 (D96, Review A): the name is optional now (presentation only,
       // no engine reads it - the same rationale C5-P1-09 recorded for the
@@ -1962,6 +1999,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
       buildWatch.at('profile');
       if (user?.id) await saveLocalProfile(user.id, merged);
+      coachingProfileRef.current = merged;
 
       // (Health Connect / Apple Health connect-on-enrolment was removed with the
       // step-target feature, founder 2026-06-30.)
@@ -2071,10 +2109,23 @@ export default function ProOnboardingScreen({ navigation }) {
         }
       }
 
+      // Coaching mode: the baseline and the targets are now written, so the
+      // marker clears here, and only with every required field present
+      // (canFinishCoachingSetup). Anything missing is a failed setup, never
+      // a defaulted one: the catch below tells the person and nothing opens.
+      if (coachingMode && user?.id) {
+        const setUp = { ...merged, coachingDeferred: false };
+        if (!canFinishCoachingSetup(setUp)) throw new Error('coaching baseline incomplete');
+        await saveLocalProfile(user.id, setUp);
+        coachingProfileRef.current = setUp;
+      }
+
       buildWatch.at('plan');
       // Auto-generate the training plan so the user lands on a ready-to-train
-      // home screen rather than a "build me a plan" empty state.
-      if (user?.id) {
+      // home screen rather than a "build me a plan" empty state. Coaching
+      // mode never builds here: the person keeps their plan, or rebuilds it
+      // through the preview below (finishCoachingSetup).
+      if (user?.id && !coachingMode) {
         const planProfile = planProfileNow();
         // F-16 REVISED point 1: 'Kettlebells' and 'Bands' never reach the
         // generator. Non-null here means this build installs a LIBRARY plan
@@ -2303,6 +2354,11 @@ export default function ProOnboardingScreen({ navigation }) {
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     if (user?.id) clearDraft(user.id).catch(() => {});
 
+    if (coachingMode) {
+      await finishCoachingSetup();
+      return;
+    }
+
     if (planFailed) {
       cancelSequenceTimers();
       setBusy(false);
@@ -2336,6 +2392,57 @@ export default function ProOnboardingScreen({ navigation }) {
     });
   }
 
+  // Coaching mode's ending: the profile, targets and reminders are saved.
+  // "Keep" leaves the plan exactly as it is. "Rebuild" shows the same
+  // preview every rebuild uses (D139) and builds only on confirm; declining
+  // keeps the plan. Either way coaching is on, and the person goes back to
+  // where they came from.
+  async function finishCoachingSetup() {
+    let message = 'Coaching is set up. Your plan stays as it is.';
+    let variant = 'success';
+    const profile = coachingProfileRef.current;
+    if (planChoice === 'rebuild' && profile && user?.id) {
+      try {
+        const prep = await prepareStartWithPlan(user.id, profile, {
+          mode: 'goal',
+          currentSessionLengthMinutes: profile.sessionLengthMinutes ?? null,
+        });
+        if (!prep.ok) {
+          message = 'Coaching is set up. The new plan could not be prepared, so your current plan stays. You can rebuild it from Update your plan.';
+          variant = 'info';
+        } else {
+          setBusy(false);
+          const confirmed = await new Promise((resolve) => {
+            planPreviewResolveRef.current = resolve;
+            setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount });
+          });
+          planPreviewResolveRef.current = null;
+          if (confirmed) {
+            setPlanCommitting(true);
+            const result = await commitStartWithPlan(user.id, profile).catch((e) => {
+              logError('ProOnboarding.coachingRebuild', e, { userId: user?.id });
+              return { ok: false };
+            });
+            setPlanCommitting(false);
+            message = result?.ok
+              ? 'Coaching is set up and your new plan is ready.'
+              : 'Coaching is set up. The new plan did not build, so your current plan stays. You can rebuild it from Update your plan.';
+            if (!result?.ok) variant = 'info';
+          }
+          setPlanPreview(null);
+        }
+      } catch (e) {
+        logError('ProOnboarding.coachingRebuildPrepare', e, { userId: user?.id });
+        message = 'Coaching is set up. The new plan could not be prepared, so your current plan stays. You can rebuild it from Update your plan.';
+        variant = 'info';
+      }
+    }
+    setBusy(false);
+    submittingRef.current = false;
+    toast.show(message, { variant });
+    navigation.goBack();
+  }
+
   // ── Step 1, Create account ──────────────────────────────────────────────────
 
   if (step === 1) {
@@ -2344,7 +2451,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step} skipGym={skipGymStep}
+              step={step} skipGym={skipGymStep} coaching={coachingMode}
               title="Set up your account safely"
               sub="Sign in once so your plan, weight history and coaching updates can be restored if you change device."
             />
@@ -2392,8 +2499,9 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step} skipGym={skipGymStep}
-              title="Set your starting baseline"
+              step={step} skipGym={skipGymStep} coaching={coachingMode}
+onBack={coachingMode ? () => navigation.goBack() : undefined}
+                            title="Set your starting baseline"
               sub="These details let the app set a safe starting baseline without guessing."
             />
 
@@ -2623,7 +2731,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step} skipGym={skipGymStep}
+              step={step} skipGym={skipGymStep} coaching={coachingMode}
               title="Add your starting body composition"
               sub="An honest estimate makes your first plan more accurate. Skip this if you are not sure."
               onBack={goBack}
@@ -2714,7 +2822,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step} skipGym={skipGymStep}
+              step={step} skipGym={skipGymStep} coaching={coachingMode}
               title="Shape your training week"
               sub="The plan should fit your real week, not the week you wish you had."
               onBack={goBack}
@@ -2825,7 +2933,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step} skipGym={skipGymStep}
+              step={step} skipGym={skipGymStep} coaching={coachingMode}
               title="Where you train, and Community"
               sub="Optional: pick your gym and Volyume connects you with the people who train there. Only training facts are ever shared: never your body, your food or your location."
               onBack={goBack}
@@ -3021,7 +3129,7 @@ export default function ProOnboardingScreen({ navigation }) {
       <SafeAreaView key="step-6" style={[styles.safe, live.safe]}>
         <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
-            step={step} skipGym={skipGymStep}
+            step={step} skipGym={skipGymStep} coaching={coachingMode}
             title="Anything Volyume should build around?"
             sub="If you have an injury, pain, a long-term health condition or a disability, set it up now and every plan starts compatible. Plenty of people train seated, one-sided or without overhead work. If not, skip straight past."
             onBack={goBack}
@@ -3075,7 +3183,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step} skipGym={skipGymStep}
+              step={step} skipGym={skipGymStep} coaching={coachingMode}
               title="Set your training focus"
               sub="Your goal sets the calorie direction, training bias and nutrition target."
               onBack={goBack}
@@ -3280,7 +3388,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <SafeAreaView key="step-8-fit" style={[styles.safe, live.safe]}>
           <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step} skipGym={skipGymStep}
+              step={step} skipGym={skipGymStep} coaching={coachingMode}
               title="Plan fit"
               sub="Here is how your week looks against the plan your coach would build for you."
               onBack={() => setFitReview(null)}
@@ -3519,7 +3627,7 @@ export default function ProOnboardingScreen({ navigation }) {
       <SafeAreaView key="step-8" style={[styles.safe, live.safe]}>
         <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
-            step={step} skipGym={skipGymStep}
+            step={step} skipGym={skipGymStep} coaching={coachingMode}
             title="Your reminders"
             // C5-P36-02 (D96): this screen stated one idea four times in a
             // single scroll; the volume clause was deleted from this sub.
@@ -3659,6 +3767,33 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
           </View>
 
+          {/* Coaching mode (founder brief 2026-10-19): keep the plan the
+              person already trains on, or build a new one from these answers.
+              An explicit answer; nothing is pre-selected. */}
+          {coachingMode ? (
+            <View style={styles.section}>
+              <Text style={[styles.wpLabel, live.wpLabel]}>Your plan</Text>
+              {[
+                { value: 'keep', label: 'Keep my current plan and turn on weekly coaching around it' },
+                { value: 'rebuild', label: 'Build a new plan from my details' },
+              ].map((o) => (
+                <TouchableOpacity
+                  key={o.value}
+                  style={[styles.hourChip, live.hourChip, styles.planChoiceRow, planChoice === o.value && [styles.hourChipActive, live.hourChipActive]]}
+                  onPress={() => { haptics.selection(); setPlanChoice(o.value); }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: planChoice === o.value }}
+                  accessibilityLabel={o.label}
+                >
+                  <Text style={[styles.hourChipText, live.hourChipText, planChoice === o.value && [styles.hourChipTextActive, live.hourChipTextActive]]}>{o.label}</Text>
+                </TouchableOpacity>
+              ))}
+              {planChoiceAttempted && !planChoice ? (
+                <Text style={[styles.continueHint, live.continueHint]}>Still needed: keep your plan or build a new one.</Text>
+              ) : null}
+            </View>
+          ) : null}
+
           <Button
             title="Continue"
             trailingIcon="arrow-forward"
@@ -3670,6 +3805,20 @@ export default function ProOnboardingScreen({ navigation }) {
             accessibilityLabel="Continue"
           />
         </ScrollView>
+        {coachingMode ? (
+          <PlanPreviewSheet
+            userId={user?.id ?? null}
+            source="goal"
+            visible={!!planPreview}
+            preview={planPreview?.preview ?? null}
+            currentPlanName={planPreview?.preview?.currentPlanName ?? null}
+            otherPlansCount={planPreview?.otherPlansCount ?? 0}
+            confirmLabel="Confirm and rebuild"
+            onConfirm={() => planPreviewResolveRef.current?.(true)}
+            onClose={() => { if (!planCommitting) planPreviewResolveRef.current?.(false); }}
+            busy={planCommitting}
+          />
+        ) : null}
       </SafeAreaView>
     );
   }
@@ -3678,6 +3827,7 @@ export default function ProOnboardingScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  planChoiceRow: { alignSelf: 'stretch', marginTop: spacing.xs },
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
 

@@ -781,6 +781,7 @@ const useAppStore = create((set, get) => ({
       // from the setup wizard's "See my plan" (read once by MainTabs, then
       // cleared). Null means the default tab.
       postSetupLanding: null,
+      postSetupOpen: null,
       firstRunChecked: true,
       // Consent state resets so the next sign-in re-checks. Cached
       // AsyncStorage value persists per-user so a same-account
@@ -1448,6 +1449,11 @@ const useAppStore = create((set, get) => ({
   },
 
   setPostSetupLanding: (tab) => set({ postSetupLanding: tab || null }),
+  // Coaching-first onboarding (founder brief 2026-10-19): the quick start's
+  // "Pick a ready-made plan" / "Build my own" asks the Train tab to open
+  // PlanLibrary or ManualBuilder once, on its first focus. Null: nothing.
+  postSetupOpen: null,
+  setPostSetupOpen: (route) => set({ postSetupOpen: route || null }),
 
   completeFirstRun: async () => {
     const uid = get().session?.user?.id;

@@ -47,6 +47,8 @@ import {
 // M4: the submit haptic now rides the Button primitive's success beat
 // (audit 03b §3.3b), so this screen no longer calls the vocabulary itself.
 import Button from '../components/Button';
+import CoachingSetupCard from '../components/CoachingSetupCard';
+import useCoachingSetUp from '../hooks/useCoachingSetUp';
 import BackHeader from '../components/BackHeader';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
@@ -204,6 +206,10 @@ const TOTAL_STEPS = 4;
 // --- Main screen --------------------------------------------------------------
 
 export default function WeeklyCheckInScreen({ navigation }) {
+  // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
+  // start): no weekly check-in until coaching is set up. The card replaces it,
+  // returned after the last hook (see "Setup gate" below).
+  const coachingSetUp = useCoachingSetUp();
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
   // block) for why.
@@ -1605,6 +1611,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </View>
         )}
       </>
+    );
+  }
+
+  // --- Setup gate (founder brief 2026-10-19) ---------------------------------
+  if (!coachingSetUp) {
+    return (
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingHorizontal: t.screenPadding }}>
+          <CoachingSetupCard onPress={() => navigation.navigate('CoachingSetup')} />
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 

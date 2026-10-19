@@ -37,7 +37,9 @@ describe('the layout never moves during generation', () => {
     expect(SRC).not.toMatch(/seqPanel: \{[\s\S]{0,200}borderWidth: 1\.5/);
   });
   test('reduce motion runs the same card with instant transitions', () => {
-    expect(SRC).toMatch(/const useSequence = true;/);
+    // Every full onboarding runs the card; coaching mode builds no plan, so
+    // it has none (founder brief 2026-10-19).
+    expect(SRC).toMatch(/const useSequence = !coachingMode;/);
     expect(SRC).toMatch(/if \(reduceMotion\) \{\s*textOpacity\.setValue\(textTo\);\s*tickOpacity\.setValue\(tickTo\);\s*return;\s*\}/);
     expect(SRC).toMatch(/await wait\(reduceMotion \? 0 : PAYOFF_HOLD_MS\);/);
   });

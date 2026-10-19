@@ -135,6 +135,8 @@ import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { deriveSafetyState, withholdsWeightFigures } from '../lib/safetyState';
+import CoachingSetupCard from '../components/CoachingSetupCard';
+import useCoachingSetUp, { openCoachingSetup } from '../hooks/useCoachingSetUp';
 // Campaign 22 Phase 2 Stage 1 copy contract item 5: the check-in nudge's
 // optional scan subline is retired from Home (it moves to the check-in
 // screen it belongs to), so the photo-suppression hook this line fed is no
@@ -193,6 +195,10 @@ function capabilityBlockedNote(n) {
 
 export default function HomeScreen({ navigation, route }) {
   const toast = useToast();
+  // Coaching-first onboarding (founder brief 2026-10-19): a quick-start
+  // person has given no baseline, so Home never asks for a daily weigh-in
+  // or counts down to a check-in they cannot do; the setup card stands in.
+  const coachingSetUp = useCoachingSetUp();
   // R9 (D70): insets and reduceMotion left with the raw intent Modal -
   // the shared BottomSheet owns both now.
   // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
@@ -2617,7 +2623,7 @@ export default function HomeScreen({ navigation, route }) {
             vanish for someone who has already weighed in. The check-in's
             "Log my weight first" link still opens its input, because
             TodayStrip reads that signal when it mounts. ── */}
-        {!initialLoading && user?.id && todayWeight == null && (
+        {!initialLoading && user?.id && coachingSetUp && todayWeight == null && (
           <TodayStrip
             bwu={bwu}
             todayWeight={todayWeight}
@@ -3065,7 +3071,10 @@ export default function HomeScreen({ navigation, route }) {
             today's weight is logged it is one quiet line in this pane. The
             weigh-in strip itself moved up under the Community row (founder
             order 2026-09-26, see there). ── */}
-        {user?.id && evidencePanelItem && (
+        {user?.id && !coachingSetUp ? (
+          <CoachingSetupCard onPress={() => openCoachingSetup(navigation)} />
+        ) : null}
+        {user?.id && coachingSetUp && evidencePanelItem && (
           <EvidencePanel
             panel={evidencePanelItem}
             onPress={openFirstReviewSurface}
