@@ -144,23 +144,25 @@ describe('source guards', () => {
   });
 });
 
-describe('the free band (founder brief 2026-10-19)', () => {
+describe('the free line (founder brief 2026-10-19)', () => {
   const SRC = fs.readFileSync(path.join(__dirname, '../StartChoiceScreen.js'), 'utf8');
+  const WELCOME = fs.readFileSync(path.join(__dirname, '../WelcomeScreen.js'), 'utf8');
 
-  it('says everything is free, in full sentences', async () => {
+  it('says the coaching is free, in the Welcome screen line style', async () => {
     const r = await mount();
     const text = r.root.findAll((n) => typeof n.props?.children === 'string').map((n) => n.props.children).join(' | ');
-    expect(text).toContain('The whole app is free');
-    expect(text).toContain('Coaching, food logging, meal plans and Community are all included. There is no paid version and there are no adverts.');
+    expect(text).toContain('Coaching is completely free · No ads');
+    // Welcome's line: label role, secondary ink, centred.
+    expect(WELCOME).toMatch(/free: \{ \.\.\.type\.label, color: colors\.textSecondary, textAlign: 'center' \}/);
+    expect(SRC).toMatch(/t\.type\.label, styles\.free, \{ color: t\.colors\.textSecondary \}/);
   });
 
-  it('uses the app note pattern, never amber spent on decoration (styling.md)', () => {
-    expect(SRC).not.toMatch(/Free\. All of it\./);
-    expect(SRC).not.toMatch(/backgroundColor: t\.colors\.primaryBg \}\]\} testID="start-choice-free"/);
-    expect(SRC).toMatch(/<Card style=\{styles\.card\} testID="start-choice-free">/);
+  it('the main action is the emphatic button, as on Welcome, consent and the wizard', () => {
+    expect(SRC).toMatch(/variant="emphatic"\s+title="Set up coaching"/);
+    expect((SRC.match(/variant="emphatic"/g) || []).length).toBe(1);
   });
 
-  it('never repeats free in other words (founder: no card, no trial, no subscription, data lines)', () => {
+  it('never repeats free in other words or uses clipped copy', () => {
     expect(SRC).not.toMatch(/no card|card details|no trial|no subscription|never sold|sell your data|all of it/i);
   });
 });
