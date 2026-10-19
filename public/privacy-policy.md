@@ -93,11 +93,21 @@ When you create an account you are told that Volyume will email you about new fe
 
 **Deleting.** Deleting your account deletes all of this.
 
-## 8. Health-app access
+## 8. Gym challenges
+
+A gym challenge is optional and runs at one gym for up to a month. You only take part if you join it yourself, and only adults can join.
+
+To score you, the challenge reads your training, your check-ins and Community posts, whether you logged food, whether you weighed in, and whether calm mode is on or the safety check has paused your calorie changes, so it never asks you to log food or weigh in at those times. It never reads what you ate or what you weigh.
+
+If you are in the top 10, the name you choose and your score are shown to the other people in that challenge. Nobody else sees them. Winners are picked by a recorded computer draw. If you win, we use your email address to tell you, and your name and county are published unless you object.
+
+You can leave a challenge at any time. After you leave, your records are not read for it again and you are taken off its board. We use this data with your explicit consent, which you give when you join. Joining a challenge also keeps Volyume free for you for life. Deleting your account deletes all of it, except the record of each prize draw, which is kept so the draw can be checked and no longer links to you once your account is gone.
+
+## 9. Health-app access
 
 If you opt in, Volyume can read body weight and daily steps and write completed workouts through Apple Health or Health Connect. We do not read heart rate, sleep, or HRV. Health-app permissions are controlled by the operating system and can be revoked there at any time.
 
-## 9. Deletion and retention
+## 10. Deletion and retention
 
 While your account is active, we keep your data so the app can work and sync across devices.
 
@@ -105,22 +115,22 @@ If you delete your account from Settings > Account > Delete account, cloud remov
 
 Crash and diagnostic events age out according to the retention settings of our Sentry project.
 
-## 10. Your rights
+## 11. Your rights
 
 Under UK and EU GDPR you have the right to access, correct, delete, restrict, object to, and port your personal data. In Volyume, Settings > Your data lets you export workout sets as CSV and create a JSON app-data backup. The JSON backup contains database records, including progress photo metadata and Volyume Score analysis metadata, but not private photo image files.
 
 To make a request, use the in-app controls or email support@volyume.app. We respond to verifiable requests within 30 days.
 
-## 11. Children
+## 12. Children
 
 Volyume is not directed at children under 13 and we do not knowingly collect data from anyone under 13. If we discover an account belongs to someone under 13, we delete it and refund any active subscription where possible.
 
 In Community, anyone under 18 shares with their followers only and never appears on pages shown outside the app.
 
-## 12. Changes
+## 13. Changes
 
 If we materially change this policy we update the date above and notify signed-in users in the app.
 
-## 13. Contact
+## 14. Contact
 
 Privacy questions or requests: support@volyume.app. You can also contact the UK Information Commissioner's Office at https://ico.org.uk/.
