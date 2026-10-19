@@ -53,7 +53,9 @@ describe('the wizard has the step, in its place', () => {
   });
 
   test('Training week advances into it and it advances into Injuries', () => {
-    expect(SRC).toMatch(/emitStepDone\(4\);\s*\n\s*\/\/[^\n]*\n\s*setStep\(skipGymStep \? 6 : 5\);/);
+    // Coaching mode (founder brief 2026-10-19) steps from 4 to 7 before this;
+    // the full onboarding still goes 4 to 5 (6 for a minor).
+    expect(SRC).toMatch(/emitStepDone\(4\);(?:\s*\n\s*\/\/[^\n]*)*\s*\n\s*if \(coachingMode\) \{ setStep\(7\); return; \}\s*\n\s*\/\/[^\n]*\n\s*setStep\(skipGymStep \? 6 : 5\);/);
     const fn = SRC.slice(SRC.indexOf('function advanceFrom5(intent)'), SRC.indexOf('// CC28 (section 11.2): the capability step is OPTIONAL'));
     expect(fn).toMatch(/emitStepDone\(5\);\s*setStep\(6\);/);
   });

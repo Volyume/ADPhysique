@@ -102,7 +102,8 @@ describe('F-16 REVISED: a kit answer installs a library plan and never generates
   });
 
   test('the schedule-fit gate is skipped for a kit answer, because no plan is generated', () => {
-    expect(source).toMatch(/if \(!fitAccepted && !libraryKitForEquipment\(equipment\)\) \{/);
+    // Coaching mode's "keep my plan" builds nothing either (founder brief 2026-10-19).
+    expect(source).toMatch(/if \(!fitAccepted && !libraryKitForEquipment\(equipment\) && !\(coachingMode && planChoice === 'keep'\)\) \{/);
   });
 });
 

@@ -142,6 +142,7 @@ const NotificationSettingsScreen = lazyScreen(() => require('../screens/Notifica
 const CreditsScreen = lazyScreen(() => require('../screens/CreditsScreen').default);
 const ImportScreen = lazyScreen(() => require('../screens/ImportScreen').default);
 const ProOnboardingScreen = lazyScreen(() => require('../screens/ProOnboardingScreen').default);
+const StartChoiceScreen = lazyScreen(() => require('../screens/StartChoiceScreen').default);
 const ProSetupCompleteScreen = lazyScreen(() => require('../screens/ProSetupCompleteScreen').default);
 const CoachHeldHistoryScreen = lazyScreen(() => require('../screens/CoachHeldHistoryScreen').default);
 const CoachReviewScreen = lazyScreen(() => require('../screens/CoachReviewScreen').default);
@@ -878,6 +879,9 @@ function Article9ConsentStack() {
 function ProOnboardingStack() {
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
+      {/* Founder brief 2026-10-19: coaching-first onboarding with an optional
+          quick start. The choice screen is the initial route. */}
+      <Stack.Screen name="StartChoice" component={StartChoiceScreen} />
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
       {/* Same pre-B2 residue as FirstRunStack (D95, AUDIT-ROUTES 5.7):
           ProOnboarding only ever replaces into ProSetupComplete, so the

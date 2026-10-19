@@ -15,6 +15,8 @@ import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import CoachingSetupCard from '../components/CoachingSetupCard';
+import useCoachingSetUp from '../hooks/useCoachingSetUp';
 import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
 import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
@@ -317,6 +319,10 @@ const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function NutritionTargetsScreen({ navigation, route }) {
   const toast = useToast();
+  // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
+  // start): targets are set only through coaching setup, the one path that
+  // enforces the required fields. The card replaces the form, after all hooks.
+  const coachingSetUp = useCoachingSetUp();
   // A6 (certification 2026-09-05): a screen that sent the person here can ask
   // to get them back. MealPlanScreen.js:430-434 has always passed
   // returnToTab/returnToScreen when a missing target blocked plan generation
@@ -966,6 +972,17 @@ export default function NutritionTargetsScreen({ navigation, route }) {
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (!coachingSetUp) {
+    return (
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+        <BackHeader title="Nutrition targets" />
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <CoachingSetupCard variant="nutrition" onPress={() => navigation.navigate('CoachingSetup')} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>

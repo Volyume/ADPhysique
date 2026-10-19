@@ -19,6 +19,8 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, 
 import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
+import CoachingSetupCard from '../components/CoachingSetupCard';
+import useCoachingSetUp from '../hooks/useCoachingSetUp';
 import { NavRow, NavGroup } from '../components/NavRow';
 import { Skeleton } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
@@ -149,6 +151,10 @@ function buildPendingCoachCopy(readiness) {
 }
 
 export default function YouScreen({ navigation }) {
+  // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
+  // start): the setup card sits at the top until coaching is set up; the rest
+  // of the tab stays available (non-blocking).
+  const coachingSetUp = useCoachingSetUp();
   // `tier` left this selector with the retired Partners row (blueprint
   // section 1, entry point 2): it was read only to pass through to the
   // partner hook, and nothing on this screen consults tier now (fully-free
@@ -328,6 +334,10 @@ export default function YouScreen({ navigation }) {
             </Pressable>
           )}
         />
+
+        {!coachingSetUp ? (
+          <CoachingSetupCard variant="coach" onPress={() => navigation.navigate('CoachingSetup')} />
+        ) : null}
 
         {/* DD113 (design-consistency-audit-2026-08-06): documented exception,
             not bespoke drift. Unlike AnalyticsScreen's blocking EmptyState
