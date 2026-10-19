@@ -42,20 +42,22 @@ async function holdSignedOut(event, payload) {
   } catch (_) { /* best effort */ }
 }
 
-let _flushingHeld = false;
-async function sendHeld(uid) {
-  if (_flushingHeld) return;
-  _flushingHeld = true;
-  try {
-    const raw = await AsyncStorage.getItem(SIGNED_OUT_KEY);
-    if (!raw) return;
-    await AsyncStorage.removeItem(SIGNED_OUT_KEY);
-    JSON.parse(raw).forEach(({ event, payload }) => {
-      Promise.resolve(track(uid, event, payload)).catch(() => {});
-    });
-  } catch (_) { /* best effort */ } finally {
-    _flushingHeld = false;
-  }
+// One shared send of the held events, so every event that arrives while it
+// runs waits for it and the timeline keeps its order.
+let _heldSend = null;
+function sendHeld(uid) {
+  if (_heldSend) return _heldSend;
+  _heldSend = (async () => {
+    try {
+      const raw = await AsyncStorage.getItem(SIGNED_OUT_KEY);
+      if (!raw) return;
+      await AsyncStorage.removeItem(SIGNED_OUT_KEY);
+      JSON.parse(raw).forEach(({ event, payload }) => {
+        Promise.resolve(track(uid, event, payload)).catch(() => {});
+      });
+    } catch (_) { /* best effort */ }
+  })().finally(() => { _heldSend = null; });
+  return _heldSend;
 }
 
 /**
@@ -69,8 +71,10 @@ export function trackNow(event, payload = null) {
     if (allowedBeforeConsent(event)) holdSignedOut(event, payload);
     return;
   }
-  sendHeld(uid);
-  Promise.resolve(track(uid, event, payload)).catch(() => {});
+  // Anything held from before sign-in goes first.
+  sendHeld(uid)
+    .then(() => track(uid, event, payload))
+    .catch(() => {});
 }
 
 async function once(key, fn) {

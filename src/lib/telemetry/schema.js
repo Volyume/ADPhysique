@@ -22,6 +22,9 @@
 
 // ── Buckets: numbers become ranges before they leave the device ─────────
 const bucket = (edges, labels) => (n) => {
+  // Only a number (or a numeric string) has a bucket: a missing value must
+  // never be reported as the lowest range (Number(null) and Number('') are 0).
+  if (typeof n !== 'number' && !(typeof n === 'string' && n.trim() !== '')) return null;
   const v = Number(n);
   if (!Number.isFinite(v) || v < 0) return null;
   for (let i = 0; i < edges.length; i += 1) if (v < edges[i]) return labels[i];
