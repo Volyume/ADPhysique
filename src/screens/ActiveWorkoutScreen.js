@@ -148,6 +148,8 @@ import HintCaption from '../components/HintCaption';
 // be delivered. Both helpers are non-prompting reads plus the single ask;
 // nothing here touches quiet hours, categories or suppression.
 import { getNotificationPermissionStatus, requestNotificationPermissions } from '../lib/notifications/permissions';
+import useScreenReady from '../lib/telemetry/useScreenReady';
+import FeatureSeen from '../components/FeatureSeen';
 
 // FQ-3 (D96): rir defaults to NULL. The per-set RIR picker is permanently
 // removed (D14/D19), so no set carries a genuine per-set effort rating, and
@@ -1387,6 +1389,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     if (!workoutPrefsLoaded) loadWorkoutPrefs();
   }, [workoutPrefsLoaded, loadWorkoutPrefs]);
+  // Ready: the live workout is in the store and the device prefs are read.
+  useScreenReady('ActiveWorkout', !!activeWorkout && workoutPrefsLoaded);
 
   useEffect(() => {
     if (!sessionAdjustment?.show || !exercise?.id) return;
@@ -6663,6 +6667,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               compound exercises only: the "Add warm-up sets" chip below lines
               up the ramp, and still logs nothing until the user ticks. */}
           {canAddWarmups ? (
+            <>
+            <FeatureSeen feature="warmup_chip" />
             <Chip
               label="Add warm-up sets"
               icon="flame-outline"
@@ -6670,6 +6676,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               style={styles.warmupChip}
               accessibilityLabel={`Add warm-up sets before ${exercise?.name ?? 'this exercise'}`}
             />
+            </>
           ) : null}
           <View onLayout={(e) => { tableYRef.current = e?.nativeEvent?.layout?.y ?? 0; }}>
           <SetTable

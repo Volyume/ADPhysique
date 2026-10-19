@@ -317,6 +317,11 @@ class ErrorBoundary extends React.Component {
       incidentId: this.state?.incidentId,
       componentStack: errorInfo?.componentStack?.slice(0, 1200),
     });
+    // Growth telemetry (2026-10-19): the crash screen is about to show.
+    try {
+      // eslint-disable-next-line global-require
+      require('./src/lib/telemetry/growth').errorShown('error_view');
+    } catch (_) { /* telemetry never blocks the recovery screen */ }
     AsyncStorage.setItem(CRASH_LOG_KEY, JSON.stringify({
       incidentId: this.state?.incidentId ?? null,
       message: error?.message || String(error),

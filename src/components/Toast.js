@@ -132,6 +132,13 @@ export function ToastProvider({ children }) {
       // something other than the toast running out (audit A6).
       key: options.key || null,
     };
+    // Growth telemetry (2026-10-19): an error toast is a failure the person saw.
+    if (variant === 'error') {
+      try {
+        // eslint-disable-next-line global-require
+        require('../lib/telemetry/growth').errorShown('toast');
+      } catch (_) { /* telemetry never blocks the toast */ }
+    }
     setQueue(q => [...q, next]);
     // DEFAULTS only changes reference when the theme actually flips (see the
     // useMemo above); F7's "show is stable for the app's life" is now

@@ -65,6 +65,7 @@ import { useToast } from '../components/Toast';
 import { track } from '../lib/telemetry';
 import { logError, logInfo } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
+import useScreenReady from '../lib/telemetry/useScreenReady';
 
 // C6 F8 (D97): per-user, matching every sibling dismissal key - a second
 // account on the same device must not inherit the first account's snooze.
@@ -245,6 +246,7 @@ export default function PlansScreen({ navigation }) {
   const [activeBlockId, setActiveBlockId] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  useScreenReady('Plans', loaded);
   // D109-3: the Plan tools count for the "Avoided movements" row. Loaded
   // independently of loadData's Promise.all batch (own failure mode, own
   // req-guard would be overkill for one count) - a read failure just leaves

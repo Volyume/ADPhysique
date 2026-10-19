@@ -69,6 +69,7 @@ import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { trackNow } from '../lib/telemetry/growth';
 import { toBucket } from '../lib/telemetry/schema';
 import { touchTarget } from '../styles/layout';
+import useScreenReady from '../lib/telemetry/useScreenReady';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -308,6 +309,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const bwu = bodyWeightUnits || 'st';
 
   const [loading, setLoading] = useState(true);
+  useScreenReady('WeeklyCheckIn', !loading);
   const [busy, setBusy] = useState(false);
   // M4 (audit 03b §3.3b): the submit CTA's success beat. The save has already
   // landed when this is true; the stashed continuation (navigate to the

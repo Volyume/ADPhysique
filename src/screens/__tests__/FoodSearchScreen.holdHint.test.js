@@ -18,6 +18,9 @@
  */
 import { create, act } from 'react-test-renderer';
 
+// Telemetry is not under test here; its own storage use must not count as
+// a hint being stored.
+jest.mock('../../lib/telemetry/useScreenReady', () => ({ __esModule: true, default: () => {} }));
 jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 // The screen's renderEmpty() now goes through the shared EmptyState -> Button

@@ -84,6 +84,7 @@ import {
   CLIP_STRINGS, KEEP_DAYS_KEY, savedLine, summaryClipRowCopy, summaryClipRowVisible,
 } from '../lib/clips/rules';
 import { deleteClip } from '../lib/clips/store';
+import FeatureSeen from '../components/FeatureSeen';
 
 // COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
 // (captured where they are accurate). The post-workout block keeps only the
@@ -1998,6 +1999,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && declinedToday.length > 0 ? (
           <RevealSection delay={1360}>
             <Card style={styles.shareOfferCard}>
+              <FeatureSeen feature="declined_today_card" />
               <Text style={[styles.shareOfferLine, { ...t.type.body, color: t.colors.textPrimary }]}>
                 {`You could not do ${joinNames(declinedToday)} today. Was that a one-off, or should Volyume add ${declinedToday.length === 1 ? 'it' : 'them'} to Injuries & limitations and adjust your plan?`}
               </Text>

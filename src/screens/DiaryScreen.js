@@ -135,6 +135,7 @@ import { touchTarget } from '../styles/layout';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { WELLBEING_KEY, isCalm } from '../lib/wellbeing';
 import { resolveMealReminderOfferEligible, MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR } from '../lib/food/mealReminderOffer';
+import useScreenReady from '../lib/telemetry/useScreenReady';
 
 // D138 item 6: the diary resolves its food refs in ONE batched read (the
 // day's entries, and the usual chips per slot) via resolveFoodRefs.
@@ -276,6 +277,7 @@ export default function DiaryScreen({ navigation, route }) {
   // a skeleton instead of the empty state, so a day that DOES have food never
   // flashes "Nothing logged yet" before it paints (food review U-M7).
   const [loaded, setLoaded] = useState(false);
+  useScreenReady('Diary', loaded);
   // EP-07/UI-02 (Codex end-user-polish audit): whether the MOST RECENT load()
   // attempt for the day in view failed. A failed load never wipes whatever
   // was already on screen (see the catch branch in load() below); it only

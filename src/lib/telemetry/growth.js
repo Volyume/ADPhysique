@@ -15,6 +15,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { track } from '../engineTelemetry';
 import { currentScreen } from './session';
+import { allowedBeforeConsent } from './schema';
 
 function currentUserId() {
   try {
@@ -25,10 +26,50 @@ function currentUserId() {
   }
 }
 
-/** Send `event` for the signed-in person (nothing when signed out). */
+// Failures and slowness before sign-in (founder: "if something is failing or
+// slow before that appears I want to know"). Only the preConsent events
+// (performance, failure, lifecycle; no health data) are held, at most
+// SIGNED_OUT_CAP of them, and sent once someone signs in on this phone.
+const SIGNED_OUT_KEY = '@volyume_telemetry_signed_out';
+const SIGNED_OUT_CAP = 20;
+
+async function holdSignedOut(event, payload) {
+  try {
+    const held = JSON.parse((await AsyncStorage.getItem(SIGNED_OUT_KEY)) || '[]');
+    if (held.length >= SIGNED_OUT_CAP) return;
+    held.push({ event, payload });
+    await AsyncStorage.setItem(SIGNED_OUT_KEY, JSON.stringify(held));
+  } catch (_) { /* best effort */ }
+}
+
+let _flushingHeld = false;
+async function sendHeld(uid) {
+  if (_flushingHeld) return;
+  _flushingHeld = true;
+  try {
+    const raw = await AsyncStorage.getItem(SIGNED_OUT_KEY);
+    if (!raw) return;
+    await AsyncStorage.removeItem(SIGNED_OUT_KEY);
+    JSON.parse(raw).forEach(({ event, payload }) => {
+      Promise.resolve(track(uid, event, payload)).catch(() => {});
+    });
+  } catch (_) { /* best effort */ } finally {
+    _flushingHeld = false;
+  }
+}
+
+/**
+ * Send `event` for the signed-in person. Signed out, a preConsent event is
+ * held on the phone and sent at the next signed-in event; anything else is
+ * dropped.
+ */
 export function trackNow(event, payload = null) {
   const uid = currentUserId();
-  if (!uid) return;
+  if (!uid) {
+    if (allowedBeforeConsent(event)) holdSignedOut(event, payload);
+    return;
+  }
+  sendHeld(uid);
   Promise.resolve(track(uid, event, payload)).catch(() => {});
 }
 
@@ -94,4 +135,4 @@ export function helpOpened(topic) {
   trackNow('help_opened', { topic, screen: currentScreen() });
 }
 
-export const __test = { hash, dayKey };
+export const __test = { hash, dayKey, SIGNED_OUT_KEY, SIGNED_OUT_CAP };

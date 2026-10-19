@@ -83,6 +83,7 @@ import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { scaleMacrosAsWeighed } from '../lib/food/cookYield';
 import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
 import { parseFoodLine, isFoodLine, portionFor, matchFoodLineParts } from '../lib/food/foodLine';
+import useScreenReady from '../lib/telemetry/useScreenReady';
 
 const EMPTY_COPY = {
   recents: 'Your recent foods will appear here after you log them.',
@@ -142,6 +143,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // repeat path showing its list untouched. Starts false so a first render
   // never steals focus before loadBrowse has actually reported back.
   const [recentsLoaded, setRecentsLoaded] = useState(false);
+  useScreenReady('FoodSearch', recentsLoaded);
   // food_ref -> last portion used in THIS slot (Campaign 17B job 2).
   const [slotPortions, setSlotPortions] = useState(() => new Map());
   // D230 R7: the foods eaten around this clock time on other days, resolved,

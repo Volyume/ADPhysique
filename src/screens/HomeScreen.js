@@ -137,6 +137,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { deriveSafetyState, withholdsWeightFigures } from '../lib/safetyState';
 import CoachingSetupCard from '../components/CoachingSetupCard';
 import useCoachingSetUp, { openCoachingSetup } from '../hooks/useCoachingSetUp';
+import useScreenReady from '../lib/telemetry/useScreenReady';
 // Campaign 22 Phase 2 Stage 1 copy contract item 5: the check-in nudge's
 // optional scan subline is retired from Home (it moves to the check-in
 // screen it belongs to), so the photo-suppression hook this line fed is no
@@ -414,6 +415,7 @@ export default function HomeScreen({ navigation, route }) {
   // the user sees structure instantly on cold launch rather than a
   // blank screen until SQLite reads complete.
   const [initialLoading, setInitialLoading] = useState(true);
+  useScreenReady('Home', !initialLoading);
   const [coachBannerDismissed, setCoachBannerDismissed] = useState(false);
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
   const [recentWeights, setRecentWeights] = useState([]);     // last 14 entries for sparkline

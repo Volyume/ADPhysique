@@ -88,6 +88,7 @@ import {
 import { readJoinReceiptSeen, markJoinReceiptSeen } from '../lib/community/joinReceipt';
 import { todayLocalKey } from '../lib/dayKey';
 import { composeAudienceLine, composeDefaultVisibility } from './CommunityComposeScreen';
+import useScreenReady from '../lib/telemetry/useScreenReady';
 
 const PAGE = 20;
 
@@ -226,6 +227,7 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [sortUnavailable, setSortUnavailable] = useState(false);
   const [hub, setHub] = useState(null);
   const [loading, setLoading] = useState(true);
+  useScreenReady('Community', !loading);
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
   const [legacyCardShown, setLegacyCardShown] = useState(!!legacyPartnerCode);

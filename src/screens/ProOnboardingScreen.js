@@ -265,6 +265,9 @@ function watchSetupStage(stage, reportAfterMs = 30000) {
   };
   log('logInfo', 'ProOnboarding.stage', `start ${stage}`);
   const timer = setTimeout(() => {
+    // Growth telemetry (2026-10-19): the stall is also counted, stage name only.
+    // eslint-disable-next-line global-require
+    try { require('../lib/telemetry/setupStalled').emitSetupStageStalled(stage); } catch (_) { /* best-effort */ }
     log('logWarn', 'ProOnboarding.stageStalled', `stage=${stage} at=${current}`, {
       stage, at: current, waitedMs: Date.now() - startedAt,
     });
