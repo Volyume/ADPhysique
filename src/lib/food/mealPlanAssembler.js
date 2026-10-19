@@ -25,7 +25,7 @@ import { CURATED_MEALS, mealItems, mealTotals } from './curatedMeals';
 import { fitScore, perMealMacros, slotMatches } from './mealSuggest';
 import { normalisePreferences, filterMealsByPreferences, filterSavedMealsByPreferences } from './planPreferences';
 import { roleOf, gramRangeOf } from './foodRoles';
-import { solveGramsForKcal } from './gramSolve';
+import { solveGramsForKcal, kitchenRoundWithin, kitchenStep } from './gramSolve';
 import { within, ADHERENCE_TOLERANCE } from './adherence';
 // Campaign 17B job 5: structured reasons, stamped as the plan is built.
 import { MEAL_REASON } from './mealRationale';
@@ -351,7 +351,7 @@ const FLOORED_PER_MEAL_BALANCE = Object.freeze({
  * plate on a training day — a redistribution within the SAME day.kcal/protein/
  * carbs/fat objective (`want`, `terms`), never a change to it.
  */
-function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEAL_BALANCE }) {
+function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEAL_BALANCE, kcalFloor = 0 }) {
   const staples = [];
   const byMealProtein = new Map();
   const byMealCarb = new Map();
@@ -432,7 +432,16 @@ function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEA
   ].filter((t) => t.want > 0);
   const cur = { kcal: consumed.kcal, protein: consumed.protein, carbs: consumed.carbs, fat: consumed.fat };
 
-  for (let sweep = 0; sweep < 16; sweep += 1) {
+  // Fine sweeps in whole grams find the optimum; the kitchen sweeps after
+  // them (founder ruling 2026-10-19) snap each staple to its kitchen-scale
+  // step starting from that optimum, so the coarse grid never strands the
+  // descent far from it.
+  const FINE_SWEEPS = 16;
+  const KITCHEN_SWEEPS = 8;
+  let fineDone = false;
+  for (let sweep = 0; sweep < FINE_SWEEPS + KITCHEN_SWEEPS; sweep += 1) {
+    if (sweep < FINE_SWEEPS && fineDone) continue;
+    const kitchen = sweep >= FINE_SWEEPS;
     let moved = false;
     for (let k = 0; k < staples.length; k += 1) {
       const st = staples[k];
@@ -475,15 +484,57 @@ function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEA
       lo = Math.ceil(lo); hi = Math.floor(hi);
       if (hi < st.lo) hi = st.lo;   // never clamp below the food's own floor
       if (lo > hi) lo = hi;         // the ceiling wins if it crosses the anchor floor
-      let x = Math.round(-num / den);
-      if (x < lo) x = lo; else if (x > hi) x = hi;
+      // Kitchen-scale grams on the kitchen sweeps: the step for the size,
+      // kept inside the box, so a ceiling or floor is never crossed.
+      let x;
+      if (kitchen) {
+        // The step below and the step above the optimum, both inside the
+        // box; the better of the two for the objective, except that a step
+        // which would take the day under the kcal floor loses to one that
+        // does not (rounding never crosses the floor downward).
+        const opt = -num / den;
+        const step = kitchenStep(opt);
+        const down = kitchenRoundWithin(Math.floor(opt / step) * step, lo, hi);
+        const up = kitchenRoundWithin(Math.ceil(opt / step) * step, lo, hi);
+        const score = (g) => {
+          let e = 0;
+          for (const t of terms) {
+            const v = (cur[t.key] + st.per[t.key] * (g - st.g) - t.want) / t.want;
+            e += t.w * v * v;
+          }
+          return e;
+        };
+        const underFloor = (g) => cur.kcal + st.per.kcal * (g - st.g) < kcalFloor;
+        if (underFloor(down) !== underFloor(up)) x = underFloor(down) ? up : down;
+        else x = score(down) <= score(up) ? down : up;
+      } else {
+        x = Math.round(-num / den);
+        if (x < lo) x = lo; else if (x > hi) x = hi;
+      }
       if (x !== st.g) {
         for (const t of terms) cur[t.key] += st.per[t.key] * (x - st.g);
         st.g = x;
         moved = true;
       }
     }
-    if (!moved) break;
+    if (!kitchen) fineDone = !moved;
+    else if (!moved) break;
+  }
+  // Rounding never leaves the day under the kcal floor: while it does, the
+  // staple whose next kitchen step adds the fewest kcal goes up one step,
+  // within the food's own range. Deterministic (ties keep staple order).
+  while (cur.kcal < kcalFloor) {
+    let best = -1; let bestAdd = Infinity; let bestG = 0;
+    staples.forEach((st, k) => {
+      const nextG = st.g + kitchenStep(st.g);
+      if (nextG > st.hi || !(st.per.kcal > 0)) return;
+      const add = st.per.kcal * (nextG - st.g);
+      if (add < bestAdd) { bestAdd = add; best = k; bestG = nextG; }
+    });
+    if (best < 0) break;
+    const st = staples[best];
+    for (const t of terms) cur[t.key] += st.per[t.key] * (bestG - st.g);
+    st.g = bestG;
   }
 
   // Write solved grams back into NEW placed entries; recompute consumed from the
@@ -847,12 +898,12 @@ export function assembleDayPlan({
   let perMealBalanced = false;
   let perMealRelaxed = false;
   const balanceProfile = targetFloored ? FLOORED_PER_MEAL_BALANCE : PER_MEAL_BALANCE;
-  const balanced = solvePlacedStaples({ placed, consumed, want, perMeal: true, balance: balanceProfile });
+  const balanced = solvePlacedStaples({ placed, consumed, want, perMeal: true, balance: balanceProfile, kcalFloor: kcalMin });
   let solved = balanced;
   if (balanced.changed) {
     perMealBalanced = true;
     if (!dayTolerant(balanced)) {
-      const free = solvePlacedStaples({ placed, consumed, want, perMeal: false });
+      const free = solvePlacedStaples({ placed, consumed, want, perMeal: false, kcalFloor: kcalMin });
       if (free.changed && dayTolerant(free) && !dayTolerant(balanced)) {
         solved = free;
         perMealBalanced = false;
