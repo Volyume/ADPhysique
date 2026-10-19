@@ -50,10 +50,25 @@ describe('migrate_201 gym challenge', () => {
     expect(score).toMatch(/v_weigh_hits := v_weigh_hits \+ 1/);
   });
 
-  it('under the migrate_180 gate, food and weigh-in score in full', () => {
+  it('the migrate_180 gate is read by day and credits food and weigh-in on withheld days (review round 1, B2)', () => {
     const score = body('_gym_challenge_score');
-    expect(score).toMatch(/v_withheld := public\._community_consistency_withheld\(v_uid\)/);
-    expect(score).toMatch(/IF v_withheld THEN[\s\S]{0,120}p_food := 6; p_weigh := 4;/);
+    // never once for the month: an ED flag's own history, the hourly readings, and today
+    expect(score).toMatch(/FROM public\.ed_pattern_flags f[\s\S]{0,200}raised_at[\s\S]{0,200}cleared_at/);
+    expect(score).toMatch(/FROM public\.gym_challenge_gate_days gd/);
+    expect(score).toMatch(/g\.d = v_today AND v_now/);
+    // a withheld day counts as a food day and a weigh-in week
+    expect(score).toMatch(/UNION\s+SELECT w\.d FROM pg_temp\._gc_w w WHERE w\.d BETWEEN r\.bs AND r\.be/);
+    expect(score).toMatch(/IF EXISTS \(SELECT 1 FROM pg_temp\._gc_w w WHERE w\.d BETWEEN r\.bs AND r\.be\)/);
+    // the hourly reading exists and is scheduled
+    expect(SQL).toMatch(/cron\.schedule\('gym-challenge-gate-readings', '7 \* \* \* \*'/);
+    // the screen always gets the gate now, even after close
+    expect(body('gym_challenge_score')).toMatch(/'withheld', public\._community_consistency_withheld\(v_uid\)/);
+  });
+
+  it('a withdrawn entrant is never scored again, and only winners carry an email (review round 1, M2)', () => {
+    const r = body('gym_challenge_results');
+    expect(r).toMatch(/CASE WHEN e\.withdrawn_at IS NULL\s+THEN public\._gym_challenge_entrant_score\(v_c, e\) END/);
+    expect(r).toMatch(/e\.user_id = ANY \(d\.winners\)\)\s+THEN u\.email::text END/);
   });
 
   it('a withheld person is never listed, and a withheld viewer gets no board or invite', () => {
@@ -72,27 +87,28 @@ describe('migrate_201 gym challenge', () => {
   });
 
   it('tables are RPC only', () => {
-    ['gym_challenges', 'gym_challenge_entrants', 'gym_challenge_draws', 'free_for_life_grants'].forEach((t) => {
+    ['gym_challenges', 'gym_challenge_entrants', 'gym_challenge_draws', 'free_for_life_grants', 'gym_challenge_gate_days'].forEach((t) => {
       expect(SQL).toMatch(new RegExp(`ALTER TABLE public\\.${t}\\s+ENABLE ROW LEVEL SECURITY`));
     });
-    expect(SQL).toMatch(/REVOKE ALL ON public\.gym_challenges, public\.gym_challenge_entrants, public\.gym_challenge_draws,\s+public\.free_for_life_grants FROM PUBLIC, anon, authenticated;/);
+    expect(SQL).toMatch(/REVOKE ALL ON public\.gym_challenges, public\.gym_challenge_entrants, public\.gym_challenge_draws,\s+public\.free_for_life_grants, public\.gym_challenge_gate_days FROM PUBLIC, anon, authenticated;/);
   });
 
   it('founder operations are service role only; only the landing page is anon', () => {
-    ['gym_challenge_close(uuid)', 'gym_challenge_results(uuid)', 'gym_challenge_draw(uuid, text, int)'].forEach((sig) => {
+    ['gym_challenge_close(uuid, boolean)', 'gym_challenge_results(uuid)', 'gym_challenge_draw(uuid, text, int)'].forEach((sig) => {
       const esc = sig.replace(/[()]/g, '\\$&');
       expect(SQL).toMatch(new RegExp(`REVOKE ALL ON FUNCTION public\\.${esc} FROM PUBLIC, anon, authenticated;`));
       expect(SQL).toMatch(new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${esc} TO service_role;`));
     });
     const anonGrants = SQL.match(/GRANT EXECUTE ON FUNCTION [^\n]* TO anon[^\n]*/g) || [];
     expect(anonGrants).toEqual(['GRANT EXECUTE ON FUNCTION public.gym_challenge_public(text) TO anon, authenticated;']);
-    expect(body('gym_challenge_public')).toMatch(/RETURN public\._gym_challenge_json\(v_c\) - 'id';/);
+    expect(body('gym_challenge_public')).toMatch(/RETURN public\._gym_challenge_json\(v_c\) - 'id' - 'entrants';/);
+    expect(SQL).toMatch(/GRANT EXECUTE ON FUNCTION public\.gym_challenge_create\([^)]*\)\s+TO service_role;/);
   });
 
   it('joining records the free-for-life promise, and nothing removes it', () => {
     expect(body('gym_challenge_join')).toMatch(/INSERT INTO public\.free_for_life_grants \(user_id, source, source_code\)/);
     expect(SQL).not.toMatch(/(DELETE FROM|UPDATE)\s+public\.free_for_life_grants/i);
-    expect(SQL).toMatch(/free_for_life_grants FROM PUBLIC, anon, authenticated;/);
+    expect(SQL).toMatch(/public\.free_for_life_grants, public\.gym_challenge_gate_days FROM PUBLIC, anon, authenticated;/);
   });
 
   it('carries the required header notes', () => {
