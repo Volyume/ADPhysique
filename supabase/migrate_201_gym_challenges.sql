@@ -9,8 +9,13 @@
 --
 --                    WHAT IS ADDED (all additive; nothing existing changes):
 --                    * gym_challenges, gym_challenge_entrants,
---                      gym_challenge_draws (RLS on, no policy, every grant
---                      revoked: RPC only, as every Community table).
+--                      gym_challenge_draws, free_for_life_grants (RLS on,
+--                      no policy, every grant revoked: RPC only, as every
+--                      Community table).
+--                    * FREE FOR LIFE (founder, 2026-10-19): joining a
+--                      challenge writes a free_for_life_grants row, kept
+--                      through withdrawal and challenge deletion; any future
+--                      billing must honour it (docs/rules/billing.md).
 --                    * _gym_challenge_phase, _gym_challenge_score (SPEC 3),
 --                      _gym_challenge_name, _gym_challenge_json.
 --                    * Member RPCs (authenticated): gym_challenge_lookup,
@@ -53,6 +58,8 @@
 -- Rollback:          DROP FUNCTION the twelve public functions and four
 --                    helpers listed above; DROP TABLE gym_challenge_draws,
 --                    gym_challenge_entrants, gym_challenges (in that order).
+--                    free_for_life_grants records promises made to members:
+--                    never drop it without the founder's decision.
 --                    Nothing else references them.
 -- Transaction:       no explicit BEGIN/COMMIT; the runner supplies one.
 
@@ -104,11 +111,24 @@ CREATE TABLE IF NOT EXISTS public.gym_challenge_draws (
   winners        uuid[] NOT NULL
 );
 
+-- Free for life (founder, 2026-10-19): everyone who joins a challenge is
+-- promised Volyume free for life, even if paid plans ever arrive. A row here
+-- is that promise. It is written on join, never removed by withdrawal or by
+-- deleting a challenge, and any future billing must honour it
+-- (docs/rules/billing.md).
+CREATE TABLE IF NOT EXISTS public.free_for_life_grants (
+  user_id     uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  source      text NOT NULL CHECK (source IN ('gym_challenge')),
+  source_code text,
+  granted_at  timestamptz NOT NULL DEFAULT now()
+);
+
 ALTER TABLE public.gym_challenges         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.free_for_life_grants   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gym_challenge_entrants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gym_challenge_draws    ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.gym_challenges, public.gym_challenge_entrants, public.gym_challenge_draws
-  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.gym_challenges, public.gym_challenge_entrants, public.gym_challenge_draws,
+  public.free_for_life_grants FROM PUBLIC, anon, authenticated;
 
 -- ─── Part 2: helpers ────────────────────────────────────────────────────
 
@@ -438,7 +458,11 @@ BEGIN
         planned_per_week = greatest(e.planned_per_week, EXCLUDED.planned_per_week),
         consent_version = EXCLUDED.consent_version;
 
-  RETURN jsonb_build_object('challenge_id', v_c.id, 'joined', true);
+  INSERT INTO public.free_for_life_grants (user_id, source, source_code)
+  VALUES (v_uid, 'gym_challenge', v_c.code)
+  ON CONFLICT (user_id) DO NOTHING;
+
+  RETURN jsonb_build_object('challenge_id', v_c.id, 'joined', true, 'free_for_life', true);
 END $$;
 REVOKE ALL ON FUNCTION public.gym_challenge_join(text, text, text, int, text, boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.gym_challenge_join(text, text, text, int, text, boolean) TO authenticated;

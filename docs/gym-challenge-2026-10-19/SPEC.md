@@ -27,6 +27,14 @@ section 0 verbatim or near-verbatim; every lead ruling (D33) is marked.
   the challenge, as simple as possible; after the challenge they carry on as
   normal; the challenge is not visible to people at other gyms.
 - Plan: "Go as written".
+- Free for life (founder, later the same day): "I'm going to say it's going
+  to be free for challenge users indefinitely. So if I ever add any prices to
+  it, these users ... are never going to be charged." Lead note given: make
+  it a real, recorded entitlement and word it so it does not imply others pay
+  today (they do not). Wording: "Volyume is free. Join through the challenge
+  and it stays free for you for life, even if we ever introduce paid plans."
+  Recorded server side in `free_for_life_grants` on join (migrate_201), kept
+  through withdrawal and challenge deletion.
 
 ## 1. What a challenge is
 
@@ -145,11 +153,12 @@ Join text (Article 9 explicit consent for this purpose, versioned
 whether you logged food and whether you weighed in during the challenge. It
 never reads what you ate or what you weigh. If you are in the top 10, your
 name and score are shown to other entrants. If you win, your name and county
-are published, and you can object. You can leave the challenge at any time."
+are published, and you can object. You can leave the challenge at any time." Then, as its own line: "Joining also keeps Volyume free for you for life, even if we ever introduce paid plans."
 Terms page per challenge: promoter name and address, eligibility (18+, the
 gym's members), how to enter (free, no purchase), dates, prizes, how scores
 work, how winners are drawn (recorded computer draw), how and when winners
-are told and announced, withdrawal.
+are told and announced, withdrawal, and the free-for-life promise (kept after
+withdrawal; never implies that anyone else pays today).
 
 ## 6. Founder operations (service role only)
 

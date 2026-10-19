@@ -28,8 +28,8 @@ describe('migrate_201 gym challenge', () => {
   it('is additive: nothing is dropped, altered or deleted outside its own tables', () => {
     const code = SQL.replace(/^\s*--.*$/gm, '');
     expect(code).not.toMatch(/\bDROP\s+(TABLE|FUNCTION|COLUMN|INDEX)/i);
-    expect(code).not.toMatch(/\bALTER\s+TABLE\s+(?!public\.gym_challenge)/i);
-    expect(code).not.toMatch(/\b(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+public\.(?!gym_challenge)/i);
+    expect(code).not.toMatch(/\bALTER\s+TABLE\s+(?!public\.(?:gym_challenge|free_for_life_grants))/i);
+    expect(code).not.toMatch(/\b(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+public\.(?!gym_challenge|free_for_life_grants)/i);
   });
 
   it('never reads a food amount, a calorie or a body weight value', () => {
@@ -72,10 +72,10 @@ describe('migrate_201 gym challenge', () => {
   });
 
   it('tables are RPC only', () => {
-    ['gym_challenges', 'gym_challenge_entrants', 'gym_challenge_draws'].forEach((t) => {
+    ['gym_challenges', 'gym_challenge_entrants', 'gym_challenge_draws', 'free_for_life_grants'].forEach((t) => {
       expect(SQL).toMatch(new RegExp(`ALTER TABLE public\\.${t}\\s+ENABLE ROW LEVEL SECURITY`));
     });
-    expect(SQL).toMatch(/REVOKE ALL ON public\.gym_challenges, public\.gym_challenge_entrants, public\.gym_challenge_draws\s+FROM PUBLIC, anon, authenticated;/);
+    expect(SQL).toMatch(/REVOKE ALL ON public\.gym_challenges, public\.gym_challenge_entrants, public\.gym_challenge_draws,\s+public\.free_for_life_grants FROM PUBLIC, anon, authenticated;/);
   });
 
   it('founder operations are service role only; only the landing page is anon', () => {
@@ -87,6 +87,12 @@ describe('migrate_201 gym challenge', () => {
     const anonGrants = SQL.match(/GRANT EXECUTE ON FUNCTION [^\n]* TO anon[^\n]*/g) || [];
     expect(anonGrants).toEqual(['GRANT EXECUTE ON FUNCTION public.gym_challenge_public(text) TO anon, authenticated;']);
     expect(body('gym_challenge_public')).toMatch(/RETURN public\._gym_challenge_json\(v_c\) - 'id';/);
+  });
+
+  it('joining records the free-for-life promise, and nothing removes it', () => {
+    expect(body('gym_challenge_join')).toMatch(/INSERT INTO public\.free_for_life_grants \(user_id, source, source_code\)/);
+    expect(SQL).not.toMatch(/(DELETE FROM|UPDATE)\s+public\.free_for_life_grants/i);
+    expect(SQL).toMatch(/free_for_life_grants FROM PUBLIC, anon, authenticated;/);
   });
 
   it('carries the required header notes', () => {

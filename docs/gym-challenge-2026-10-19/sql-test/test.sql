@@ -88,4 +88,5 @@ DO $$ BEGIN PERFORM gym_challenge_draw((SELECT id FROM gym_challenges), 'second'
 SET ROLE authenticated;
 DO $$ BEGIN PERFORM gym_challenge_results((SELECT id FROM gym_challenges)); RAISE EXCEPTION 'authenticated ran results'; EXCEPTION WHEN insufficient_privilege THEN NULL; END $$;
 RESET ROLE;
+DO $$ BEGIN IF (SELECT count(*) FROM free_for_life_grants) <> 2 THEN RAISE EXCEPTION 'free for life grants lost'; END IF; END $$;
 SELECT 'ALL OK';
