@@ -48,6 +48,21 @@ function _trackPermissionResult(status) {
   } catch (_) { /* best-effort telemetry */ }
 }
 
+// Growth telemetry (brief 2026-10-19): the answer to the system prompt as
+// granted, denied, or blocked (denied and the system will not ask again).
+// Sent only when the system was actually asked; an already-granted check is
+// not an answer. Lazy require keeps this module free of import cycles.
+function _trackPermissionOutcome(status, canAskAgain) {
+  try {
+    let outcome = null;
+    if (status === 'granted') outcome = 'granted';
+    else if (status === 'denied') outcome = canAskAgain === false ? 'blocked' : 'denied';
+    if (!outcome) return;
+    // eslint-disable-next-line global-require
+    require('../telemetry/growth').trackNow('notification_permission_result', { outcome });
+  } catch (_) { /* best-effort telemetry */ }
+}
+
 /**
  * Request notification permissions. Returns 'granted' | 'denied' |
  * 'undetermined'. Sound is requested off by default -- the in-app
@@ -68,14 +83,15 @@ export async function requestNotificationPermissions() {
     if (existing === 'granted') {
       result = 'granted';
     } else {
-      const { status } = await Notifications.requestPermissionsAsync({
+      const answer = await Notifications.requestPermissionsAsync({
         ios: {
           allowAlert: true,
           allowBadge: true,
           allowSound: false,
         },
       });
-      result = status;
+      result = answer.status;
+      _trackPermissionOutcome(answer.status, answer.canAskAgain);
     }
   } catch {
     result = 'undetermined';

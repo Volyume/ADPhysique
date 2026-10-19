@@ -61,6 +61,8 @@ import { resolveFoodRefs } from '../lib/food/sources/localCache';
 // Campaign 17A job 6: the ONE exclusion predicate, at the food-ref level.
 import { foodRefExcluded } from '../lib/food/foodRoles';
 import { audit } from '../lib/observability';
+import { trackNow } from '../lib/telemetry/growth';
+import { toBucket } from '../lib/telemetry/schema';
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -457,6 +459,9 @@ export default function FoodSearchScreen({ navigation, route }) {
         // Only the no-hit case is ambiguous. A saved-food (local) hit means
         // we answered without needing the network, so never flag offline then.
         if (rows.length === 0) {
+          // Growth telemetry: one event per settled query (this runs after the
+          // 250ms debounce and the stale-request guard), length only, never text.
+          try { trackNow('food_search_empty', { query_length: toBucket('count', q.length) }); } catch (_) { /* telemetry never blocks search */ }
           let offline = false;
           try {
             const state = await NetInfo.fetch();
@@ -519,7 +524,12 @@ export default function FoodSearchScreen({ navigation, route }) {
   // they were, which is why the old "2 of 3 foods were added" sentence is gone:
   // that half-state can no longer happen.
   async function logPlate() {
-    await writeItems(plate, () => { setPlate([]); setShowPlate(false); });
+    const plateSize = plate.length;
+    const written = await writeItems(plate, () => { setPlate([]); setShowPlate(false); });
+    // Growth telemetry: several foods logged in one go (the plate flow).
+    if (written && plateSize >= 2) {
+      try { trackNow('food_plate_logged', { items: toBucket('count', plateSize) }); } catch (_) { /* telemetry never blocks logging */ }
+    }
   }
 
   // The one write behind the plate AND the typed-line review (D230 R13): the

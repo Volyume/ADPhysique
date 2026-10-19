@@ -66,6 +66,8 @@ import { SkeletonCard } from '../components/Skeleton';
 // date the trial moment promises can never drift apart.
 import { FIRST_CHECKIN_MIN_DAYS, MIN_WEIGH_INS, firstReviewUnlockDate } from '../lib/trialActivation';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import { trackNow } from '../lib/telemetry/growth';
+import { toBucket } from '../lib/telemetry/schema';
 import { touchTarget } from '../styles/layout';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
@@ -228,6 +230,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [cycleEnabled, setCycleEnabled] = useState(false);
   const [cycle, setCycle] = useState(null);            // 'yes' | 'no' | null (GAP row 15)
   const [step, setStep] = useState(0); // 0-3
+  // Growth telemetry (checkin_completed / checkin_abandoned): when the screen
+  // opened, the furthest wizard step reached, whether the form was ever shown
+  // (gate screens are not an abandon) and whether the check-in was submitted.
+  const openedAtRef = useRef(Date.now());
+  const maxStepRef = useRef(0);
+  const formShownRef = useRef(false);
+  const submittedRef = useRef(false);
+  useEffect(() => { maxStepRef.current = Math.max(maxStepRef.current, step); }, [step]);
   // COMP-008 Fast Check-In: when set, the user has chosen to expand the
   // condensed card into the full four-step wizard. Lets the fast path stay an
   // offer, never a cage.
@@ -938,6 +948,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
         ].filter(Boolean).join(' ') || null,
       });
 
+      // Growth telemetry: the check-in landed. `first` = no coach review has
+      // ever been produced (hasPriorReview === false, read by this screen
+      // already); unread (null) or true counts as not first. Duration is
+      // bucketed minutes since the screen opened.
+      try {
+        submittedRef.current = true;
+        trackNow('checkin_completed', {
+          first: hasPriorReview === false,
+          duration: toBucket('minutes', (Date.now() - openedAtRef.current) / 60000),
+        });
+      } catch (_) { /* telemetry never blocks the check-in */ }
+
       // Activation funnel (lead activation ruling, 2026-09-03): anchored on
       // the audit('checkin.weekly.submit') call above, but fired only once
       // saveWeeklyCheckin has actually landed -- a genuine successful submit,
@@ -1076,8 +1098,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
   }, [
     busy, submitSuccess, user?.id, energyScore, sorenessScore, stressScore, sleepHours,
     calsAdherence, stepsAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,
-    hasActiveEpisode, restrictionWeek, legsQuestionDue, legsFlat,
+    hasActiveEpisode, restrictionWeek, legsQuestionDue, legsFlat, hasPriorReview,
   ]);
+
+  // Growth telemetry: leaving the open form without submitting is an abandon.
+  useEffect(() => { if (gateState === 'open') formShownRef.current = true; }, [gateState]);
+  useEffect(() => () => {
+    try {
+      if (formShownRef.current && !submittedRef.current) {
+        trackNow('checkin_abandoned', { step_reached: Math.min(12, maxStepRef.current) });
+      }
+    } catch (_) { /* telemetry never blocks leaving */ }
+  }, []);
 
   // M4: the Button's success beat finished; run the stashed outcome.
   const handleSubmitSettled = useCallback(() => {

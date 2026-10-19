@@ -123,6 +123,8 @@ import CopyFromDaySheet from '../components/food/CopyFromDaySheet';
 import MealsSheet from '../components/food/MealsSheet';
 import HeaderAction from '../components/HeaderAction';
 import { useToast } from '../components/Toast';
+import { trackNow } from '../lib/telemetry/growth';
+import { toBucket } from '../lib/telemetry/schema';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate, entryToPatch } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, mealSlotLabel, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
@@ -508,6 +510,7 @@ export default function DiaryScreen({ navigation, route }) {
       const mealsConfirmed = Math.max(1, plannedCount);
       const n = await confirmPlannedDay(userId, selectedDate);
       await load();
+      if (n > 0) trackPlannedConfirmed('day', n);
       if (n > 0) dismissMarkEatenHint(); // discovery: bulk mark-as-eaten used
       if (n > 0) dismissPlanAddedHint(); // same discovery, plan-added teach's signal
       toast.show(n > 0 ? `${mealsConfirmed} planned ${mealsConfirmed === 1 ? 'meal' : 'meals'} marked as eaten.` : 'Nothing to confirm.', { variant: n > 0 ? 'success' : 'info' });
@@ -529,6 +532,7 @@ export default function DiaryScreen({ navigation, route }) {
       const n = await confirmPlannedDay(userId, selectedDate, slotKey);
       await load();
       if (n > 0) {
+        trackPlannedConfirmed('meal', n);
         dismissMarkEatenHint(); // discovery: per-meal mark-as-eaten used
         dismissPlanAddedHint(); // same discovery, plan-added teach's signal
         toast.show('Marked as eaten.', { variant: 'success' });
@@ -1160,6 +1164,7 @@ export default function DiaryScreen({ navigation, route }) {
         if (skipped > 0) toast.show('Those entries could not be copied.', { variant: 'error' });
         return;
       }
+      trackEntriesMoved('copy', ids.length);
       const left = skipped > 0 ? ` ${skipped} could not be copied.` : '';
       toast.show(`${slotLabel} copied from yesterday, ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'}.${left}`, {
         variant: 'undo',
@@ -1460,6 +1465,7 @@ export default function DiaryScreen({ navigation, route }) {
         else toast.show('Nothing was added. Planned meals are not copied.', { variant: 'info' });
         return;
       }
+      trackEntriesMoved('copy', ids.length);
       const left = skipped > 0 ? ` ${skipped} could not be copied.` : '';
       toast.show(`${ids.length} ${ids.length === 1 ? 'entry' : 'entries'} added to today.${left}`, {
         variant: 'undo',
@@ -1496,6 +1502,7 @@ export default function DiaryScreen({ navigation, route }) {
     await load();
     if (moved.length === 0) return;
     const n = moved.length;
+    trackEntriesMoved('move', n);
     toast.show(`Moved ${n} ${n === 1 ? 'food' : 'foods'} to ${mealSlotLabel(slot)}.`, {
       variant: 'undo',
       action: {
@@ -1769,6 +1776,7 @@ export default function DiaryScreen({ navigation, route }) {
       }
       // D88: one word for one thing. These rows are "entries" when deleted and
       // added, so they are entries here too.
+      trackEntriesMoved('copy', ids.length);
       const left = skipped > 0 ? ` ${skipped} could not be copied.` : '';
       toast.show(`Copied ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'}.${left}`, {
         variant: 'undo',
@@ -2511,6 +2519,13 @@ const WATER_TARGET_KEY = '@volyume_water_target_ml';
 // '@volyume_seen_workout_info' (ActiveWorkoutScreen).
 const DIARY_FOOD_HINT_KEY = '@volyume_seen_diary_food_hint';
 const DIARY_WATER_HINT_KEY = '@volyume_seen_diary_water_hint';
+// Growth telemetry: counts only, bucketed; never blocks the diary.
+function trackDiary(event, payload) {
+  try { trackNow(event, payload); } catch (_) { /* telemetry never blocks the diary */ }
+}
+const trackPlannedConfirmed = (scope, n) => trackDiary('planned_meal_confirmed', { scope, items: toBucket('count', n) });
+const trackEntriesMoved = (action, n) => trackDiary('diary_entries_moved', { action, items: toBucket('count', n) });
+
 const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';
 // Founder ask (2026-07-09): a one-time teach anchored to the moment meals
 // from the meal builder / meal plan land in the diary (MealPlanScreen's

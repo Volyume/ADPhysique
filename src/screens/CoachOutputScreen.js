@@ -91,6 +91,7 @@ import { readMaintenanceInputs } from '../lib/maintenanceInputs';
 import { effectiveMaintenanceReceipt, resolveEffectiveMaintenance } from '../lib/effectiveMaintenance';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, markApplied, isApplied, markDeclined, isDeclined } from '../lib/coachApply';
 import { loadVolumeIncreaseHolds } from '../lib/coachApplySafety';
+import { trackNow } from '../lib/telemetry/growth';
 // D219 lane A3 (design 4.10): the check-in for a plan the new planner built is
 // placed set by set. resolveCheckinPlan only reads; writeCheckinPlan runs on
 // Apply. Both give way to today's path (null) for every other plan.
@@ -1349,6 +1350,12 @@ export default function CoachOutputScreen({ navigation, route }) {
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
       trackEngineEvent(user.id, 'coach_recommendation_declined', { kind: 'calories' }).catch(() => {});
+      // Growth telemetry. Kind mapping (coach_recommendation_* in schema.js):
+      // the calorie card's "Keep as is" = dismissed/calories. Training, deload
+      // and diet-break cards offer Apply only (no decline control), so they
+      // emit nothing here; HowYouTrainScreen maps the training-adaptation
+      // hold and "Not now" to held/dismissed with kind 'training'.
+      try { trackNow('coach_recommendation_dismissed', { kind: 'calories' }); } catch (_) { /* telemetry never blocks */ }
     } catch (e) {
       logError('CoachOutputScreen.handleDeclineCalories', e, { userId: user?.id });
     }

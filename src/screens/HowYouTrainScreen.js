@@ -29,6 +29,7 @@ import Button from '../components/Button';
 import BottomSheet from '../components/BottomSheet';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
+import { trackNow } from '../lib/telemetry/growth';
 import {
   SettingsPage, SettingRow, SectionHeader, settingsStyles, useSettingsStyles,
 } from '../components/SettingsPrimitives';
@@ -452,6 +453,8 @@ export default function HowYouTrainScreen() {
           // eslint-disable-next-line no-await-in-loop
           await recordEffectiveChoice(userId, id, 'declined').catch(() => {});
         }
+        // Growth telemetry: the proposal was declined ("Not now"), kind training.
+        try { trackNow('coach_recommendation_dismissed', { kind: 'training' }); } catch (_) { /* telemetry never blocks */ }
         toast.show('Kept as recorded. Affected exercises will show a quiet notice with a swap shortcut.');
       };
       appAlert(
@@ -1552,7 +1555,7 @@ export default function HowYouTrainScreen() {
                 ) : (
                   <SettingRow icon="pause-outline" label="Keep my plan as it is"
                     sub="Volyume changes nothing for this until you say so. Your plan runs exactly as it is."
-                    onPress={() => after(async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); toast.show('Volyume is keeping your plan as it is for this. Changes for it are paused; your training is not.'); refresh(); })} />
+                    onPress={() => after(async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); try { trackNow('coach_recommendation_held', { kind: 'training' }); } catch (_) { /* telemetry never blocks */ } toast.show('Volyume is keeping your plan as it is for this. Changes for it are paused; your training is not.'); refresh(); })} />
                 )}
                 <SettingRow icon="body-outline" label="Make it long-term"
                   sub="Becomes part of your normal setup, with full progression and coaching."

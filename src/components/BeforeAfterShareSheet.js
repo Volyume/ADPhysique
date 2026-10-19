@@ -58,6 +58,7 @@ import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
 import { loadCardTypefaces } from '../lib/shareCard/cardTypefaces';
+import { trackNow } from '../lib/telemetry/growth';
 import {
   buildBeforeAfterParams,
   defaultPair,
@@ -439,7 +440,10 @@ export default function BeforeAfterShareSheet({
         const canShare = await Sharing.isAvailableAsync();
         if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
         // ONE composited file, never a multi-attach (S2 §1).
+        try { trackNow('share_attempted', { surface: 'progress', audience: 'external' }); } catch (_) { /* telemetry never blocks sharing */ }
         await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share progress image' });
+        // expo-sharing resolves once the sheet closes and reports no action.
+        try { trackNow('share_completed', { surface: 'progress', audience: 'external' }); } catch (_) { /* telemetry never blocks sharing */ }
       } catch (_e) {
         toast.show("Could not open the share sheet. Please try again.", { variant: 'error' });
       } finally {

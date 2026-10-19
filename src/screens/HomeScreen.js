@@ -288,7 +288,12 @@ export default function HomeScreen({ navigation, route }) {
   // per user) so historical food lands on the local calendar day.
   useEffect(() => {
     if (user?.id && !activeWorkout) {
-      restoreActiveWorkout(user.id);
+      // Growth telemetry: a workout restored here was left open (workout_abandoned).
+      Promise.resolve(restoreActiveWorkout(user.id)).then((restored) => {
+        if (!restored) return;
+        // eslint-disable-next-line global-require
+        require('../lib/telemetry/workoutAbandoned').trackWorkoutAbandonedIfOpen(useAppStore.getState(), user.id);
+      }).catch(() => { /* telemetry never blocks recovery */ });
     }
     if (user?.id) {
       migrateFoodDayKeysOnce(user.id);
