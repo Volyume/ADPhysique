@@ -17,7 +17,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { MUSCLE_DISPLAY_NAMES, muscleDisplayName } from '../lib/algorithms';
 import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds, getExerciseUsageStats, getActiveBlock, clearExerciseIntent } from '../lib/database';
 import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, movementFamilyOf, isEligibleExercise } from '../lib/exercise/intent';
 // CC27 (sections 9.2.6, 9.4, 8.4): the picker asks the capability lane's
@@ -970,6 +970,7 @@ export default function ExercisePickerModal({
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
+                  style={styles.filterScroll}
                   contentContainerStyle={styles.filterRow}
                 >
                   {PICKER_MUSCLES.map(m => (
@@ -989,6 +990,7 @@ export default function ExercisePickerModal({
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
+                  style={styles.filterScroll}
                   contentContainerStyle={styles.filterRow}
                 >
                   {PICKER_EQUIPMENT.map(eq => (
@@ -1066,7 +1068,7 @@ export default function ExercisePickerModal({
                       ) : capCaption ? (
                         <Text style={[styles.pickerSetAside, live.pickerSetAside]}>{capCaption}</Text>
                       ) : item.primaryMuscle ? (
-                        <Text style={[styles.pickerMuscle, live.pickerMuscle]}>{item.primaryMuscle}</Text>
+                        <Text style={[styles.pickerMuscle, live.pickerMuscle]}>{muscleDisplayName(String(item.primaryMuscle).toLowerCase())}</Text>
                       ) : null}
                     </View>
                     {setAside ? (
@@ -1224,6 +1226,13 @@ const styles = StyleSheet.create({
   createNameInputText: { ...type.bodyStrong, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   createLabel: { ...type.captionStrong, color: colors.textMuted },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  // Founder report 2026-10-19 (screenshot: two chip rows, then two large
+  // empty gaps, then the list in the bottom third). A ScrollView's default
+  // style grows and shrinks to fill its parent, so these two direct children
+  // of the column took equal shares of the height with the flex:1 list
+  // instead of their own height. They size to their chips; the list keeps
+  // every remaining pixel.
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs, flexGrow: 0,
     paddingHorizontal: spacing.lg, paddingTop: spacing.sm,
