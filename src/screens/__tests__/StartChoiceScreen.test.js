@@ -33,7 +33,8 @@ jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastS
 jest.mock('../../lib/errorLog', () => ({ logError: (...a) => mockLogError(...a) }));
 jest.mock('../../lib/proOnboardingDraft', () => ({ loadDraft: (...a) => mockLoadDraft(...a) }));
 let mockInChallenge = false;
-jest.mock('../../lib/challenges/pending', () => ({ hasChallengeActiveFlag: async () => mockInChallenge }));
+const mockHasFlag = jest.fn(async () => mockInChallenge);
+jest.mock('../../lib/challenges/pending', () => ({ hasChallengeActiveFlag: (...a) => mockHasFlag(...a) }));
 jest.mock('../../components/BrandMark', () => ({ VolyumeIcon: () => null }));
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), error: jest.fn() }));
 jest.mock('../../components/Button', () => (props) => {
@@ -140,6 +141,8 @@ describe('StartChoiceScreen', () => {
     expect(descOf(await mount())).not.toContain('In the challenge');
     mockInChallenge = true;
     expect(descOf(await mount())).toContain('In the challenge, coaching adds up to 20 more points.');
+    // The flag is kept per person: it is read for the signed-in user only.
+    expect(mockHasFlag).toHaveBeenCalledWith('u1');
     mockInChallenge = false;
   });
 

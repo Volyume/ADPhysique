@@ -7,12 +7,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Volyume">
 <meta property="og:title" content="A gym challenge on Volyume">
-<meta property="og:description" content="Train, check in and climb the board. Prize draws for everyone who scores.">
+<meta property="og:description" content="Train, check in and climb the board. Score 70 and above for the main prize draw, or 50 and above for the second.">
 <meta property="og:image" content="https://volyume.app/volyume-v.png">
 <meta property="og:image:alt" content="Volyume">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="A gym challenge on Volyume">
-<meta name="twitter:description" content="Train, check in and climb the board. Prize draws for everyone who scores.">
+<meta name="twitter:description" content="Train, check in and climb the board. Score 70 and above for the main prize draw, or 50 and above for the second.">
 <meta name="twitter:image" content="https://volyume.app/volyume-v.png">
 <meta name="description" content="Join a gym challenge on Volyume.">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -27,8 +27,8 @@
 
   It reads the code from the path (/c/<code>) or, after the 404 fallback
   forwards a path to this page, from ?code=<code>. It then asks the anon RPC
-  gym_challenge_public for the public fields only (title, gym, dates, prizes,
-  thresholds, terms link, entrant count): no names, no scores, no personal
+  gym_challenge_public for the public fields only (title, gym, dates, status,
+  prizes, thresholds, terms link): no names, no scores, no counts, no personal
   data. The anon key is the same public key the survey page already ships;
   it grants only what the RPC's own grants allow. No tracking scripts.
 -->
@@ -63,7 +63,7 @@
   .muted{color:var(--textSecondary); font-size:14px; margin-top:24px;}
   a{color:var(--amber);}
   #loading, #notfound{padding:80px 0; text-align:center; color:var(--textSecondary); font-size:16px;}
-  #content, #notfound{display:none;}
+  #content, #notfound, #finished{display:none;}
 </style>
 </head>
 <body>
@@ -77,14 +77,15 @@
       <h1 id="title"></h1>
       <p class="lead" id="sub"></p>
 
+      <p class="lead" id="finished"></p>
+
       <div class="card" id="prizes">
         <h2>Prizes</h2>
         <p id="prizeMain"></p>
         <p id="prizeSecond"></p>
-        <p class="note">Volyume is free. Join through the challenge and it stays free for you for life, even if we ever introduce paid plans.</p>
       </div>
 
-      <div class="card">
+      <div class="card" id="scoring">
         <h2>How you score</h2>
         <table>
           <tbody>
@@ -102,9 +103,11 @@
         <p class="note"><a id="terms" href="#">Read the full terms</a></p>
       </div>
 
+      <p class="lead" id="free">Volyume is free. Join through the challenge and it stays free for you for life, even if we ever introduce paid plans.</p>
+
       <a class="cta" id="open" href="#">Open in Volyume</a>
       <a class="cta secondary" id="store" href="#">Get Volyume</a>
-      <p class="muted">Already have the app? Scan the code again.</p>
+      <p class="muted" id="again">Already have the app? Scan the code again.</p>
       <p class="muted">Volyume. See our <a href="/privacy/">privacy policy</a>.</p>
     </div>
   </div>
@@ -115,6 +118,8 @@
       var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1anJ5bHp6eGNxeHhmeWdwdG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODIxODksImV4cCI6MjA5NDc1ODE4OX0.NjRsRu8pL1UEJe3z9TTfSrvpruKqQYQ-HrN4zXvsVVY';
       var PLAY = 'https://play.google.com/store/apps/details?id=app.volyume';
       var APPLE = 'https://apps.apple.com/gb/app/volyume/id6777083702';
+      var FINISHED = ['ended', 'closed', 'cancelled'];
+      var FINISHED_LINE = 'This challenge has finished. Thank you to everyone who took part.';
       var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
       function $(id) { return document.getElementById(id); }
@@ -178,6 +183,15 @@
           $('terms').setAttribute('href', c.terms_url);
         } else {
           $('terms').parentNode.style.display = 'none';
+        }
+        // Over (ended, closed or cancelled): a calm word in place of the
+        // prizes, the scoring table, the free-for-life offer and the way in.
+        // The store link stays, without the challenge referrer.
+        if (FINISHED.indexOf(c.status) !== -1) {
+          $('finished').textContent = FINISHED_LINE;
+          $('finished').style.display = 'block';
+          ['prizes', 'scoring', 'free', 'open', 'again'].forEach(function (id) { $(id).style.display = 'none'; });
+          $('store').setAttribute('href', /iPad|iPhone|iPod/i.test(navigator.userAgent) ? APPLE : PLAY);
         }
         $('loading').style.display = 'none';
         $('content').style.display = 'block';

@@ -7,11 +7,16 @@
  *  2. Coaching not set up: the CoachingSetupCard replaces the three coaching
  *     rows and says coaching adds up to 20 points.
  *  3. Withheld (SPEC 3.3): no food or weigh-in row, no coaching prompt, no
- *     board and no hint of why, while the rest renders as normal.
+ *     board and no hint of why, while the rest renders as normal. Withheld
+ *     when the server says so OR the device's own gate (calm mode or an open
+ *     ED flag, via usePhotoSuppression, fail closed) does: the device alone
+ *     hides the rows, the prompt and the board even when the server sent
+ *     `withheld: false` and a full board.
  *  4. The board: the top 10 rows, the "You" marker, the counts line.
  *  5. Closed: the final score, the draw you finished in and the winners.
  *  6. Leave confirms through appAlert, calls withdraw, and goes back.
  *  7. Source guard: the screen never names the food or weigh-in detail values.
+ *  8. The terms row opens terms_url exactly as given and is not shown without one.
  */
 import fs from 'fs';
 import path from 'path';
@@ -27,6 +32,8 @@ jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 const mockToastShow = jest.fn();
 const mockAppAlert = jest.fn();
+let mockSuppressed = false;
+jest.mock('../../hooks/usePhotoSuppression', () => ({ __esModule: true, default: () => mockSuppressed }));
 jest.mock('../../components/AppAlert', () => ({ appAlert: (...a) => mockAppAlert(...a) }));
 jest.mock('../../hooks/useCoachingSetUp', () => ({
   __esModule: true,
@@ -56,9 +63,9 @@ import {
 import ChallengeScreen from '../ChallengeScreen';
 
 const CHALLENGE = {
-  id: 'c1', code: 'volt-nov', title: 'Volt Gym November', gym_name: 'Volt Gym', status: 'active',
+  id: 'c1', code: 'volt-nov-3f9a1c2e', title: 'Volt Gym November', gym_name: 'Volt Gym', status: 'active',
   starts_on: '2026-11-01', ends_on: '2026-11-30', days_left: 12, main_threshold: 70, second_threshold: 50,
-  terms_url: 'https://volyume.app/c/volt-nov/terms', total: 62,
+  terms_url: 'https://volyume.app/challenge-terms/?c=volt-nov-3f9a1c2e', total: 62,
 };
 
 function scoreRow(over = {}) {
@@ -113,7 +120,10 @@ async function mount({
   return { tree, navigation, text: () => texts(tree.toJSON()) };
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockSuppressed = false;
+});
 
 test('shows the score, the draw and the gap, and a row per part with its detail', async () => {
   const { text } = await mount();
@@ -167,6 +177,44 @@ test('a withheld caller sees no food or weigh-in row, no coaching prompt and no 
     expect(out).toContain('9 of 12 training days');
     expect(out).toContain(coachingSetUp ? 'Weekly check-in' : 'Train to your plan');
   }
+});
+
+test('the device gate alone hides the food and weigh-in rows, the coaching prompt and the board, even when the server sent withheld: false and a board', async () => {
+  mockSuppressed = true;
+  for (const coachingSetUp of [true, false]) {
+    const { tree, text } = await mount({
+      score: scoreRow({ withheld: false }), board: { ...BOARD, status: 'closed', winners: [{ name: 'Sam K', tier: 'main' }] },
+      coachingSetUp, challenge: { ...CHALLENGE, status: 'closed' },
+    });
+    const out = text();
+    expect(out).not.toMatch(/food/i);
+    expect(out).not.toMatch(/weigh/i);
+    expect(out).not.toContain('7 of 12 days logged');
+    expect(out).not.toContain('Top 10');
+    expect(out).not.toContain('Member 1');
+    expect(out).not.toContain('Winners');
+    expect(out).not.toContain('Sam K');
+    expect(out).not.toContain('have reached 70 points');
+    expect(tree.root.findAll((n) => n.props?.testID === 'coaching-setup-card').length).toBe(0);
+    expect(out).toContain('9 of 12 training days');
+    expect(out).toContain(coachingSetUp ? 'Weekly check-in' : 'Train to your plan');
+  }
+});
+
+test('the server withholding alone still hides everything, when the device says clear and a board arrives', async () => {
+  const { tree, text } = await mount({ score: scoreRow({ withheld: true }), board: BOARD, coachingSetUp: true });
+  const out = text();
+  expect(out).not.toMatch(/food/i);
+  expect(out).not.toContain('Top 10');
+  expect(tree.root.findAll((n) => n.props?.testID === 'coaching-setup-card').length).toBe(0);
+});
+
+test('with both gates clear the food row, the coaching card and the board all show', async () => {
+  const withCoaching = await mount();
+  expect(withCoaching.text()).toContain('Food logging');
+  expect(withCoaching.text()).toContain('Top 10');
+  const withoutCoaching = await mount({ coachingSetUp: false });
+  expect(withoutCoaching.tree.root.findAll((n) => n.props?.testID === 'coaching-setup-card').length).toBeGreaterThan(0);
 });
 
 test('the board lists ten rows, marks you and prints the counts', async () => {
@@ -231,12 +279,33 @@ test('a failed load is an error state with a retry, not a crash', async () => {
   expect(texts(tree.toJSON())).toContain('Could not load the challenge');
 });
 
+test('the terms row opens the URL exactly as given, and is not shown without one', async () => {
+  const { Linking } = require('react-native');
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  const { tree } = await mount();
+  const row = tree.root.findAll((n) => n.props?.title === 'Terms and prizes' && n.props.onPress)[0];
+  await act(async () => { row.props.onPress(); });
+  expect(open).toHaveBeenCalledWith('https://volyume.app/challenge-terms/?c=volt-nov-3f9a1c2e');
+
+  for (const terms_url of [undefined, null, '']) {
+    const m = await mount({ challenge: { ...CHALLENGE, terms_url } });
+    expect(m.text()).not.toContain('Terms and prizes');
+  }
+  open.mockRestore();
+});
+
 test('source guard: the screen never reads the food or weigh-in detail values', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'ChallengeScreen.js'), 'utf8');
   expect(src).not.toMatch(/food_days|food_cap|weighin_weeks/);
   const display = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'challenges', 'display.js'), 'utf8');
   // The only readers sit in the per-part formatter, reached through partRows,
   // which drops both parts for any caller whose withheld flag is not a clear false.
-  expect(display).toMatch(/const withheld = score\.withheld !== false/);
+  expect(display).toMatch(/const withheld = isWithheld\(score, deviceWithheld\)/);
   expect(display).toMatch(/withheld \? \['checkin'\] : COACHING_KEYS/);
+  // Withheld means the server's answer OR the device's gate; anything but a clear false on either counts.
+  expect(display).toMatch(/return !score \|\| score\.withheld !== false \|\| deviceWithheld !== false;/);
+  // The screen reads the device's gate through the shared hook and shows the board only when not withheld.
+  expect(src).toMatch(/import usePhotoSuppression from '\.\.\/hooks\/usePhotoSuppression';/);
+  expect(src).toMatch(/const shownBoard = isWithheld\(score, deviceWithheld\) \? null : board;/);
+  expect(src).not.toMatch(/\bboard\.(top|me|counts|winners)\b/);
 });

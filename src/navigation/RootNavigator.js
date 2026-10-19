@@ -994,10 +994,12 @@ export function rewriteLegacyCommunityPath(path) {
 // sign-in cannot resolve (no Community tab is mounted), so the code is held
 // until sign-in and the Article 9 gate are done and the join screen opens.
 const CHALLENGE_PATH = /^\/?c\/([^/?#]+)/i;
+// The query form the website's 404 forward produces: /c/?code=<code>.
+const CHALLENGE_QUERY_PATH = /^\/?c\/?\?(?:[^#]*&)?code=([^&#]+)/i;
 
 export function stashChallengePath(path) {
   if (typeof path !== 'string') return null;
-  const match = CHALLENGE_PATH.exec(path);
+  const match = CHALLENGE_PATH.exec(path) || CHALLENGE_QUERY_PATH.exec(path);
   if (!match) return null;
   let code = match[1];
   try { code = decodeURIComponent(code); } catch (_) { return null; }

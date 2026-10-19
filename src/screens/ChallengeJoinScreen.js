@@ -10,12 +10,13 @@ import Card from '../components/Card';
 import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { logError } from '../lib/errorLog';
 import { lookupChallenge, joinChallenge } from '../lib/challenges/api';
 import {
-  CHALLENGE_CONSENT_TEXT, CHALLENGE_CONSENT_VERSION, CORE_SCORING, COACHING_SCORING,
-  FREE_FOR_LIFE_JOIN_LINE,
+  CHALLENGE_CONSENT_TEXT, CHALLENGE_CONSENT_VERSION, CHALLENGE_FINISHED_LINE, FREE_FOR_LIFE_JOIN_LINE,
 } from '../lib/challenges/copy';
+import { isChallengeFinished, joinScoring, termsLink } from '../lib/challenges/display';
 import {
   normaliseChallengeCode, peekPendingChallenge, clearPendingChallenge, setChallengeActiveFlag,
 } from '../lib/challenges/pending';
@@ -25,7 +26,9 @@ import { setGyms } from '../lib/gyms';
 
 // Gym challenge SPEC sections 2 (step 6) and 5. Opens from a challenge link or
 // a pending code, strictly AFTER the Article 9 consent gate. Nothing here
-// reads what anyone ate or weighs.
+// reads what anyone ate or weighs. On the device's own wellbeing gate (calm
+// mode or an open ED flag, fail closed) the scoring table leaves out the food
+// and weigh-in rows and says nothing that invites either.
 
 const NAME_MAX = 30;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -48,6 +51,9 @@ export default function ChallengeJoinScreen({ navigation, route }) {
   const userId = useAppStore((s) => s.user?.id);
   const firstName = useAppStore((s) => s.userProfile?.firstName);
   const busy = useRef(false);
+  // The device's own gate: true (withheld) until it has confirmed calm mode is
+  // off and no ED flag is open.
+  const deviceWithheld = usePhotoSuppression(userId);
 
   const paramCode = normaliseChallengeCode(route?.params?.code);
   const [code, setCode] = useState(paramCode);
@@ -95,10 +101,25 @@ export default function ChallengeJoinScreen({ navigation, route }) {
 
   useEffect(() => { if (code) load(code); }, [code, load]);
 
-  const continueOn = useCallback(() => {
-    if (inOnboarding) navigation.replace('StartChoice');
-    else if (navigation.canGoBack?.()) navigation.goBack();
-  }, [inOnboarding, navigation]);
+  // True when this stack has a screen beneath this one. `navigation.canGoBack()`
+  // alone is not enough: it also counts the parent tab navigator, so after a
+  // link opens the Community tab for the first time it still says yes and
+  // going back lands on the first tab, not where the person was heading.
+  const canPop = useCallback(() => {
+    const routes = navigation?.getState?.()?.routes;
+    if (Array.isArray(routes)) return routes.length > 1;
+    return !!navigation?.canGoBack?.();
+  }, [navigation]);
+
+  // Onboarding goes on to StartChoice. Elsewhere the person goes back, or, with
+  // nothing beneath (a link opened this screen first), on to the challenge they
+  // joined, or the Community hub when there is none.
+  const continueOn = useCallback((challengeId) => {
+    if (inOnboarding) { navigation.replace('StartChoice'); return; }
+    if (canPop()) { navigation.goBack(); return; }
+    if (challengeId) { navigation.replace('Challenge', { id: challengeId }); return; }
+    if (navigation?.getState?.()?.routeNames?.includes('Community')) navigation.replace('Community');
+  }, [inOnboarding, navigation, canPop]);
 
   async function notNow() {
     await clearPendingChallenge();
@@ -114,6 +135,7 @@ export default function ChallengeJoinScreen({ navigation, route }) {
     if (!canJoin || busy.current) return;
     busy.current = true;
     setJoining(true);
+    let joined = false;
     try {
       const planned = await readPlannedPerWeek(userId);
       await joinChallenge({
@@ -124,40 +146,70 @@ export default function ChallengeJoinScreen({ navigation, route }) {
         consentVersion: CHALLENGE_CONSENT_VERSION,
         adult: true,
       });
-      await setChallengeActiveFlag();
+      joined = true;
+      await setChallengeActiveFlag(userId);
       await clearPendingChallenge();
       // A person with a Community profile and no gym yet gets this gym. Best
       // effort: the join itself has already worked.
-      try {
-        if (profileExists && !me?.profile?.gym_id && challenge.gym_id) {
-          await setGyms(challenge.gym_id);
-        }
-      } catch (e) {
-        logError('ChallengeJoinScreen.setGym', e);
-      }
+      await setPrimaryGymIfNone();
+      // If the screen stays up, it must not offer Join a second time.
+      setChallenge((cur) => (cur ? { ...cur, joined: true, withdrawn: false } : cur));
       toast.show("You're in.", { variant: 'success' });
-      continueOn();
     } catch (e) {
-      logError('ChallengeJoinScreen.join', e);
-      toast.show(
-        e?.code === 'network'
-          ? 'No connection just now. Try again in a moment.'
-          : 'That did not go through. Try again in a moment.',
-        { variant: 'error' },
-      );
+      if (!joined) {
+        logError('ChallengeJoinScreen.join', e);
+        toast.show(
+          e?.code === 'network'
+            ? 'No connection just now. Try again in a moment.'
+            : 'That did not go through. Try again in a moment.',
+          { variant: 'error' },
+        );
+      } else {
+        logError('ChallengeJoinScreen.afterJoin', e);
+      }
+    } finally {
       busy.current = false;
       setJoining(false);
+    }
+    if (joined) {
+      try {
+        continueOn(challenge.id);
+      } catch (e) {
+        // The join worked; the screen now says so and offers the challenge.
+        logError('ChallengeJoinScreen.continue', e);
+      }
+    }
+  }
+
+  // Sets the challenge's gym as the primary gym only for a person with a
+  // Community profile and no gym yet, and passes their other gyms through
+  // (`setGyms` replaces the whole list). Reads the profile fresh so a stale
+  // cache can never overwrite a gym set elsewhere; any doubt writes nothing.
+  async function setPrimaryGymIfNone() {
+    try {
+      if (!challenge.gym_id) return;
+      const { me: fresh } = await loadMe({ force: true, userId });
+      if (!hasProfile(fresh) || fresh?.profile?.gym_id) return;
+      const current = fresh.profile.other_gym_ids;
+      const others = (Array.isArray(current) ? current : [])
+        .filter((id) => typeof id === 'string' && id !== challenge.gym_id);
+      await setGyms(challenge.gym_id, others);
+    } catch (e) {
+      logError('ChallengeJoinScreen.setGym', e);
     }
   }
 
   function openChallenge() {
     if (inOnboarding) { continueOn(); return; }
-    navigation.navigate('Challenge', { id: challenge.id });
+    if (canPop()) navigation.navigate('Challenge', { id: challenge.id });
+    else navigation.replace('Challenge', { id: challenge.id });
   }
 
+  // The terms open exactly as the server gave them; with none, no button shows.
   function openTerms() {
-    if (!challenge?.terms_url) return;
-    Linking.openURL(challenge.terms_url).catch(() => {
+    const url = termsLink(challenge);
+    if (!url) return;
+    Linking.openURL(url).catch(() => {
       toast.show('Could not open the terms just now.', { variant: 'error' });
     });
   }
@@ -210,7 +262,24 @@ export default function ChallengeJoinScreen({ navigation, route }) {
     }
 
     const c = challenge;
-    if (c.joined && !c.withdrawn) {
+    const inIt = c.joined && !c.withdrawn;
+    // Over: no Join, no scoring table and no free-for-life offer, only a calm
+    // word. Someone who took part can still open the challenge to see where
+    // they finished.
+    if (isChallengeFinished(c)) {
+      return (
+        <View>
+          <Text style={[t.type.h2, primary]} accessibilityRole="header">{c.title}</Text>
+          <Text style={[t.type.body, styles.gapText, secondary]}>{CHALLENGE_FINISHED_LINE}</Text>
+          {inIt ? (
+            <Button title={inOnboarding ? 'Continue' : 'Go to the challenge'} onPress={openChallenge} style={styles.gap} />
+          ) : (
+            <Button title={inOnboarding ? 'Continue' : 'Go back'} onPress={notNow} style={styles.gap} />
+          )}
+        </View>
+      );
+    }
+    if (inIt) {
       return (
         <View>
           <Text style={[t.type.h2, primary]} accessibilityRole="header">{c.title}</Text>
@@ -220,6 +289,9 @@ export default function ChallengeJoinScreen({ navigation, route }) {
       );
     }
 
+    const scoring = joinScoring(deviceWithheld);
+    const terms = termsLink(c);
+
     return (
       <View>
         <Text style={[t.type.h1, primary]} accessibilityRole="header">{c.title}</Text>
@@ -227,6 +299,7 @@ export default function ChallengeJoinScreen({ navigation, route }) {
           {[c.gym_name, datesLine(c.starts_on, c.ends_on)].filter(Boolean).join(' · ')}
         </Text>
 
+        {c.prize_main || c.prize_second ? (
         <Card style={styles.card}>
           <Text style={[t.type.h3, primary]}>Prizes</Text>
           {c.prize_main ? (
@@ -240,25 +313,26 @@ export default function ChallengeJoinScreen({ navigation, route }) {
             </Text>
           ) : null}
         </Card>
+        ) : null}
 
         <Card style={styles.card}>
           <Text style={[t.type.h3, primary]}>How you score</Text>
-          {CORE_SCORING.map((r) => (
+          {scoring.core.map((r) => (
             <View key={r.label} style={styles.scoreRow}>
               <Text style={[t.type.body, primary]}>{r.label}</Text>
               <Text style={[t.type.body, secondary]}>{r.points}</Text>
             </View>
           ))}
-          {COACHING_SCORING.map((r) => (
+          {scoring.coaching.map((r) => (
             <View key={r.label} style={styles.scoreRow}>
               <Text style={[t.type.body, primary]}>{`${r.label} (with coaching)`}</Text>
               <Text style={[t.type.body, secondary]}>{r.points}</Text>
             </View>
           ))}
-          <Text style={[t.type.caption, styles.gapText, secondary]}>
-            Coaching adds up to 20 more points. Without it you can still reach 80.
-          </Text>
-          <Button title="Read the full terms" variant="tertiary" onPress={openTerms} style={styles.gap} />
+          <Text style={[t.type.caption, styles.gapText, secondary]}>{scoring.note}</Text>
+          {terms ? (
+            <Button title="Read the full terms" variant="tertiary" onPress={openTerms} style={styles.gap} />
+          ) : null}
         </Card>
 
         <Card style={styles.card}>

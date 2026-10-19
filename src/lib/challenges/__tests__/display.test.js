@@ -1,10 +1,13 @@
 /**
  * Gym challenge display lines: the sentences the Challenge screen, the Home
  * card and the Community entries print. Pins the withheld rule (no food or
- * weigh-in row, failing closed) and the draw and gap wording.
+ * weigh-in row, failing closed, withheld when the server OR the device's own
+ * gate says so), the join screen's scoring table, the finished statuses and
+ * the terms link, and the draw and gap wording.
  */
 import {
-  partRows, showCoachingCard, daysLeftLine, drawLines, countsLine, pointsText, scoreLine,
+  partRows, showCoachingCard, isWithheld, joinScoring, isChallengeFinished, termsLink,
+  daysLeftLine, drawLines, countsLine, pointsText, scoreLine,
 } from '../display';
 
 const score = (over = {}) => ({
@@ -22,32 +25,45 @@ test('points drop a trailing .0', () => {
   expect(pointsText(9.04)).toBe('9');
 });
 
-test('four core rows always; three coaching rows only when set up and not withheld', () => {
-  expect(partRows(score(), { coachingSetUp: true }).coaching.map((r) => r.key)).toEqual(['checkin', 'food', 'weighin']);
-  expect(partRows(score(), { coachingSetUp: false }).coaching).toEqual([]);
-  expect(partRows(score(), { coachingSetUp: true }).core).toHaveLength(4);
+test('four core rows always; three coaching rows only when set up and clear on both gates', () => {
+  const clear = { coachingSetUp: true, deviceWithheld: false };
+  expect(partRows(score(), clear).coaching.map((r) => r.key)).toEqual(['checkin', 'food', 'weighin']);
+  expect(partRows(score(), { ...clear, coachingSetUp: false }).coaching).toEqual([]);
+  expect(partRows(score(), clear).core).toHaveLength(4);
 });
 
 test('a withheld caller never gets a food or weigh-in row', () => {
-  const rows = partRows(score({ withheld: true }), { coachingSetUp: true });
+  const rows = partRows(score({ withheld: true }), { coachingSetUp: true, deviceWithheld: false });
   expect(rows.coaching.map((r) => r.key)).toEqual(['checkin']);
 });
 
-test('a missing withheld flag fails closed', () => {
+test('the device gate alone withholds, even when the server says withheld: false', () => {
+  const rows = partRows(score({ withheld: false }), { coachingSetUp: true, deviceWithheld: true });
+  expect(rows.coaching.map((r) => r.key)).toEqual(['checkin']);
+  expect(showCoachingCard(score({ withheld: false }), false, true)).toBe(false);
+  expect(isWithheld(score({ withheld: false }), true)).toBe(true);
+});
+
+test('a missing withheld flag fails closed, on either gate', () => {
   const s = score();
   delete s.withheld;
-  expect(partRows(s, { coachingSetUp: true }).coaching.map((r) => r.key)).toEqual(['checkin']);
-  expect(showCoachingCard(s, false)).toBe(false);
+  expect(partRows(s, { coachingSetUp: true, deviceWithheld: false }).coaching.map((r) => r.key)).toEqual(['checkin']);
+  expect(showCoachingCard(s, false, false)).toBe(false);
+  // The device gate unresolved (undefined) is withheld too.
+  expect(partRows(score(), { coachingSetUp: true }).coaching.map((r) => r.key)).toEqual(['checkin']);
+  expect(showCoachingCard(score(), false)).toBe(false);
+  expect(isWithheld(null, false)).toBe(true);
+  expect(isWithheld(score(), false)).toBe(false);
 });
 
 test('the coaching card is for a clear, not-set-up caller only', () => {
-  expect(showCoachingCard(score(), false)).toBe(true);
-  expect(showCoachingCard(score(), true)).toBe(false);
-  expect(showCoachingCard(score({ withheld: true }), false)).toBe(false);
+  expect(showCoachingCard(score(), false, false)).toBe(true);
+  expect(showCoachingCard(score(), true, false)).toBe(false);
+  expect(showCoachingCard(score({ withheld: true }), false, false)).toBe(false);
 });
 
 test('detail lines are plain', () => {
-  const rows = partRows(score(), { coachingSetUp: true });
+  const rows = partRows(score(), { coachingSetUp: true, deviceWithheld: false });
   const by = Object.fromEntries([...rows.core, ...rows.coaching].map((r) => [r.key, r.detail]));
   expect(by.train).toBe('6 of 12 training days');
   expect(by.week).toBe('1 of 4 weeks hit');
@@ -72,4 +88,32 @@ test('days left, counts and score lines', () => {
   expect(countsLine({ main: 0, second: 1 }, { main_threshold: 70, second_threshold: 50 }))
     .toBe('0 members have reached 70 points, and 1 has reached 50.');
   expect(scoreLine({ total: 62 })).toBe('Your score: 62 of 100');
+});
+
+test('the join screen table: food and weigh-in rows and their invitation only when the device is clear', () => {
+  const clear = joinScoring(false);
+  expect(clear.core).toHaveLength(4);
+  expect(clear.coaching.map((r) => r.label)).toEqual(['Weekly check-in', 'Food logging', 'Weekly weigh-in']);
+  expect(clear.note).toBe('Coaching adds up to 20 more points. Without it you can still reach 80.');
+  for (const gate of [true, undefined, null]) {
+    const w = joinScoring(gate);
+    expect(w.coaching.map((r) => r.label)).toEqual(['Weekly check-in']);
+    expect(w.note).toBe('Weekly check-ins with coaching add up to 10 more points.');
+    expect(w.note).not.toMatch(/food|weigh/i);
+  }
+});
+
+test('ended, closed and cancelled are finished; upcoming and active are not', () => {
+  for (const status of ['ended', 'closed', 'cancelled']) expect(isChallengeFinished({ status })).toBe(true);
+  for (const status of ['upcoming', 'active']) expect(isChallengeFinished({ status })).toBe(false);
+  expect(isChallengeFinished(null)).toBe(false);
+});
+
+test('the terms link is the server URL as given, or null when there is nothing safe to open', () => {
+  expect(termsLink({ terms_url: 'https://volyume.app/challenge-terms/?c=volt-nov-3f9a1c2e' }))
+    .toBe('https://volyume.app/challenge-terms/?c=volt-nov-3f9a1c2e');
+  expect(termsLink({ terms_url: '' })).toBeNull();
+  expect(termsLink({})).toBeNull();
+  expect(termsLink(null)).toBeNull();
+  expect(termsLink({ terms_url: 'javascript:alert(1)' })).toBeNull();
 });

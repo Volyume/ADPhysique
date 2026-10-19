@@ -62,9 +62,9 @@ export default function StartChoiceScreen({ navigation }) {
 
   useEffect(() => {
     let alive = true;
-    hasChallengeActiveFlag().then((on) => { if (alive) setInChallenge(!!on); }).catch(() => {});
+    hasChallengeActiveFlag(userId).then((on) => { if (alive) setInChallenge(!!on); }).catch(() => {});
     return () => { alive = false; };
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;

@@ -6,6 +6,8 @@
  * Safety (SPEC 3.3): `partRows` leaves the food and weigh-in rows out for a
  * withheld caller, and `detail.food_days` / `detail.weighin_weeks` (null from
  * the server in that case) are read ONLY inside the non-withheld branch.
+ * "Withheld" is decided by `isWithheld`: the server's answer OR the device's
+ * own calm-mode and ED-flag gate, whichever says so, each failing closed.
  */
 import { CORE_SCORING, COACHING_SCORING } from './copy';
 
@@ -20,6 +22,9 @@ const LABELS = {
   food: COACHING_SCORING[1].label,
   weighin: COACHING_SCORING[2].label,
 };
+
+// Statuses after which nobody can join or score any more.
+const FINISHED_STATUSES = ['ended', 'closed', 'cancelled'];
 
 const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const plural = (count, one, many) => (count === 1 ? one : many);
@@ -62,13 +67,24 @@ function row(key, score) {
 }
 
 /**
+ * Is this person withheld? True unless BOTH the server's score row says a clear
+ * `withheld: false` AND the device's own gate (`usePhotoSuppression`, calm mode
+ * or an open ED flag, itself fail closed) says a clear `false`. A missing score,
+ * a missing flag or an unresolved device read all count as withheld.
+ */
+export function isWithheld(score, deviceWithheld) {
+  return !score || score.withheld !== false || deviceWithheld !== false;
+}
+
+/**
  * The breakdown rows. `core` always; `coaching` is the "With coaching" list
  * (empty when the person has not set coaching up, when the card is shown
- * instead; food and weigh-in never appear for a withheld caller).
+ * instead; food and weigh-in never appear for a withheld caller, whichever of
+ * the server or the device says so).
  */
-export function partRows(score, { coachingSetUp }) {
+export function partRows(score, { coachingSetUp, deviceWithheld }) {
   if (!score) return { core: [], coaching: [] };
-  const withheld = score.withheld !== false; // anything but a clear false fails closed
+  const withheld = isWithheld(score, deviceWithheld);
   const core = CORE_KEYS.map((k) => row(k, score));
   let coachingKeys = [];
   if (coachingSetUp) coachingKeys = withheld ? ['checkin'] : COACHING_KEYS;
@@ -76,8 +92,35 @@ export function partRows(score, { coachingSetUp }) {
 }
 
 /** The coaching card is shown when coaching is not set up and the caller is not withheld. */
-export function showCoachingCard(score, coachingSetUp) {
-  return !!score && score.withheld === false && !coachingSetUp;
+export function showCoachingCard(score, coachingSetUp, deviceWithheld) {
+  return !!score && !isWithheld(score, deviceWithheld) && !coachingSetUp;
+}
+
+/**
+ * The scoring table the join screen prints. On the device's own gate (calm mode
+ * or an open ED flag, anything but a clear false) the food and weigh-in rows are
+ * left out and the line under the table speaks only of the weekly check-in, so
+ * nothing on the screen invites logging food or weighing in.
+ */
+export function joinScoring(deviceWithheld) {
+  const withheld = deviceWithheld !== false;
+  const checkin = COACHING_SCORING[0]; // Weekly check-in
+  const coaching = withheld ? [checkin] : COACHING_SCORING;
+  const note = withheld
+    ? `Weekly check-ins with coaching add up to ${checkin.points} more points.`
+    : 'Coaching adds up to 20 more points. Without it you can still reach 80.';
+  return { core: CORE_SCORING, coaching, note };
+}
+
+/** Ended, closed or cancelled: no joining and no scoring any more. */
+export function isChallengeFinished(c) {
+  return !!c && FINISHED_STATUSES.includes(c.status);
+}
+
+/** The terms link exactly as the server gave it, or null when there is none to open. */
+export function termsLink(c) {
+  const u = c?.terms_url;
+  return typeof u === 'string' && /^https:\/\//.test(u) ? u : null;
 }
 
 export function daysLeftLine(c) {

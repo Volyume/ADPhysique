@@ -187,11 +187,13 @@ draws have run.
 ## 5. Consent and terms
 
 Join text (Article 9 explicit consent for this purpose, versioned
-`challenge_consent_v1`): "To score you, Volyume reads your training, check-ins,
-whether you logged food and whether you weighed in during the challenge. It
-never reads what you ate or what you weigh. If you are in the top 10, your
-name and score are shown to other entrants. If you win, your name and county
-are published, and you can object. You can leave the challenge at any time." Then, as its own line: "Joining also keeps Volyume free for you for life, even if we ever introduce paid plans."
+`challenge_consent_v2` after review round 1): "To score you, the challenge
+reads your training, your check-ins and Community posts, whether you logged
+food, whether you weighed in, and whether calm mode is on, so it never asks
+you to log food or weigh in at those times. It never reads what you ate or
+what you weigh. If you are in the top 10, your name and score are shown to
+other entrants. If you win, your name and county are published, and you can
+object. You can leave the challenge at any time." Then, as its own line: "Joining also keeps Volyume free for you for life, even if we ever introduce paid plans."
 Terms page per challenge: promoter name and address, eligibility (18+, the
 gym's members), how to enter (free, no purchase), dates, prizes, how scores
 work, how winners are drawn (recorded computer draw), how and when winners

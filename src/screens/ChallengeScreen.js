@@ -11,9 +11,10 @@
  * coaching is not set up.
  *
  * Safety (SPEC 3.3, CLAUDE.md section 2): a withheld caller (open ED flag or
- * calm mode, decided by the server) gets no food or weigh-in row, no prompt
- * to log either, and no board and no word about why. Nothing here reads or
- * shows what anyone ate or weighs.
+ * calm mode, decided by the server OR by this device's own gate, whichever
+ * says so, each failing closed) gets no food or weigh-in row, no prompt to log
+ * either, and no board and no word about why. Nothing here reads or shows what
+ * anyone ate or weighs.
  *
  * Route params: { id: challengeId }.
  */
@@ -35,6 +36,7 @@ import { appAlert } from '../components/AppAlert';
 import useTheme from '../hooks/useTheme';
 import useCoachingSetUp, { openCoachingSetup } from '../hooks/useCoachingSetUp';
 import useAppStore from '../store/useAppStore';
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { spacing, radius } from '../styles/theme';
 import { logError } from '../lib/errorLog';
 import {
@@ -42,7 +44,8 @@ import {
 } from '../lib/challenges/api';
 import { readPlannedPerWeek } from '../lib/challenges/plannedPerWeek';
 import {
-  partRows, showCoachingCard, daysLeftLine, drawLines, thresholdsLine, countsLine, tierLabel, pointsText,
+  partRows, showCoachingCard, isWithheld, termsLink, daysLeftLine, drawLines, thresholdsLine, countsLine,
+  tierLabel, pointsText,
 } from '../lib/challenges/display';
 import { datesLine } from './ChallengeJoinScreen';
 
@@ -54,6 +57,9 @@ export default function ChallengeScreen({ navigation, route }) {
   const challengeId = route?.params?.id ?? null;
   const userId = useAppStore((s) => s.user?.id);
   const coachingSetUp = useCoachingSetUp();
+  // The device's own gate (calm mode or an open ED flag): true until it has
+  // confirmed neither applies. Either this or the server withholds the person.
+  const deviceWithheld = usePhotoSuppression(userId);
 
   const [challenge, setChallenge] = useState(null);
   const [score, setScore] = useState(null);
@@ -96,8 +102,9 @@ export default function ChallengeScreen({ navigation, route }) {
   useEffect(() => { load(); }, [load]);
 
   function openTerms() {
-    if (!challenge?.terms_url) return;
-    Linking.openURL(challenge.terms_url).catch(() => {
+    const url = termsLink(challenge);
+    if (!url) return;
+    Linking.openURL(url).catch(() => {
       toast.show('Could not open the terms just now.', { variant: 'error' });
     });
   }
@@ -185,13 +192,17 @@ export default function ChallengeScreen({ navigation, route }) {
     }
 
     const c = challenge;
-    const { core, coaching } = partRows(score, { coachingSetUp });
-    const coachingCard = showCoachingCard(score, coachingSetUp);
+    const { core, coaching } = partRows(score, { coachingSetUp, deviceWithheld });
+    const coachingCard = showCoachingCard(score, coachingSetUp, deviceWithheld);
     const draws = drawLines(score, c);
     const total = Number(score?.total) || 0;
-    const topRows = Array.isArray(board?.top) ? board.top : [];
-    const winners = closed && Array.isArray(board?.winners) ? board.winners : [];
-    const youOffBoard = board && !board.me?.in_top;
+    // No board, no winners and no counts for a withheld person, whatever the
+    // server sent: the device's own gate can say so when the server did not.
+    const shownBoard = isWithheld(score, deviceWithheld) ? null : board;
+    const topRows = Array.isArray(shownBoard?.top) ? shownBoard.top : [];
+    const winners = closed && Array.isArray(shownBoard?.winners) ? shownBoard.winners : [];
+    const youOffBoard = shownBoard && !shownBoard.me?.in_top;
+    const terms = termsLink(c);
 
     return (
       <View>
@@ -244,7 +255,7 @@ export default function ChallengeScreen({ navigation, route }) {
           </>
         ) : null}
 
-        {board ? (
+        {shownBoard ? (
           <>
             <BandGap />
             <Band>
@@ -267,10 +278,10 @@ export default function ChallengeScreen({ navigation, route }) {
                 <PersonRow
                   inBand
                   person={{ user_id: 'me', display_name: 'You', isYou: true }}
-                  metric={String(Number(board.me?.score) || 0)}
+                  metric={String(Number(shownBoard.me?.score) || 0)}
                 />
               ) : null}
-              <Text style={[styles.counts, t.type.bodySm, secondary]}>{countsLine(board.counts, challenge)}</Text>
+              <Text style={[styles.counts, t.type.bodySm, secondary]}>{countsLine(shownBoard.counts, challenge)}</Text>
             </Band>
           </>
         ) : null}
@@ -294,7 +305,7 @@ export default function ChallengeScreen({ navigation, route }) {
 
         <BandGap />
         <Band>
-          {c.terms_url ? (
+          {terms ? (
             <EntryRow
               icon="document-text-outline"
               title="Terms and prizes"

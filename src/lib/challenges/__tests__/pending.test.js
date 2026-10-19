@@ -3,6 +3,9 @@
  * lower-cased and validated as [a-z0-9-]{3,32} or ignored; take clears,
  * peek does not; the Play install referrer is read on Android only, once per
  * install, and only a challenge=<code> value is kept; failures never throw.
+ * A pending code belongs to whoever is signed in when it is first looked at
+ * and is dropped when a different person signs in; the active flag is kept
+ * per user.
  */
 const mockStore = {};
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -16,9 +19,18 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 const mockLogError = jest.fn();
 jest.mock('../../errorLog', () => ({ logError: (...a) => mockLogError(...a) }));
 const mockReferrer = jest.fn();
-jest.mock('expo-application', () => ({ getInstallReferrerAsync: (...a) => mockReferrer(...a) }));
+const mockInstalledAt = jest.fn(async () => new Date());
+jest.mock('expo-application', () => ({
+  getInstallReferrerAsync: (...a) => mockReferrer(...a),
+  getInstallationTimeAsync: (...a) => mockInstalledAt(...a),
+}));
 const mockRN = { Platform: { OS: 'android' } };
 jest.mock('react-native', () => mockRN);
+let mockUser = null;
+jest.mock('../../../store/useAppStore', () => ({
+  __esModule: true,
+  default: { getState: () => ({ user: mockUser }) },
+}));
 
 const pending = require('../pending');
 
@@ -27,6 +39,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   pending._resetPendingForTests();
   mockRN.Platform.OS = 'android';
+  mockUser = null;
 });
 
 test('normalise: lower-cases, trims, rejects bad shapes', () => {
@@ -76,6 +89,14 @@ test('referrer is read once per install and stores the code', async () => {
   expect(mockReferrer).toHaveBeenCalledTimes(1);
 });
 
+test('an old install never hands over its referrer code (a later account on the same phone)', async () => {
+  mockInstalledAt.mockResolvedValueOnce(new Date(Date.now() - 4 * 24 * 60 * 60 * 1000));
+  mockReferrer.mockResolvedValue('challenge=volt-nov');
+  expect(await pending.readInstallReferrerOnce()).toBeNull();
+  expect(mockReferrer).not.toHaveBeenCalled();
+  expect(await pending.peekPendingChallenge()).toBeNull();
+});
+
 test('the same launch shares one read', async () => {
   mockReferrer.mockResolvedValue('challenge=volt-nov');
   await Promise.all([pending.readInstallReferrerOnce(), pending.readInstallReferrerOnce()]);
@@ -97,8 +118,62 @@ test('a referrer failure is logged and ignored, and is not retried', async () =>
   expect(mockReferrer).toHaveBeenCalledTimes(1);
 });
 
-test('the active flag round-trips', async () => {
-  expect(await pending.hasChallengeActiveFlag()).toBe(false);
-  await pending.setChallengeActiveFlag();
-  expect(await pending.hasChallengeActiveFlag()).toBe(true);
+test('the active flag round-trips for the same user and is not shared with another', async () => {
+  expect(await pending.hasChallengeActiveFlag('u1')).toBe(false);
+  await pending.setChallengeActiveFlag('u1');
+  expect(await pending.hasChallengeActiveFlag('u1')).toBe(true);
+  expect(await pending.hasChallengeActiveFlag('u2')).toBe(false);
+  expect(Object.keys(mockStore)).toEqual([pending.CHALLENGE_ACTIVE_KEY('u1')]);
+  expect(pending.CHALLENGE_ACTIVE_KEY('u1')).toBe('@volyume_challenge_active_u1');
+});
+
+test('the active flag needs a user: with none it is never written and reads false', async () => {
+  await pending.setChallengeActiveFlag(undefined);
+  await pending.setChallengeActiveFlag(null);
+  expect(Object.keys(mockStore)).toEqual([]);
+  expect(await pending.hasChallengeActiveFlag(undefined)).toBe(false);
+});
+
+test('a code left by one user is dropped when a different user signs in, and subscribers hear it', async () => {
+  mockUser = { id: 'u1' };
+  await pending.setPendingChallenge('volt-nov');
+  expect(mockStore[pending.PENDING_OWNER_KEY]).toBe('u1');
+  expect(await pending.peekPendingChallenge()).toBe('volt-nov');
+  const seen = [];
+  pending.subscribePendingChallenge((c) => seen.push(c));
+  mockUser = { id: 'u2' };
+  expect(await pending.peekPendingChallenge()).toBeNull();
+  expect(seen).toEqual([null]);
+  expect(mockStore[pending.PENDING_CHALLENGE_KEY]).toBeUndefined();
+  expect(mockStore[pending.PENDING_OWNER_KEY]).toBeUndefined();
+});
+
+test('take by a different user gets nothing', async () => {
+  mockUser = { id: 'u1' };
+  await pending.setPendingChallenge('volt-nov');
+  mockUser = { id: 'u2' };
+  expect(await pending.takePendingChallenge()).toBeNull();
+  expect(await pending.peekPendingChallenge()).toBeNull();
+});
+
+test('a code that arrived signed out stands until someone signs in, then belongs to them', async () => {
+  await pending.setPendingChallenge('volt-nov');
+  expect(mockStore[pending.PENDING_OWNER_KEY]).toBe('');
+  // Nobody signed in yet: no verdict, the code stands.
+  expect(await pending.peekPendingChallenge()).toBe('volt-nov');
+  mockUser = { id: 'u1' };
+  expect(await pending.peekPendingChallenge()).toBe('volt-nov');
+  expect(mockStore[pending.PENDING_OWNER_KEY]).toBe('u1');
+  mockUser = { id: 'u2' };
+  expect(await pending.peekPendingChallenge()).toBeNull();
+});
+
+test('clear and take remove the owner mark with the code', async () => {
+  mockUser = { id: 'u1' };
+  await pending.setPendingChallenge('volt-nov');
+  await pending.clearPendingChallenge();
+  expect(Object.keys(mockStore)).toEqual([]);
+  await pending.setPendingChallenge('volt-nov');
+  expect(await pending.takePendingChallenge()).toBe('volt-nov');
+  expect(Object.keys(mockStore)).toEqual([]);
 });
