@@ -22,7 +22,7 @@
  *
  * Pure, no I/O, deterministic.
  */
-import { PROGRESSION, TEMPLATES, TIERS, PATTERNS, MUSCLES } from './rulebook';
+import { PROGRESSION, TEMPLATES, TIERS, PATTERNS, MUSCLES, ruleKeyOf, ARCHETYPES } from './rulebook';
 import { checkPlan } from './checker';
 import { senseCheck } from './sense';
 import { weeklyLoad, sessionMinutes } from './measure';
@@ -55,6 +55,9 @@ export function planFromFacts(facts) {
   const offer = s.kitOffer || { names: {}, patterns: {} };
   return {
     category: s.category,
+    // Founder ruling 2026-10-19: the training style, kept apart from the
+    // category; an unknown one (a newer build's) is dropped, never guessed.
+    ...(s.archetype && ARCHETYPES[s.archetype] ? { archetype: s.archetype } : {}),
     days: s.days,
     equipment: s.equipment,
     experience: s.experience,
@@ -421,7 +424,7 @@ export function swapAllowed(plan, ref, row, before = null) {
  * the engine's report.weekly, measured on the plan as it stands.
  */
 export function weeklyOf(plan) {
-  const targets = weeklyTargets(plan.category, plan.days, plan.experience, plan.focus || []);
+  const targets = weeklyTargets(ruleKeyOf(plan), plan.days, plan.experience, plan.focus || []);
   const load = weeklyLoad(plan, PEAK);
   return Object.fromEntries(Object.entries(targets).map(([m, t]) => [m, { sets: (load[m] || {}).fractional || 0, ...t }]));
 }
@@ -492,7 +495,7 @@ export function raiseOrder(plan, held = new Set()) {
   for (const m of list) {
     const app = appMuscleOf(m);
     if (app && held.has(app)) { out.notRaised.push({ muscle: m, why: 'held' }); continue; }
-    const t = tierOf(plan.category, m);
+    const t = tierOf(ruleKeyOf(plan), m);
     if (!focus.includes(m) && t !== 'P' && t !== 'S') continue;
     out.order.push(m);
   }
@@ -509,7 +512,7 @@ export function raiseOrder(plan, held = new Set()) {
 // The sessions whose template lists a muscle (a check-in opens an exercise
 // only where the plan's week trains that muscle).
 function sessionsListing(plan, m) {
-  const template = (TEMPLATES[plan.category] || {})[plan.days] || [];
+  const template = (TEMPLATES[ruleKeyOf(plan)] || {})[plan.days] || [];
   return plan.sessions.map((s, i) => ({ s, i })).filter(({ s }) => {
     const t = template.find((x) => x.key === s.key);
     return t && t.muscles.includes(m);

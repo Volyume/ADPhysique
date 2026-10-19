@@ -177,7 +177,9 @@ describe('the phone\'s keyboard is the input, with the step bar above it (D220 a
     // before the target adds a pending row (2a). 3b amended (founder report
     // 2026-10-11): leaving an edit saves it, nothing asks.
     expect(SRC).toContain("const SET_TYPE_MARKERS = Object.freeze({ warmup: 'W', dropset: 'D', myo_reps: 'M', rest_pause: 'R', amrap: 'A' });");
-    expect((SRC.match(/marker: markerForSet\(/g) || []).length).toBe(2);
+    // Founder decision 2026-10-19 (Add warm-up sets): the lined-up warm-up
+    // rows take the same marker, a third use.
+    expect((SRC.match(/marker: markerForSet\(/g) || []).length).toBe(3);
     // Re-pinned 2026-10-17: Add set adjusts the per-exercise target map
     // (Remove set's partner), kept for the session.
     expect(SRC).toContain('if (!targetComplete) { adjustTargetSets(+1); return; }');

@@ -108,7 +108,7 @@ const T = (gen, bb, cl, mp, bk, wl, fg, wp) => Object.freeze({
   bikini: bk, wellness: wl, figure: fg, womens_physique: wp,
 });
 /** Per muscle, per category: P priority, S standard, M maintenance, I indirect only. */
-export const TIERS = Object.freeze({
+const CATEGORY_TIERS = Object.freeze({
   chest: T('S', 'P', 'S', 'S', 'M', 'M', 'S', 'S'),
   lats: T('S', 'P', 'P', 'P', 'S', 'S', 'P', 'P'),
   upper_back: T('S', 'P', 'S', 'P', 'S', 'M', 'S', 'S'),
@@ -127,6 +127,74 @@ export const TIERS = Object.freeze({
   calves: T('S', 'S', 'P', 'M', 'M', 'M', 'M', 'S'),
   abs: T('S', 'S', 'S', 'S', 'M', 'M', 'S', 'S'),
 });
+
+// ── Physique archetypes (founder ruling 2026-10-19) ───────────────────────
+// A person who is not competing picks a training style. Each is the general
+// rulebook with some muscles re-tiered (never an indirect-only muscle, and
+// never above P), and it may borrow an upper-biased rotation. The research's
+// eight categories are untouched; an archetype is its own rulebook key,
+// 'general_<archetype>', so every per-category lookup reads it as one.
+// `balanced` is the general rulebook itself, exactly as before.
+//  - split 'upper' (v_taper): the men's physique rotation, one leg day a week
+//    (F4), glutes on it; legs, calves and glutes at maintenance as in men's
+//    physique, since one session cannot hold more (founder answer 1b).
+//  - split 'density' (upper_density): its own rotation, one leg day a week,
+//    chest and back twice a week from 4 days (founder answer 1b).
+//  - split 'power' (powerbuilder): the general rotation, with an Upper day
+//    in place of Shoulders & Arms at 5 days (founder answer 2).
+//  - minimal: every muscle's target is its minimum, not its normal volume.
+//  - strength: a loaded heavy compound on a main-lift pattern (squat, bench,
+//    deadlift, barbell row) takes STRENGTH_REP_RANGE for an intermediate or
+//    advanced lifter (a beginner keeps the normal range); size work around
+//    it keeps the normal ranges, and the main lifts lead (CATEGORY_ORDER).
+export const ARCHETYPES = Object.freeze({
+  balanced: Object.freeze({ tiers: Object.freeze({}) }),
+  v_taper: Object.freeze({
+    split: 'upper',
+    tiers: Object.freeze({ lats: 'P', side_delts: 'P', upper_back: 'P', quads: 'M', hamstrings: 'M', glute_max: 'M', calves: 'M' }),
+  }),
+  x_frame: Object.freeze({ tiers: Object.freeze({ lats: 'P', side_delts: 'P', quads: 'P', hamstrings: 'P' }) }),
+  upper_density: Object.freeze({
+    split: 'density',
+    tiers: Object.freeze({ chest: 'P', upper_back: 'P', lats: 'P', quads: 'M', hamstrings: 'M', glute_max: 'M', calves: 'M' }),
+  }),
+  powerbuilder: Object.freeze({
+    split: 'power',
+    strength: true,
+    tiers: Object.freeze({ quads: 'P', glute_max: 'P', chest: 'P', upper_back: 'P', side_delts: 'M', biceps: 'M', calves: 'M' }),
+  }),
+  minimalist: Object.freeze({ minimal: true, tiers: Object.freeze({}) }),
+});
+export const ARCHETYPE_KEYS = Object.freeze(Object.keys(ARCHETYPES));
+/** The rulebook key an archetype builds under ('balanced' is 'general'). */
+export const archetypeCategory = (archetype) => (archetype === 'balanced' ? 'general' : `general_${archetype}`);
+/** Every archetype rulebook key other than 'general' itself. */
+export const ARCHETYPE_CATEGORIES = Object.freeze(ARCHETYPE_KEYS.filter((a) => a !== 'balanced').map(archetypeCategory));
+/**
+ * The rulebook key a plan is judged by. A plan stores its research category
+ * ('general') and its archetype separately, so a build that predates
+ * archetypes reads a synced plan as an ordinary general plan, never an
+ * unknown key (adversarial review, round 1).
+ */
+export const ruleKeyOf = (plan) => (plan && plan.archetype ? rulebookCategory(plan.category, plan.archetype) : plan?.category);
+/** The archetype a rulebook key was built from, or null for a research category. */
+export const archetypeOfCategory = (category) => ARCHETYPE_KEYS.find((a) => a !== 'balanced' && archetypeCategory(a) === category) ?? null;
+// Reps for a loaded heavy compound under a strength archetype (09 B11's
+// strength band; the week's RIR still applies).
+export const STRENGTH_REP_RANGE = Object.freeze([3, 6]);
+/** True when a plan's heavy main lifts take STRENGTH_REP_RANGE (never a beginner's). */
+export const strengthRangeFor = (plan) => !!(plan && ARCHETYPES[plan.archetype]?.strength) && plan.experience !== 'beginner';
+// The main lifts a strength archetype loads heavy.
+export const STRENGTH_PATTERNS = Object.freeze(['squat_barbell', 'press_flat', 'hinge', 'row_barbell']);
+
+/** Per muscle, per rulebook key (the eight categories and each archetype). */
+export const TIERS = Object.freeze(Object.fromEntries(Object.entries(CATEGORY_TIERS).map(([m, byCategory]) => [m, Object.freeze({
+  ...byCategory,
+  ...Object.fromEntries(ARCHETYPE_KEYS.filter((a) => a !== 'balanced').map((a) => [
+    archetypeCategory(a),
+    byCategory.general === 'I' ? 'I' : (ARCHETYPES[a].tiers[m] || byCategory.general),
+  ])),
+})])));
 
 // ── Weekly volume, fractional sets at the peak week (09 s3) ───────────────
 // min by day count; typical and max for every day count. I: no direct work
@@ -258,7 +326,12 @@ export const regionOf = (m) => (m === 'abs' ? 'trunk' : UPPER_MUSCLES.includes(m
 // F4 (founder, D219 addendum 4): men's physique trains legs in one session a
 // week at every day count. The legs are these; calves are not among them
 // (the founder-approved week carries a calf finisher on an upper day).
-export const LEGS_ONCE = Object.freeze({ mens_physique: Object.freeze(['quads', 'hamstrings', 'glute_max', 'glute_med', 'adductors']) });
+const LEGS_ONCE_MUSCLES = Object.freeze(['quads', 'hamstrings', 'glute_max', 'glute_med', 'adductors']);
+// The upper-biased archetypes keep men's physique's one leg day.
+export const LEGS_ONCE = Object.freeze({
+  mens_physique: LEGS_ONCE_MUSCLES,
+  ...Object.fromEntries(ARCHETYPE_KEYS.filter((a) => ['upper', 'density'].includes(ARCHETYPES[a].split)).map((a) => [archetypeCategory(a), LEGS_ONCE_MUSCLES])),
+});
 export const REP_RANGES = Object.freeze({
   heavy_compound: Object.freeze([6, 10]),
   mod_compound: Object.freeze([8, 12]),
@@ -404,6 +477,7 @@ const GENERAL_TEMPLATES = Object.freeze({
   ]),
 });
 
+// (UPPER_BIASED_TEMPLATES, below the men's physique rotation it is made from.)
 const MENS_PHYSIQUE_TEMPLATES = Object.freeze({
   2: Object.freeze([
     S('upper', 'Upper', UPPER),
@@ -438,6 +512,13 @@ const MENS_PHYSIQUE_TEMPLATES = Object.freeze({
     S('legs', 'Legs & Calves', ['quads', 'hamstrings', 'calves']),
   ]),
 });
+// Founder ruling 2026-10-19: the upper-biased rotation the v_taper and
+// upper_density archetypes train on. The men's physique sessions, with the
+// glutes (indirect only in men's physique, trained in these archetypes) on
+// every session that trains the quads.
+const withGlutes = (list) => (list.includes('quads') ? [...list, ...['glute_max', 'glute_med'].filter((g) => !list.includes(g))] : list);
+const UPPER_BIASED_TEMPLATES = Object.freeze(Object.fromEntries(Object.entries(MENS_PHYSIQUE_TEMPLATES).map(([d, list]) => [d,
+  Object.freeze(list.map((x) => Object.freeze({ ...x, muscles: Object.freeze(withGlutes(x.muscles)) })))])));
 
 const BIKINI_UPPER = ['lats', 'upper_back', 'side_delts', 'rear_delts', 'chest', 'biceps', 'triceps'];
 const BIKINI_TEMPLATES = Object.freeze({
@@ -590,6 +671,31 @@ const SESSION_CORE = {
 const withCore = (templates, cores) => Object.freeze(Object.fromEntries(Object.entries(templates).map(([d, list]) => [d,
   Object.freeze(list.map((x) => Object.freeze({ ...x, core: Object.freeze((cores[x.key] || SESSION_CORE.general[x.key] || []).map((g) => Object.freeze([...g]))) })))])));
 
+// Founder answers 1b and 2 (2026-10-19). Upper-body density: one leg day
+// a week, chest and back twice a week from 4 days. Powerbuilder: the
+// general rotation (Upper/Lower at 4 days, the main lifts twice a week) with
+// an Upper day for Shoulders & Arms at 5 days.
+const DENSITY_TEMPLATES = Object.freeze({
+  2: MENS_PHYSIQUE_TEMPLATES[2].map((x) => Object.freeze({ ...x, muscles: Object.freeze(withGlutes(x.muscles)) })),
+  3: Object.freeze([S('push', 'Push', [...PUSH, 'abs']), S('pull', 'Pull', PULL), S('legs', 'Legs', LOWER)]),
+  4: Object.freeze([S('upper_a', 'Upper A', UPPER), S('legs', 'Legs', LOWER), S('upper_b', 'Upper B', UPPER), S('pull', 'Pull', PULL)]),
+  5: Object.freeze([
+    S('push_a', 'Push A', PUSH), S('pull_a', 'Pull A', PULL), S('legs', 'Legs', LOWER),
+    S('push_b', 'Push B', [...PUSH, 'abs']), S('pull_b', 'Pull B', PULL),
+  ]),
+  6: Object.freeze([
+    S('push_a', 'Push A', PUSH), S('pull_a', 'Pull A', PULL), S('upper', 'Upper', UPPER), S('legs', 'Legs', LOWER),
+    S('push_b', 'Push B', [...PUSH, 'abs']), S('pull_b', 'Pull B', PULL),
+  ]),
+});
+const POWERBUILDER_TEMPLATES = Object.freeze({ ...GENERAL_TEMPLATES, 5: BODYBUILDING_TEMPLATES[5] });
+const ARCHETYPE_SPLITS = Object.freeze({
+  upper: withCore(UPPER_BIASED_TEMPLATES, SESSION_CORE.mens_physique),
+  // The 2-day rotation reuses men's physique's Legs & Abs, so its core comes too.
+  density: withCore(DENSITY_TEMPLATES, { ...SESSION_CORE.general, legs_abs: SESSION_CORE.mens_physique.legs_abs }),
+  power: withCore(POWERBUILDER_TEMPLATES, SESSION_CORE.general),
+});
+
 /** TEMPLATES[category][days] = the rotation's sessions, in order. */
 export const TEMPLATES = Object.freeze({
   general: withCore(GENERAL_TEMPLATES, SESSION_CORE.general),
@@ -600,6 +706,10 @@ export const TEMPLATES = Object.freeze({
   wellness: withCore(WELLNESS_TEMPLATES, SESSION_CORE.wellness),
   figure: withCore(FIGURE_TEMPLATES, SESSION_CORE.figure),
   womens_physique: withCore(Object.freeze({ ...FIGURE_TEMPLATES, 3: GENERAL_TEMPLATES[3] }), SESSION_CORE.figure),
+  ...Object.fromEntries(ARCHETYPE_KEYS.filter((a) => a !== 'balanced').map((a) => [
+    archetypeCategory(a),
+    ARCHETYPE_SPLITS[ARCHETYPES[a].split] || withCore(GENERAL_TEMPLATES, SESSION_CORE.general),
+  ])),
 });
 
 // R22: when a muscle cannot reach its category minimum in the sessions its
@@ -617,9 +727,12 @@ export const SIBLING_MUSCLES = Object.freeze({
 });
 
 /** The rulebook's category for an app goal key (R15). */
-export function rulebookCategory(goal) {
-  if (CATEGORIES.includes(goal)) return goal;
-  return CATEGORY_ALIASES[goal] ?? 'general';
+export function rulebookCategory(goal, archetype = null) {
+  const category = CATEGORIES.includes(goal) ? goal : (CATEGORY_ALIASES[goal] ?? 'general');
+  // An archetype is for a person who is not competing: it shapes the general
+  // rulebook only, and a competing category ignores it.
+  if (category === 'general' && archetype != null && ARCHETYPES[archetype]) return archetypeCategory(archetype);
+  return category;
 }
 
 // ── Sources (pinned by rulebook.test.js) ──────────────────────────────────
@@ -669,5 +782,14 @@ export const EVIDENCE = Object.freeze({
   PRIORITY: 'D: 09 B8, with founder Q1 = C (register D222).',
   TEMPLATES: 'D for structure, A for frequency (Pelland 2026): 09 B7; R11 to R13 and R21 (register D222).',
   SIBLING_MUSCLES: 'D: lead ruling R22 (register D222); where a muscle may take a session it is not listed in to reach its minimum.',
-  rulebookCategory: 'D: lead ruling R15 (register D222).',
+  rulebookCategory: 'D: lead ruling R15 (register D222); A: founder ruling 2026-10-19, an archetype shapes the general rulebook only.',
+  ARCHETYPES: 'A: founder ruling 2026-10-19 (answers 1a, 2b, 3b, 4b): the five training styles and their re-tiered muscles, as approved; D: tiers per 09 B3.',
+  ARCHETYPE_KEYS: 'A: founder ruling 2026-10-19.',
+  archetypeCategory: 'A: founder ruling 2026-10-19; balanced is the general rulebook itself.',
+  ARCHETYPE_CATEGORIES: 'A: founder ruling 2026-10-19.',
+  archetypeOfCategory: 'A: founder ruling 2026-10-19.',
+  strengthRangeFor: 'A: founder answer 2 (2026-10-19); intermediate and advanced only.',
+  ruleKeyOf: 'A: founder ruling 2026-10-19; D: lead ruling, a plan stores its category and archetype apart so older builds read it safely.',
+  STRENGTH_PATTERNS: 'A: founder answer 2 (2026-10-19), powerbuilding loads the main lifts heavy; D: practitioner consensus, back squat, bench press, deadlift and barbell row as the main lifts, size work around them at normal ranges.',
+  STRENGTH_REP_RANGE: 'A: founder ruling 2026-10-19 (powerbuilder, 2b); B: Schoenfeld 2017 heavy-load band (1 to 6 reps near failure builds strength more than moderate loads); D: 09 B11 strength band, intermediate and advanced only.',
 });

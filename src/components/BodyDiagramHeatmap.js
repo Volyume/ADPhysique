@@ -452,6 +452,11 @@ export default function BodyDiagramHeatmap({
   // D214 (plan 7.4 item 2): a recovery week on the Volume heatmap draws no
   // verdict. Ignored when `recoveryByMuscle` is supplied.
   neutralVolume = false,
+  // Founder ruling 2026-10-19 (training style cards): the figure alone, no
+  // card, labels, legend or taps, spoken as `compactLabel`. The caller paints
+  // it through volumeByMuscle ({ [muscle]: { color } }).
+  compact = false,
+  compactLabel = null,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -474,7 +479,8 @@ export default function BodyDiagramHeatmap({
       ? { stroke: t.colors.textPrimary, strokeWidth: SELECTED_STROKE, strokeDasharray: undefined }
       : null),
     strokeLinejoin: 'round',
-    onPress: handle(muscleKey),
+    // A compact figure is a picture only: no taps (the card around it owns them).
+    ...(compact ? {} : { onPress: handle(muscleKey) }),
     testID: `muscle-${muscleKey}`,
   });
 
@@ -488,7 +494,7 @@ export default function BodyDiagramHeatmap({
     return (
       <G x={offsetX} y={0}>
         <Silhouette paths={silhouette} c={t.colors} />
-        {hits.map(h => (
+        {!compact && hits.map(h => (
           <Path
             key={`h${h.i}`}
             d={h.d}
@@ -509,6 +515,17 @@ export default function BodyDiagramHeatmap({
       </G>
     );
   };
+
+  if (compact) {
+    return (
+      <View style={styles.imageBox} accessible accessibilityRole="image" accessibilityLabel={compactLabel || undefined}>
+        <Svg viewBox={`0 0 ${TOTAL_WIDTH} ${FIGURE_HEIGHT}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" pointerEvents="none">
+          {renderView('front', FRONT_SILHOUETTE, FRONT_MUSCLES, FRONT_HITS, 0)}
+          {renderView('back', BACK_SILHOUETTE, BACK_MUSCLES, BACK_HITS, BACK_OFFSET_X)}
+        </Svg>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, live.container]}>

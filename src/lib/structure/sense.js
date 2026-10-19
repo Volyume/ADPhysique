@@ -15,7 +15,7 @@
  * Pure, no I/O, deterministic.
  */
 import {
-  TIERS, OPT_IN_MUSCLES, LARGE_MUSCLES, TEMPLATES, RECOVERY_HOURS, PER_SESSION, LIGHT_DOSE, PATTERNS, LEGS_ONCE,
+  TIERS, OPT_IN_MUSCLES, LARGE_MUSCLES, TEMPLATES, RECOVERY_HOURS, PER_SESSION, LIGHT_DOSE, PATTERNS, LEGS_ONCE, ruleKeyOf,
 } from './rulebook';
 import { sessionLoad, weeklyLoad, isTrained, isLightDose, setsIn, rirIn, patternOf, PEAK_WEEK } from './measure';
 import { variantOf } from './patterns';
@@ -87,7 +87,7 @@ export function senseCheck(plan) {
 
   // S1: no muscle the category trains is left without an exercise of its own.
   for (const m of Object.keys(TIERS)) {
-    const t = tierOf(plan.category, m);
+    const t = tierOf(ruleKeyOf(plan), m);
     if (t === 'I' || OPT_IN_MUSCLES.includes(m) || untrainable.has(m)) continue;
     if ((direct[m] || 0) < 2) fail('S1', `${m} has no exercise of its own this week`, { muscle: m });
   }
@@ -118,9 +118,9 @@ export function senseCheck(plan) {
 
   // S10: own sets of priority and standard muscles, at least half the minimum.
   for (const m of Object.keys(TIERS)) {
-    const t = tierOf(plan.category, m);
+    const t = tierOf(ruleKeyOf(plan), m);
     if ((t !== 'P' && t !== 'S') || OPT_IN_MUSCLES.includes(m) || untrainable.has(m)) continue;
-    const floor = Math.ceil(weeklyMin(plan.category, m, plan.days, plan.experience) / 2);
+    const floor = Math.ceil(weeklyMin(ruleKeyOf(plan), m, plan.days, plan.experience) / 2);
     if ((direct[m] || 0) < floor) fail('S10', `${m} has ${direct[m] || 0} sets of its own against a floor of ${floor}`, { muscle: m });
   }
 
@@ -148,7 +148,7 @@ export function senseCheck(plan) {
     const fr = weeklyLoad(plan, week);
     const reported = new Set((plan.focusUnmet || []).map((f) => f.muscle));
     for (const m of plan.focus) {
-      if (untrainable.has(m) || reported.has(m) || tierOf(plan.category, m) === 'I') continue;
+      if (untrainable.has(m) || reported.has(m) || tierOf(ruleKeyOf(plan), m) === 'I') continue;
       const target = (plan.focusTargets || {})[m];
       const sets = (fr[m] || {}).fractional || 0;
       if (target == null || sets < target) fail('S12', `the ${m} focus reaches ${sets} of ${target ?? 'an unrecorded target'} and the plan does not say so`, { muscle: m });
@@ -156,7 +156,7 @@ export function senseCheck(plan) {
   }
 
   // S14: the legs in one session a week where the category says so (F4).
-  const legsOnce = LEGS_ONCE[plan.category];
+  const legsOnce = LEGS_ONCE[ruleKeyOf(plan)];
   if (legsOnce) {
     const legDays = plan.sessions.filter((s) => s.exercises.some((ex) => setsIn(ex, week) > 0 && legsOnce.includes((patternOf(ex) || {}).muscle)));
     if (legDays.length > 1) fail('S14', `legs trained in ${legDays.map((s) => s.key).join(' and ')}`, { muscle: 'quads' });
@@ -173,7 +173,7 @@ export function senseCheck(plan) {
   if (q > 0 && !untrainable.has('hamstrings') && h * 2 < q) fail('S4', `${h} hamstring sets against ${q} quad sets`);
 
   // S5 to S7: each session.
-  const template = (TEMPLATES[plan.category] || {})[plan.days] || [];
+  const template = (TEMPLATES[ruleKeyOf(plan)] || {})[plan.days] || [];
   const overflow = plan.overflow || [];
   const minSets = plan.experience === 'beginner' ? 6 : 8;
   for (const s of plan.sessions) {
@@ -202,7 +202,7 @@ export function senseCheck(plan) {
       const own = {};
       for (const ex of live) { const p = patternOf(ex); if (p) own[p.muscle] = (own[p.muscle] || 0) + setsIn(ex, week); }
       for (const group of t.core || []) {
-        const trainable = group.filter((m) => tierOf(plan.category, m) !== 'I' && !untrainable.has(m) && t.muscles.includes(m));
+        const trainable = group.filter((m) => tierOf(ruleKeyOf(plan), m) !== 'I' && !untrainable.has(m) && t.muscles.includes(m));
         if (!trainable.length) continue;
         if (!trainable.some((m) => (own[m] || 0) >= 2)) {
           fail('S7', `${s.name || s.key} has no ${trainable.join(' or ')} exercise`, { session: s.key, muscle: trainable[0] });

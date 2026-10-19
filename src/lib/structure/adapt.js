@@ -17,7 +17,7 @@
  *     structureRefusal, structureFit), in the words of ./messages.js.
  */
 import {
-  PATTERNS, CREDIT_FRACTION, PROGRESSION, TIME_MODEL, LIGHT_DOSE, rulebookCategory,
+  PATTERNS, CREDIT_FRACTION, PROGRESSION, TIME_MODEL, LIGHT_DOSE, rulebookCategory, ARCHETYPES,
 } from './rulebook';
 import { checkPlan } from './checker';
 import { senseCheck } from './sense';
@@ -86,6 +86,8 @@ export function structureArgs(inputs) {
     equipment: inputs.equipment,
     experience: structureExperience(inputs.experience),
     focus: focusFromWeakPoints(inputs.weakPoints),
+    // Only a known training style is passed; the engine refuses an unknown one.
+    ...(inputs.archetype && ARCHETYPES[inputs.archetype] ? { archetype: inputs.archetype } : {}),
   };
 }
 
@@ -93,11 +95,13 @@ export function structureArgs(inputs) {
 const CATEGORY_NAMES = Object.freeze({
   general: 'General', bodybuilding: 'Bodybuilding', classic_physique: 'Classic physique', mens_physique: "Men's physique",
   bikini: 'Bikini', wellness: 'Wellness', figure: 'Figure', womens_physique: "Women's physique",
+  general_v_taper: 'V-taper', general_x_frame: 'X-frame', general_upper_density: 'Upper-body density',
+  general_powerbuilder: 'Powerbuilder', general_minimalist: 'Minimalist',
 });
 
 /** The saved plan's name: its category and day count ("Bikini, 4 days a week"). */
 export function structurePlanName(args) {
-  const category = CATEGORY_NAMES[rulebookCategory(args.goal)] || 'Your plan';
+  const category = CATEGORY_NAMES[rulebookCategory(args.goal, args.archetype)] || 'Your plan';
   return `${category}, ${args.days} days a week`;
 }
 
@@ -288,6 +292,7 @@ export function structureFacts(result, args, { routineIds, routineExerciseIds = 
     structure: {
       version: 3,
       category: plan.category,
+      ...(plan.archetype ? { archetype: plan.archetype } : {}),
       days: plan.days,
       lengthMinutes: plan.lengthMinutes,
       equipment: plan.equipment,

@@ -11,6 +11,8 @@ import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
 import Chip from '../components/Chip';
+import ArchetypePicker from '../components/ArchetypePicker';
+import { archetypeApplies, normaliseArchetype } from '../lib/trainingArchetypes';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import FieldError from '../components/FieldError';
@@ -607,6 +609,7 @@ export default function ProOnboardingScreen({ navigation }) {
   function validateStep7() {
     const errs = {};
     if (!trainingPhase) errs.phase = 'Choose what you are focused on.';
+    if (archetypeApplies(trainingGoal) && !trainingArchetype) errs.archetype = 'Choose a training style.';
     return errs;
   }
 
@@ -725,6 +728,12 @@ export default function ProOnboardingScreen({ navigation }) {
   // Defaults to 'general' (not competing). Users tap into the optional
   // "Competing in a category?" dropdown to pick a physique category.
   const [trainingGoal, setTrainingGoal] = useState('general');
+  // Founder ruling 2026-10-19: a not-competing person's training style
+  // (structure/rulebook.js ARCHETYPES). Required while the category is "Not
+  // competing" (answer 4b), nothing pre-selected; never saved for a
+  // competing category, which ignores it.
+  const [trainingArchetype, setTrainingArchetype] = useState(null);
+  const effectiveArchetype = archetypeApplies(trainingGoal) ? trainingArchetype : null;
   // Default to lean gain (lean bulk) rather than an empty greyed picker, so
   // the screen lands on the most common phase and the user changes it only if
   // they want something else.
@@ -978,6 +987,7 @@ export default function ProOnboardingScreen({ navigation }) {
       num(a.daysPerWeek, setDaysPerWeek);
       str(a.equipment, setEquipment);
       str(a.trainingGoal, setTrainingGoal);
+      if (normaliseArchetype(a.trainingArchetype)) setTrainingArchetype(a.trainingArchetype);
       str(a.trainingPhase, setTrainingPhase);
       if (Array.isArray(a.planWeakPoints)) setPlanWeakPoints(a.planWeakPoints.filter((m) => typeof m === 'string').slice(0, 3));
       str(a.proteinOverride, setProteinOverride);
@@ -1023,7 +1033,7 @@ export default function ProOnboardingScreen({ navigation }) {
       firstName, localBWUnits, bodyWeightSt, bodyWeightStLbs, bodyWeight,
       bodyFat, bfSource, localHeightUnits, sex, age, heightCm, heightFt,
       heightIn, experience, sessionLengthMinutes, daysPerWeek, equipment,
-      trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
+      trainingGoal, trainingArchetype, trainingPhase, planWeakPoints, proteinOverride,
       morningHour, checkinDay,
       gymVenue, gymChoice, communityHandle, communityDisplayName, communityJoin,
     };
@@ -1036,7 +1046,7 @@ export default function ProOnboardingScreen({ navigation }) {
     user, step, firstName, localBWUnits, bodyWeightSt, bodyWeightStLbs,
     bodyWeight, bodyFat, bfSource, localHeightUnits, sex, age, heightCm,
     heightFt, heightIn, experience, sessionLengthMinutes, daysPerWeek,
-    equipment, trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
+    equipment, trainingGoal, trainingArchetype, trainingPhase, planWeakPoints, proteinOverride,
     morningHour, checkinDay,
     gymVenue, gymChoice, communityHandle, communityDisplayName, communityJoin,
   ]);
@@ -1415,7 +1425,7 @@ export default function ProOnboardingScreen({ navigation }) {
     Keyboard.dismiss();
     const errs = validateStep7();
     if (Object.keys(errs).length) {
-      surfaceGaps(errs, ['phase'], 'group7', null, setAttempted7);
+      surfaceGaps(errs, ['phase', 'archetype'], 'group7', null, setAttempted7);
       return;
     }
     // The "aggressive cuts" goal-lock interstitial was removed from
@@ -1663,6 +1673,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // whole (home_gym for kettlebells, bodyweight for bands).
       equipment: generationEquipmentFor(equipment),
       trainingGoal,
+      trainingArchetype: effectiveArchetype,
       trainingPhase,
       planWeakPoints,
       recoveryRating,
@@ -1918,6 +1929,7 @@ export default function ProOnboardingScreen({ navigation }) {
         heightCm: safeHeightCm,
         weightKg: safeWeightKg,
         trainingGoal,
+        trainingArchetype: effectiveArchetype,
         trainingPhase,
         goalPhase,
         phaseStartedAt: Date.now(),
@@ -2076,7 +2088,7 @@ export default function ProOnboardingScreen({ navigation }) {
         // answers produce a different signature and generate as before.
         const planSignature = JSON.stringify([
           experience, daysPerWeek, sessionLengthMinutes, equipment,
-          trainingGoal, trainingPhase, planWeakPoints, recoveryRating,
+          trainingGoal, effectiveArchetype, trainingPhase, planWeakPoints, recoveryRating,
         ]);
         const reusablePlanId = priorBuild?.planId && priorBuild.planSignature === planSignature
           ? priorBuild.planId
@@ -3112,6 +3124,24 @@ export default function ProOnboardingScreen({ navigation }) {
                 />
               </View>
 
+              {/* Founder ruling 2026-10-19: a not-competing person picks a
+                  training style (required, nothing pre-selected). Each card's
+                  muscle map is filled from the rulebook's own tiers. Hidden
+                  for a competing category, which ignores it. */}
+              {archetypeApplies(trainingGoal) ? (
+                <View style={styles.section} onLayout={markY('archetype')}>
+                  <Text style={[styles.wpLabel, live.wpLabel]}>Your training style</Text>
+                  <Text style={[styles.wpHint, live.wpHint]}>
+                    How your plan shares out its work. The muscle map shows where the extra work goes. You can change it later.
+                  </Text>
+                  <ArchetypePicker
+                    value={trainingArchetype}
+                    onChange={(v) => { haptics.selection(); setTrainingArchetype(v); }}
+                    error={errors7.archetype}
+                  />
+                </View>
+              ) : null}
+
               {/* Weak points, division-scoped. The options shown are the ones
                   this division is judged on (or commonly brings up). Picking none
                   is fine, it just means a balanced plan. */}
@@ -3195,8 +3225,10 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </QuestionGroup>
 
-            {errors7.phase ? (
-              <Text style={[styles.continueHint, live.continueHint]}>Still needed: your focus.</Text>
+            {errors7.phase || errors7.archetype ? (
+              <Text style={[styles.continueHint, live.continueHint]}>
+                {`Still needed: ${[errors7.phase ? 'your focus' : null, errors7.archetype ? 'your training style' : null].filter(Boolean).join(' and ')}.`}
+              </Text>
             ) : null}
 
             <Button

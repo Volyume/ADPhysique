@@ -44,7 +44,7 @@ import {
   SESSION_LIMITS, REP_RANGES, REST_TRIM_ORDER, TIME_MODEL,
   PROGRESSION, TEMPLATES, DAY_COUNTS, OPT_IN_MUSCLES, SIBLING_MUSCLES, CREDIT_FRACTION, rulebookCategory,
   restSecondsFor, restClassFor, orderKindFor, PER_SESSION, LIGHT_DOSE, REP_RANGE_UNLOADED_COMPOUND,
-  regionOf, LEGS_ONCE,
+  regionOf, LEGS_ONCE, ARCHETYPES, archetypeOfCategory, STRENGTH_REP_RANGE, STRENGTH_PATTERNS,
 } from './rulebook';
 import { structureChoices, variantOf } from './patterns';
 import { checkPlan, weeklyMax, weeklyMin } from './checker';
@@ -86,6 +86,13 @@ const CATEGORY_ORDER = Object.freeze({
   // may overrule (round 4 audits: a flat press won the second slot on the
   // credits it brings, so men's physique chest was two presses and no fly).
   mens_physique: { chest: { main: ['press_incline', 'fly', 'press_flat'], fallback: [], strict: true } },
+  // Founder answer 2 (2026-10-19): powerbuilding leads triceps with
+  // close-grip pressing for the bench lockout (a preference, not strict).
+  // The barbell row stays the fallback it is everywhere: it spends the
+  // week's heavy-hinge budget the deadlift needs.
+  general_powerbuilder: {
+    triceps: { main: ['close_grip_press', 'pushdown', 'tri_overhead'], fallback: ['skull'] },
+  },
 });
 // Muscles that take the least fatiguing name in a category even above
 // maintenance: men's physique presses on a machine or dumbbells before a
@@ -244,9 +251,14 @@ function normaliseFocus(category, focus) {
   return { focus: seen.slice(0, FOCUS.maxPicks), ignored, dropped: seen.slice(FOCUS.maxPicks) };
 }
 
-/** Weekly targets per muscle (S2): minimum, normal volume and maximum. */
+/**
+ * Weekly targets per muscle (S2): minimum, normal volume and maximum. Under
+ * the minimalist archetype (founder ruling 2026-10-19) a muscle's normal
+ * volume is its minimum; focus picks still add on top.
+ */
 export function weeklyTargets(category, days, experience, focus) {
   const factor = EXPERIENCE[experience] ?? 1;
+  const minimal = !!ARCHETYPES[archetypeOfCategory(category)]?.minimal;
   const out = {};
   for (const m of Object.keys(TIERS)) {
     const t = tierOf(category, m);
@@ -254,7 +266,7 @@ export function weeklyTargets(category, days, experience, focus) {
     const v = VOLUME[t];
     const min = weeklyMin(category, m, days, experience);
     const max = weeklyMax(category, m, focus);
-    const typical = Math.max(min, Math.min(v.max, Math.round(v.typical * factor)));
+    const typical = minimal ? min : Math.max(min, Math.min(v.max, Math.round(v.typical * factor)));
     const target = focus.includes(m) ? Math.min(max, typical + FOCUS.addFractional) : typical;
     out[m] = { tier: t, min, typical, target, max };
   }
@@ -321,7 +333,15 @@ function kitOffer(kit) {
  * @returns {{ ok: true, plan: object, report: object } | { ok: false, refusal: object }}
  */
 function buildWith(args, strategy) {
-  const category = rulebookCategory(args.goal);
+  // An archetype the rulebook does not know is refused, never read silently
+  // as balanced (as R45 does for experience).
+  if (args.archetype != null && !ARCHETYPES[args.archetype]) {
+    return { ok: false, refusal: { reason: 'archetype_unknown', detail: `the rulebook has no training style "${args.archetype}"` } };
+  }
+  const category = rulebookCategory(args.goal, args.archetype);
+  // Founder ruling 2026-10-19 (powerbuilder): loaded heavy compounds take
+  // the strength rep range, except for a beginner.
+  const strengthReps = !!ARCHETYPES[archetypeOfCategory(category)]?.strength && args.experience !== 'beginner';
   const days = args.days;
   if (!DAY_COUNTS.includes(days)) {
     return { ok: false, refusal: { reason: 'days_out_of_range', detail: `the rulebook covers 2 to 6 days, not ${days}` } };
@@ -351,8 +371,10 @@ function buildWith(args, strategy) {
   const ownFloor = (m) => Math.ceil(targets[m].min / 2);
 
   const offer = kitOffer(kit);
+  // The plan keeps its research category and its archetype apart (ruleKeyOf).
   const plan = {
-    category, days, equipment, experience, focus: [],
+    category: rulebookCategory(args.goal), ...(category !== rulebookCategory(args.goal) ? { archetype: args.archetype } : {}),
+    days, equipment, experience, focus: [],
     lengthMinutes: args.lengthMinutes,
     untrainable: kit.untrainable.filter((m) => targets[m]),
     // S11 reads what the kit offers; set from the start so every sense
@@ -430,7 +452,8 @@ function buildWith(args, strategy) {
       kind: choice.kind,
       extraJoints: [...choice.extraJoints],
       restSec: restSecondsFor(choice.kind, pattern).default,
-      repRange: [...(choice.repRange || (choice.unloaded ? REP_RANGE_UNLOADED_COMPOUND : REP_RANGES[choice.kind]))],
+      repRange: [...(choice.repRange || (choice.unloaded ? REP_RANGE_UNLOADED_COMPOUND
+        : (strengthReps && choice.kind === 'heavy_compound' && STRENGTH_PATTERNS.includes(pattern)) ? STRENGTH_REP_RANGE : REP_RANGES[choice.kind]))],
       peak: sets,
       nextDayException: light,
       solePattern: solePattern(m),
