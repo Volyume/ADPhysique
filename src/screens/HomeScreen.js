@@ -3072,7 +3072,7 @@ export default function HomeScreen({ navigation, route }) {
             weigh-in strip itself moved up under the Community row (founder
             order 2026-09-26, see there). ── */}
         {user?.id && !coachingSetUp ? (
-          <CoachingSetupCard onPress={() => openCoachingSetup(navigation)} />
+          <CoachingSetupCard surface="home" onPress={() => openCoachingSetup(navigation)} />
         ) : null}
         {user?.id && coachingSetUp && evidencePanelItem && (
           <EvidencePanel

@@ -14,6 +14,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import ArchetypePicker from '../components/ArchetypePicker';
+import { trackNow, trackFeatureSeen } from '../lib/telemetry/growth';
 import { archetypeApplies, normaliseArchetype } from '../lib/trainingArchetypes';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
@@ -106,6 +107,11 @@ export default function PlanUpdateScreen({ navigation }) {
   })));
 
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
+  // Telemetry: the training-style cards were shown (first sighting only).
+  const archetypeCardsShown = archetypeApplies(selectedGoal);
+  useEffect(() => {
+    if (archetypeCardsShown) trackFeatureSeen('archetype_cards');
+  }, [archetypeCardsShown]);
   const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
   // Founder ruling 2026-10-19: the training style. A person who never chose
   // one has been on the balanced plan, so that is what shows as theirs.
@@ -407,7 +413,7 @@ export default function PlanUpdateScreen({ navigation }) {
     if (!proceed) { setSaving(false); return; }
     let planResult = { ok: false, error: 'not attempted' };
     try {
-      planResult = await generateAndSavePlan(user.id, updatedProfile, { keepBlock });
+      planResult = await generateAndSavePlan(user.id, updatedProfile, { keepBlock, telemetryTrigger: 'rebuild' });
     } catch (e) {
       // C1: log the real exception here, the diagnostic must survive even
       // though planResult.error below is never shown to the user.
@@ -572,7 +578,10 @@ export default function PlanUpdateScreen({ navigation }) {
             <Text style={[styles.sectionSub, live.sectionSub]}>
               How your plan shares out its work. The muscle map shows where the extra work goes.
             </Text>
-            <ArchetypePicker value={trainingArchetype} onChange={setTrainingArchetype} />
+            <ArchetypePicker
+              value={trainingArchetype}
+              onChange={(v) => { trackNow('archetype_chosen', { archetype: v, surface: 'plan_update' }); setTrainingArchetype(v); }}
+            />
           </>
         ) : null}
 

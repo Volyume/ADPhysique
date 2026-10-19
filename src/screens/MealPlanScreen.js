@@ -1180,7 +1180,7 @@ export default function MealPlanScreen({ navigation, route }) {
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Meal builder" onBack={() => navigation.goBack()} />
         <View style={{ paddingHorizontal: t.screenPadding }}>
-          <CoachingSetupCard variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
+          <CoachingSetupCard surface="meal_plan" variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
         </View>
       </SafeAreaView>
     );

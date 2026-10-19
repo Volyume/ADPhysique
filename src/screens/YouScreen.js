@@ -336,7 +336,7 @@ export default function YouScreen({ navigation }) {
         />
 
         {!coachingSetUp ? (
-          <CoachingSetupCard variant="coach" onPress={() => navigation.navigate('CoachingSetup')} />
+          <CoachingSetupCard surface="coach_home" variant="coach" onPress={() => navigation.navigate('CoachingSetup')} />
         ) : null}
 
         {/* DD113 (design-consistency-audit-2026-08-06): documented exception,

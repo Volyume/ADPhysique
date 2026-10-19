@@ -29,7 +29,7 @@ describe('FF-003: partial-plan note (behavioural)', () => {
 describe('FF-002: plan rebuild is a transaction', () => {
   test('source guard: PlanUpdate rebuilds before committing the profile and bails on failure', () => {
     // D140: the call carries the keep-block ruling; the ordering it pins is unchanged.
-    const rebuildIdx = PLAN_UPDATE.indexOf('generateAndSavePlan(user.id, updatedProfile, { keepBlock })');
+    const rebuildIdx = PLAN_UPDATE.indexOf("generateAndSavePlan(user.id, updatedProfile, { keepBlock, telemetryTrigger: 'rebuild' })");
     const saveIdx = PLAN_UPDATE.indexOf('saveLocalProfile(user.id, updatedProfile)');
     expect(rebuildIdx).toBeGreaterThan(-1);
     expect(saveIdx).toBeGreaterThan(-1);

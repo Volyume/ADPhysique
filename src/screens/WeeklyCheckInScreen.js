@@ -1619,7 +1619,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingHorizontal: t.screenPadding }}>
-          <CoachingSetupCard onPress={() => navigation.navigate('CoachingSetup')} />
+          <CoachingSetupCard surface="checkin" onPress={() => navigation.navigate('CoachingSetup')} />
         </ScrollView>
       </SafeAreaView>
     );

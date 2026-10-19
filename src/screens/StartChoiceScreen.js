@@ -10,6 +10,7 @@ import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { loadDraft } from '../lib/proOnboardingDraft';
 import { logError } from '../lib/errorLog';
+import { trackNow, trackFeatureSeen } from '../lib/telemetry/growth';
 
 // Founder brief 2026-10-19: coaching-first onboarding with an optional quick
 // start. After the Article 9 consent gate the person chooses between the full
@@ -40,10 +41,19 @@ export default function StartChoiceScreen({ navigation }) {
     return () => { cancelled = true; };
   }, [userId, navigation]);
 
+  // The choice is on screen once the draft check settles.
+  useEffect(() => {
+    if (checked) trackFeatureSeen('start_choice');
+  }, [checked]);
+
   async function quickStart(openRoute) {
     if (busy.current) return;
     busy.current = true;
     try {
+      trackNow('onboarding_path_chosen', {
+        path: 'quick_start',
+        plan_source: openRoute === 'PlanLibrary' ? 'library' : 'builder',
+      });
       const store = useAppStore.getState();
       const uid = store.user?.id;
       await store.saveLocalProfile(uid, { ...(store.userProfile || {}), coachingDeferred: true });
@@ -85,7 +95,10 @@ export default function StartChoiceScreen({ navigation }) {
           </Text>
           <Button
             title="Set up coaching"
-            onPress={() => navigation.replace('ProOnboarding')}
+            onPress={() => {
+              trackNow('onboarding_path_chosen', { path: 'coaching', plan_source: 'none' });
+              navigation.replace('ProOnboarding');
+            }}
             accessibilityLabel="Set up coaching. Recommended."
             style={styles.cta}
           />

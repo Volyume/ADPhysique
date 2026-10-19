@@ -148,7 +148,7 @@ describe('D160 (2026-09-12): the two review notes the lead had held, now built',
 
   test('N9: the funnel event carries the wizard numbering as an integer beside the step', () => {
     expect(SRC).toMatch(/const ONBOARDING_WIZARD_VERSION = 2;/);
-    expect(SRC).toContain("track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION })");
+    expect(SRC).toContain("track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION, mode: coachingMode ? 'coaching_setup' : 'full' })");
   });
 });
 

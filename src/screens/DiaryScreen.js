@@ -2527,7 +2527,7 @@ function CoachingSetupGate({ navigation, screenPadding, liveSafe }) {
     <SafeAreaView style={[styles.safe, liveSafe]} edges={['top']}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: screenPadding }]}>
         <ScreenHeader title="Nutrition" />
-        <CoachingSetupCard variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
+        <CoachingSetupCard surface="nutrition" variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
       </ScrollView>
     </SafeAreaView>
   );

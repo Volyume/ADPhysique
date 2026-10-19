@@ -37,7 +37,7 @@ describe('PlanUpdateScreen preview + confirm wiring', () => {
 
   test('the commit asks about the block in progress before it rebuilds, and aborts on a no', () => {
     const confirmIdx = source.indexOf("confirmPlanSwitchMidBlock(user.id, { mode: 'rebuild', keepBlock })");
-    const buildIdx = source.indexOf('generateAndSavePlan(user.id, updatedProfile, { keepBlock })');
+    const buildIdx = source.indexOf("generateAndSavePlan(user.id, updatedProfile, { keepBlock, telemetryTrigger: 'rebuild' })");
     expect(confirmIdx).toBeGreaterThan(-1);
     expect(buildIdx).toBeGreaterThan(-1);
     expect(confirmIdx).toBeLessThan(buildIdx);

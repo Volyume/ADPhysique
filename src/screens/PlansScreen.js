@@ -846,6 +846,7 @@ export default function PlansScreen({ navigation }) {
           ledger: seedRanges,
           allowLearnedCarry: true,
           continuityProposal: review?.programmeProposal ?? blockReview?.programmeProposal ?? null,
+          telemetryTrigger: 'rebuild',
         });
       if (!result?.ok) {
         // The refinement failed (or the user held it at the pre-flight).

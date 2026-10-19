@@ -56,7 +56,7 @@ describe('the streamlined wizard', () => {
 
   test('keep or rebuild is an explicit answer', () => {
     expect(src).toMatch(/const \[planChoice, setPlanChoice\] = useState\(null\);/);
-    expect(src).toMatch(/if \(coachingMode && !planChoice\) \{ setPlanChoiceAttempted\(true\);/);
+    expect(src).toMatch(/if \(coachingMode && !planChoice\) \{ (?:trackNow\([^)]*\); )?setPlanChoiceAttempted\(true\);/);
   });
 
   test('it never builds a plan in the save, and never completes first run', () => {

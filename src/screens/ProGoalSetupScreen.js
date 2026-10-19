@@ -22,6 +22,7 @@ import useCoachingSetUp from '../hooks/useCoachingSetUp';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import ArchetypePicker from '../components/ArchetypePicker';
+import { trackNow, trackFeatureSeen } from '../lib/telemetry/growth';
 import { archetypeApplies, normaliseArchetype } from '../lib/trainingArchetypes';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
@@ -147,6 +148,11 @@ export default function ProGoalSetupScreen({ navigation }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
+  // Telemetry: the training-style cards were shown (first sighting only).
+  const archetypeCardsShown = archetypeApplies(selectedGoal);
+  useEffect(() => {
+    if (archetypeCardsShown) trackFeatureSeen('archetype_cards');
+  }, [archetypeCardsShown]);
   // Wave A B4: the footer names the next check-in day. Same flat prefs blob
   // the check-in screen reads (checkinDay 0=Sunday, default 0); best-effort.
   const [nextCheckinLabel, setNextCheckinLabel] = useState(null);
@@ -778,7 +784,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Update goal and phase" />
         <View style={{ paddingHorizontal: t.screenPadding }}>
-          <CoachingSetupCard onPress={() => navigation.navigate('CoachingSetup')} />
+          <CoachingSetupCard surface="goal_setup" onPress={() => navigation.navigate('CoachingSetup')} />
         </View>
       </SafeAreaView>
     );
@@ -820,7 +826,10 @@ export default function ProGoalSetupScreen({ navigation }) {
             <Text style={[styles.sectionSub, live.sectionSub]}>
               How your plan shares out its work. The muscle map shows where the extra work goes.
             </Text>
-            <ArchetypePicker value={trainingArchetype} onChange={setTrainingArchetype} />
+            <ArchetypePicker
+              value={trainingArchetype}
+              onChange={(v) => { trackNow('archetype_chosen', { archetype: v, surface: 'goal_setup' }); setTrainingArchetype(v); }}
+            />
           </>
         ) : null}
 

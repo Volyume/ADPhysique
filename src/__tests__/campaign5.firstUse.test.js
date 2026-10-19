@@ -1510,7 +1510,7 @@ describe('ANALYTICS: the existing onboarding events fire once (C5-P38-05, D96)',
     // D160 (2026-09-12): `wizard` (an integer) rides beside `step`, because
     // the gym step (CR-15) moved every later step's number by one and a
     // funnel must never compare step numbers across the two wizards.
-    expect(src).toContain("track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION })");
+    expect(src).toContain("track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION, mode: coachingMode ? 'coaching_setup' : 'full' })");
     expect(src).toMatch(/const ONBOARDING_WIZARD_VERSION = 2;/);
     // Still an integer-only payload, per the Campaign 1 privacy law.
     expect(read('lib/telemetry/events.js')).toContain('onboarding_step_completed');

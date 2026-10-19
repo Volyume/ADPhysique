@@ -991,7 +991,37 @@ export function thinSessionReport(plan, blockedSlots) {
  * choose. If EVERY slot is blocked that way, the plan is not saved at all and
  * the error is 'plan_blocked_by_exclusions'.
  */
-export async function generateAndSavePlan(userId, profile, {
+export async function generateAndSavePlan(userId, profile, options = {}) {
+  const startedAt = Date.now();
+  let result;
+  try {
+    result = await generateAndSavePlanInner(userId, profile, options);
+  } catch (e) {
+    emitPlanGenerationFinished(userId, 'failed', startedAt, options);
+    throw e;
+  }
+  emitPlanGenerationFinished(userId, result?.ok ? 'ok' : (result?.error === 'structure_refused' ? 'refused' : 'failed'), startedAt, options);
+  return result;
+}
+
+// Telemetry only (growth brief 2026-10-19): fire and forget, never throws.
+// trigger: the caller names it in `options.telemetryTrigger` (onboarding,
+// rebuild, start_with_plan); anything unnamed reports 'other'.
+function emitPlanGenerationFinished(userId, outcome, startedAt, options) {
+  try {
+    // eslint-disable-next-line global-require
+    const { trackNow } = require('./telemetry/growth');
+    // eslint-disable-next-line global-require
+    const { toBucket } = require('./telemetry/schema');
+    trackNow('plan_generation_finished', {
+      outcome,
+      ms: toBucket('ms', Date.now() - startedAt),
+      trigger: options?.telemetryTrigger || 'other',
+    });
+  } catch (_) { /* telemetry never blocks a plan */ }
+}
+
+async function generateAndSavePlanInner(userId, profile, {
   ledger = null, allowLearnedCarry = true, continuityProposal = null, keepBlock = false,
 } = {}) {
   if (!userId) return { ok: false, error: 'No user' };
