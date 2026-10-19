@@ -1,4 +1,4 @@
-import { scaleMacros } from './macros';
+import { scaleMacrosAsWeighed } from './cookYield';
 
 export function buildFoodEntryPayload({ entryDate, mealSlot, foodRef, quantityG, food, weightState, note }) {
   return {
@@ -6,7 +6,10 @@ export function buildFoodEntryPayload({ entryDate, mealSlot, foodRef, quantityG,
     mealSlot,
     foodRef,
     quantityG,
-    ...scaleMacros(food, quantityG),
+    // Founder ruling 2026-10-19: grams are stored as weighed, in the
+    // entry's weight state; the macros are those of the same amount of food
+    // on its own per-100g basis (cookYield.js).
+    ...scaleMacrosAsWeighed(food, quantityG, weightState),
     // Ultimate-Audit item 12: undefined when the caller has no basis choice
     // (e.g. quick relog, no sheet shown); logFoodEntry defaults it to
     // 'as_weighed', today's behaviour.

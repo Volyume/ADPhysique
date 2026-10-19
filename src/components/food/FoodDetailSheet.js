@@ -29,7 +29,8 @@ import {
 import { parseDecimalInput } from '../../lib/parseDecimalInput';
 import { isNetworkSourced, formatLastVerified } from '../../lib/food/freshness';
 import { refetchStaleFood } from '../../lib/food/waterfall';
-import { defaultWeightStateFor } from '../../lib/food/foodRoles';
+import { hasCookToggle, nativeState, convertCookGrams, gramsOnNativeBasis } from '../../lib/food/cookYield';
+import { kitchenRound } from '../../lib/food/gramSolve';
 import { entryDateLine } from '../../lib/food/diaryDates';
 import { parseLocalDay } from '../../lib/dayKey';
 import EatenTimePicker from './EatenTimePicker';
@@ -204,9 +205,13 @@ export default function FoodDetailSheet({
   // untouched item keeps exactly today's meaning. This never changes grams or
   // macros -- see foodRoles.js defaultWeightStateFor for the founder ruling
   // this pins (store the basis, no conversion).
+  // Founder ruling 2026-10-19 supersedes that for paired foods: the choice
+  // shows only for a food with a CoFID raw/cooked pair (cookYield.js), and
+  // switching it converts the grams for the same amount of food, so the
+  // calories and macros stay the same. Every other food shows no choice.
   const curatedKey = curatedKeyOf(food);
-  const nativeWeightState = curatedKey ? defaultWeightStateFor(curatedKey) : null;
-  const showWeightChoice = nativeWeightState != null;
+  const showWeightChoice = !!curatedKey && hasCookToggle(curatedKey);
+  const nativeWeightState = showWeightChoice ? nativeState(curatedKey) : null;
   const initialWeight = (mode === 'edit' && (initialWeightState === 'raw' || initialWeightState === 'cooked'))
     ? initialWeightState
     : nativeWeightState;
@@ -234,6 +239,20 @@ export default function FoodDetailSheet({
   const parsedAmount = parseDecimalInput(amount);
   const amountValue = Number.isFinite(parsedAmount) ? parsedAmount : 0;
   const quantityG = resolveGrams(parsedAmount, unit);
+  // The same amount on the food's own per-100g basis, for every figure shown.
+  const basisG = curatedKey ? gramsOnNativeBasis(curatedKey, quantityG, weightState) : quantityG;
+  // Raw <-> cooked: on grams, the typed weight converts to the same amount of
+  // food in the new state (kitchen-rounded); on a counted unit the amount
+  // stays and is read in the new state.
+  const switchWeightState = (next) => {
+    haptics.selection();
+    if (next === weightState) return;
+    if (unitKey === 'g' && curatedKey && Number.isFinite(parsedAmount) && parsedAmount > 0) {
+      const g = convertCookGrams(curatedKey, parsedAmount, weightState, next);
+      if (g != null) setAmount(String(Math.max(1, kitchenRound(g))));
+    }
+    setWeightState(next);
+  };
   // The Stepper's bounds are servingEntry's own: never below 1 g and never
   // above MAX_ENTRY_GRAMS, expressed in the chosen unit on the 0.1 grid the
   // amount is rounded to.
@@ -392,7 +411,7 @@ export default function FoodDetailSheet({
       fibre: Number.isFinite(Number(fixedMacros.fibre)) && fixedMacros.fibre != null
         ? Math.round(Number(fixedMacros.fibre) * 10) / 10 : null,
     }
-    : macrosFor(food, quantityG);
+    : macrosFor(food, basisG);
   // D230 R8: the one line of what this amount is, replacing the four macro
   // pills. Fibre joins it when the food carries the datum (null = "no data",
   // never a fake 0) and the Display toggle is on. The spoken label says the
@@ -419,11 +438,11 @@ export default function FoodDetailSheet({
   // Extra per-food nutrients (gap #16), now inside "More about this food":
   // shown only when the food actually carries the datum and the user keeps
   // the toggle on. Display-only, not logged, not totalled, not scored.
-  const sugarG = showSugar ? scaleSugarG(food, quantityG) : null;
+  const sugarG = showSugar ? scaleSugarG(food, basisG) : null;
   // E4: sodium scales in mg (stored grams per 100g; implausible values read
   // as no data inside the scaler). D230 R8: shown as salt, sodium x 2.5, the
   // figure UK packs print; the sodium figure stays in the spoken label.
-  const sodiumMg = showSodium ? scaleSodiumMg(food, quantityG) : null;
+  const sodiumMg = showSodium ? scaleSodiumMg(food, basisG) : null;
   const saltG = sodiumMg != null ? saltGFromSodiumMg(sodiumMg) : null;
   // D230 R5: the day being logged to, when it is not today.
   const dateLine = entryDateLine(initialEntryDate);
@@ -543,11 +562,10 @@ export default function FoodDetailSheet({
               {lastVerified ? (
                 <Text style={[styles.lastVerified, live.lastVerified]}>{lastVerified}</Text>
               ) : null}
-              {/* Ultimate-Audit item 12: only shown for a curated food with a
-                  real raw/cooked distinction. Choosing an option never changes
-                  the grams or the macros -- it only records which basis this
-                  entry's grams are in (founder ruling: store the basis, no
-                  conversion). */}
+              {/* Ultimate-Audit item 12, founder ruling 2026-10-19: only shown
+                  for a curated food with a CoFID raw/cooked pair. Switching
+                  converts the grams for the same amount of food; the macros
+                  stay the same. */}
               {showWeightChoice ? (
                 <View style={styles.block}>
                   <SectionLabel>Weighed</SectionLabel>
@@ -555,7 +573,7 @@ export default function FoodDetailSheet({
                     <Chip
                       label="Raw"
                       selected={weightState === 'raw'}
-                      onPress={() => { haptics.selection(); setWeightState('raw'); }}
+                      onPress={() => switchWeightState('raw')}
                       style={styles.unitBtn}
                       labelStyle={[styles.unitBtnText, live.unitBtnText]}
                       selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
@@ -565,7 +583,7 @@ export default function FoodDetailSheet({
                     <Chip
                       label="Cooked"
                       selected={weightState === 'cooked'}
-                      onPress={() => { haptics.selection(); setWeightState('cooked'); }}
+                      onPress={() => switchWeightState('cooked')}
                       style={styles.unitBtn}
                       labelStyle={[styles.unitBtnText, live.unitBtnText]}
                       selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
@@ -592,7 +610,7 @@ export default function FoodDetailSheet({
                 </Text>
               ) : null}
               {/* Ultimate-Audit item 16 (MN-1), D22 16b primary surface. */}
-              <MicronutrientDetail food={food} quantityG={quantityG} />
+              <MicronutrientDetail food={food} quantityG={basisG} />
             </CollapsibleSection>
           </View>
           )}

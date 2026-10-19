@@ -77,12 +77,16 @@ describe('coaching-convention roles', () => {
 });
 
 describe('weight state (the dry/cooked trap)', () => {
-  test('pasta and oats are dry; rice and potato are cooked; meat is ready', () => {
+  // Founder ruling 2026-10-19 (cookYield.js): the meat and fish staples are
+  // stated per 100 g cooked, so they carry the cooked state; eggs and tinned
+  // tuna stay ready.
+  test('pasta and oats are dry; rice, potato and meat are cooked; eggs are ready', () => {
     expect(stateOf('pasta')).toBe('dry');
     expect(stateOf('oats')).toBe('dry');
     expect(stateOf('white_rice')).toBe('cooked');
     expect(stateOf('white_potato')).toBe('cooked');
-    expect(stateOf('chicken_breast')).toBe('ready');
+    expect(stateOf('chicken_breast')).toBe('cooked');
+    expect(stateOf('eggs')).toBe('ready');
   });
 });
 

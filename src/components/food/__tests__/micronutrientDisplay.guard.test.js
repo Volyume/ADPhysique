@@ -92,10 +92,12 @@ describe('MicronutrientDetail + WeeklyMicronutrientsCard — ED-safety register 
 
   test('FoodDetailSheet.js gained a minimal, clearly-separate hook for MicronutrientDetail (not an inlined rebuild)', () => {
     expect(SHEET).toMatch(/import MicronutrientDetail from '\.\/MicronutrientDetail';/);
-    expect(SHEET).toMatch(/<MicronutrientDetail food=\{food\} quantityG=\{quantityG\} \/>/);
+    expect(SHEET).toMatch(/<MicronutrientDetail food=\{food\} quantityG=\{basisG\} \/>/);
     // The render call is a single self-closing line, not a multi-line inlined
     // reimplementation of the section inside FoodDetailSheet itself.
+    // Founder ruling 2026-10-19: the grams handed over are on the food's own
+    // per-100g basis (basisG), so a raw-weighed amount reads correctly.
     const renderLine = SHEET.split(/\r?\n/).find((l) => l.includes('<MicronutrientDetail'));
-    expect(renderLine.trim()).toBe('<MicronutrientDetail food={food} quantityG={quantityG} />');
+    expect(renderLine.trim()).toBe('<MicronutrientDetail food={food} quantityG={basisG} />');
   });
 });

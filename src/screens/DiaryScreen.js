@@ -124,7 +124,7 @@ import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate, entryToPatch } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, mealSlotLabel, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
-import { scaleMacros } from '../lib/food/macros';
+import { scaleMacrosAsWeighed } from '../lib/food/cookYield';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { parseLocalDay } from '../lib/dayKey';
 import { touchTarget } from '../styles/layout';
@@ -1585,7 +1585,9 @@ export default function DiaryScreen({ navigation, route }) {
         kcal: entry.kcal, proteinG: entry.protein_g, carbsG: entry.carbs_g,
         fatG: entry.fat_g, fibreG: entry.fibre_g ?? null,
       }
-      : scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
+      // Founder ruling 2026-10-19: macros of the grams as weighed in the
+      // entry's weight state (cookYield.js).
+      : scaleMacrosAsWeighed(food, quantityG, weightState ?? entry.weight_state); // { kcal, proteinG, carbsG, fatG, fibreG }
     const written = await updateFoodEntry(entry.id, userId, {
       entryDate,
       mealSlot,
