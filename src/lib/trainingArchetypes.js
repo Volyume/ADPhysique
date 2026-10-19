@@ -5,7 +5,7 @@
  * how it is shown: its name, one plain line about the training (never about
  * a look the person will get), and which muscles its card's muscle map
  * fills, read from the rulebook's own tiers so the picture can never promise
- * what the plan does not do.
+ * what the plan does not do. Minimalist fills every trained muscle lightly.
  *
  * Pure.
  */
@@ -49,9 +49,14 @@ export function archetypeEmphasis(archetype) {
     const key = DIAGRAM_KEY[m] || m;
     if (best[key] == null || RANK[t] > RANK[best[key]]) best[key] = t;
   }
+  // Minimalist (founder 2026-10-19): every trained muscle at its minimum,
+  // so the whole map takes the light fill.
+  const minimal = !!ARCHETYPES[archetype].minimal;
   const out = {};
   for (const [key, t] of Object.entries(best)) {
-    if (t === 'P') out[key] = 'priority';
+    if (t === 'I') continue;
+    if (minimal) out[key] = 'maintenance';
+    else if (t === 'P') out[key] = 'priority';
     else if (t === 'M') out[key] = 'maintenance';
   }
   return out;
@@ -65,6 +70,7 @@ const list = (xs) => (xs.length <= 1 ? (xs[0] || '') : `${xs.slice(0, -1).join('
 
 /** The muscle map in words, for a screen reader. */
 export function archetypeEmphasisLabel(archetype) {
+  if (ARCHETYPES[archetype]?.minimal) return 'Muscle map: lighter work for every muscle.';
   const e = archetypeEmphasis(archetype);
   const priority = Object.keys(e).filter((k) => e[k] === 'priority').map((k) => WORDS[k] || k);
   const lighter = Object.keys(e).filter((k) => e[k] === 'maintenance').map((k) => WORDS[k] || k);

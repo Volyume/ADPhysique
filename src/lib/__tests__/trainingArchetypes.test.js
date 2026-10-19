@@ -33,7 +33,12 @@ describe('the cards', () => {
 
   test('the muscle map is the rulebook tiers', () => {
     expect(archetypeEmphasis('balanced')).toEqual({});
-    expect(archetypeEmphasis('minimalist')).toEqual({});
+    // Minimalist: every trained muscle takes the light fill (founder 2026-10-19).
+    const mini = archetypeEmphasis('minimalist');
+    expect(Object.values(mini).every((e) => e === 'maintenance')).toBe(true);
+    expect(mini).toMatchObject({ chest: 'maintenance', back: 'maintenance', quads: 'maintenance', glutes: 'maintenance' });
+    for (const indirect of ['front_delts', 'traps', 'forearms']) expect(mini[indirect]).toBeUndefined();
+    expect(archetypeEmphasisLabel('minimalist')).toBe('Muscle map: lighter work for every muscle.');
     expect(archetypeEmphasis('v_taper')).toMatchObject({ back: 'priority', side_delts: 'priority', quads: 'maintenance', calves: 'maintenance' });
     expect(archetypeEmphasis('x_frame')).toMatchObject({ back: 'priority', side_delts: 'priority', quads: 'priority', hamstrings: 'priority' });
     expect(archetypeEmphasis('upper_density')).toMatchObject({ chest: 'priority', back: 'priority', quads: 'maintenance' });
