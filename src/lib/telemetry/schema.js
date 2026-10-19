@@ -69,7 +69,9 @@ const ROUTE = Object.freeze({ type: 'route' });
 // A short code (lower snake/dot case): a glossary key or an experiment name.
 const CODE = Object.freeze({ type: 'code' });
 
-const SETUP_SURFACES = ['nutrition', 'meal_plan', 'targets', 'checkin', 'coach_output', 'coach_home', 'home', 'goal_setup', 'unknown'];
+const SETUP_SURFACES = ['nutrition', 'meal_plan', 'targets', 'checkin', 'coach_output', 'coach_home', 'home', 'goal_setup', 'challenge', 'unknown'];
+const CHALLENGE_SOURCES = ['link', 'gym_invite', 'code'];
+const CHALLENGE_STATUSES = ['upcoming', 'active', 'ended', 'closed'];
 const ARCHETYPES = ['balanced', 'v_taper', 'x_frame', 'upper_density', 'powerbuilder', 'minimalist'];
 const SHARE_SURFACES = ['workout', 'week', 'pr', 'clip', 'progress', 'other'];
 const AUDIENCES = ['followers', 'public', 'gym', 'external', 'none'];
@@ -139,6 +141,15 @@ export const EVENT_SCHEMAS = Object.freeze([
   // ── Plans ────────────────────────────────────────────────────────────
   ev('plan_generation_finished', 'plan', 'progression', 'A plan build finished: built, refused by the rules, or failed, and how long it took.',
     { outcome: enumOf('ok', 'refused', 'failed'), ms: bucketOf('ms'), trigger: enumOf('onboarding', 'coaching_setup', 'rebuild', 'start_with_plan', 'other') }),
+
+  // ── Gym challenge (docs/gym-challenge-2026-10-19/SPEC.md section 7) ──
+  ev('challenge_join_viewed', 'challenge', 'exposure', 'The gym challenge join screen showed a challenge.',
+    { source: enumOf(...CHALLENGE_SOURCES), status: enumOf(...CHALLENGE_STATUSES) }),
+  ev('challenge_joined', 'challenge', 'progression', 'A person joined a gym challenge.',
+    { source: enumOf(...CHALLENGE_SOURCES), coaching: BOOL }),
+  ev('challenge_viewed', 'challenge', 'retention', 'An entrant opened their gym challenge.',
+    { status: enumOf(...CHALLENGE_STATUSES), tier: enumOf('main', 'second', 'none') }),
+  ev('challenge_withdrawn', 'challenge', 'retention', 'An entrant left a gym challenge.'),
 
   // ── Check-in and coach ───────────────────────────────────────────────
   ev('checkin_completed', 'coach', 'progression', 'A weekly check-in was submitted.',

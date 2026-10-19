@@ -108,7 +108,8 @@ describe('the two small controls', () => {
   test('each carries a plain word above its value, and the line under the button says both ways', () => {
     expect(CLIP_STRINGS.countdownCaption).toBe('Countdown');
     expect(CLIP_STRINGS.lengthCaption).toBe('Length');
-    expect(CLIP_STRINGS.recordHint).toBe('Tap the button to start after a countdown, or press and hold it to record for as long as you hold.');
+    // Founder report 2026-10-19: shortened to one action per line.
+    expect(CLIP_STRINGS.recordHint).toBe('Tap to start, or press and hold to film.');
   });
 });
 
@@ -343,7 +344,8 @@ describe('the ruled words', () => {
     expect(CLIP_STRINGS.closeIdleA11y).toBe('Close camera');
     expect(CLIP_STRINGS.closeBusyA11y).toBe('Cancel recording');
     expect(CLIP_STRINGS.cancelCountdownA11y).toBe('Cancel the countdown');
-    expect(CLIP_STRINGS.countdownHint).toBe('Tap the button again to cancel.');
+    // Founder report 2026-10-19: shortened ("Tap the button again to cancel.").
+    expect(CLIP_STRINGS.countdownHint).toBe('Tap to cancel.');
     expect(CLIP_STRINGS.stopA11y).toBe('Stop recording');
   });
 

@@ -32,7 +32,11 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 jest.mock('../../lib/errorLog', () => ({ logError: (...a) => mockLogError(...a) }));
 jest.mock('../../lib/proOnboardingDraft', () => ({ loadDraft: (...a) => mockLoadDraft(...a) }));
-jest.mock('../../components/Card', () => ({ children }) => children);
+let mockInChallenge = false;
+const mockHasFlag = jest.fn(async () => mockInChallenge);
+jest.mock('../../lib/challenges/pending', () => ({ hasChallengeActiveFlag: (...a) => mockHasFlag(...a) }));
+jest.mock('../../components/BrandMark', () => ({ VolyumeIcon: () => null }));
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), error: jest.fn() }));
 jest.mock('../../components/Button', () => (props) => {
   const React = require('react');
   return React.createElement('Button', props);
@@ -42,8 +46,16 @@ const StartChoiceScreen = require('../StartChoiceScreen').default;
 
 const navigation = { replace: jest.fn() };
 
-function button(root, title) {
-  return root.findAll((n) => n.props && n.props.title === title && n.props.onPress)[0];
+function byId(root, id) {
+  return root.findAll((n) => n.props && n.props.testID === id && n.props.onPress)[0];
+}
+
+async function choose(r, key) {
+  await act(async () => { byId(r.root, `start-choice-${key}`).props.onPress(); });
+}
+
+async function cont(r) {
+  await act(async () => { await byId(r.root, 'start-choice-continue').props.onPress(); });
 }
 
 async function mount() {
@@ -67,25 +79,36 @@ beforeEach(() => {
 });
 
 describe('StartChoiceScreen', () => {
-  it('renders both paths', async () => {
+  it('offers the three ways to start, none pre-selected', async () => {
     const r = await mount();
-    expect(button(r.root, 'Set up coaching')).toBeTruthy();
-    expect(button(r.root, 'Pick a ready-made plan')).toBeTruthy();
-    expect(button(r.root, 'Build my own')).toBeTruthy();
+    ['coaching', 'library', 'builder'].forEach((k) => {
+      expect(byId(r.root, `start-choice-${k}`).props.accessibilityState).toEqual({ selected: false });
+    });
   });
 
-  it('Set up coaching replaces to ProOnboarding', async () => {
+  it('Continue with nothing chosen shows the hint and goes nowhere', async () => {
     const r = await mount();
-    button(r.root, 'Set up coaching').props.onPress();
+    await cont(r);
+    const text = r.root.findAll((n) => typeof n.props?.children === 'string').map((n) => n.props.children).join(' | ');
+    expect(text).toContain('Still needed: choose how you want to start.');
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(mockStore.completeFirstRun).not.toHaveBeenCalled();
+  });
+
+  it('coaching then Continue replaces to ProOnboarding', async () => {
+    const r = await mount();
+    await choose(r, 'coaching');
+    await cont(r);
     expect(navigation.replace).toHaveBeenCalledWith('ProOnboarding');
   });
 
   it.each([
-    ['Pick a ready-made plan', 'PlanLibrary'],
-    ['Build my own', 'ManualBuilder'],
-  ])('%s saves, sets landing and route, then completes first run', async (title, route) => {
+    ['library', 'PlanLibrary'],
+    ['builder', 'ManualBuilder'],
+  ])('%s then Continue saves, sets landing and route, then completes first run', async (key, route) => {
     const r = await mount();
-    await act(async () => { await button(r.root, title).props.onPress(); });
+    await choose(r, key);
+    await cont(r);
     expect(mockCalls).toEqual([
       ['save', 'u1', { name: 'A', coachingDeferred: true }],
       ['landing', 'PlansTab'],
@@ -96,7 +119,8 @@ describe('StartChoiceScreen', () => {
 
   it('a double tap runs once', async () => {
     const r = await mount();
-    const b = button(r.root, 'Build my own');
+    await choose(r, 'builder');
+    const b = byId(r.root, 'start-choice-continue');
     await act(async () => { await Promise.all([b.props.onPress(), b.props.onPress()]); });
     expect(mockStore.completeFirstRun).toHaveBeenCalledTimes(1);
   });
@@ -104,10 +128,22 @@ describe('StartChoiceScreen', () => {
   it('a failure logs and toasts and does not complete first run', async () => {
     mockStore.saveLocalProfile = jest.fn().mockRejectedValue(new Error('boom'));
     const r = await mount();
-    await act(async () => { await button(r.root, 'Build my own').props.onPress(); });
+    await choose(r, 'builder');
+    await cont(r);
     expect(mockLogError).toHaveBeenCalledWith('StartChoiceScreen.quickStart', expect.any(Error));
     expect(mockToastShow).toHaveBeenCalled();
     expect(mockStore.completeFirstRun).not.toHaveBeenCalled();
+  });
+
+  it('a challenge entrant reads that coaching adds points; nobody else does', async () => {
+    const descOf = (r) => byId(r.root, 'start-choice-coaching').props.accessibilityLabel;
+    mockInChallenge = false;
+    expect(descOf(await mount())).not.toContain('In the challenge');
+    mockInChallenge = true;
+    expect(descOf(await mount())).toContain('In the challenge, coaching adds up to 20 more points.');
+    // The flag is kept per person: it is read for the signed-in user only.
+    expect(mockHasFlag).toHaveBeenCalledWith('u1');
+    mockInChallenge = false;
   });
 
   it('an existing draft replaces straight to ProOnboarding', async () => {
@@ -141,5 +177,34 @@ describe('source guards', () => {
     const body = s.slice(s.indexOf('function ProOnboardingStack()'));
     expect(body.indexOf('name="StartChoice"')).toBeGreaterThan(-1);
     expect(body.indexOf('name="StartChoice"')).toBeLessThan(body.indexOf('name="ProOnboarding"'));
+  });
+});
+
+describe('matches the onboarding wizard (founder 2026-10-19: match what is used everywhere)', () => {
+  const SRC = fs.readFileSync(path.join(__dirname, '../StartChoiceScreen.js'), 'utf8');
+  const WIZ = fs.readFileSync(path.join(__dirname, '../ProOnboardingScreen.js'), 'utf8');
+  const style = (src, name) => ((src.match(new RegExp(`\\n  ${name}: (\\{[^}]*\\})`)) || [])[1] || '')
+    .replace(/\s+/g, ' ').replace(/,\s*\}/, ' }');
+
+  it('the step title is the wizard title role (h2), not h1', () => {
+    expect(SRC).toMatch(/\.\.\.t\.type\.h2, color: t\.colors\.textPrimary/);
+    expect(SRC).not.toMatch(/type\.h1/);
+    expect(WIZ).toMatch(/stepTitle: \{ \.\.\.t\.type\.h2/);
+  });
+
+  it('the option rows, badge, hint and button carry the wizard values', () => {
+    expect(style(WIZ, 'scroll')).toBe(style(SRC, 'scroll'));
+    expect(style(WIZ, 'primaryBtn')).toBe(style(SRC, 'primaryBtn'));
+    expect(SRC).toMatch(/borderRadius: radius\.md, borderWidth: 1\.5, padding: spacing\.md, minHeight: 64/);
+    expect(WIZ).toMatch(/borderWidth: 1\.5, borderColor: colors\.border, padding: spacing\.md,\s+minHeight: 64/);
+    expect(SRC).toMatch(/title="Continue"\s+trailingIcon="arrow-forward"/);
+    expect(SRC).not.toMatch(/variant="emphatic"/);
+  });
+
+  it('says coaching is free in a full sentence, nothing redundant or clipped', async () => {
+    const r = await mount();
+    const text = r.root.findAll((n) => typeof n.props?.children === 'string').map((n) => n.props.children).join(' | ');
+    expect(text).toContain('Coaching is free, like everything else in Volyume. You can change your mind later.');
+    expect(SRC).not.toMatch(/no card|card details|no trial|no subscription|never sold|sell your data|all of it/i);
   });
 });

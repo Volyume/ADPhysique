@@ -90,6 +90,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, BackHandler, Platform, AppState } from 'react-native';
 import Text from '../components/Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -110,7 +111,7 @@ import {
   CLIP_STRINGS, LEAD_IN_KEY, LENGTH_KEY, GUIDES_KEY, DEFAULT_LEAD_IN_SECONDS, DEFAULT_LENGTH_SECONDS,
   MAX_CLIP_MS, MIN_CLIP_MS, isFull, nextLeadIn, nextLength, parseLeadIn,
   parseLength, parseGuides, leadInLabel, leadInA11yLabel, lengthLabel, lengthA11yLabel, startA11yLabel,
-  guidesLabel, guidesA11yLabel,
+  guidesLabel, guidesA11yLabel, autoStopLine,
   CUES_KEY, DEFAULT_CUES, nextCues, parseCues, cuesLabel, cuesA11yLabel, cuesHaveSound, cuesHaveLight,
   MIN_FREE_BYTES, KEEP_DAYS_KEY, parseKeepDays, savedLine,
 } from '../lib/clips/rules';
@@ -157,8 +158,10 @@ const HOLD_DELAY_MS = 400;
 // is repeated until recordAsync resolves (never a fixed number of retries).
 const STOP_ASK_EVERY_MS = 300;
 
-// One of the two small controls beside the record button: a plain word above
-// its value, so nobody has to guess what a bare "3 s" or "15 s" changes.
+// One of the setting chips: a caption and its value on one dark pill, so
+// nobody has to guess what a bare "3 s" or "15 s" changes (founder report
+// 2026-10-19: grey text straight on the picture was unreadable). At least
+// 48 dp tall; at large text the caption and value wrap inside the pill.
 function ValueControl({
   caption, value, onPress, disabled, accessibilityLabel, testID, captionStyle, valueStyle,
 }) {
@@ -893,8 +896,12 @@ export default function ClipCameraScreen({ navigation, route }) {
   // cancels it; only the save greys it.
   const recordDisabled = !ready || phase === 'saving';
   const greyed = !ready || phase === 'saving';
-  const ink = greyed ? CAM.textSecondary : CAM.textPrimary;
-  const innerColour = greyed ? CAM.textSecondary : CAM.primaryFill;
+  // The ring is white and the centre the record red; both go to a dimmed white
+  // when the control is unavailable (never the grey text ink, which is banned
+  // on the picture).
+  const dimmedInk = withAlpha(CAM.textPrimary, alpha.half);
+  const ink = greyed ? dimmedInk : CAM.textPrimary;
+  const innerColour = greyed ? dimmedInk : CAM.record;
   const topOffset = insets.top + spacing.xs;
 
   // Camera access refused: a calm card with the same words the toast used,
@@ -944,6 +951,26 @@ export default function ClipCameraScreen({ navigation, route }) {
           screen, which faces the lifter then (addendum 13). */}
       {screenPulse ? <View pointerEvents="none" style={styles.screenPulse} testID="clip-camera-screen-pulse" /> : null}
 
+      {/* The legibility scrims: black at about 55% at the screen edge fading to
+          clear, over the top 18% and the bottom 30% of the picture, always on.
+          Decorative, so never touched and hidden from a screen reader. */}
+      <LinearGradient
+        colors={[CAM.scrim, CAM.scrimClear]}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.scrimTop}
+        testID="clip-camera-scrim-top"
+      />
+      <LinearGradient
+        colors={[CAM.scrimClear, CAM.scrim]}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.scrimBottom}
+        testID="clip-camera-scrim-bottom"
+      />
+
       {isRecording ? (
         <RecordingProgress
           startedAtMs={recording.startedAtMs}
@@ -951,10 +978,12 @@ export default function ClipCameraScreen({ navigation, route }) {
           reduceMotion={!!reduceMotion}
           topOffset={topOffset}
           clockStyle={live.clock}
+          recStyle={live.rec}
         />
       ) : null}
 
-      <View style={[styles.topBar, { top: topOffset }]}>
+      <View style={[styles.topStack, { top: topOffset }]}>
+      <View style={styles.topBar}>
         <Pressable
           onPress={handleClose}
           style={styles.glyph}
@@ -964,8 +993,25 @@ export default function ClipCameraScreen({ navigation, route }) {
         >
           <Ionicons name="close" size={iconSize.lg} color={CAM.textPrimary} style={styles.shadow} />
         </Pressable>
-        <View style={styles.topSpacer}>
-          <View style={styles.topControls}>
+        <View style={styles.topSpacer} />
+        <Pressable
+          onPress={handleFlip}
+          disabled={isRecording || phase === 'saving'}
+          style={[styles.glyph, (isRecording || phase === 'saving') && styles.dimmed]}
+          accessibilityRole="button"
+          accessibilityLabel={CLIP_STRINGS.flipA11y}
+          accessibilityState={{ disabled: isRecording || phase === 'saving' }}
+          testID="clip-camera-flip"
+        >
+          <Ionicons name="camera-reverse-outline" size={iconSize.lg} color={CAM.textPrimary} style={styles.shadow} />
+        </Pressable>
+      </View>
+
+      {/* The setting chips, in normal flow under the top bar so a wrapped row
+          pushes the tip down instead of colliding with it. Hidden while
+          recording (nothing can be changed then). */}
+      {!isRecording ? (
+        <View style={styles.topControls}>
             <ValueControl
               caption={CLIP_STRINGS.guidesCaption}
               value={guidesLabel(guides)}
@@ -1001,24 +1047,11 @@ export default function ClipCameraScreen({ navigation, route }) {
               />
             ) : null}
           </View>
-        </View>
-        <Pressable
-          onPress={handleFlip}
-          disabled={isRecording || phase === 'saving'}
-          style={[styles.glyph, (isRecording || phase === 'saving') && styles.dimmed]}
-          accessibilityRole="button"
-          accessibilityLabel={CLIP_STRINGS.flipA11y}
-          accessibilityState={{ disabled: isRecording || phase === 'saving' }}
-          testID="clip-camera-flip"
-        >
-          <Ionicons name="camera-reverse-outline" size={iconSize.lg} color={CAM.textPrimary} style={styles.shadow} />
-        </Pressable>
-      </View>
-
-      {/* The setup line, while the camera waits: what to line up and where
-          to stand. It goes once the countdown starts. */}
+      ) : null}
+      {/* The setup line, while the camera waits: what to line up and where to
+          stand, on its own pill and one plain line. It goes with the countdown. */}
       {idle && ready ? (
-        <View style={[styles.setupRow, { top: topOffset + GLYPH + spacing.sm }]} pointerEvents="none">
+        <View style={styles.pill} pointerEvents="none">
           <Text
             style={[styles.hint, live.hint]}
             maxFontSizeMultiplier={fontScaleCaps.chrome}
@@ -1028,23 +1061,59 @@ export default function ClipCameraScreen({ navigation, route }) {
           </Text>
         </View>
       ) : null}
+      </View>
 
       {counting && countdownN > 0 ? (
         <View style={styles.countdownWrap} pointerEvents="none">
-          <Text
-            style={[styles.countdown, live.countdown]}
-            maxFontSizeMultiplier={fontScaleCaps.numeral}
-            accessibilityLiveRegion="polite"
-            testID="clip-camera-countdown"
-          >
-            {countdownN}
-          </Text>
+          <View style={styles.countdownDisc}>
+            <Text
+              style={[styles.countdown, live.countdown]}
+              maxFontSizeMultiplier={fontScaleCaps.numeral}
+              accessibilityLiveRegion="polite"
+              testID="clip-camera-countdown"
+            >
+              {countdownN}
+            </Text>
+          </View>
+          <View style={styles.pill}>
+            <Text
+              style={[styles.hint, live.hint]}
+              maxFontSizeMultiplier={fontScaleCaps.chrome}
+              testID="clip-camera-countdown-caption"
+            >
+              {CLIP_STRINGS.getIntoPosition}
+            </Text>
+          </View>
         </View>
       ) : null}
 
       <View style={[styles.bottomBar, { bottom: insets.bottom + spacing.lg }]}>
+        {/* One action per line, on a pill above the button. */}
+        <View style={styles.pill}>
+          <Text
+            style={[styles.hint, live.hint]}
+            maxFontSizeMultiplier={fontScaleCaps.chrome}
+            testID="clip-camera-hint"
+          >
+            {phase === 'saving'
+              ? CLIP_STRINGS.savingHint
+              : isRecording
+                ? (recordMode === 'hold' ? CLIP_STRINGS.recordingHintHold : CLIP_STRINGS.recordingHintTap)
+                : (counting ? CLIP_STRINGS.countdownHint : CLIP_STRINGS.recordHint)}
+          </Text>
+          {!isRecording && !counting && phase !== 'saving' ? (
+            <Text
+              style={[styles.hintSub, live.hintSub]}
+              maxFontSizeMultiplier={fontScaleCaps.chrome}
+              testID="clip-camera-hint-sub"
+            >
+              {autoStopLine(lengthSec)}
+            </Text>
+          ) : null}
+        </View>
         <View style={styles.controlsRow}>
           <View style={[styles.slot, styles.slotStart]}>
+            {!isRecording ? (
             <ValueControl
               caption={CLIP_STRINGS.countdownCaption}
               value={leadInLabel(leadIn)}
@@ -1055,6 +1124,7 @@ export default function ClipCameraScreen({ navigation, route }) {
               captionStyle={live.caption}
               valueStyle={live.value}
             />
+            ) : null}
           </View>
           <Pressable
             onPress={handleRecordTap}
@@ -1071,6 +1141,7 @@ export default function ClipCameraScreen({ navigation, route }) {
             <View style={isRecording ? [styles.stopSquare, { backgroundColor: innerColour }] : [styles.recordDot, { backgroundColor: innerColour }]} />
           </Pressable>
           <View style={[styles.slot, styles.slotEnd]}>
+            {!isRecording ? (
             <ValueControl
               caption={CLIP_STRINGS.lengthCaption}
               value={lengthLabel(lengthSec)}
@@ -1081,17 +1152,9 @@ export default function ClipCameraScreen({ navigation, route }) {
               captionStyle={live.caption}
               valueStyle={live.value}
             />
+            ) : null}
           </View>
         </View>
-        <Text
-          style={[styles.hint, live.hint]}
-          maxFontSizeMultiplier={fontScaleCaps.chrome}
-          testID="clip-camera-hint"
-        >
-          {isRecording
-            ? (recordMode === 'hold' ? CLIP_STRINGS.recordingHintHold : CLIP_STRINGS.recordingHintTap)
-            : (counting ? CLIP_STRINGS.countdownHint : CLIP_STRINGS.recordHint)}
-        </Text>
       </View>
 
       {/* Opens INSTEAD of recording when the workout already holds three
@@ -1108,14 +1171,22 @@ export default function ClipCameraScreen({ navigation, route }) {
 }
 
 const GLYPH = touchTarget.minimum;
-// The record control: a 72 dp ring (comfortably above the 48 dp target, easy
-// to find by feel at a propped phone), a 3 dp rim that reads on any picture,
-// and a dot 20 dp smaller than the ring so the rim shows around it.
-const RECORD_SIZE = 72;
+// The record control: an 80 dp ring (above the 48 dp target and the 72 dp it
+// was, founder report 2026-10-19: easy to find by feel at a propped phone), a
+// 3 dp white rim that reads on any picture, and a record-red dot 20 dp smaller
+// than the ring that morphs to a rounded square while recording.
+const RECORD_SIZE = 80;
 const RECORD_BORDER = 3;
 const RECORD_DOT_INSET = 20;
-// The soft shadow behind white chrome keeps it readable over a bright picture:
-// 1 dp down and a 3 dp blur for the small text and glyphs.
+const STOP_SQUARE_SIZE = 32;
+// The dark disc behind the countdown numeral.
+const COUNTDOWN_DISC = 184;
+// The scrims: the top 18% and the bottom 30% of the preview.
+const SCRIM_TOP_HEIGHT = '18%';
+const SCRIM_BOTTOM_HEIGHT = '30%';
+// The soft shadow behind white chrome stays as a SECONDARY aid (the pills and
+// scrims are the primary): 1 dp down and a 3 dp blur for the small text and
+// glyphs.
 const SHADOW_OFFSET_Y = 1;
 const SHADOW_RADIUS = 3;
 // The big countdown numerals carry a larger shadow in proportion: 2 dp down,
@@ -1138,22 +1209,38 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: CAM.textPrimary,
   },
   deniedBackText: { color: CAM.textPrimary },
-  topBar: {
-    position: 'absolute',
-    left: spacing.xs,
-    right: spacing.xs,
-    flexDirection: 'row',
+  // The top stack lays out in normal flow (bar, chips, tip) so nothing can
+  // collide at large text.
+  topStack: { position: 'absolute', left: spacing.xs, right: spacing.xs, alignItems: 'center', gap: spacing.sm },
+  topBar: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center' },
+  topSpacer: { flex: 1 },
+  topControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  scrimTop: { position: 'absolute', top: 0, left: 0, right: 0, height: SCRIM_TOP_HEIGHT },
+  scrimBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, height: SCRIM_BOTTOM_HEIGHT },
+  // The dark glass pill every text group sits on.
+  pill: {
     alignItems: 'center',
+    maxWidth: '100%',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.xl,
+    backgroundColor: CAM.pill,
   },
-  topSpacer: { flex: 1, alignItems: 'center' },
-  topControls: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: spacing.md, flexWrap: 'wrap' },
   screenPulse: { ...StyleSheet.absoluteFillObject, backgroundColor: withAlpha(CAM.textPrimary, alpha.half) },
-  setupRow: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   glyph: { width: GLYPH, height: GLYPH, alignItems: 'center', justifyContent: 'center' },
   dimmed: { opacity: alpha.strong },
   shadow: SHADOW,
   countdownWrap: {
     ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  countdownDisc: {
+    width: COUNTDOWN_DISC,
+    height: COUNTDOWN_DISC,
+    borderRadius: circle(COUNTDOWN_DISC),
+    backgroundColor: CAM.disc,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1178,8 +1265,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   slot: { flex: 1 },
-  slotStart: { alignItems: 'flex-end', paddingRight: spacing.lg },
-  slotEnd: { alignItems: 'flex-start', paddingLeft: spacing.lg },
+  slotStart: { alignItems: 'flex-end', paddingRight: spacing.sm },
+  slotEnd: { alignItems: 'flex-start', paddingLeft: spacing.sm },
   recordRing: {
     width: RECORD_SIZE,
     height: RECORD_SIZE,
@@ -1189,19 +1276,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   recordDot: { width: RECORD_SIZE - RECORD_DOT_INSET, height: RECORD_SIZE - RECORD_DOT_INSET, borderRadius: circle(RECORD_SIZE - RECORD_DOT_INSET) },
-  stopSquare: { width: iconSize.lg, height: iconSize.lg, borderRadius: radius.sm },
-  valueControl: { minWidth: GLYPH, minHeight: GLYPH, alignItems: 'center', justifyContent: 'center' },
-  hint: { ...SHADOW, color: CAM.textPrimary, textAlign: 'center', paddingHorizontal: spacing.lg },
+  stopSquare: { width: STOP_SQUARE_SIZE, height: STOP_SQUARE_SIZE, borderRadius: radius.md },
+  valueControl: {
+    minWidth: GLYPH,
+    minHeight: GLYPH,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    columnGap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: CAM.pill,
+  },
+  hint: { ...SHADOW, color: CAM.textPrimary, textAlign: 'center' },
+  hintSub: { ...SHADOW, color: CAM.textPrimary, textAlign: 'center' },
 });
 
 // The type follows the live scale (Larger text); the colours are the
 // viewfinder's fixed ink, so only the type roles are mirrored here.
 function buildLiveStyles(t) {
+  // Minimum sizes on the picture (founder report 2026-10-19): captions 13,
+  // hints at body size (16, above the 15 floor), the clock 17 and bold. All
+  // white; the grey secondary ink is never used on the video.
   return {
-    clock: { ...t.type.num('label') },
+    clock: { ...t.type.w(t.type.num('title'), 'bold') },
+    rec: { ...t.type.w('label', 'bold') },
     countdown: { ...t.type.num('hero') },
-    caption: { ...t.type.caption, color: CAM.textSecondary, ...SHADOW },
-    value: { ...t.type.label, color: CAM.textPrimary, ...SHADOW },
-    hint: { ...t.type.label },
+    caption: { ...t.type.label, color: CAM.textPrimary, ...SHADOW },
+    value: { ...t.type.w('label', 'bold'), color: CAM.textPrimary, ...SHADOW },
+    hint: { ...t.type.w('bodyStrong', 'semibold') },
+    hintSub: { ...t.type.label },
   };
 }

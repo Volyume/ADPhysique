@@ -83,6 +83,18 @@ const CLIENT_RPCS = [
   'member_email_set_subscribed',
   'member_email_get_topics',
   'member_email_set_topic',
+  // Gym challenge (migrate_201): SECURITY DEFINER, pinned search_path, the
+  // caller from auth.uid() via _community_caller(), granted to
+  // `authenticated` (gym_challenge_public also to anon: facts, no person).
+  'gym_challenge_public',
+  'gym_challenge_lookup',
+  'gym_challenge_join',
+  'gym_challenge_withdraw',
+  'gym_challenge_set_target',
+  'gym_challenge_mine',
+  'gym_challenge_score',
+  'gym_challenge_board',
+  'gym_challenge_for_my_gym',
   // Community (migrate_160, SD-14). Every one is SECURITY DEFINER with
   // `search_path = public, pg_temp`, derives its user from auth.uid(), and is
   // granted to `authenticated` only; the `_community_*` helpers beneath them

@@ -56,6 +56,8 @@ import PlanRebuildNote from '../components/PlanRebuildNote';
 import PlanRebuildChoiceCard from '../components/PlanRebuildChoiceCard';
 import { ensureActivePlanRebuilt } from '../lib/planRebuild';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
+import HomeChallengeCard from '../components/HomeChallengeCard';
+import { myChallenges } from '../lib/challenges/api';
 import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
 import HomeChangeWorkoutSheet from '../components/HomeChangeWorkoutSheet';
 import BottomSheet from '../components/BottomSheet';
@@ -437,6 +439,9 @@ export default function HomeScreen({ navigation, route }) {
   // dismissed so it never flashes before the stored flag and the cached
   // profile are read; never shown to someone who already has a profile.
   const [communityIntroDismissed, setCommunityIntroDismissed] = useState(true);
+  // Gym challenge (SPEC section 2): the person's active or just-ended challenge
+  // from gym_challenge_mine, or null. Hidden until the read answers.
+  const [homeChallenge, setHomeChallenge] = useState(null);
   // Founder order 2026-09-22 item 2 x 4a: the Today live Community row.
   // Defaults hidden (never a flash of the wrong state) until the loader
   // below confirms membership from the CACHED profile and the ED/calm
@@ -604,6 +609,21 @@ export default function HomeScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // The gym challenge card: one best-effort read, never awaited by loadData so
+  // a slow connection cannot hold Home's first paint. Any failure hides it.
+  function loadHomeChallenge() {
+    if (!user?.id) { setHomeChallenge(null); return; }
+    myChallenges()
+      .then((rows) => {
+        const row = rows.find((r) => r?.status === 'active' || r?.status === 'ended') ?? null;
+        setHomeChallenge(row);
+      })
+      .catch(() => {
+        // best-effort: no card is shown when the read fails.
+        setHomeChallenge(null);
+      });
+  }
+
   async function loadData() {
     // HP-7: clear the loading spinner in a finally so a single rejected
     // loader can't leave Home spinning forever. The loaders each guard
@@ -611,6 +631,7 @@ export default function HomeScreen({ navigation, route }) {
     // throw and would otherwise skip setInitialLoading(false).
     const reqId = ++loadReqRef.current;
     const loadedForDay = todayLocalKey();
+    loadHomeChallenge();
     try {
       // D219 lane C1b (founder Q1 = A): the first open of an active plan whose facts
       // are not version 2 rebuilds it by its kind, so every loader below reads the
@@ -3104,6 +3125,16 @@ export default function HomeScreen({ navigation, route }) {
             relativeDay={lastSessionRelativeDay}
             onOpenHistory={goToWorkoutHistory}
             onRepeat={handleRepeatLastSession}
+          />
+        )}
+
+        {/* ── Gym challenge (SPEC section 2): a slim row under the last
+            session, secondary to today's training. Entrants only; the read
+            returns nothing for anyone else. ── */}
+        {!initialLoading && homeChallenge && (
+          <HomeChallengeCard
+            challenge={homeChallenge}
+            onOpen={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab', 'Challenge', { id: homeChallenge.id }); }}
           />
         )}
 

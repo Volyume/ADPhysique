@@ -318,3 +318,96 @@ describe('linking config — the conversation deep link (discovery section 10)',
     expect(config.screens.CommunityTab.screens.CommunityConversation).toBe('m');
   });
 });
+
+describe('linking config — gym challenge links (gym challenge SPEC section 2)', () => {
+  test.each([
+    'volyume://c/volt-nov',
+    'https://volyume.app/c/volt-nov',
+  ])('%s opens the join screen in the Community tab with the code', (url) => {
+    expect(routeFor(url)).toEqual({
+      tab: 'CommunityTab',
+      name: 'ChallengeJoin',
+      params: { code: 'volt-nov' },
+    });
+  });
+
+  test('the path is stashed as a pending code before resolving', () => {
+    expect(source).toMatch(/stashChallengePath\(path\);\s*\n\s*return safeGetStateFromPath/);
+    expect(source).toMatch(/const CHALLENGE_PATH = /);
+  });
+
+  // The stash function the navigator installs, evaluated with the two regex
+  // constants it closes over (declared immediately above it in the source) and
+  // a recording stand-in for the pending store, so it runs exactly as written.
+  describe('stashChallengePath parses the path form and the query form', () => {
+    const stashed = [];
+    // eslint-disable-next-line no-eval
+    const stashChallengePath = eval(`((setPendingChallenge) => {
+      ${source.match(/^const CHALLENGE_PATH = .*$/m)[0]}
+      ${source.match(/^const CHALLENGE_QUERY_PATH = .*$/m)[0]}
+      ${readFunctionSource(source, 'stashChallengePath')}
+      return stashChallengePath;
+    })`)((code) => { stashed.push(code); return Promise.resolve(true); });
+
+    beforeEach(() => { stashed.length = 0; });
+
+    test.each([
+      ['/c/volt-nov-3f9a1c2e'],
+      ['c/volt-nov-3f9a1c2e'],
+      ['c/volt-nov-3f9a1c2e/'],
+      ['c/volt-nov-3f9a1c2e?utm_source=poster'],
+      ['/c/?code=volt-nov-3f9a1c2e'],
+      ['c/?code=volt-nov-3f9a1c2e'],
+      ['c?code=volt-nov-3f9a1c2e'],
+      ['c/?utm_source=poster&code=volt-nov-3f9a1c2e'],
+      ['c/?code=volt-nov-3f9a1c2e&utm_source=poster'],
+      ['c/?code=volt%2Dnov%2D3f9a1c2e'],
+    ])('%s stashes volt-nov-3f9a1c2e', (p) => {
+      expect(stashChallengePath(p)).toBe('volt-nov-3f9a1c2e');
+      expect(stashed).toEqual(['volt-nov-3f9a1c2e']);
+    });
+
+    test('the URLs the website and the poster hand to the OS reach it through the real prefix extraction', () => {
+      for (const url of [
+        'https://volyume.app/c/?code=volt-nov-3f9a1c2e',
+        'https://volyume.app/c/volt-nov-3f9a1c2e',
+        'volyume://c/?code=volt-nov-3f9a1c2e',
+      ]) {
+        stashed.length = 0;
+        stashChallengePath(extractPathFromURL(PREFIXES, url));
+        expect(stashed).toEqual(['volt-nov-3f9a1c2e']);
+      }
+    });
+
+    test.each([
+      ['c/?code='],
+      ['c/?other=1'],
+      ['c/'],
+      ['c'],
+      ['community?code=volt-nov-3f9a1c2e'],
+      ['workout/start'],
+      ['/c/?x=1#code=volt-nov-3f9a1c2e'],
+    ])('%s stashes nothing', (p) => {
+      expect(stashChallengePath(p)).toBeNull();
+      expect(stashed).toEqual([]);
+    });
+
+    test('a non-string path is ignored', () => {
+      expect(stashChallengePath(undefined)).toBeNull();
+      expect(stashed).toEqual([]);
+    });
+  });
+
+  test('the Android intent filter and the Apple association carry /c/', () => {
+    const appJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'app.json'), 'utf8'));
+    const filters = appJson.expo.android.intentFilters;
+    const prefixes = filters.flatMap((f) => f.data.map((d) => d.pathPrefix));
+    expect(prefixes).toContain('/c/');
+    const c = filters.find((f) => f.data.some((d) => d.pathPrefix === '/c/'));
+    expect(c.autoVerify).toBe(true);
+    expect(c.data[0]).toMatchObject({ scheme: 'https', host: 'volyume.app' });
+    const aasa = JSON.parse(fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'public', '.well-known', 'apple-app-site-association'), 'utf8'));
+    expect(aasa.applinks.details[0].paths).toContain('/c/*');
+  });
+});

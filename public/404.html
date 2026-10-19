@@ -14,13 +14,21 @@
   https://volyume.app/partner/<CODE>, but only /partner/ (index.html) is a real
   file here, so a bare /partner/<CODE> would otherwise 404 for anyone without
   the app installed. Forward it to the landing page's query form, which renders
-  the code and offers the store link. Everything else gets a real 404.
+  the code and offers the store link. The gym challenge link /c/<code> is
+  forwarded the same way (to /c/?code=<code>). Everything else gets a real 404.
 -->
 <script>
   (function () {
     var m = location.pathname.match(/^\/partner\/([A-Za-z0-9]{8,})\/?$/);
     if (m) {
       location.replace('/partner/?c=' + m[1].toUpperCase());
+    }
+    // Gym challenge poster link: https://volyume.app/c/<code> has no file of
+    // its own (only /c/ is real), so forward it to the landing page's query
+    // form. The app itself never reaches this: the verified app link opens it.
+    var c = location.pathname.match(/^\/c\/([A-Za-z0-9-]{3,32})\/?$/);
+    if (c) {
+      location.replace('/c/?code=' + c[1].toLowerCase());
     }
   })();
 </script>

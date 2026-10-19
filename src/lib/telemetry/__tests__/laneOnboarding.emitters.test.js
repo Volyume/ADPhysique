@@ -18,7 +18,7 @@ function bodyOf(src, startMarker) {
 
 const EMITTERS = [
   ['src/screens/StartChoiceScreen.js', 'async function quickStart', 'onboarding_path_chosen', ['path', 'plan_source']],
-  ['src/screens/StartChoiceScreen.js', 'title="Set up coaching"', 'onboarding_path_chosen', ['path', 'plan_source']],
+  ['src/screens/StartChoiceScreen.js', "if (choice === 'coaching')", 'onboarding_path_chosen', ['path', 'plan_source']],
   ['src/screens/ProOnboardingScreen.js', 'useEffect(() => {\n    if (viewedStepsRef', 'onboarding_step_viewed', ['step', 'mode']],
   ['src/screens/ProOnboardingScreen.js', 'function surfaceGaps', 'onboarding_validation_blocked', ['step', 'field', 'mode']],
   ['src/screens/ProOnboardingScreen.js', 'async function advanceFrom8', 'onboarding_validation_blocked', ['step', 'field', 'mode']],
