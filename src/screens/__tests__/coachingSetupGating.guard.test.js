@@ -40,10 +40,9 @@ describe('coaching setup gating', () => {
     },
   );
 
-  it('DiaryScreen stands its data effects down when not set up', () => {
+  it('DiaryScreen stands its only writing effect (the calorie bank clean-up) down when not set up', () => {
     const src = read('DiaryScreen.js');
     expect(src).toMatch(/if \(!coachingSetUp\) return; \/\/ 2026-10-19 brief: no bank writes/);
-    expect(src).toMatch(/if \(!coachingSetUp\) return; load\(\)/);
   });
 
   it('CoachOutputScreen never starts the weekly coach run when not set up', () => {
