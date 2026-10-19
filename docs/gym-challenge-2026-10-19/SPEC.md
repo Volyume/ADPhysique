@@ -36,6 +36,44 @@ section 0 verbatim or near-verbatim; every lead ruling (D33) is marked.
   Recorded server side in `free_for_life_grants` on join (migrate_201), kept
   through withdrawal and challenge deletion.
 
+### 0.1 Adversarial review round 1 (2026-10-19): lead rulings (D33)
+
+- B1 Minors: a KNOWN minor (Community profile is_minor, or an onboarding
+  date of birth under 18) is refused at join, never listed and never drawn.
+  An unknown date of birth (a quick start) rests on the person's own 18+
+  answer; the terms require winners to show proof of age before a prize is
+  given. (The app's `_community_minor` treats unknown as minor; using it
+  here would silently exclude every quick-start entrant.)
+- B2 Wellbeing gate by day: the migrate_180 gate is never read once for the
+  month. A day counts as withheld when an ED flag covered it
+  (ed_pattern_flags history), an hourly reading saw the gate on
+  (gym_challenge_gate_days, pg_cron), or it is today and the gate is on
+  now. Food logging and weigh-in credit withheld days. The screen always
+  follows the gate now, on the server and on the device (either one hides).
+- M1 Late joiners: everyone is scored over the whole window, whatever the
+  join date (a late joiner has less time, never easier targets). Activity
+  before joining inside the window counts.
+- M2 A withdrawn entrant's records are not read again; the export lists
+  them with no score. Emails are exported only for drawn winners.
+- M4 A post the ED withhold hid still counts as taking part.
+- M5 The board names the latest draw's winners per tier only, never a
+  withdrawn winner.
+- M8 The weekly target follows the plan freely for the first 7 days of the
+  person's challenge, then may only rise.
+- M9 Codes are made by `gym_challenge_create`: a slug plus an 8-character
+  random part, so nobody can guess another gym's code.
+- M10 Terms are required on every challenge and live outside /c/ (the app
+  link captures /c/).
+- M13 SPEC 2 step 8 (a "Have a challenge code?" entry in the Community tab)
+  is NOT built: the founder's rule that the challenge is not visible to
+  people at other gyms wins. The routes in are the poster link (on iPhone,
+  scanning again opens the app), the gym invite, and the join screen's own
+  code box when a link is not found.
+- Closing is refused until 3 days after the end (late syncs) unless forced.
+- Board position band (SPEC 4) is replaced by: the top 10, your own score
+  and draw, and the counts at each threshold. A Home card (not in the first
+  draft) shows an entrant's score and days left.
+
 ## 1. What a challenge is
 
 A challenge belongs to one gym (`gym_venues.id`), has a short public code
@@ -77,13 +115,13 @@ entrant can withdraw at any time and rejoin while the challenge is open.
 7. Gym invite: a person whose Community gym is the challenge's gym and who is
    not an entrant sees a "Challenge at your gym" card (Community tab), from
    `gym_challenge_for_my_gym`. Nobody else ever sees a challenge.
-8. Typed code: Community tab, "Have a challenge code?" opens the join screen.
+8. (Not built, see 0.1 M13.) A code typed into the join screen's own box
+   when a link is not found.
 
 ## 3. Scoring (server, `_gym_challenge_score`)
 
-Window for a person: `effective_start = greatest(starts_on, joined_on)` to
-`ends_on`. Days `D = ends_on - effective_start + 1`. Blocks: 7-day blocks from
-`effective_start`; block `i` has `f_i = days_in_block / 7`. Weekly target
+Window for everyone: `starts_on` to `ends_on` (0.1 M1). Days `D = ends_on - effective_start + 1`. Blocks: 7-day blocks from
+`starts_on`; block `i` has `f_i = days_in_block / 7`. Weekly target
 `T` = the entrant's `planned_per_week` (2 to 6; default 3; set at join from
 the plan, may only rise during the challenge).
 
