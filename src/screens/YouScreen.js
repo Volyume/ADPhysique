@@ -521,6 +521,9 @@ export default function YouScreen({ navigation }) {
 
         {/* FOUNDER DECISION (fully free, no tier split): Setup renders for
             everyone now. */}
+        {/* Coaching-first onboarding (founder brief 2026-10-19): the Setup rows
+            are coaching; until it is set up the card at the top is the way in. */}
+        {coachingSetUp ? (
         <View style={styles.section}>
           <SectionLabel>Setup</SectionLabel>
           <NavGroup>
@@ -544,6 +547,7 @@ export default function YouScreen({ navigation }) {
           />
           </NavGroup>
         </View>
+        ) : null}
 
         {/* W-8 / C5-P7-07 (D96): this section used to sit inside the isPro
             branch, and YouScreen is the ONLY route to WellbeingCheckScreen in

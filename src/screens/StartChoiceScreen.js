@@ -68,7 +68,7 @@ export default function StartChoiceScreen({ navigation }) {
           How would you like to start?
         </Text>
         <Text style={[t.type.body, styles.lead, { color: t.colors.textSecondary }]}>
-          Both are free. You can change your mind later.
+          You can change your mind later.
         </Text>
 
         <Card tone="primary" style={styles.card}>

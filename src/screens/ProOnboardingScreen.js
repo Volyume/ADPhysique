@@ -13,6 +13,7 @@ import SegmentedControl from '../components/SegmentedControl';
 import Chip from '../components/Chip';
 import ArchetypePicker from '../components/ArchetypePicker';
 import { archetypeApplies, normaliseArchetype } from '../lib/trainingArchetypes';
+import { canFinishCoachingSetup } from '../lib/coachingSetup';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import FieldError from '../components/FieldError';
@@ -1985,10 +1986,10 @@ export default function ProOnboardingScreen({ navigation, route }) {
         // userProfile.goal (Nutrition Targets summary) show the right phase
         // instead of defaulting to lean_gain.
         goal: phaseToNutritionKey(trainingPhase),
-        // Coaching-first onboarding: the full baseline above is now saved,
-        // so coaching is set up (src/lib/coachingSetup.js). Only a quick
-        // start ever sets this true.
-        coachingDeferred: false,
+        // Coaching-first onboarding (src/lib/coachingSetup.js): a full
+        // onboarding is set up; coaching mode keeps the marker until the
+        // targets below are written (adversarial review, round 1).
+        coachingDeferred: coachingMode,
       };
       // RA-4 (D96, Review A): the name is optional now (presentation only,
       // no engine reads it - the same rationale C5-P1-09 recorded for the
@@ -2106,6 +2107,17 @@ export default function ProOnboardingScreen({ navigation, route }) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboardingScreen.saveNutritionTargets', e, { userId: user.id }); } catch (_) {}
         }
+      }
+
+      // Coaching mode: the baseline and the targets are now written, so the
+      // marker clears here, and only with every required field present
+      // (canFinishCoachingSetup). Anything missing is a failed setup, never
+      // a defaulted one: the catch below tells the person and nothing opens.
+      if (coachingMode && user?.id) {
+        const setUp = { ...merged, coachingDeferred: false };
+        if (!canFinishCoachingSetup(setUp)) throw new Error('coaching baseline incomplete');
+        await saveLocalProfile(user.id, setUp);
+        coachingProfileRef.current = setUp;
       }
 
       buildWatch.at('plan');
@@ -2387,6 +2399,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
   // where they came from.
   async function finishCoachingSetup() {
     let message = 'Coaching is set up. Your plan stays as it is.';
+    let variant = 'success';
     const profile = coachingProfileRef.current;
     if (planChoice === 'rebuild' && profile && user?.id) {
       try {
@@ -2396,6 +2409,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
         });
         if (!prep.ok) {
           message = 'Coaching is set up. The new plan could not be prepared, so your current plan stays. You can rebuild it from Update your plan.';
+          variant = 'info';
         } else {
           setBusy(false);
           const confirmed = await new Promise((resolve) => {
@@ -2413,17 +2427,19 @@ export default function ProOnboardingScreen({ navigation, route }) {
             message = result?.ok
               ? 'Coaching is set up and your new plan is ready.'
               : 'Coaching is set up. The new plan did not build, so your current plan stays. You can rebuild it from Update your plan.';
+            if (!result?.ok) variant = 'info';
           }
           setPlanPreview(null);
         }
       } catch (e) {
         logError('ProOnboarding.coachingRebuildPrepare', e, { userId: user?.id });
         message = 'Coaching is set up. The new plan could not be prepared, so your current plan stays. You can rebuild it from Update your plan.';
+        variant = 'info';
       }
     }
     setBusy(false);
     submittingRef.current = false;
-    toast.show(message, { variant: 'success' });
+    toast.show(message, { variant });
     navigation.goBack();
   }
 

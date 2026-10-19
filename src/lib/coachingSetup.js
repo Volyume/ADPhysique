@@ -56,6 +56,6 @@ export function canFinishCoachingSetup(profile) {
 export const COACHING_SETUP_COPY = Object.freeze({
   title: 'Set up coaching',
   body: 'Set up coaching to get weekly adjustments and nutrition targets. Your current plan stays in place unless you choose otherwise.',
-  nutritionBody: 'Set up coaching to unlock nutrition: food logging, your targets and meal plans, built around you. Your current plan stays in place unless you choose otherwise.',
+  nutritionBody: 'Set up coaching to get food logging, your nutrition targets and meal plans, built around you. Your current plan stays in place unless you choose otherwise.',
   action: 'Set up coaching',
 });

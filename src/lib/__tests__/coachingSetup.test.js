@@ -68,10 +68,38 @@ describe('the streamlined wizard', () => {
     expect(finish).toMatch(/if \(confirmed\) \{/);
   });
 
-  test('the marker clears only in the save that validated the baseline', () => {
+  test('the marker clears only after the targets are written, and only with every required field', () => {
     const guard = src.indexOf("'Baseline needs checking'");
-    const clear = src.indexOf('coachingDeferred: false,');
+    const targets = src.indexOf('await saveNutritionTargets(user.id, nutritionData);');
+    const clear = src.indexOf('const setUp = { ...merged, coachingDeferred: false };');
     expect(guard).toBeGreaterThan(0);
-    expect(clear).toBeGreaterThan(guard);
+    expect(targets).toBeGreaterThan(guard);
+    expect(clear).toBeGreaterThan(targets);
+    expect(src).toMatch(/if \(!canFinishCoachingSetup\(setUp\)\) throw new Error/);
+    // The first profile save in coaching mode keeps the marker.
+    expect(src).toMatch(/coachingDeferred: coachingMode,/);
   });
 });
+
+describe('nothing coaching reaches a quick-start person (adversarial review, round 1)', () => {
+  const read = (...p) => fs.readFileSync(path.join(__dirname, '..', '..', ...p), 'utf8');
+
+  test('weigh-in, check-in and coach-ready reminders stay off until setup', () => {
+    const sched = read('lib', 'notifications', 'scheduler.js');
+    expect(sched).toMatch(/function coachingRemindersAllowed\(state\) \{\s*if \(state\?\.tier !== 'pro'\) return false;[\s\S]{0,160}return isCoachingSetUp\(state\?\.userProfile\);/);
+    expect(sched.match(/isPro = coachingRemindersAllowed\(/g)).toHaveLength(2);
+    expect(sched).not.toMatch(/isPro = require\('..\/..\/store\/useAppStore'\)\.default\.getState\(\)\?\.tier === 'pro'/);
+  });
+
+  test('Home asks for no weigh-in and counts down to no check-in', () => {
+    const home = read('screens', 'HomeScreen.js');
+    expect(home).toMatch(/user\?\.id && coachingSetUp && todayWeight == null/);
+    expect(home).toMatch(/user\?\.id && coachingSetUp && evidencePanelItem/);
+  });
+
+  test('goal setup is gated, and the Coach tab hides its coaching rows', () => {
+    expect(read('screens', 'ProGoalSetupScreen.js')).toMatch(/if \(!coachingSetUp\) \{\s*return \(/);
+    expect(read('screens', 'YouScreen.js')).toMatch(/\{coachingSetUp \? \(\s*<View style=\{styles\.section\}>/);
+  });
+});
+

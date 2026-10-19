@@ -17,6 +17,8 @@ import useTheme from '../hooks/useTheme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
+import CoachingSetupCard from '../components/CoachingSetupCard';
+import useCoachingSetUp from '../hooks/useCoachingSetUp';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import ArchetypePicker from '../components/ArchetypePicker';
@@ -129,6 +131,10 @@ function kitInstallFailedLine(kit) {
 }
 
 export default function ProGoalSetupScreen({ navigation }) {
+  // Coaching-first onboarding (founder brief 2026-10-19): goal and phase set
+  // nutrition targets, so a quick-start person sets them through coaching
+  // setup, the one path that enforces the required baseline.
+  const coachingSetUp = useCoachingSetUp();
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, saveLocalProfile } = useAppStore(useShallow(s => ({
@@ -766,6 +772,17 @@ export default function ProGoalSetupScreen({ navigation }) {
   const primaryLabel = libraryKit
     ? `Add the ${libraryKitWord(libraryKit)} plan`
     : 'Review my plan changes';
+
+  if (!coachingSetUp) {
+    return (
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+        <BackHeader title="Update goal and phase" />
+        <View style={{ paddingHorizontal: t.screenPadding }}>
+          <CoachingSetupCard onPress={() => navigation.navigate('CoachingSetup')} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>

@@ -977,7 +977,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Nutrition targets" />
-        <View style={{ paddingHorizontal: spacing.lg }}>
+        <View style={{ paddingHorizontal: t.screenPadding }}>
           <CoachingSetupCard variant="nutrition" onPress={() => navigation.navigate('CoachingSetup')} />
         </View>
       </SafeAreaView>
