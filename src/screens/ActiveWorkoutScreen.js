@@ -2169,6 +2169,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         exerciseTo: newExercise.id,
       }).catch(() => { /* best effort; the swap itself must never fail */ });
     }
+    // "Cannot do this?" answered "Just for today": recorded on the session's
+    // effects record so the summary can ask once whether it was a one-off or
+    // belongs in Injuries & limitations. Its own effect name, so every reader
+    // that counts 'omitted' / 'substituted' (coaching, check-in, block
+    // ledger) never sees it.
+    if (workAroundSwapRef.current && user?.id && activeWorkout?.id && exercise?.id && newExercise?.id && newExercise.id !== exercise.id) {
+      // eslint-disable-next-line global-require
+      const { appendSessionConstraintEffects } = require('../lib/database');
+      appendSessionConstraintEffects(user.id, activeWorkout.id, [{
+        slot: currentExerciseIndex,
+        rowId: prevRoutineEx?.id ?? null,
+        exerciseFrom: exercise.id,
+        exerciseTo: newExercise.id,
+        effect: 'declined_today',
+      }]).catch(() => { /* best effort; the swap itself must never fail */ });
+    }
     // C9 Work 3: a swap is a deliberate choice, so it is evidence too. Recorded
     // with the routine it happened in, so the preference stays contextual.
     // Best-effort: this must never fail the swap.

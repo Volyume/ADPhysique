@@ -125,6 +125,11 @@ function buildConstraintSummaryLine(substituted, omitted, userChosen = 0) {
   return null;
 }
 
+// "A", "A and B", "A, B and C" for the declined-today question.
+function joinNames(names) {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
 
 function RatingRow({ label, field, value, max, onChange, hint }) {
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
@@ -349,6 +354,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // resolvable entries) - the line and the expander both render nothing.
   const [constraintEffect, setConstraintEffect] = useState(null);
   const [constraintDetailExpanded, setConstraintDetailExpanded] = useState(false);
+  // Exercises answered "Just for today" on "Cannot do this?" and not trained
+  // in the end: names for the one-off-or-limitation question. Live path only.
+  const [declinedToday, setDeclinedToday] = useState([]);
 
   const feedbackDebounceRef = useRef(null);
 
@@ -633,6 +641,32 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     })();
     return () => { cancelled = true; };
   }, [user?.id, workoutId]);
+
+  // "Cannot do this?" answered "Just for today": the live finish asks once
+  // whether it was a one-off. Its own read, live path only, so the effects
+  // line above stays reachable from history exactly as before. A movement
+  // the user went back to and trained was not, in the end, one they could
+  // not do, so it is not asked about. Best-effort: a failure shows nothing.
+  useEffect(() => {
+    if (readOnly || !user?.id || !workoutId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const record = await getSessionConstraintEffect(user.id, workoutId);
+        const effects = Array.isArray(record?.effects) ? record.effects : [];
+        const trained = new Set(exerciseData.map((e) => e.exerciseId));
+        const declined = effects.filter((e) => e?.effect === 'declined_today' && e.exerciseFrom && !trained.has(e.exerciseFrom));
+        if (!declined.length) return;
+        const library = await getAllExercises();
+        const byId = new Map(library.map((e) => [e.id, e]));
+        const names = [...new Set(declined.map((e) => byId.get(e.exerciseFrom)?.name).filter(Boolean))];
+        if (!cancelled && names.length) setDeclinedToday(names);
+      } catch (_e) { /* best-effort: no card, no crash */ }
+    })();
+    return () => { cancelled = true; };
+    // exerciseData is a route param, fixed for this screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly, user?.id, workoutId]);
 
   // Contextual feedback prompt, fires ONCE after the user has
   // completed their first ~3 sessions. Suppressed thereafter via
@@ -1956,6 +1990,43 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             showCoachLink above (readOnly-safe: reachable from history too,
             since WorkoutSummaryScreen serves both the live finish flow and
             a history reopen). */}
+        {/* "Cannot do this?" answered "Just for today": asked once, on the
+            live finish only, whether it was a one-off or belongs in
+            Injuries & limitations. "Add it" opens the add flow pre-filled
+            with the movement; that flow asks permanent-or-temporary and
+            offers the plan update itself. "Just today" saves nothing. */}
+        {!readOnly && declinedToday.length > 0 ? (
+          <RevealSection delay={1360}>
+            <Card style={styles.shareOfferCard}>
+              <Text style={[styles.shareOfferLine, { ...t.type.body, color: t.colors.textPrimary }]}>
+                {`You could not do ${joinNames(declinedToday)} today. Was that a one-off, or should Volyume add ${declinedToday.length === 1 ? 'it' : 'them'} to Injuries & limitations and adjust your plan?`}
+              </Text>
+              <View style={styles.shareOfferButtons}>
+                <Button
+                  title="Just today"
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={() => { hapticSelection(); setDeclinedToday([]); }}
+                  accessibilityLabel="It was just today"
+                />
+                <Button
+                  title="Add it"
+                  variant="primary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={() => {
+                    hapticSelection();
+                    const exerciseNames = declinedToday;
+                    setDeclinedToday([]);
+                    navigation.navigate('HowYouTrain', { preselect: { kind: 'exercise', exerciseNames } });
+                  }}
+                  accessibilityLabel="Add it to Injuries and limitations"
+                />
+              </View>
+            </Card>
+          </RevealSection>
+        ) : null}
         {constraintEffect ? (
           <RevealSection delay={1380}>
             <View style={styles.constraintEffectSection}>
