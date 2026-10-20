@@ -89,7 +89,7 @@ import { SPLIT_LABELS } from '../lib/planEngine';
 import { BLOCK_PLANNED_WEEKS } from '../lib/mesocycle';
 import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import {
-  saveDraft, loadDraft, clearDraft, loadBuildProgress, markBuildProgress, DRAFT_DEBOUNCE_MS,
+  saveDraft, loadDraft, clearDraft, clampResumeStep, loadBuildProgress, markBuildProgress, DRAFT_DEBOUNCE_MS,
 } from '../lib/proOnboardingDraft';
 import { dateOfBirthFromAgeYears } from '../lib/profileAge';
 import { FIRST_CHECKIN_MIN_DAYS } from '../lib/trialActivation';
@@ -129,7 +129,7 @@ const TOTAL_STEPS = 8;
 // funnel reader never compares a step 6 of one wizard with a step 6 of the
 // other (D160; integer-only payload, the Campaign 1 privacy law).
 const ONBOARDING_WIZARD_VERSION = 2;
-const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Targets', 'Check-in rhythm'];
+const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Training focus', 'Check-in rhythm'];
 const STEP_OUTCOMES = {
   1: [
     { icon: 'shield-checkmark-outline', label: 'Secure sign-in' },
@@ -1000,9 +1000,14 @@ export default function ProOnboardingScreen({ navigation, route }) {
     if (draftRestoredRef.current) return;
     if (!user?.id || user.isLocal) return;
     draftRestoredRef.current = true;
-    loadDraft(user.id).then((draft) => {
+    loadDraft(user.id).then((loaded) => {
       draftLoadedRef.current = true;
-      if (!draft) return;
+      if (!loaded) return;
+      // Coaching mode does not run steps 5 or 6, so a draft parked there by
+      // a full-setup run resumes on the next step coaching does run (7);
+      // otherwise the header read "Step 0 of 5". Applied to the draft before
+      // the pinned minor and sex-gate steps below, which are unchanged.
+      const draft = coachingMode ? { ...loaded, step: clampResumeStep(loaded.step, COACHING_STEPS) } : loaded;
       const a = draft.answers || {};
       const str = (v, set) => { if (typeof v === 'string') set(v); };
       const num = (v, set) => { if (Number.isFinite(v)) set(v); };
