@@ -1091,6 +1091,15 @@ function resolveConfidence({ comparableHistory, today, provenance }) {
   return 'high';
 }
 
+// G2 / item 17 (owner 2026-10-20): a layoff is MORE than 14 days since the
+// exercise was last logged (was 7), so a once-a-week lift whose day drifts
+// by a day or two is never cut. Integer day count, same `floor` the screen
+// uses, so 14 days is still not a layoff and 15 is.
+export const LAYOFF_DAYS = 14;
+function isLayoff(senior) {
+  return Number.isFinite(senior?.layoffDays) && senior.layoffDays > LAYOFF_DAYS;
+}
+
 // §9.3 step 4: the working load for TODAY, in precedence order (user
 // override > today's evidence with adjustWeaker/adjustStronger >
 // nextSessionOpeningLoad). `sessionDriven: true` marks that an EXPLICIT
@@ -1154,19 +1163,24 @@ function determineWorkingLoad({ packet, comparableHistory, band, pos }) {
   // "a senior flag never makes the prescription MORE aggressive" (Stage 14)
   // against every history shape, not only the common case where the
   // session's heaviest set happens to sit at position 1.
-  if ((Number.isFinite(senior.layoffDays) && senior.layoffDays > 7) || senior.blockFinished) {
+  if (isLayoff(senior) || senior.blockFinished) {
     const usable = discountOutliers(comparableHistory);
     const top = usable.length ? topLoadAndReps(usable[0]) : null;
     if (top && top.W > 0) {
       const opening = nextSessionOpeningLoad(comparableHistory, band, opts);
       const capped = opening.weight != null ? Math.min(opening.weight, top.W) : top.W;
-      const isLayoff = Number.isFinite(senior.layoffDays) && senior.layoffDays > 7;
+      const layoff = isLayoff(senior);
       return {
         L: capped,
         provenance: PROVENANCE.SENIOR_RECOVERY_HOLD,
-        repsOverride: band.min,
+        // G2 / item 17 (owner 2026-10-20): a layoff trims the LOAD only; the
+        // rep target is last time's reps exactly (no plus one),
+        // never above the un-flagged baseline's reps (older-lifter property,
+        // owner 2026-10-20: strict). A finished block keeps its reset.
+        repsOverride: (layoff && !senior.blockFinished) ? null : band.min,
+        layoffReps: layoff && !senior.blockFinished,
         sessionDriven: false,
-        seniorMultiplier: isLayoff ? 0.9 : null, // §10.5: layoff's flat 0.9 reduction; block-finished has none
+        seniorMultiplier: layoff ? 0.9 : null, // §10.5: layoff's flat 0.9 reduction; block-finished has none
       };
     }
   }
@@ -1181,6 +1195,66 @@ function determineWorkingLoad({ packet, comparableHistory, band, pos }) {
     sessionDriven: false,
     ...(Number.isFinite(opening.repsCeiling) ? { repsCeiling: opening.repsCeiling } : {}),
   };
+}
+
+/**
+ * G2 / item 17: the WHY behind the two lowerings the Exercise info sheet
+ * explains (layoff, consecutive miss). Pure; reads the same inputs as
+ * resolveSetPrescription and reports only what it actually did at set 1.
+ * Not shown on the set card (founder order 2026-08-17).
+ *
+ * @returns {{layoff:({days:number,fromWeight:number,toWeight:number}|null),
+ *   consecutiveMiss:({fromWeight:number,toWeight:number}|null)}}
+ */
+export function explainPrescription(packet) {
+  const none = { layoff: null, consecutiveMiss: null };
+  const p0 = normalizePacket(packet);
+  // Judged as at the START of the exercise, so the reasons stay readable
+  // after sets are logged (the opening suggestion is what they explain).
+  const p = { ...p0, today: { working: [], overrideLoad: null, overrideReps: null } };
+  if (p.senior.isDeload) return none;
+  if (p.exercise.exerciseType === 'duration' || p.exercise.exerciseType === 'distance' || p.exercise.exerciseType === 'reps_only') return none;
+  const comparable = p.history.filter((s) => s.comparable);
+  if (!comparable.length) return none;
+  const usable = discountOutliers(comparable);
+  const top = usable.length ? topLoadAndReps(usable[0]) : null;
+  if (!top || !(top.W > 0)) return none;
+  const rx = resolveSetPrescription(p, 1);
+  if (!Number.isFinite(rx.weight)) return none;
+  if (isLayoff(p.senior)) {
+    return { layoff: { days: p.senior.layoffDays, fromWeight: top.W, toWeight: rx.weight }, consecutiveMiss: null };
+  }
+  if (rx.provenance === PROVENANCE.LOAD_DROP_CONSECUTIVE_MISS) {
+    return { layoff: null, consecutiveMiss: { fromWeight: top.W, toWeight: rx.weight } };
+  }
+  return none;
+}
+
+/**
+ * G2 / item 17: the Exercise info sheet's wording for explainPrescription's
+ * output, in the "Eased for today" style (title, reason, signal). Returns
+ * null when nothing needs explaining. Kilograms only (gym weights).
+ * @returns {({title:string, reason:string, signal:string}|null)}
+ */
+export function prescriptionReasonCopy(reasons) {
+  const kg = (n) => `${Number(Number(n).toFixed(2))} kg`;
+  if (reasons?.layoff) {
+    const { days, fromWeight, toWeight } = reasons.layoff;
+    return {
+      title: 'Eased after a break',
+      reason: `It has been ${days} days since you last did this lift, so today's suggestion starts a little lighter while you ease back in.`,
+      signal: `Last time you used ${kg(fromWeight)}. Today's suggestion is ${kg(toWeight)}.`,
+    };
+  }
+  if (reasons?.consecutiveMiss) {
+    const { fromWeight, toWeight } = reasons.consecutiveMiss;
+    return {
+      title: 'Lowered to rebuild',
+      reason: `Your last two sessions at ${kg(fromWeight)} finished below the rep range, so today's suggestion steps down a little to help you build your reps back up.`,
+      signal: `Last time you used ${kg(fromWeight)}. Today's suggestion is ${kg(toWeight)}.`,
+    };
+  }
+  return null;
 }
 
 /**
@@ -1285,11 +1359,33 @@ export function resolveSetPrescription(packet, position) {
     repsTarget = band.min; // fresh range at the new load
   } else if (provenance === PROVENANCE.INSUFFICIENT_EVIDENCE) {
     repsTarget = band.min;
+  } else if (working.layoffReps) {
+    // G2 / item 17 (owner 2026-10-20): first session after a break asks for
+    // exactly last time's reps at this position (no plus one), inside the
+    // band. STRICT older-lifter property: never above what the same history
+    // without the layoff flag would ask for. Where that baseline would
+    // ADVANCE the load its reps restart at the band floor, so the layoff
+    // keeps that reset rather than showing more reps than an unflagged
+    // session (a senior flag never makes the prescription more aggressive).
+    const E = expectedReps({ pos: pos.index, comparableHistory, today: p.today, band, category: p.exercise.category });
+    const last = referenceRow && Number.isFinite(referenceRow.reps) ? referenceRow.reps : E;
+    repsTarget = clamp(last, band.min, band.max);
+    const baselineReps = resolveSetPrescription({ ...p, senior: { ...p.senior, layoffDays: null } }, position).repsTarget;
+    if (Number.isFinite(baselineReps)) repsTarget = Math.min(repsTarget, baselineReps);
   } else {
     const E = expectedReps({ pos: pos.index, comparableHistory, today: p.today, band, category: p.exercise.category });
     // D227 E1: a reps-first exercise of an authored plan builds to 20.
     const repCap = Number.isFinite(working.repsCeiling) ? working.repsCeiling : band.max;
     repsTarget = clamp(Math.min(E + 1, repCap), band.min, repCap);
+    // G2 / item 17 (owner 2026-10-20): the range was topped but the load
+    // holds (effort unknown or very hard). Reps may rise to last time's reps
+    // at this position, never past them, so the box is not lower than what
+    // the lifter just did. Only these two holds; band.max still caps every
+    // other path.
+    if ((provenance === PROVENANCE.HOLD_EFFORT_UNKNOWN || provenance === PROVENANCE.HOLD_EFFORT_VERY_HARD)
+      && referenceRow && Number.isFinite(referenceRow.reps) && referenceRow.reps > repsTarget) {
+      repsTarget = referenceRow.reps;
+    }
   }
 
   // AMRAP positions: capability/load only, never a numeric rep target (§15).

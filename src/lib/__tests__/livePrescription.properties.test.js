@@ -142,7 +142,7 @@ describe('introducing any senior recovery flag never makes the prescription MORE
     { label: 'isDeload+deloadTargets', senior: (base) => ({ isDeload: true, deloadTargets: [{ weight: base * 0.5, reps: 6 }] }) },
     { label: 'reEntryEaseActive', senior: () => ({ reEntryEaseActive: true, readinessTweak: { reduces: true, loadFactor: 0.95, because: 'athlete_reentry_choice' } }) },
     { label: 'readinessReductionActive', senior: () => ({ readinessReductionActive: true, readinessTweak: { reduces: true, loadFactor: 0.95 } }) },
-    { label: 'layoffDays>7', senior: () => ({ layoffDays: 10 }) },
+    { label: 'layoffDays>14', senior: () => ({ layoffDays: 20 }) },
     { label: 'blockFinished', senior: () => ({ blockFinished: true }) },
   ];
 

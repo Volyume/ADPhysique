@@ -3310,9 +3310,9 @@
   "rule_id": "T-LIVESET-09",
   "domain": "liveset",
   "source_file": "src/lib/livePrescription.js",
-  "authority": "src/lib/livePrescription.js:829-844 determineWorkingLoad (layoff / block-finished senior opening-time overrides, \u00a710.5/\u00a714)",
+  "authority": "src/lib/livePrescription.js:829-844 determineWorkingLoad (layoff / block-finished senior opening-time overrides, \u00a710.5/\u00a714; layoff threshold 14 days, G2 item 17)",
   "decision": "",
-  "thresholds": "senior.layoffDays > 7 (the \"layoff >7d\" named in the mission) OR senior.blockFinished -> cap the opening load at the most recent comparable session's top load (never let the ADVANCE gate fire), still respect a genuine consecutive-miss DROP, still allow back-off structure to compose. Layoff specifically applies seniorMultiplier = 0.9 (the \"\u00d70.9\" named in the mission) on top of the capped load; block-finished applies no multiplier (cap only)",
+  "thresholds": "senior.layoffDays > 14 (more than 14 days since last logged; owner 2026-10-20, was 7) OR senior.blockFinished -> cap the opening load at the most recent comparable session's top load (never let the ADVANCE gate fire), still respect a genuine consecutive-miss DROP, still allow back-off structure to compose. Layoff specifically applies seniorMultiplier = 0.9 (the \"\u00d70.9\" named in the mission) on top of the capped load; block-finished applies no multiplier (cap only). Layoff trims LOAD only: its rep target is exactly last time's reps at the position (no plus one), never above the un-flagged baseline's reps (strict older-lifter property); block-finished keeps the band-floor reps",
   "precedence": "fires only when today.working.length===0 (no today evidence yet); ordinary nextSessionOpeningLoad gate runs afterward if neither layoff nor block-finished condition triggers",
   "direct_case": [
    "LSO-30"
