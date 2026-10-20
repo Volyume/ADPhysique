@@ -262,7 +262,7 @@ export default function ChallengeScreen({ navigation, route }) {
           <>
             <BandGap />
             <Band>
-              <SectionHeader title="Top 10" />
+              <SectionHeader title={boardTitle(topRows.length)} />
               {topRows.length ? topRows.map((r, i) => (
                 <PersonRow
                   // eslint-disable-next-line react/no-array-index-key
@@ -284,7 +284,7 @@ export default function ChallengeScreen({ navigation, route }) {
                   metric={String(Number(shownBoard.me?.score) || 0)}
                 />
               ) : null}
-              <Text style={[styles.counts, t.type.bodySm, secondary]}>{countsLine(shownBoard.counts, challenge)}</Text>
+              <Text style={[styles.counts, { paddingHorizontal: t.screenPadding }, t.type.bodySm, secondary]}>{countsLine(shownBoard.counts, challenge)}</Text>
             </Band>
           </>
         ) : null}
@@ -351,6 +351,15 @@ export default function ChallengeScreen({ navigation, route }) {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+// Item 32: the board's title counts the rows it shows. The server lists at most
+// ten, so fewer than ten reads "Top 4", never "Top 10" over four names. With no
+// rows the title is "Leaderboard" and the line under it says nobody is on the board.
+const BOARD_SIZE = 10;
+export function boardTitle(rowCount) {
+  if (!rowCount) return 'Leaderboard';
+  return rowCount < BOARD_SIZE ? `Top ${rowCount}` : `Top ${BOARD_SIZE}`;
 }
 
 const styles = StyleSheet.create({
