@@ -8,7 +8,7 @@ import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles, useS
 // delete) kept together at the bottom. Volyume is fully free (founder
 // ruling): no tier, no subscription, no upgrade path, so this screen carries
 // no Plan section any more.
-export default function SettingsAccountScreen() {
+export default function SettingsAccountScreen({ navigation }) {
   const { user } = useAppStore(
     useShallow(s => ({ user: s.user })),
   );
@@ -24,6 +24,16 @@ export default function SettingsAccountScreen() {
           icon="person-circle-outline"
           label={user?.email || 'Signed in'}
           showArrow={false}
+        />
+      </View>
+
+      <SectionHeader title="Sign in" />
+      <View style={[styles.section, live.section]}>
+        <SettingRow
+          icon="key-outline"
+          label="Sign-in methods"
+          sub="Add or remove Apple, Google or email."
+          onPress={() => navigation?.navigate?.('SettingsSignInMethods')}
         />
       </View>
 

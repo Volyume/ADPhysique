@@ -23,12 +23,15 @@ describe('OAuthButtons', () => {
     expect(google.props.disabled).toBe(true);
   });
 
-  test('iOS hides Google (no iOS client id) and keeps Apple', () => {
+  // Founder-approved rule change (Batch 4, item 2): this replaces the old
+  // "iOS hides Google (no iOS client id)" pin. Apple and Google now show on
+  // both platforms. It is a product rule, not a safety guard.
+  test.each(['ios', 'android'])('%s shows both Apple and Google', (os) => {
     const prev = Platform.OS;
-    Platform.OS = 'ios';
+    Platform.OS = os;
     try {
       const tree = create(<OAuthButtons onGoogle={() => {}} onApple={() => {}} disabled={false} />);
-      expect(tree.root.findAllByProps({ accessibilityLabel: 'Continue with Google' })).toHaveLength(0);
+      expect(tree.root.findAllByProps({ accessibilityLabel: 'Continue with Google' }).length).toBeGreaterThan(0);
       expect(tree.root.findAllByProps({ accessibilityLabel: 'Continue with Apple' }).length).toBeGreaterThan(0);
     } finally {
       Platform.OS = prev;

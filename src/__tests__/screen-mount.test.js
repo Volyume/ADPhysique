@@ -649,6 +649,8 @@ const SCREENS_TO_SWEEP = [
   'ProUpgradeScreen',
   'SettingsScreen',
   'SettingsAccountScreen',
+  'SettingsSignInMethodsScreen',
+  'SetNewPasswordScreen',
   'SettingsProfileScreen',
   'SettingsCoachingScreen',
   'SettingsDisplayScreen',

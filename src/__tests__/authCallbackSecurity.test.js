@@ -115,6 +115,29 @@ describe('account-substitution resistance', () => {
     expect(sb.auth.setSession).toHaveBeenCalledWith({ access_token: ACCESS, refresh_token: REFRESH });
   });
 
+  test('a verified recovery callback marks the set-new-password screen pending; signup does not', async () => {
+    const rec = require('../lib/passwordRecoveryState');
+    rec._resetPasswordRecoveryForTests();
+    const n1 = await beginAuthFlow('signup', 'victim@example.com');
+    await handleAuthDeepLink(implicitUrl(ACCESS, REFRESH, n1), { supabase: fakeSupabase() });
+    expect(rec.isPasswordRecoveryPending()).toBe(false);
+    const n2 = await beginAuthFlow('recovery', 'victim@example.com');
+    await handleAuthDeepLink(implicitUrl(ACCESS, REFRESH, n2), { supabase: fakeSupabase() });
+    expect(rec.isPasswordRecoveryPending()).toBe(true);
+    expect(rec.takePasswordRecoveryPending()).toBe(true);
+    expect(rec.isPasswordRecoveryPending()).toBe(false);
+  });
+
+  test('a refused recovery callback never marks it pending', async () => {
+    const rec = require('../lib/passwordRecoveryState');
+    rec._resetPasswordRecoveryForTests();
+    const n = await beginAuthFlow('recovery', 'victim@example.com');
+    await handleAuthDeepLink(implicitUrl(ATTACKER_ACCESS, REFRESH, n), {
+      supabase: fakeSupabase({ verifiedEmail: 'attacker@example.com', verifiedId: 'attacker-id' }),
+    });
+    expect(rec.isPasswordRecoveryPending()).toBe(false);
+  });
+
   test('missing state is refused for every newly-created flow', async () => {
     await beginAuthFlow('signup', 'victim@example.com');
     const sb = fakeSupabase();

@@ -548,6 +548,13 @@ async function _signInWithOAuthProvider(provider) {
 // verifies via signInWithIdToken.
 const GOOGLE_WEB_CLIENT_ID = '520741631478-apaethkp3g55o06lott116jag73l0ves.apps.googleusercontent.com';
 
+// Public Google OAuth iOS client ID (not a secret: it ships in the binary).
+// OWNER TO FILL before the iPhone build, together with the iosUrlScheme
+// plugin option in app.json; see docs/release/SIGN-IN-SETUP.md. Until it is
+// filled, Google on iPhone answers with a calm message instead of failing
+// inside the native module.
+const GOOGLE_IOS_CLIENT_ID = '';
+
 // Native Google Sign-In: shows the OS account-picker sheet (no browser, no
 // supabase.co URL on screen), returns a Google ID token, and exchanges it with
 // Supabase via signInWithIdToken. Same real account + session as the old
@@ -562,6 +569,9 @@ export async function signInWithGoogle() {
   if (!c) {
     return { error: { message: 'Cloud sign-in is not available right now. Try again.' } };
   }
+  if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) {
+    return { error: { message: 'Google sign-in is not available on this build yet. Use Apple or email.' } };
+  }
   let GoogleSignin;
   let statusCodes;
   try {
@@ -571,7 +581,13 @@ export async function signInWithGoogle() {
     return { error: { message: 'Google sign-in is unavailable in this build.' } };
   }
   try {
-    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    // iPhone needs the iOS client id as well (its URL scheme is the
+    // app.json plugin option). Android ignores iosClientId.
+    GoogleSignin.configure(
+      Platform.OS === 'ios' && GOOGLE_IOS_CLIENT_ID
+        ? { webClientId: GOOGLE_WEB_CLIENT_ID, iosClientId: GOOGLE_IOS_CLIENT_ID }
+        : { webClientId: GOOGLE_WEB_CLIENT_ID },
+    );
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     // Start from a clean native state. The Google SDK keeps the last
     // account signed in at the native layer, and that cache outlives a
@@ -706,6 +722,86 @@ export async function signInWithApple() {
   } finally {
     _appleSignInInFlight = false;
   }
+}
+
+// ─── Sign-in methods (Account > Sign-in methods) ─────────────────────────
+//
+// Link or unlink Apple, Google and email on the SIGNED-IN account. Linking
+// adds a way in to the same user (the user id never changes), so the locked
+// identity model is untouched. Needs "Enable Manual Linking" in the Supabase
+// Authentication settings (docs/release/SIGN-IN-SETUP.md).
+
+/** Identities on the signed-in account, or [] when unavailable. */
+export async function getSignInIdentities() {
+  const c = getSupabaseClient();
+  if (!c?.auth?.getUserIdentities) return { identities: [], error: { message: 'Cloud sign-in is not available right now.' } };
+  const { data, error } = await withAuthTimeout(c.auth.getUserIdentities());
+  if (error) return { identities: [], error };
+  return { identities: data?.identities ?? [], error: null };
+}
+
+/** Add Apple or Google to this account through the provider's web sign-in. */
+export async function linkSignInMethod(provider) {
+  if (provider !== 'apple' && provider !== 'google') return { error: { message: 'Unknown sign-in method.' } };
+  const c = getSupabaseClient();
+  if (!c?.auth?.linkIdentity) return { error: { message: 'Cloud sign-in is not available right now. Try again.' } };
+  try {
+    const { data, error } = await c.auth.linkIdentity({
+      provider,
+      options: { redirectTo: OAUTH_REDIRECT_URL, skipBrowserRedirect: true },
+    });
+    if (error) return { error };
+    if (!data?.url) return { error: { message: 'No auth URL returned from Supabase.' } };
+    // eslint-disable-next-line global-require
+    const WebBrowser = require('expo-web-browser');
+    const result = await WebBrowser.openAuthSessionAsync(data.url, OAUTH_REDIRECT_URL);
+    if (result.type === 'success' && result.url) {
+      const codeMatch = result.url.match(/[?&]code=([^&#]+)/);
+      if (codeMatch) {
+        try { await c.auth.exchangeCodeForSession(decodeURIComponent(codeMatch[1])); }
+        catch (_) { /* App.js handler will retry */ }
+      }
+      return { ok: true };
+    }
+    if (result.type === 'cancel' || result.type === 'dismiss') return { cancelled: true };
+    return { error: { message: 'Linking did not complete.' } };
+  } catch (e) {
+    return { error: { message: e?.message ?? 'Linking failed.' } };
+  }
+}
+
+/**
+ * Remove one sign-in method. Refuses the last one HERE (not only in the UI):
+ * the identities are re-read at the moment of the call so a stale screen
+ * cannot remove the final way in.
+ */
+export async function unlinkSignInMethod(provider) {
+  const c = getSupabaseClient();
+  if (!c?.auth?.unlinkIdentity) return { error: { message: 'Cloud sign-in is not available right now. Try again.' } };
+  // eslint-disable-next-line global-require
+  const { canUnlink, LAST_METHOD_MESSAGE } = require('./signInMethods');
+  const { identities, error: readError } = await getSignInIdentities();
+  if (readError) return { error: readError };
+  if (!canUnlink(identities, provider)) {
+    return { error: { code: 'last_method', message: LAST_METHOD_MESSAGE } };
+  }
+  const identity = identities.find((i) => String(i?.provider).toLowerCase() === provider);
+  if (!identity) return { error: { message: 'That sign-in method is not on this account.' } };
+  const { error } = await withAuthTimeout(c.auth.unlinkIdentity(identity));
+  if (error) return { error };
+  return { ok: true };
+}
+
+/**
+ * Set a new password on the signed-in account. For an Apple- or Google-only
+ * account this adds email and password as another way in.
+ */
+export async function updatePassword(newPassword) {
+  const c = getSupabaseClient();
+  if (!c?.auth?.updateUser) return { error: { message: 'Cloud sign-in is not available right now. Try again.' } };
+  const { error } = await withAuthTimeout(c.auth.updateUser({ password: newPassword }));
+  if (error) return { error };
+  return { ok: true };
 }
 
 // ─── PostgREST clock-skew retry (2026-09-06, Sentry VOLYUME-2Q / 32) ──────

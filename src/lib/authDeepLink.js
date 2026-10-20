@@ -6,6 +6,7 @@ import {
   clearAuthCallbackAdmission,
 } from './authCallbackState';
 import { logError, logInfo } from './errorLog';
+import { markPasswordRecoveryPending } from './passwordRecoveryState';
 
 const AUTH_KEYS = new Set([
   'token_hash', 'type', 'code', 'access_token', 'refresh_token', 'state',
@@ -108,6 +109,7 @@ export async function handleAuthDeepLink(url, { supabase, notifyAuthLinkFailed }
         return fail(notifyAuthLinkFailed, 'auth.deepLink.tokenHashIdentityMismatch', 'identity_mismatch');
       }
       logInfo('auth.deepLink.tokenHash', 'session established from a server-verified token hash');
+      if (gate.kind === 'recovery') markPasswordRecoveryPending();
       return { action: 'signedIn', via: 'token_hash' };
     } catch (_) {
       await clearAuthCallbackAdmission();
@@ -179,6 +181,7 @@ export async function handleAuthDeepLink(url, { supabase, notifyAuthLinkFailed }
       if (installed?.error || installed?.data?.user?.id !== verifiedUser.id) {
         throw new Error('installed session could not be revalidated');
       }
+      if ((params.type ?? gate.kind) === 'recovery') markPasswordRecoveryPending();
       return { action: 'signedIn', via: 'implicit' };
     } catch (_) {
       try { await supabase.auth.signOut?.(); } catch (_) { /* refusal remains closed */ }
