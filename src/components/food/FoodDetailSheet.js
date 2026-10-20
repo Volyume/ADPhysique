@@ -29,7 +29,7 @@ import {
 import { parseDecimalInput } from '../../lib/parseDecimalInput';
 import { isNetworkSourced, formatLastVerified } from '../../lib/food/freshness';
 import { refetchStaleFood } from '../../lib/food/waterfall';
-import { hasCookToggle, nativeState, convertCookGrams, gramsOnNativeBasis } from '../../lib/food/cookYield';
+import { hasCookToggle, nativeState, convertCookGrams, gramsOnNativeBasis, weighAsListed } from '../../lib/food/cookYield';
 import { kitchenRound } from '../../lib/food/gramSolve';
 import { entryDateLine } from '../../lib/food/diaryDates';
 import { parseLocalDay } from '../../lib/dayKey';
@@ -594,6 +594,11 @@ export default function FoodDetailSheet({
                     />
                   </View>
                 </View>
+              ) : null}
+              {/* Item 27: a curated food named cooked or dry with no pair has
+                  no Raw/Cooked choice, so say the grams are as listed. */}
+              {!showWeightChoice && curatedKey && weighAsListed(curatedKey, food.name) ? (
+                <Text style={[styles.lastVerified, live.lastVerified]}>Weigh as listed</Text>
               ) : null}
               {sugarG != null ? (
                 <Text
