@@ -438,7 +438,7 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain('bottomScrollPadding');
     expect(source).toContain('emptyBottomPadding');
     expect(source).toContain('const hasSwappableFoods = (day?.slots || []).some');
-    expect(source).toContain('Hold a swappable food to leave it out of future plans.');
+    expect(source).toContain('Hold a swappable food, or open its swap list, and choose "Don\\\'t suggest again" to leave it out of future plans.');
     expect(source).toContain('Review the meals and add the plan when it looks right.');
     expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
     // The date is the real one: "today" only when the plan is for today.
@@ -803,7 +803,7 @@ describe('MealPlanScreen — calm failures with a logged cause, sheet headings (
     act(() => { row.props.onLongPress(); });
     const [title, , alertButtons] = appAlert.mock.calls[0];
     expect(title).toBe('Stop suggesting this?');
-    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest it").onPress(); });
+    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest again").onPress(); });
 
     expect(mockToastShow).toHaveBeenCalledWith('Porridge oats will not be suggested again.', { variant: 'success' });
     expect(mockToastShow).not.toHaveBeenCalledWith(expect.stringContaining('We will not'), expect.anything());
@@ -817,7 +817,7 @@ describe('MealPlanScreen — calm failures with a logged cause, sheet headings (
       && /Porridge oats/.test(String(n.props.accessibilityLabel || '')))[0];
     act(() => { row.props.onLongPress(); });
     const [, , alertButtons] = appAlert.mock.calls[0];
-    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest it").onPress(); });
+    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest again").onPress(); });
 
     expect(logError).toHaveBeenCalledWith('MealPlanScreen.flagFood', expect.any(Error), { slotKey: 'meal_1' });
     expect(mockToastShow).toHaveBeenCalledWith('That food was not left out of your plans. Try again in a moment.', { variant: 'error' });

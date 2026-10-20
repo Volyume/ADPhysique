@@ -88,9 +88,8 @@
   .step p{color:var(--textSecondary); font-size:15px; line-height:1.55; margin:0;}
 
   /* Plans */
-  .plans{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  .plans{display:grid; grid-template-columns:1fr; gap:24px; max-width:640px;}
   .plan{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:18px; padding:30px;}
-  .plan.pro{border-color:var(--amber);}
   .plan .kicker{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
   .plan h3{font-weight:800; font-size:22px; margin:0; letter-spacing:-0.3px;}
   .plan .price{color:var(--amber); font-weight:700; font-size:16px;}
@@ -99,12 +98,6 @@
   .plan li{display:flex; gap:11px; align-items:flex-start; color:var(--textSecondary); font-size:15px; line-height:1.5;}
   .plan li::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%; background:var(--amber); margin-top:8px;}
 
-  /* Trial */
-  .trial-box{background:var(--amberBg); border:1px solid var(--amber); border-radius:18px; padding:30px; max-width:760px;}
-  .trial-box p{color:var(--text); font-size:16px; line-height:1.65; margin:0 0 14px; max-width:70ch;}
-  .trial-box p:last-child{margin-bottom:0;}
-  .trial-box .concise{font-weight:600;}
-  .trial-box .fine{color:var(--textMuted); font-size:14px;}
 
   /* Generic feature grid */
   .fgrid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;}
@@ -200,7 +193,7 @@
         <div class="step">
           <div class="n">STEP 3</div>
           <h3>You train and log</h3>
-          <p>Log your sessions and, on Pro, your food. The local database on your device is the source of truth.</p>
+          <p>Log your sessions and your food. The local database on your device is the source of truth.</p>
         </div>
         <div class="step">
           <div class="n">STEP 4</div>
@@ -252,11 +245,11 @@
   <section class="section-pad">
     <div class="wrap">
       <h2 class="title">What is in it</h2>
-      <p class="lead">The training core is free and permanent, a real product on its own. Nutrition and the weekly coaching decision are Pro.</p>
+      <p class="lead">Volyume is free. Training, nutrition and the weekly coaching decision are all included in one app.</p>
       <div class="plans">
         <div class="plan">
-          <div class="kicker"><h3>Free</h3><span class="price">Always free</span></div>
-          <p class="desc">The training core, permanent.</p>
+          <div class="kicker"><h3>Free</h3><span class="price">Free</span></div>
+          <p class="desc">Everything in Volyume, in one app.</p>
           <ul>
             <li>Full workout logging</li>
             <li>Plan library, 31 built-in training plans</li>
@@ -264,12 +257,6 @@
             <li>Exercise library, 551 exercises plus your own</li>
             <li>Training history</li>
             <li>Personal bests and progress tracking</li>
-          </ul>
-        </div>
-        <div class="plan pro">
-          <div class="kicker"><h3>Pro</h3><span class="price">£2.99/month or £19.99/year</span></div>
-          <p class="desc">Everything nutrition and coaching.</p>
-          <ul>
             <li>Nutrition, macros and food diary</li>
             <li>Barcode scanning</li>
             <li>Over 29,000 UK foods, searchable offline</li>
@@ -279,19 +266,6 @@
             <li>Advanced progression</li>
           </ul>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- TRIAL -->
-  <section class="section-pad">
-    <div class="wrap">
-      <h2 class="title">Trying Pro</h2>
-      <p class="lead">Two separate steps, described plainly, so there are no surprises.</p>
-      <div class="trial-box">
-        <p class="concise">Start with 14 days of full Pro, no card needed. Continue through Google Play and its intro offer adds 7 more free days before your first payment.</p>
-        <p>Volyume Pro begins with 14 days of full access and no card required, so you can see the whole system before deciding. If you choose to continue, you opt into the subscription through Google Play, and Google Play's introductory offer adds a further 7 free days before your first payment is taken. That is up to 21 days of access before you are charged anything. You can cancel in Google Play at any time before the charge.</p>
-        <p class="fine">The price Google Play shows at the point of purchase is the one that applies.</p>
       </div>
     </div>
   </section>
@@ -354,20 +328,11 @@
   "holds decisions when data is insufficient / never guesses" §A, §F
   "live on Google Play, package app.volyume" ............... §A
   "iOS coming soon" (never App Store availability) ......... §A, §E, §F
-  Free: logging, plan library, custom plans, history,
-     progress tracking ..................................... §B (Free)
   "31 built-in training plans" ............................. §D
   "551 exercises plus custom" .............................. §D
-  Pro: nutrition/macros/food diary, barcode, meal planning,
-     Progress Scan, weekly Precision Coaching, adv progression §B (Pro)
-  "barcode scanning is Pro" (never free) ................... §D
   "over 29,000 UK foods, searchable offline" ............... §D, §E
   "Progress Scan, a progress score from your own photos"
      (not body-fat, not medical) ........................... §A, §F
-  Pricing "£2.99/month or £19.99/year" ..................... §C
-  "Google Play price at purchase is authoritative" ......... §C
-  Trial wording (14-day cardless in-app + 7-day store offer,
-     up to 21 days, cancel any time) ....................... §C, CLAIMS-STANDARDS §3
   "deterministic coaching, not generative coaching /
      same inputs same decision / reason written down /
      not a chat assistant / no model of you" ............... §A, CLAIMS-STANDARDS §6

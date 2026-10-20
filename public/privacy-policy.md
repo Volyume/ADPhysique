@@ -70,7 +70,6 @@ We use a small number of processors to run the app:
 |---|---|---|
 | Supabase | Database, authentication and cloud backup | Cloud-backed account data, never progress-photo image files |
 | Sentry | Crash and performance reporting | Scrubbed diagnostic events |
-| Apple App Store / Google Play | Subscription purchases | Store receipt and transaction metadata |
 | Expo push | Push notification delivery | Device push token |
 | Resend (sends from Ireland, records kept in the United States under the standard contract clauses) | Sending the news emails | Your email address and the email itself |
 | Open Food Facts / USDA FoodData Central | Food lookup data | Search terms and barcode values only |
@@ -123,7 +122,7 @@ To make a request, use the in-app controls or email support@volyume.app. We resp
 
 ## 12. Children
 
-Volyume is not directed at children under 13 and we do not knowingly collect data from anyone under 13. If we discover an account belongs to someone under 13, we delete it and refund any active subscription where possible.
+Volyume is not directed at children under 13 and we do not knowingly collect data from anyone under 13. If we discover an account belongs to someone under 13, we delete it.
 
 In Community, anyone under 18 shares with their followers only and never appears on pages shown outside the app.
 

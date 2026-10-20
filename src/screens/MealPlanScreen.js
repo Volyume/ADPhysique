@@ -44,7 +44,7 @@ import { shiftDate } from '../lib/food/diaryDates';
 // Campaign 17B job 4: stated vs observed, from CONFIRMED intake only.
 import { mealCountObservation } from '../lib/food/habits';
 // Campaign 17B job 5: why these meals, from the codes stamped at generation.
-import { explainMeal, explainDay, explainFood, explainAbsence } from '../lib/food/mealRationale';
+import { explainMeal, explainDay, explainFood, explainAbsence, MEAL_REASON } from '../lib/food/mealRationale';
 import { getNutritionTargets } from '../lib/database';
 
 // How far back the meal-count observation looks. Four weeks is long enough to
@@ -871,7 +871,7 @@ export default function MealPlanScreen({ navigation, route }) {
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: "Don't suggest it",
+          text: "Don't suggest again",
           onPress: async () => {
             setBusy(true);
             try {
@@ -1431,7 +1431,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <Text style={[styles.reviewTitle, live.reviewTitle]}>Review meals</Text>
             <Text style={[styles.reviewSub, live.reviewSub]}>
               {hasSwappableFoods
-                ? 'Tap a food to swap it. Hold a swappable food to leave it out of future plans.'
+                ? 'Tap a food to swap it. Hold a swappable food, or open its swap list, and choose "Don\'t suggest again" to leave it out of future plans.'
                 : 'Review the meals and add the plan when it looks right.'}
             </Text>
           </View>
@@ -1523,13 +1523,13 @@ export default function MealPlanScreen({ navigation, route }) {
                       );
                     })}
                     <Text style={[styles.macroLine, live.macroLine]} numberOfLines={1} ellipsizeMode="tail">
-                      {`P ${formatNumber(slot.totals.protein)} g - C ${formatNumber(slot.totals.carbs)} g - F ${formatNumber(slot.totals.fat)} g`}
+                      {`P ${formatNumber(Math.round(slot.totals.protein))} g · C ${formatNumber(Math.round(slot.totals.carbs))} g · F ${formatNumber(Math.round(slot.totals.fat))} g`}
                     </Text>
                     {/* Campaign 17B job 5: WHY THIS MEAL. Rendered only when a
                         reason was actually recorded - a meal with none shows
                         nothing, which is honest, rather than a guess dressed
                         up as an explanation. */}
-                    {explainMeal(slot.reason) ? (
+                    {slot.reason !== MEAL_REASON.GENERIC_START && explainMeal(slot.reason) ? (
                       <Text style={[styles.mealReason, live.mealReason]}>{explainMeal(slot.reason)}</Text>
                     ) : null}
                     {/* Season to taste: the free additions that suit this meal
@@ -1600,7 +1600,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <View style={styles.totalsRow}>
               <Text style={[styles.totalsLabel, live.totalsLabel]}>Day total</Text>
               <Text style={[styles.totalsText, live.totalsText]}>
-                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${formatNumber(day.totals.protein)} g - C ${formatNumber(day.totals.carbs)} g - F ${formatNumber(day.totals.fat)} g`}
+                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${formatNumber(Math.round(day.totals.protein))} g · C ${formatNumber(Math.round(day.totals.carbs))} g · F ${formatNumber(Math.round(day.totals.fat))} g`}
               </Text>
             </View>
           ) : null}
@@ -1709,14 +1709,14 @@ export default function MealPlanScreen({ navigation, route }) {
                   onPress={() => applyMealChoice(swapSheet.slotKey, meal)}
                   disabled={busy}
                   accessibilityRole="button"
-                  accessibilityLabel={`${meal.name}, ${formatEnergy(meal.totals.kcal, energyUnit)} ${energyWord}, ${meal.totals.protein} grams protein${recommended ? '. Closest match.' : ''}`}
+                  accessibilityLabel={`${meal.name}, ${formatEnergy(meal.totals.kcal, energyUnit)} ${energyWord}, ${Math.round(meal.totals.protein)} grams protein${recommended ? '. Closest match.' : ''}`}
                 >
                   <View style={styles.swapOptionMain}>
                     <Text style={[styles.swapOptionName, live.swapOptionName]}>{meal.name}</Text>
                     {recommended ? <Text style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
                   </View>
                   <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
-                    {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${meal.totals.protein} g`}
+                    {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${Math.round(meal.totals.protein)} g`}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1809,18 +1809,31 @@ export default function MealPlanScreen({ navigation, route }) {
                       onPress={() => setFoodSwapSheet((sh) => (sh ? { ...sh, pending: { foodIn, name } } : sh))}
                       disabled={busy}
                       accessibilityRole="button"
-                      accessibilityLabel={`${name}, ${formatEnergy(totals.kcal, energyUnit)} ${energyWord}, ${totals.protein} grams protein${i === 0 ? '. Closest match.' : ''}`}
+                      accessibilityLabel={`${name}, ${formatEnergy(totals.kcal, energyUnit)} ${energyWord}, ${Math.round(totals.protein)} grams protein${i === 0 ? '. Closest match.' : ''}`}
                     >
                       <View style={styles.swapOptionMain}>
                         <Text style={[styles.swapOptionName, live.swapOptionName]}>{name}</Text>
                         {i === 0 ? <Text style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
                       </View>
                       <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
-                        {`${formatEnergy(totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${totals.protein} g`}
+                        {`${formatEnergy(totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${Math.round(totals.protein)} g`}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+                <TouchableOpacity
+                  style={styles.swapBackRow}
+                  onPress={() => {
+                    const sh = foodSwapSheet;
+                    setFoodSwapSheet(null);
+                    handleFlagFood(sh.slotKey, sh.foodKeyOut, sh.foodOutName);
+                  }}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Don't suggest ${foodSwapSheet.foodOutName} again`}
+                >
+                  <Text style={[styles.swapSheetSub, live.swapSheetSub]}>Don't suggest again</Text>
+                </TouchableOpacity>
                 {/* Campaign 17B job 5: the foods that are NOT here, and why.
                     Only ever the user's own instructions - a food left out on
                     macro fit is simply not mentioned, because there is no

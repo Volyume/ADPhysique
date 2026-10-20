@@ -1321,7 +1321,11 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     // things the app connects; that is plain English, not the product term.
     // The gloss obligation attaches to the product term and to the Coach
     // surface's own noun.
-    const usesTerm = /\bcoach\b/i.test(src) || /Precision Coaching/.test(src);
+    // Item 30 (owner-approved line): "Your coach isn't an AI chatbot. It
+    // follows fixed rules." is itself the plain explanation of what the
+    // coach is, so that one sentence carries no separate gloss.
+    const glossed = src.replace("Your coach isn't an AI chatbot. It follows fixed rules.", '');
+    const usesTerm = /\bcoach\b/i.test(glossed) || /Precision Coaching/.test(src);
     if (usesTerm) {
       expect(src).toContain('<InfoTooltip text={GLOSSARY.precisionCoaching}');
     } else {
@@ -1461,7 +1465,8 @@ describe('LOGGER: the first session states its effort target and its own words (
 describe('WELLBEING + ACCOUNT: the two settings sentences (W-3/W-4, E-7, D96)', () => {
   test('calm mode says what it changes, and that the safety limits do not (W-3/W-4)', () => {
     const src = read('screens/SettingsCoachingScreen.js');
-    expect(src).toContain('Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change.');
+    expect(src).toContain('Your plan, your numbers and your weight figures do not change. Calmer coaching:');
+    expect(src).toContain('Turns the PR vibration into a plain tap');
     expect(src).toContain('The safety limits on calories and training load are always on, in both modes.');
     // A true statement about existing behaviour only: no threshold, gate or
     // detector mechanic reaches the user.
