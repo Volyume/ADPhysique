@@ -92,6 +92,7 @@ import {
   saveDraft, loadDraft, clearDraft, clampResumeStep, loadBuildProgress, markBuildProgress, DRAFT_DEBOUNCE_MS,
 } from '../lib/proOnboardingDraft';
 import { dateOfBirthFromAgeYears } from '../lib/profileAge';
+import { SENSITIVE_NOTES } from '../lib/sensitiveFieldNotes';
 import { FIRST_CHECKIN_MIN_DAYS } from '../lib/trialActivation';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 
@@ -2604,7 +2605,7 @@ onBack={coachingMode ? () => navigation.goBack() : undefined}
 
               <View style={styles.section} onLayout={markY('sex')}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Biological sex</Text>
-                <Text style={[styles.fieldHint, live.fieldHint]}>Used by the calorie formula and safety floors. This stays private.</Text>
+                <Text style={[styles.fieldHint, live.fieldHint]}>Used by the calorie formula and safety floors.</Text>
                 <SegmentedControl
                   options={SEX_OPTIONS}
                   value={sex}
@@ -2613,6 +2614,7 @@ onBack={coachingMode ? () => navigation.goBack() : undefined}
                   error={!!errors2.sex}
                 />
                 <FieldError message={errors2.sex} />
+                <Text style={[styles.fieldHint, live.fieldHint, styles.sensitiveNote]}>{SENSITIVE_NOTES.sex}</Text>
               </View>
 
               <View style={styles.section} onLayout={markY('age')}>
@@ -2629,6 +2631,7 @@ onBack={coachingMode ? () => navigation.goBack() : undefined}
                   textContentType="none"
                   error={errors2.age}
                 />
+                <Text style={[styles.fieldHint, live.fieldHint, styles.sensitiveNote]}>{SENSITIVE_NOTES.age}</Text>
               </View>
 
               <View style={styles.section} onLayout={markY('height')}>
@@ -2688,6 +2691,7 @@ onBack={coachingMode ? () => navigation.goBack() : undefined}
                   </View>
                 )}
                 <FieldError message={errors2.height} />
+                <Text style={[styles.fieldHint, live.fieldHint, styles.sensitiveNote]}>{SENSITIVE_NOTES.height}</Text>
               </View>
 
               <View style={styles.sectionLast} onLayout={markY('weight')}>
@@ -2751,6 +2755,7 @@ onBack={coachingMode ? () => navigation.goBack() : undefined}
                   </View>
                 )}
                 <FieldError message={errors2.weight} />
+                <Text style={[styles.fieldHint, live.fieldHint, styles.sensitiveNote]}>{SENSITIVE_NOTES.weight}</Text>
               </View>
             </QuestionGroup>
             </View>
@@ -2838,6 +2843,7 @@ onBack={coachingMode ? () => navigation.goBack() : undefined}
                     />
                   </View>
                 ) : null}
+                <Text style={[styles.fieldHint, live.fieldHint, styles.sensitiveNote]}>{SENSITIVE_NOTES.bodyFat}</Text>
               </View>
             </QuestionGroup>
 
@@ -4035,6 +4041,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted, marginBottom: spacing.sm,
   },
   fieldHint: { ...type.captionTight, color: colors.textMuted, marginBottom: spacing.sm },
+  // Item 4: the "who can see this" line sits under the field, so it is
+  // spaced from the control above rather than from a label.
+  sensitiveNote: { marginTop: spacing.xs, marginBottom: 0 },
   // A3: provisional energy line under the focus dropdown (step 5).
   provisionalKcal: {
     ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xs,

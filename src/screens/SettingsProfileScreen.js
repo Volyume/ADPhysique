@@ -20,6 +20,7 @@ import { useToast } from '../components/Toast';
 import { DIETS } from '../lib/food/curatedMeals';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { touchTarget } from '../styles/layout';
+import { SENSITIVE_NOTES } from '../lib/sensitiveFieldNotes';
 
 // AC-08 (Codex adversarial audit, 2026-07-12): height/age feed BMR and
 // calorie-floor maths same as weight/body fat, but saveHeight/saveAge below
@@ -259,6 +260,7 @@ export default function SettingsProfileScreen() {
               );
             })}
           </View>
+          <Text style={[settingsStyles.settingSub, live.settingSub, styles.sensitiveNote]}>{SENSITIVE_NOTES.sex}</Text>
         </View>
         <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
@@ -278,6 +280,7 @@ export default function SettingsProfileScreen() {
             onChangeInches={setHeightIn}
             onBlurInches={() => saveHeight(heightFt, heightIn)}
           />
+          <Text style={[settingsStyles.settingSub, live.settingSub, styles.sensitiveNote]}>{SENSITIVE_NOTES.height}</Text>
         </View>
         <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
@@ -290,6 +293,7 @@ export default function SettingsProfileScreen() {
             </View>
           </View>
           <AgeYearsField value={age} onChangeText={setAge} onBlur={() => saveAge(age)} />
+          <Text style={[settingsStyles.settingSub, live.settingSub, styles.sensitiveNote]}>{SENSITIVE_NOTES.age}</Text>
         </View>
         <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
@@ -325,6 +329,8 @@ export default function SettingsProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Item 4: the "who can see this" line under a sensitive field.
+  sensitiveNote: { marginTop: spacing.xs },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',

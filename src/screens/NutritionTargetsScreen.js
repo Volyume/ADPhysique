@@ -57,6 +57,7 @@ import HeightFeetInchesField from '../components/HeightFeetInchesField';
 import AgeYearsField from '../components/AgeYearsField';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { touchTarget } from '../styles/layout';
+import { CALCULATION_ONLY_NOTES } from '../lib/sensitiveFieldNotes';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1095,10 +1096,12 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                   selected={sex}
                   onSelect={(v) => { if (profileLoaded) setSex(v); }}
                 />
+                <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.sex}</Text>
               </View>
               <View style={styles.formGroup}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
                 <AgeYearsField value={age} onChangeText={setAge} />
+                <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.age}</Text>
               </View>
               <View style={styles.formGroup}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
@@ -1108,6 +1111,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                   inches={heightIn}
                   onChangeInches={setHeightIn}
                 />
+                <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.height}</Text>
               </View>
               <View style={styles.formGroup}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
@@ -1125,6 +1129,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                   maxLength={5}
                   accessibilityLabel="Current weight in kilograms"
                 />
+                <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.weight}</Text>
               </View>
 
               {/* The same GDPR consent the full form requires, bound to the same
@@ -1186,12 +1191,14 @@ export default function NutritionTargetsScreen({ navigation, route }) {
               selected={sex}
               onSelect={(v) => { if (profileLoaded) setSex(v); }}
             />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.sex}</Text>
           </View>
 
           {/* Age */}
           <View style={styles.formGroup}>
             <Text style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
             <AgeYearsField value={age} onChangeText={setAge} />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.age}</Text>
           </View>
 
           {/* Height */}
@@ -1203,6 +1210,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
               inches={heightIn}
               onChangeInches={setHeightIn}
             />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.height}</Text>
           </View>
 
           {/* Weight */}
@@ -1222,6 +1230,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
               maxLength={5}
               accessibilityLabel="Current weight in kilograms"
             />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.weight}</Text>
           </View>
 
           {/* Body fat */}
@@ -1235,6 +1244,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
               maxLength={4}
               accessibilityLabel="Body fat estimate percentage"
             />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.bodyFat}</Text>
           </View>
 
           {/* BF Source, only shown when BF is entered */}
@@ -2181,6 +2191,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   fieldHintKg: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
+  // Item 4: the "who can see this" line under a sensitive field.
+  sensitiveNote: { marginTop: spacing.xs, marginBottom: 0 },
   optional: {
     fontFamily: fontFamily.regular, fontWeight: fontWeight.regular,
     color: colors.textMuted,
