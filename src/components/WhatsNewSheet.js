@@ -168,7 +168,7 @@ export const WHATS_NEW = {
   // user-facing features.
   '3.2.0': [
     { icon: 'barbell-outline', text: 'The workout logger has been completely revamped. Logging, fixing a set and finishing a workout are all quicker and smoother.' },
-    { icon: 'videocam-outline', text: 'You can now record videos of your sets and share them, with your lifts and PRs shown over the video. Your videos stay private on your device unless you choose to share them.' },
+    { icon: 'videocam-outline', text: 'Record videos of your sets and share them on social media with your workout stats on top: your best lifts, PRs, total weight lifted and more. Add a filter, a quote or your own words, and trim it to the best part. Your videos stay private on your device unless you choose to share them.' },
     { icon: 'people-outline', text: 'Community has been improved, with smoother feeds, chats and profiles.' },
   ],
   // 3.1.0 (2026-10-18): the Android setup fix (setup no longer stalls on the
