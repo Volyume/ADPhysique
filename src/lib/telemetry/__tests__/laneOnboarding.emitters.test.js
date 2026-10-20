@@ -26,7 +26,6 @@ const EMITTERS = [
   ['src/screens/ProOnboardingScreen.js', 'async function finishCoachingSetup', 'coaching_setup_finished', ['plan_choice', 'rebuild_outcome']],
   ['src/screens/ProOnboardingScreen.js', '<ArchetypePicker', 'archetype_chosen', ['archetype', 'surface']],
   ['src/screens/PlanUpdateScreen.js', '<ArchetypePicker', 'archetype_chosen', ['archetype', 'surface']],
-  ['src/screens/ProGoalSetupScreen.js', '<ArchetypePicker', 'archetype_chosen', ['archetype', 'surface']],
   ['src/components/CoachingSetupCard.js', 'useEffect', 'coaching_setup_card_shown', ['surface']],
   ['src/components/CoachingSetupCard.js', 'onPress={() =>', 'coaching_setup_started', ['entry']],
   ['src/lib/planAutoGen.js', 'function emitPlanGenerationFinished', 'plan_generation_finished', ['outcome', 'ms', 'trigger']],
@@ -47,9 +46,12 @@ describe('lane onboarding emitters', () => {
 
   test('feature_seen emitters and the card surfaces', () => {
     expect(read('src/screens/StartChoiceScreen.js')).toContain("trackFeatureSeen('start_choice')");
-    for (const f of ['ProOnboardingScreen', 'PlanUpdateScreen', 'ProGoalSetupScreen']) {
+    for (const f of ['ProOnboardingScreen', 'PlanUpdateScreen']) {
       expect(read(`src/screens/${f}.js`)).toContain("trackFeatureSeen('archetype_cards')");
     }
+    // Item 10 (Option B, owner 2026-10-20): the training style moved to Adjust
+    // training plan, so Update goal and phase no longer shows the archetype cards.
+    expect(read('src/screens/ProGoalSetupScreen.js')).not.toContain('<ArchetypePicker');
     expect(read('src/components/CoachingSetupCard.js')).toContain("trackFeatureSeen('coaching_setup_card')");
     const surfaces = {
       DiaryScreen: 'nutrition', MealPlanScreen: 'meal_plan', NutritionTargetsScreen: 'targets',
