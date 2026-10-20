@@ -45,6 +45,7 @@ import { shiftDate } from '../lib/food/diaryDates';
 import { mealCountObservation } from '../lib/food/habits';
 // Campaign 17B job 5: why these meals, from the codes stamped at generation.
 import { explainMeal, explainDay, explainFood, explainAbsence, MEAL_REASON } from '../lib/food/mealRationale';
+import { countOilyMeals, oilyFishCapFromProfile, OILY_FISH_NO_LIMIT } from '../lib/food/oilyFish';
 import { getNutritionTargets } from '../lib/database';
 
 // How far back the meal-count observation looks. Four weeks is long enough to
@@ -75,7 +76,7 @@ import {
 } from '../lib/food/db';
 // Campaign 17A job 3: what a food swap MEANS, in the user's own words.
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from '../lib/food/foodSwapScope';
-import { hasCookToggle, nativeState, convertCookGrams, uncookedWord } from '../lib/food/cookYield';
+import { hasCookToggle, nativeState, convertCookGrams, uncookedWord, weighAsListed } from '../lib/food/cookYield';
 import { kitchenRound } from '../lib/food/gramSolve';
 import { buildGroceryList, formatGroceryListForShare, GROCERY_REPEAT_DAYS } from '../lib/food/groceryList';
 import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
@@ -196,7 +197,7 @@ const DIETARY_CHIP_HINT_KEY = '@volyume_seen_mealplan_dietary_chip';
 
 // One labelled segmented row of preference options (a small radio group).
 function PrefRow({
-  label, help, options, value, onSelect, busy,
+  label, help, options, value, onSelect, busy, a11yLabel,
 }) {
   // CP-10 batch E (2026-07-10): sibling function-component scope (not
   // prop-drilled `live`/`t` from MealPlanScreen, matching AddCustomFoodScreen's
@@ -221,7 +222,7 @@ function PrefRow({
               hitSlop={hitSlop}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected, disabled: busy }}
-              accessibilityLabel={`${label}: ${opt.label}`}
+              accessibilityLabel={`${a11yLabel || label}: ${opt.label}`}
             >
               <Text style={[styles.prefOptText, live.prefOptText, selected && [styles.prefOptTextOn, live.prefOptTextOn]]}>{opt.label}</Text>
             </TouchableOpacity>
@@ -314,6 +315,16 @@ function MealPreferencesControls({
         ]}
         value={prefs.variety}
         onSelect={(v) => onSetPref({ mealPlanVariety: v })}
+        busy={busy}
+      />
+      {/* Item 25: how many oily fish meals a plan may hold in a week. Counted
+          in meals; kept on this phone with the other meal plan choices. */}
+      <PrefRow
+        label={`Oily fish meals a week: ${prefs.oilyFish === Infinity ? 'no limit' : `up to ${prefs.oilyFish}`}`}
+        a11yLabel="Oily fish meals a week"
+        options={[...[0, 1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: n, label: String(n) })), { value: Infinity, label: 'No limit' }]}
+        value={prefs.oilyFish}
+        onSelect={(v) => onSetPref({ mealPlanOilyFish: v === Infinity ? OILY_FISH_NO_LIMIT : v })}
         busy={busy}
       />
     </>
@@ -960,12 +971,13 @@ export default function MealPlanScreen({ navigation, route }) {
     );
   }, [user?.id, record, plan, day, dayIndex, busy, addMealPlanExcludedFood, toast]);
 
-  // Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
-  // NA-nutrition-1): record which basis the user will weigh this plate item
-  // in. Only the grams shown convert (src/lib/food/cookYield.js); calories
-  // and macros are untouched, so the day's totals never move when this is
-  // set. Persists the same way a swap does: rewrite the slot's items array in
-  // the stored plan JSON and push it through updateMealPlan.
+  // Ultimate-Audit item 12 (raw/cooked weighing, founder ruling 2026-10-19,
+  // which superseded NA-nutrition-1 for foods with a CoFID pair): an item with
+  // a pair can be shown in either weight. Only the grams shown convert
+  // (src/lib/food/cookYield.js); calories and macros are untouched, so the
+  // day's totals never move when this is set. Persists the same way a swap
+  // does: rewrite the slot's items array in the stored plan JSON and push it
+  // through updateMealPlan.
   // The day-wide switch: every paired item in the day to one weight state,
   // in one write. Items without a CoFID pair are left as they are.
   const handleSetDayWeightState = useCallback(async (value) => {
@@ -1157,7 +1169,8 @@ export default function MealPlanScreen({ navigation, route }) {
     mealsPerDay: plan?.prefs?.mealsPerDay ?? userProfile?.mealPlanMealsPerDay ?? 4,
     periWorkoutSlots: plan?.prefs?.periWorkoutSlots ?? !!userProfile?.mealPlanPeriWorkout,
     variety: userProfile?.mealPlanVariety ?? 0,
-  }), [plan?.prefs, userProfile?.mealPlanMealsPerDay, userProfile?.mealPlanPeriWorkout, userProfile?.mealPlanVariety]);
+    oilyFish: oilyFishCapFromProfile(userProfile),
+  }), [plan?.prefs, userProfile]);
   const prefSummary = useMemo(() => {
     const meals = prefs.mealsPerDay ?? 4;
     const variety = prefs.variety === 1
@@ -1543,6 +1556,9 @@ export default function MealPlanScreen({ navigation, route }) {
                             <Text style={[styles.itemLine, live.itemLine]} numberOfLines={1} ellipsizeMode="tail">{`${formatNumber(shown.grams)} g ${shown.name}`}</Text>
                             {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={t.colors.textSecondary} /> : null}
                           </TouchableOpacity>
+                          {weighAsListed(foodKey, it.name) ? (
+                            <Text style={[styles.foodReason, live.foodReason]}>Weigh as listed</Text>
+                          ) : null}
                           {foodWhy ? (
                             <Text style={[styles.foodReason, live.foodReason]}>{foodWhy}</Text>
                           ) : null}
@@ -1851,6 +1867,11 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
                   Pick any one. Grams are solved to match, so the meal stays close to target; the first is the closest match.
                 </Text>
+                {grocerySheet.dayCount === 1 && grocerySheet.repeat >= 5 && countOilyMeals(plan?.days?.[0]) > 0 ? (
+                  <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
+                    {`This day has ${countOilyMeals(plan.days[0]) === 1 ? 'an oily fish meal' : `${countOilyMeals(plan.days[0])} oily fish meals`}, so ${grocerySheet.repeat} days of it is ${countOilyMeals(plan.days[0]) * grocerySheet.repeat} oily fish meals.`}
+                  </Text>
+                ) : null}
                 <ScrollView
                   style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
                   contentContainerStyle={styles.swapListContent}
@@ -2003,7 +2024,7 @@ export default function MealPlanScreen({ navigation, route }) {
                             onPress={() => toggleGroceryTick(tickKey)}
                             accessibilityRole="checkbox"
                             accessibilityState={{ checked: ticked }}
-                            accessibilityLabel={`${item.name}${item.count ? ` x${item.count}` : ''}${item.grams != null ? `, ${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : ''}${item.alt ? `, ${formatNumber(item.alt.grams)} g ${item.alt.state}` : ''}` : ''}`}
+                            accessibilityLabel={`${item.name}${item.count ? ` x${item.count}` : ''}${item.grams != null ? `, ${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : (item.asListed ? ' as listed' : '')}${item.alt ? `, ${formatNumber(item.alt.grams)} g ${item.alt.state}` : ''}` : ''}`}
                           >
                             <Ionicons
                               name={ticked ? 'checkbox' : 'square-outline'}
@@ -2018,7 +2039,7 @@ export default function MealPlanScreen({ navigation, route }) {
                             </Text>
                             {item.grams != null ? (
                               <Text style={[styles.groceryQty, live.groceryQty, ticked && [styles.groceryQtyTicked, live.groceryQtyTicked]]}>
-                                {`${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : ''}`}
+                                {`${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : (item.asListed ? ' as listed' : '')}`}
                                 {item.alt ? (
                                   <Text style={[styles.groceryQtyTicked, live.groceryQtyTicked]}>{` (${formatNumber(item.alt.grams)} g ${item.alt.state})`}</Text>
                                 ) : null}
