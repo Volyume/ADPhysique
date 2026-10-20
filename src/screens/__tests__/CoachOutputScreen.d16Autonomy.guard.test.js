@@ -160,7 +160,7 @@ describe('D16: SettingsCoachingScreen carries the mode selector (sibling-file ch
     expect(SETTINGS).toContain("{ key: 'manual', label: 'Manual' }");
     // RE-ANCHORED 2026-09-26 (plain-English sweep, actor rule: "your coach",
     // docs/rules/plain-english.md): same three sentences, same meaning.
-    expect(SETTINGS).toContain("Your coach applies each week's changes for you.");
+    expect(SETTINGS).toContain("Your coach applies each week's changes when you open this week's Coaching decision.");
     expect(SETTINGS).toContain('Your coach suggests each change. You tap to apply it.');
     expect(SETTINGS).toContain('Your coach shows each change and the reason. You make the change yourself.');
   });

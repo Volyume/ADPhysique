@@ -233,7 +233,7 @@ export default function SettingsCoachingScreen() {
               // D93 (Campaign 2, Phase 12): the D16 rule was a source
               // comment only - a Coached user whose week reverted to
               // confirm-first was told nothing. One honest sentence.
-              ? "Your coach applies each week's changes for you. Anything safety-related still waits for your confirmation."
+              ? "Your coach applies each week's changes when you open this week's Coaching decision. Anything safety-related still waits for your confirmation."
               : coachAutonomy === 'manual'
                 ? 'Your coach shows each change and the reason. You make the change yourself.'
                 : 'Your coach suggests each change. You tap to apply it.'}
