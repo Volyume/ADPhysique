@@ -144,6 +144,8 @@ export default function WelcomeScreen({ navigation, route }) {
 
         <View style={styles.actions} onLayout={(e) => setActionsH(Math.round(e.nativeEvent.layout.height))}>
           <Text style={[styles.free, live.free]}>Completely free · No ads</Text>
+          <Text style={[styles.free, live.free]}>Your progress photos and workout videos stay on this phone.</Text>
+          <Text style={[styles.free, live.free]}>Your coach isn't an AI chatbot. It follows fixed rules.</Text>
           <Button variant="emphatic" size="lg" title="Get started" onPress={getStarted} accessibilityLabel="Get started" />
           <TouchableOpacity
             accessibilityRole="button"
