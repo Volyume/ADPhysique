@@ -701,7 +701,7 @@ body {
   position: absolute; left: 0; top: ${foldY}px; width: 412px; height: 0;
   border-top: 1px dashed #ff2d55; z-index: 100000; pointer-events: none;
 }
-${opts.phone ? `#pr-page { display: flex; flex-direction: column; height: ${Number(opts.phone.height)}px; overflow: hidden; }
+${process.env.PAPER_RENDER_NO_FOLD === '1' ? '#pr-fold { display: none; }\n' : ''}${opts.phone ? `#pr-page { display: flex; flex-direction: column; height: ${Number(opts.phone.height)}px; overflow: hidden; }
 #pr-page > * { flex-shrink: 0; }
 #pr-page > :first-child { flex: 1 1 0%; min-height: 0; overflow: hidden; }
 #pr-fold { display: none; }
