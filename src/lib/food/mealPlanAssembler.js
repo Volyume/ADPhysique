@@ -25,6 +25,7 @@ import { CURATED_MEALS, mealItems, mealTotals } from './curatedMeals';
 import { fitScore, perMealMacros, slotMatches } from './mealSuggest';
 import { normalisePreferences, filterMealsByPreferences, filterSavedMealsByPreferences } from './planPreferences';
 import { roleOf, gramRangeOf } from './foodRoles';
+import { mealHasOilyFish, countOilyMeals, oilyFishDays, DEFAULT_OILY_FISH_CAP } from './oilyFish';
 import { solveGramsForKcal, kitchenRoundWithin, kitchenStep } from './gramSolve';
 import { within, ADHERENCE_TOLERANCE } from './adherence';
 // Campaign 17B job 5: structured reasons, stamped as the plan is built.
@@ -77,6 +78,7 @@ function curatedCandidate(meal) {
     items,
     totals: mealTotals(items),
     source: 'curated',
+    oily: mealHasOilyFish({ components: meal.components }),
   };
 }
 
@@ -94,6 +96,7 @@ function savedCandidate(meal) {
       fat: r1(meal.totals?.fat || 0),
     },
     source: 'saved',
+    oily: mealHasOilyFish({ items: meal.items }),
   };
 }
 
@@ -587,6 +590,7 @@ export function assembleDayPlan({
   recentlyUsed = new Map(),
   savedMeals = [],
   targetFloored = false,
+  oilyAllowed = Infinity, // oily-fish meals this day may still hold (item 25)
 } = {}) {
   const prefs = normalisePreferences(rawPrefs);
   const rng = mulberry32(seed);
@@ -638,6 +642,9 @@ export function assembleDayPlan({
   // subtracted so the fill only chases what remains. Pin order is the
   // user's order; each pin takes the earliest unfilled compatible slot.
   const pinnedTaken = new Set(); // slot keys already claimed by a pin
+  // Oily-fish cap: an explicit pin always wins and is counted; the greedy
+  // fill then skips oily meals once the day's allowance is used.
+  let oilyLeft = oilyAllowed;
   (prefs.pinnedMealIds || []).forEach((pinId) => {
     const cand = pool.find((c) => c.id === pinId && !usedIds.has(c.id));
     if (!cand) return; // pin no longer exists / excluded by diet: skip
@@ -648,7 +655,8 @@ export function assembleDayPlan({
     if (!slot) return;
     pinnedTaken.add(slot.key);
     usedIds.add(cand.id);
-    placed.push({ slot: slot.key, mealId: cand.id, name: cand.name, source: cand.source, items: cand.items, totals: cand.totals, components: cand.components, pinned: true, reason: MEAL_REASON.PINNED });
+    if (cand.oily) oilyLeft -= 1;
+    placed.push({ slot: slot.key, mealId: cand.id, name: cand.name, source: cand.source, items: cand.items, totals: cand.totals, components: cand.components, ...(cand.oily ? { oily: true } : {}), pinned: true, reason: MEAL_REASON.PINNED });
     consumed = {
       kcal: consumed.kcal + cand.totals.kcal,
       protein: consumed.protein + cand.totals.protein,
@@ -677,6 +685,7 @@ export function assembleDayPlan({
       let bestScore = -Infinity;
       pool.forEach((cand) => {
         if (usedIds.has(cand.id)) return;
+        if (cand.oily && oilyLeft <= 0) return;
         if (enforceCharacter && matchKind) {
           // The greedy fill needs POSITIVE evidence for a character slot: a
           // candidate must carry a matching tag. Untagged (saved) meals do
@@ -754,6 +763,7 @@ export function assembleDayPlan({
 
     if (best) {
       usedIds.add(best.id);
+      if (best.oily) oilyLeft -= 1;
       // Campaign 17B job 5: WHY this meal, recorded as a code at the moment
       // the decision is made. Never inferred later from the meal's name.
       // Most specific reason wins: a meal that is both the user's own recipe
@@ -762,7 +772,7 @@ export function assembleDayPlan({
       const reason = best.source === 'saved'
         ? (String(best.id).startsWith('recipe:') ? MEAL_REASON.RECIPE : MEAL_REASON.SAVED_MEAL)
         : (hasPersonalHistory ? MEAL_REASON.MACRO_FIT : MEAL_REASON.GENERIC_START);
-      placed.push({ slot: slot.key, mealId: best.id, name: best.name, source: best.source, items: best.items, totals: best.totals, components: best.components, reason });
+      placed.push({ slot: slot.key, mealId: best.id, name: best.name, source: best.source, items: best.items, totals: best.totals, components: best.components, reason, ...(best.oily ? { oily: true } : {}) });
       consumed = {
         kcal: consumed.kcal + best.totals.kcal,
         protein: consumed.protein + best.totals.protein,
@@ -1070,8 +1080,12 @@ export const DAYS_PER_PLAN_WEEK = 7;
  *
  * @param engineTarget the calculateNutritionTargets output, verbatim
  */
-export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, seed = 1, savedMeals = [] } = {}) {
+export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, seed = 1, savedMeals = [], oilyFishCap = DEFAULT_OILY_FISH_CAP } = {}) {
   const prefs = normalisePreferences(rawPrefs);
+  // Meals of oily fish allowed across the week. Infinity means no limit; a
+  // number is clamped to 0 to 7.
+  const oilyCap = oilyFishCap === Infinity ? Infinity
+    : (Number.isFinite(Number(oilyFishCap)) ? Math.min(7, Math.max(0, Math.round(Number(oilyFishCap)))) : DEFAULT_OILY_FISH_CAP);
   const dayTarget = {
     kcal: Number(engineTarget?.targetKcal) || 0,
     proteinG: Number(engineTarget?.proteinG) || 0,
@@ -1089,16 +1103,26 @@ export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, seed = 1, save
     // day. The previous code assembled separate training and rest days with
     // different seeds, so identical-calorie days came out with the SAME meals
     // in a DIFFERENT ORDER — confusing, and not a repeat.
+    // Oily-fish cap (item 25): a repeated day is eaten seven times, so it
+    // holds no oily-fish meal (cap under 7), one at a cap of 7, unless the
+    // user pinned one. An explicit pin always wins.
     const oneDay = assembleDayPlanBestOf({
       target: dayTarget, band, prefs, seed, savedMeals, targetFloored,
+      oilyAllowed: oilyCap === Infinity ? Infinity : Math.floor(oilyCap / DAYS_PER_PLAN_WEEK),
     });
     for (let i = 0; i < DAYS_PER_PLAN_WEEK; i += 1) days.push(oneDay);
   } else {
     const recentlyUsed = new Map(); // mealId -> days since used
+    let oilyUsed = 0;
+    // Spread, not front-loaded: only evenly spaced days may hold one.
+    const oilyOk = oilyCap === Infinity ? null : oilyFishDays(oilyCap, DAYS_PER_PLAN_WEEK);
     for (let i = 0; i < DAYS_PER_PLAN_WEEK; i += 1) {
       const day = assembleDayPlanBestOf({
         target: dayTarget, band, prefs, seed: seed + i * 7919, recentlyUsed, savedMeals, targetFloored,
+        oilyAllowed: oilyCap === Infinity ? Infinity
+          : (oilyOk.has(i) ? Math.max(0, Math.min(1, oilyCap - oilyUsed)) : 0),
       });
+      oilyUsed += countOilyMeals(day);
       days.push(day);
       recentlyUsed.forEach((age, id) => recentlyUsed.set(id, age + 1));
       day.slots.forEach((s) => recentlyUsed.set(s.mealId, 1));

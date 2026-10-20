@@ -48,6 +48,7 @@ import { CURATED_MEALS, dietAllows } from './curatedMeals';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
 import { foldedMealSlot, DEFAULT_MEALS_PER_DAY } from './mealSlots';
 import { track } from '../engineTelemetry';
+import { oilyFishCapFromProfile } from './oilyFish';
 
 import { curatedKeyOfRef, nativeState, convertCookGrams } from './cookYield';
 import { kitchenRound } from './gramSolve';
@@ -361,6 +362,7 @@ export async function generateAndSaveMealPlan(userId, profile, { seed = Date.now
     prefs,
     seed,
     savedMeals: [...savedMeals.map(toPoolSavedMeal), ...recipes],
+    oilyFishCap: oilyFishCapFromProfile(profile), // item 25, from Meal preferences
   });
   // Campaign 17A job 3: what the user has actually TOLD us to use instead.
   // Applied after assembly through the same macro-preserving swap their own
@@ -436,6 +438,8 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
     // Thread the floor flag so per-meal balance degrades gracefully near a floor
     // (ED-safety), consistent with the week path (see assembleDayPlan).
     targetFloored: targetWasFloored(engineTarget),
+    // Item 25: one day may not hold more oily-fish meals than the weekly cap.
+    oilyAllowed: oilyFishCapFromProfile(profile),
   });
   // Campaign 17A job 3, the same standing replacements as the week path.
   const replacements = await standingReplacementsFor(userId, prefs);
