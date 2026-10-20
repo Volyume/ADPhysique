@@ -47,7 +47,7 @@ const COMPLETION = SRC.slice(SRC.indexOf('async function advanceFrom8'), SRC.ind
 describe('the wizard has the step, in its place', () => {
   test('eight steps, "Your gym" fifth, between Training week and Injuries', () => {
     expect(SRC).toMatch(/const TOTAL_STEPS = 8;/);
-    expect(SRC).toMatch(/const STEP_LABELS = \['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Targets', 'Check-in rhythm'\];/);
+    expect(SRC).toMatch(/const STEP_LABELS = \['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Training focus', 'Check-in rhythm'\];/);
     expect(STEP5.length).toBeGreaterThan(0);
     expect(STEP5).toMatch(/title="Where you train, and Community"/);
   });

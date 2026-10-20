@@ -168,8 +168,8 @@ describe('ExerciseSection states', () => {
   });
 
   test('moreHint: the word sits beside the overflow glyph in amber and the label says what is behind it', () => {
-    const tree = render({ moreHint: 'Help' });
-    textHost(tree, 'Help');
+    const tree = render({ moreHint: 'More' });
+    textHost(tree, 'More');
     one(byLabel(tree, 'More options for this exercise, including how logging works'));
     expect(byLabel(render({}), 'More options for this exercise')).toHaveLength(1);
   });

@@ -1398,7 +1398,7 @@ describe('LOGGER: the first session states its effort target and its own words (
     // for the logger rebuild stage A (D220): the overflow is the active
     // ExerciseSection's footer; the screen passes the cue and the component
     // shows the word beside the glyph and names what is behind it.
-    expect(src).toContain("moreHint={showInfoTipPulse ? 'Help' : null}");
+    expect(src).toContain("moreHint={showInfoTipPulse ? 'More' : null}");
     const section = read('components/workout/session/ExerciseSection.js');
     expect(section).toContain("accessibilityLabel={moreHint ? 'More options for this exercise, including how logging works' : 'More options for this exercise'}");
     // Stage 1 of D104-1 phase 2b (2026-10-09) put the chrome cap on this hint

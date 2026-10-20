@@ -2703,7 +2703,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp, sidedRuleBearsOnThis, resolvedExercise, intentState]);
 
   // First-use info tip (C5-P13-03, RC-9): until the exercise options have
-  // been opened once, the active section's overflow carries the word "Help".
+  // been opened once, the active section's overflow carries the word "More".
   // The old scaling pulse is retired with the title row (D220 addendum 3).
   useEffect(() => {
     AsyncStorage.getItem('@volyume_seen_workout_info').then(val => {
@@ -6365,7 +6365,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             onSwap={handleOpenSwap}
             onMore={handleOpenOverflow}
             onFilm={clipsSuppressed === false ? handleRecordClip : null}
-            moreHint={showInfoTipPulse ? 'Help' : null}
+            moreHint={showInfoTipPulse ? 'More' : null}
             countdown={{ active: !!(autoAdvanceArmed && targetComplete && !extraSetArmed), ms: 1800, reduceMotion: !!reduceMotion }}
           >
           <View style={styles.activeBody}>

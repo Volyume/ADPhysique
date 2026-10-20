@@ -217,6 +217,29 @@ test('with both gates clear the food row, the coaching card and the board all sh
   expect(withoutCoaching.tree.root.findAll((n) => n.props?.testID === 'coaching-setup-card').length).toBeGreaterThan(0);
 });
 
+// Item 32: the title counts the rows shown; it never says Top 10 over fewer than ten.
+test('the board title counts the rows it shows: Top 4 over four names, Top 10 over ten', async () => {
+  const four = await mount({ board: { ...BOARD, top: TOP.slice(0, 4) } });
+  expect(four.text()).toContain('Top 4');
+  expect(four.text()).not.toContain('Top 10');
+  const nine = await mount({ board: { ...BOARD, top: TOP.slice(0, 9) } });
+  expect(nine.text()).toContain('Top 9');
+  const ten = await mount();
+  expect(ten.text()).toContain('Top 10');
+});
+
+test('no rows: the title is Leaderboard and the zero-row line stays', async () => {
+  const none = await mount({ board: { ...BOARD, top: [], me: { score: 0, in_top: false } } });
+  expect(none.text()).toContain('Nobody is on the board yet.');
+  expect(none.text()).toContain('Leaderboard');
+  expect(none.text()).not.toContain('Top');
+});
+
+test('the board\'s counts footer uses the screen padding token, not a fixed 24 dp', () => {
+  const src = require('fs').readFileSync(require('path').resolve(__dirname, '..', 'ChallengeScreen.js'), 'utf8');
+  expect(src).toContain('{ paddingHorizontal: t.screenPadding }, t.type.bodySm, secondary]}>{countsLine(');
+});
+
 test('the board lists ten rows, marks you and prints the counts', async () => {
   const { tree, text } = await mount();
   const out = text();
