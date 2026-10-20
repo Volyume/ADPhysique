@@ -285,7 +285,7 @@ export default function SettingsProfileScreen() {
               <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Date of birth</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Age</Text>
               <Text style={[settingsStyles.settingSub, live.settingSub]}>Enter your age. Used for calorie floors and nutrition targets.</Text>
             </View>
           </View>

@@ -78,7 +78,7 @@ import BottomSheet from '../components/BottomSheet';
 import FoodRow from '../components/food/FoodRow';
 import SearchBar from '../components/SearchBar';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { mealSlotLabel } from '../lib/food/mealSlots';
+import { mealSlotLabel, buildMealSlots, inferMealSlotForHour, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { scaleMacrosAsWeighed } from '../lib/food/cookYield';
 import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
@@ -119,8 +119,30 @@ export default function FoodSearchScreen({ navigation, route }) {
   // This screen is a root-stack modal outside the tab navigator (RootNavigator.js),
   // so nothing else absorbs the bottom system inset for the sticky plateBar footer.
   const insets = useSafeAreaInsets();
-  const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
+  // F3: a route that names no meal used to file the food under the old 'snack'
+  // key, which draws a separate Snacks card. It now defaults to the numbered
+  // meal for the time of day on today (the same pick the diary's barcode
+  // button makes), or Meal 1 on another day, over the person's own meals per
+  // day. A route that names a meal is untouched.
+  const routeMealSlot = route?.params?.mealSlot ?? null;
+  const [prefMeals, setPrefMeals] = useState(DEFAULT_MEALS_PER_DAY);
+  useEffect(() => {
+    if (routeMealSlot) return undefined;
+    let active = true;
+    AsyncStorage.getItem('@volyume_meals_per_day').then((v) => {
+      const n = parseInt(v, 10);
+      if (active && Number.isFinite(n) && n >= 1) setPrefMeals(n);
+    }).catch(() => {}); // no preference keeps the default ladder, as the diary does
+    return () => { active = false; };
+  }, [routeMealSlot]);
+  // Memoised so the default does not drift across an hour boundary while the
+  // screen is open (it feeds several effect dependencies below).
+  const mealSlot = useMemo(() => {
+    if (routeMealSlot) return routeMealSlot;
+    const keys = buildMealSlots([], prefMeals, false).map((m) => m.key);
+    return entryDate === todayLocalKey() ? inferMealSlotForHour(new Date().getHours(), keys) : keys[0];
+  }, [routeMealSlot, prefMeals, entryDate]);
 
   const [query, setQuery] = useState('');
   // Open straight on a chosen tab when routed in with one (the empty-diary

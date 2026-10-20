@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { setupFormSignature, SETUP_CHANGED_NOTICE } from '../lib/setupFormSeed';
 import {
   View, StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
@@ -135,6 +137,29 @@ export default function PlanUpdateScreen({ navigation, route }) {
     scrollRef.current?.scrollTo?.({ y: Math.max(0, styleYRef.current - spacing.md), animated: true });
   };
   const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
+
+  // Proposal 10 (F1): reload the form from the saved profile whenever the
+  // screen regains focus AND the saved setup has changed since this form last
+  // seeded. Tabs keep their stack, so this form can sit mounted while the other
+  // setup screen saves; without this, pressing save writes the old values back.
+  // Unsaved edits survive a trip to a sub-screen (same signature, no reseed).
+  const seededSigRef = useRef(setupFormSignature(userProfile));
+  const [setupReloaded, setSetupReloaded] = useState(false);
+  useFocusEffect(useCallback(() => {
+    const sig = setupFormSignature(userProfile);
+    if (sig === seededSigRef.current) return;
+    seededSigRef.current = sig;
+    const p = userProfile || {};
+    setSelectedGoal(p.trainingGoal ?? null);
+    setPlanWeakPoints(p.planWeakPoints ?? []);
+    setTrainingArchetype(normaliseArchetype(p.trainingArchetype) ?? 'balanced');
+    setExperience(p.experience ?? 'intermediate');
+    setDaysPerWeek(p.daysPerWeek ?? 4);
+    setSessionLengthMinutes(p.sessionLengthMinutes ?? 60);
+    setEquipment(p.equipment ?? 'full_gym');
+    setRecoveryRating(p.recoveryRating ?? 'average');
+    setSetupReloaded(true);
+  }, [userProfile]));
   const [saving, setSaving] = useState(false);
   // Plan diff/preview (ULTIMATE-PLANDIFF-01): a pre-commit dry-run + diff sheet.
   const [previewing, setPreviewing] = useState(false);
@@ -443,6 +468,9 @@ export default function PlanUpdateScreen({ navigation, route }) {
 
     try {
       await saveLocalProfile(user.id, updatedProfile);
+      // Our own save is not "another screen": keep the reload check quiet.
+      seededSigRef.current = setupFormSignature(updatedProfile);
+      setSetupReloaded(false);
     } catch (_) {}
 
     setSaving(false);
@@ -513,6 +541,9 @@ export default function PlanUpdateScreen({ navigation, route }) {
     // the plan is active, so a failed install can never split-brain.
     try {
       await saveLocalProfile(user.id, updatedProfile);
+      // Our own save is not "another screen": keep the reload check quiet.
+      seededSigRef.current = setupFormSignature(updatedProfile);
+      setSetupReloaded(false);
     } catch (_) {}
     setSaving(false);
     // The ONE line first run shows for the same answer: it names the plan
@@ -560,6 +591,12 @@ export default function PlanUpdateScreen({ navigation, route }) {
               style={styles.saveBtn}
             />
           </>
+        ) : null}
+
+        {setupReloaded ? (
+          <Text style={[styles.sectionSub, live.sectionSub]} accessibilityLiveRegion="polite">
+            {SETUP_CHANGED_NOTICE}
+          </Text>
         ) : null}
 
         {kindChecked && !styleLock ? (
