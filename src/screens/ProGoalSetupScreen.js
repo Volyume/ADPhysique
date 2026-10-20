@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { setupFormSignature, SETUP_CHANGED_NOTICE } from '../lib/setupFormSeed';
 import {
   View, StyleSheet, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform,
@@ -228,6 +230,31 @@ export default function ProGoalSetupScreen({ navigation }) {
   const [sessionLengthMinutes, setSessionLengthMinutes] = useState(userProfile?.sessionLengthMinutes ?? 60);
   const [equipment, setEquipment] = useState(userProfile?.equipment ?? 'full_gym');
   const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
+
+  // Proposal 10 (F1): reload the form from the saved profile whenever the
+  // screen regains focus AND the saved setup has changed since this form last
+  // seeded. Tabs keep their stack, so this form can sit mounted while the other
+  // setup screen saves; without this, pressing save writes the old values back.
+  // Unsaved edits survive a trip to a sub-screen (same signature, no reseed).
+  const seededSigRef = useRef(setupFormSignature(userProfile));
+  const [setupReloaded, setSetupReloaded] = useState(false);
+  useFocusEffect(useCallback(() => {
+    const sig = setupFormSignature(userProfile);
+    if (sig === seededSigRef.current) return;
+    seededSigRef.current = sig;
+    const p = userProfile || {};
+    setSelectedGoal(p.trainingGoal ?? null);
+    setSelectedPhase(p.trainingPhase ?? 'lean_gain');
+    if (p.proteinApproach && PROTEIN_APPROACHES[p.proteinApproach]) setProteinApproach(p.proteinApproach);
+    setPlanWeakPoints(p.planWeakPoints ?? []);
+    setTrainingArchetype(normaliseArchetype(p.trainingArchetype) ?? 'balanced');
+    setExperience(p.experience ?? 'intermediate');
+    setDaysPerWeek(p.daysPerWeek ?? 4);
+    setSessionLengthMinutes(p.sessionLengthMinutes ?? 60);
+    setEquipment(p.equipment ?? 'full_gym');
+    setRecoveryRating(p.recoveryRating ?? 'average');
+    setSetupReloaded(true);
+  }, [userProfile]));
 
   // F-16 REVISED point 3 / F-15: what the ACTIVE plan is, read once on entry.
   // `styleLock` non-null withholds the rebuild entirely (goal, phase, protein
@@ -641,6 +668,9 @@ export default function ProGoalSetupScreen({ navigation }) {
     }
 
     await saveLocalProfile(user.id, updatedProfile);
+    // Our own save is not "another screen": keep the reload check quiet.
+    seededSigRef.current = setupFormSignature(updatedProfile);
+    setSetupReloaded(false);
 
     // B4: store or clear the show date on the active peak-week plan row.
     // Best effort: the goal save must not fail on this.
@@ -803,6 +833,11 @@ export default function ProGoalSetupScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {setupReloaded ? (
+          <Text style={[styles.sectionSub, live.sectionSub]} accessibilityLiveRegion="polite">
+            {SETUP_CHANGED_NOTICE}
+          </Text>
+        ) : null}
         {/* ── Physique category (optional) ──
             Most users leave this on "Not competing, General". Competitive
             lifters pick their division so volume gets biased towards the
