@@ -442,10 +442,10 @@ describe('the volume palette and its legend', () => {
     const tree = create(<BodyDiagramHeatmap volumeByMuscle={VOLUME_BY_MUSCLE} onMuscleTap={() => {}} />);
     const group = host(tree, (n) => n.props.accessible === true && String(n.props.accessibilityLabel).startsWith('Key: '))[0];
     const legend = group.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
-    expect(legend).toEqual(['Too few to hold size', 'Holds size, some growth', 'Range for growth', 'More than needed', 'No sets']);
+    expect(legend).toEqual(['Low', 'Steady', 'Growing', 'Very high', 'No sets']);
     const sw = swatches(tree);
     expect(sw.map((s) => s.backgroundColor)).toEqual([
-      t.colors.textMuted, t.colors.volumeMinimum, t.colors.success, t.colors.macroCarb, undefined,
+      t.colors.textMuted, t.colors.volumeMinimum, t.colors.success, t.colors.volumeBeyond, undefined,
     ]);
     expect(sw.map((s) => s.backgroundColor)).not.toContain(t.colors.error);
     expect(sw.map((s) => s.backgroundColor)).not.toContain(t.colors.warning);
@@ -453,7 +453,7 @@ describe('the volume palette and its legend', () => {
     expect(sw[4]).toMatchObject({ borderWidth: 1, borderColor: t.colors.border, borderStyle: 'solid' });
     expect(tree.root.findAllByType(InfoTooltip).length).toBeGreaterThan(0);
     expect(host(tree, (n) => n.props.accessible === true && String(n.props.accessibilityLabel).startsWith('Key: '))[0].props.accessibilityLabel)
-      .toBe('Key: Too few to hold size, Holds size, some growth, Range for growth, More than needed, No sets');
+      .toBe('Key: Low, Steady, Growing, Very high, No sets');
   });
 
   test('under the colour-blind-safe palette "Maintenance to growth" and "Growth range" are different colours', () => {

@@ -48,11 +48,13 @@ describe('the eight group words and the four tone words', () => {
 
   test('the tone words', () => {
     expect(VOLUME_TONE_LABELS).toEqual({
-      below: 'Too few to hold size',
-      building: 'Holds size, some growth',
-      growth: 'Range for growth',
-      beyond: 'More than needed',
+      below: 'Low',
+      building: 'Steady',
+      growth: 'Growing',
+      beyond: 'Very high',
     });
+    // Item 14: no tone word is also a group label.
+    Object.values(VOLUME_TONE_LABELS).forEach((w) => expect(Object.values(VOLUME_BAND_LABELS)).not.toContain(w));
     expect(Object.keys(VOLUME_TONE_LABELS).sort()).toEqual(Object.values(TONE).sort());
     expect(Object.isFrozen(VOLUME_TONE_LABELS)).toBe(true);
   });

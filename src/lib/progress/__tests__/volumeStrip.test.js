@@ -35,9 +35,12 @@
 import fs from 'fs';
 import path from 'path';
 import {
-  STRIP_TONE, RECOVERY_WEEK_LINE, STRIP_LEGEND_LABEL, toneForGroup, stripToneColors,
+  STRIP_TONE, RECOVERY_WEEK_LINE, toneForGroup, stripToneColors,
   stripLegendItems, isStripRecoveryWeek, buildVolumeStrip, STRIP_TOOLTIP, STRIP_RECOVERY_TOOLTIP,
 } from '../volumeStrip';
+import {
+  VOLUME_TONE_LABELS, VOLUME_BAND_LABELS, volumeGroupLines, volumeToneLine,
+} from '../../volumeBandLabels';
 import { LISTED_MUSCLES, bandGroupFor, buildDataset, buildWindowView } from '../../volumeLogged';
 import { judgeWeek, GROUP, toneColors } from '../../volumeJudgement';
 import { resolveTheme } from '../../../styles/theme';
@@ -168,42 +171,43 @@ describe('N below maintenance: the heatmap\'s first group, by construction', () 
     expect(s.under).toBe(0);
     const triceps = s.segments.find((seg) => seg.muscle === 'triceps');
     expect(triceps.sets).toBe(1.5);
-    expect(triceps.tone).toBe(STRIP_TONE.IN);
+    expect(triceps.tone).toBe(STRIP_TONE.BUILDING);
   });
 
   // D219 (the founder's case): the strip reads the role from the plan's facts, and
   // 27 weekly sets on a focus muscle are inside the studied range, never marked.
-  test('27 sets of a focus muscle read as Range for growth; only a total past 42 is Beyond', () => {
+  test('27 sets of a focus muscle read as Growing; only a total past 42 is Very high', () => {
     const focus = strip(rows('curl', 27), { roles: { biceps: 'focus' } });
-    expect(focus.segments[0]).toMatchObject({ muscle: 'biceps', sets: 27, tone: STRIP_TONE.IN });
+    expect(focus.segments[0]).toMatchObject({ muscle: 'biceps', sets: 27, tone: STRIP_TONE.GROWTH });
     const plain = strip(rows('curl', 27));
-    expect(plain.segments[0].tone).toBe(STRIP_TONE.IN);
-    expect(strip(rows('curl', 43), { roles: { biceps: 'focus' } }).segments[0].tone).toBe(STRIP_TONE.OVER);
+    expect(plain.segments[0].tone).toBe(STRIP_TONE.GROWTH);
+    expect(strip(rows('curl', 43), { roles: { biceps: 'focus' } }).segments[0].tone).toBe(STRIP_TONE.BEYOND);
   });
 });
 
-describe('the three tones and the bar', () => {
-  test('eight groups fold into three: below maintenance is Under, beyond the studied range is Over, the rest are Within', () => {
-    expect(toneForGroup(GROUP.BELOW)).toBe(STRIP_TONE.UNDER);
-    expect(toneForGroup('unknown')).toBe(STRIP_TONE.UNDER);
-    for (const g of [GROUP.MAINTENANCE, GROUP.BETWEEN, GROUP.NORMAL, GROUP.FOCUS, GROUP.ABOVE_NORMAL, GROUP.TOP]) {
-      expect(toneForGroup(g)).toBe(STRIP_TONE.IN);
-    }
-    expect(toneForGroup(GROUP.BEYOND)).toBe(STRIP_TONE.OVER);
+describe('the four tones and the bar', () => {
+  test('eight groups fold into four: the figure legend\'s own fold (Low, Steady, Growing, Very high)', () => {
+    expect(toneForGroup(GROUP.BELOW)).toBe(STRIP_TONE.BELOW);
+    expect(toneForGroup('unknown')).toBe(STRIP_TONE.BELOW);
+    for (const g of [GROUP.MAINTENANCE, GROUP.BETWEEN]) expect(toneForGroup(g)).toBe(STRIP_TONE.BUILDING);
+    for (const g of [GROUP.NORMAL, GROUP.FOCUS, GROUP.ABOVE_NORMAL, GROUP.TOP]) expect(toneForGroup(g)).toBe(STRIP_TONE.GROWTH);
+    expect(toneForGroup(GROUP.BEYOND)).toBe(STRIP_TONE.BEYOND);
   });
 
   test('one segment per muscle with credit, widest first, each in its tone', () => {
     const s = strip([...rows('bench', 1), ...rows('row', 12), ...rows('squat', 45)]);
     expect(s.segments.map((seg) => seg.muscle)).toEqual(['quads', 'back', 'chest']);
-    expect(s.segments.map((seg) => seg.tone)).toEqual([STRIP_TONE.OVER, STRIP_TONE.IN, STRIP_TONE.UNDER]);
+    expect(s.segments.map((seg) => seg.tone)).toEqual([STRIP_TONE.BEYOND, STRIP_TONE.GROWTH, STRIP_TONE.BELOW]);
     expect(s.segments.map((seg) => seg.sets)).toEqual([45, 12, 1]);
   });
 
-  test('the legend names exactly the three tones, in the strip\'s words', () => {
+  test('the legend names exactly the four tones, in the figure legend\'s words, none of them a group label', () => {
     const colors = resolveTheme({}).colors;
     const items = stripLegendItems({ colors });
-    expect(items.map((i) => i.label)).toEqual(['Too few to hold size', 'Enough sets', 'More than needed']);
-    expect(items.map((i) => i.label)).toEqual([STRIP_LEGEND_LABEL.under, STRIP_LEGEND_LABEL.in, STRIP_LEGEND_LABEL.over]);
+    expect(items.map((i) => i.label)).toEqual(['Low', 'Steady', 'Growing', 'Very high']);
+    expect(items.map((i) => i.label)).toEqual(Object.values(VOLUME_TONE_LABELS));
+    // No word means two things: a tone word is never one of the eight group labels.
+    items.forEach((i) => expect(Object.values(VOLUME_BAND_LABELS)).not.toContain(i.label));
   });
 
   const PALETTES = {
@@ -218,18 +222,16 @@ describe('the three tones and the bar', () => {
     const colors = resolveTheme(prefs).colors;
     const tone = stripToneColors(colors);
     const items = stripLegendItems({ colors });
-    expect(items.find((i) => i.key === STRIP_TONE.UNDER).swatch.fill).toBe(tone.under);
-    expect(items.find((i) => i.key === STRIP_TONE.IN).swatch.fill).toBe(tone.in);
-    expect(items.find((i) => i.key === STRIP_TONE.OVER).swatch.fill).toBe(tone.over);
-    // The same three colours the heatmap's tones give (volumeJudgement.toneColors),
-    // and none is a warning or an error token (D219: the highest band is a note).
     const tones = toneColors(colors);
-    expect(tone.under).toBe(tones.below);
-    expect(tone.in).toBe(tones.growth);
-    expect(tone.over).toBe(tones.beyond);
-    expect(tone.under).toBe(colors.textMuted);
-    expect(tone.in).toBe(colors.success);
-    expect(tone.over).toBe(colors.macroCarb);
+    [STRIP_TONE.BELOW, STRIP_TONE.BUILDING, STRIP_TONE.GROWTH, STRIP_TONE.BEYOND].forEach((k) => {
+      expect(items.find((i) => i.key === k).swatch.fill).toBe(tone[k]);
+      expect(tone[k]).toBe(tones[k]);
+    });
+    expect(tone.below).toBe(colors.textMuted);
+    expect(tone.building).toBe(colors.volumeMinimum);
+    expect(tone.growth).toBe(colors.success);
+    expect(tone.beyond).toBe(colors.volumeBeyond);
+    expect(new Set([tone.below, tone.building, tone.growth, tone.beyond]).size).toBe(4);
     expect(Object.values(tone)).not.toContain(colors.error);
     expect(Object.values(tone)).not.toContain(colors.warning);
   });
@@ -320,7 +322,7 @@ describe('the module is pure, shares the one definition and never instructs', ()
     expect(SCREEN_SOURCE).not.toMatch(/calculateWeeklyVolume|getVolumeStatus|weeklyVolume|\.workingSets\b/);
   });
 
-  test('the middle tone is named "Enough sets" everywhere the strip speaks, and nothing says "too much"', () => {
+  test('the strip speaks in the four tone words, and nothing says "too much"', () => {
     const colors = resolveTheme({}).colors;
     const spoken = [
       strip([...rows('bench', 5), ...rows('row', 12)]).spoken,
@@ -330,27 +332,22 @@ describe('the module is pure, shares the one definition and never instructs', ()
       STRIP_RECOVERY_TOOLTIP,
       ...stripLegendItems({ colors }).map((i) => i.label),
     ].join(' | ');
-    expect(spoken).not.toMatch(/too much|near the limit|under the range|inside the range|just enough/i);
-    expect(STRIP_LEGEND_LABEL.in).toBe('Enough sets');
-    expect(STRIP_TOOLTIP).toContain('The colour labelled Enough sets covers 2 to 42 sets a week');
+    expect(spoken).not.toMatch(/too much|near the limit|under the range|inside the range|just enough|enough sets/i);
   });
 
-  // RE-ANCHORED 2026-10-11 (founder: "'More than most studies' etc what the heck is that meant to mean to a human"; "No 'ai talk'"): the bands in plain words, no "studies".
-  test('the (i), normal week: the opening, the credit sentence, the bands, the plan role, the folded groups', () => {
+  // Item 14: the (i) is BUILT from the shared tables (volumeBandLabels.js), not typed here.
+  test('the (i), normal week: the opening, the credit sentence, the eight bands from the shared table, the four colours', () => {
     expect(STRIP_TOOLTIP).toBe(
       'This week so far counts the sets you have logged since Monday.\n\n'
       + 'A set counts once for the muscle it works most and half for each muscle that helps, so the muscle figures add up to more than the sets you logged. '
-      + 'Under 2 sets a week is too few to hold a muscle\'s size. 2 to 6 holds it, and 6 to 10 holds it with some growth. '
-      + '10 to 20 is the usual range for growth. 20 to 30 is the higher range, for a muscle you picked to bring up. '
-      + '30 to 42 is close to the upper limit, and past 42 extra sets are more than needed. '
-      + 'A muscle you picked to bring up in your plan is read against that higher range. '
+      + 'A muscle is read against these bands:\n'
+      + `${volumeGroupLines()}\n\n`
       + 'A muscle your plan trains reads as too few to hold size until its first set. '
-      + 'The colour labelled Enough sets covers 2 to 42 sets a week.',
+      + volumeToneLine(),
     );
-    // It names the legend's first two tones in the legend's own words, and the third as past 42.
-    expect(STRIP_TOOLTIP.toLowerCase()).toContain(STRIP_LEGEND_LABEL.under.toLowerCase());
-    expect(STRIP_TOOLTIP).toContain(STRIP_LEGEND_LABEL.in);
-    expect(STRIP_TOOLTIP).toContain('past 42 extra sets are more than needed');
+    Object.values(VOLUME_BAND_LABELS).forEach((label) => expect(STRIP_TOOLTIP).toContain(label));
+    Object.values(VOLUME_TONE_LABELS).forEach((word) => expect(STRIP_TOOLTIP).toContain(word));
+    expect(STRIP_TOOLTIP).toContain('Very high (over 42)');
     expect(STRIP_TOOLTIP).not.toMatch(/stud(y|ies)|research/i);
   });
 
@@ -362,7 +359,7 @@ describe('the module is pure, shares the one definition and never instructs', ()
       + 'The bar draws one shade for the muscles you trained.',
     );
     // Both versions open with the same two sentences (the one credit rule at every site, V2).
-    const shared = STRIP_TOOLTIP.split(' Under 2 sets')[0];
+    const shared = STRIP_TOOLTIP.split(' A muscle is read against')[0];
     expect(STRIP_RECOVERY_TOOLTIP.startsWith(shared)).toBe(true);
   });
 

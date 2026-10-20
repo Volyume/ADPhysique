@@ -208,6 +208,13 @@ const baseColors = {
   // anyone else); the CVD tables below give it a distinct, darker Okabe-Ito
   // blue so lightness tells the two bands apart.
   volumeMinimum: '#56B4E9',
+  // Item 14: the volume figure's fourth tone ("Very high", beyond the studied
+  // range). Its own token so it no longer shares macroCarb's blue with the
+  // "building" tone. Violet: not red (nothing about extra sets is an error), not
+  // orange (that is the brand accent) and not the warning yellow. It is far from
+  // the blue, green and grey tones in all four palettes, including as a
+  // colour-blind reader sees them (theme.test.js pins the distances).
+  volumeBeyond: '#A78BFA',
 };
 
 export const colors = { ...baseColors };
@@ -273,6 +280,7 @@ const lightColors = {
   // macroCarb value it replaced (4.8:1 on white).
   recovery: '#B5472F',
   volumeMinimum: '#1E78B4',
+  volumeBeyond: '#6D3FC0', // item 14: violet ink, 6.7:1 on white
 };
 
 // Higher-contrast and colour-blind-safe modifier tables, now theme-keyed
@@ -310,9 +318,9 @@ const darkCVD = {
   onSuccessBg: '#6ABDEC',
   onErrorBg:   '#DA9FC0',
   // D214: "Just enough" must not share CVD success's sky blue. Okabe-Ito
-  // blue, 3.4:1 on surface and 2.3:1 darker than the swapped success, so the
-  // two bands differ by lightness, which colour-blind readers keep.
-  volumeMinimum: '#0072B2',
+  // Item 14: now the Okabe-Ito bluish green (5.2:1 on surface), a different HUE
+  // from the swapped success sky blue, not only a darker one.
+  volumeMinimum: '#009E73',
 };
 const lightCVD = {
   success:   '#0072B2',
@@ -859,7 +867,7 @@ export const shadow = {
 //   watch   — worth a look, approaching a limit or drifting; no demand
 //   act     — the coach suggests a concrete, reversible change
 //   neutral — no state (unknown / suppressed / body-data under an ED flag)
-// Lazy getters aliasing the semantic tokens (same pattern as volumeColors)
+// Lazy getters aliasing the semantic tokens (same lazy-getter pattern as the palette swaps)
 // so the CVD and higher-contrast swaps in applyAccessibility propagate for
 // free and there is never a second palette. Bg variants resolve the same
 // way via successBg / warningBg / errorBg.
@@ -879,80 +887,6 @@ export const stateColors = {
   // palette to avoid that -- flagged here rather than silently shipped.
   get info() { return colors.macroCarb; },
 };
-
-// Lazy getters so that swapping colors.success / colors.error (color-blind
-// safe palette) or colors.textMuted (higher contrast) propagates to volume
-// bands without callers re-importing.
-export const volumeColors = {
-  get below()   { return colors.textMuted; },
-  get optimal() { return colors.success; },
-  get overMav() { return colors.warning; },
-  get overMrv() { return colors.error; },
-};
-
-// Volume-status colours keyed by the status string getVolumeStatus returns.
-// getVolumeStatus lives in algorithms.js (a pure module that must not import
-// the theme), so it returns a status string and the colour is resolved here.
-// Getters so the colour-blind-safe and high-contrast palette swaps in
-// applyAccessibility propagate to the body heatmap and volume bars. (A2-038.)
-// Re-pointed onto stateColors (COMP-027): volume bands are a Class A
-// capacity surface, so they are the first consumer of the shared grammar
-// rather than a parallel mapping. Resolves identically (stateColors aliases
-// the same semantic tokens), so no visual change.
-//
-// O1 (comprehension-trust-audit-2026-08-06): 'minimum' (under-trained, "add
-// more") and 'near_mrv' (near the ceiling, "ease off") used to share the
-// same warning yellow -- one colour, two opposite instructions. 'minimum'
-// now gets its own tone (stateColors.info); 'near_mrv' keeps 'watch'.
-// D214: 'minimum' reads its own token (see volumeMinimum in baseColors) so
-// the colour-blind-safe palette can tell "Just enough" from "In range";
-// stateColors.info itself is unchanged for its other consumers.
-const volumeStatusColors = {
-  get unknown()  { return stateColors.neutral; },
-  get below()    { return stateColors.neutral; },
-  get minimum()  { return colors.volumeMinimum; },
-  get optimal()  { return stateColors.onTrack; },
-  get near_mrv() { return stateColors.watch; },
-  get over_mrv() { return stateColors.act; },
-};
-
-// Resolve a volume-status string to its themed colour, falling back to the
-// neutral muted token for an unrecognised status.
-//
-// Frozen singleton form: reads the module-level mutable `colors`/`stateColors`
-// (only updated on app restart via applyAccessibility). Kept as-is for every
-// unmigrated call site (VolumeHeatmapScreen.js, AnalyticsScreen.js).
-export function volumeStatusColor(status) {
-  return volumeStatusColors[status] ?? colors.textMuted;
-}
-
-// CP-10 stage 3 (theming FINAL batch, 2026-07-10): live variant for a
-// migrated screen's `const t = useTheme();` object. Resolves the SAME
-// status -> tone mapping as volumeStatusColors above (unknown/below ->
-// neutral, minimum -> info, near_mrv -> watch, optimal -> onTrack,
-// over_mrv -> act) but reads it off the passed-in live `t.colors` instead of
-// the frozen singleton, so it stays in step with WorkoutSummaryScreen.js's own theme
-// generation. Returns a resolver function, not a precomputed map, so it can
-// be called directly as `buildVolumeStatusColor(t.colors)(status)`.
-export function buildVolumeStatusColor(c) {
-  const neutral = c.textMuted;
-  const watch = c.warning;
-  const onTrack = c.success;
-  const act = c.error;
-  // O1 / D214: distinct tone for 'minimum', its own token (volumeStatusColors above).
-  const minimum = c.volumeMinimum;
-  const map = {
-    unknown: neutral,
-    below: neutral,
-    minimum,
-    optimal: onTrack,
-    near_mrv: watch,
-    over_mrv: act,
-  };
-  return function resolveVolumeStatusColor(status) {
-    return map[status] ?? neutral;
-  };
-}
 
 // Convenience: consistent icon button size used across screens
 export const iconSize = {

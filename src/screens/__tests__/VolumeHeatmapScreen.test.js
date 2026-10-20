@@ -1134,7 +1134,7 @@ describe('D214 (7.4 item 4): the one legend', () => {
   test('the figure\'s own legend names all five colours the screen can draw', () => {
     const { VOLUME_TONE_LABELS } = require('../../lib/volumeBandLabels');
     expect(Object.values(VOLUME_TONE_LABELS)).toEqual([
-      'Too few to hold size', 'Holds size, some growth', 'Range for growth', 'More than needed',
+      'Low', 'Steady', 'Growing', 'Very high',
     ]);
     for (const tone of ['BELOW', 'BUILDING', 'GROWTH', 'BEYOND']) {
       expect(BODY_DIAGRAM_SOURCE).toContain(`VOLUME_TONE_LABELS[TONE.${tone}]`);

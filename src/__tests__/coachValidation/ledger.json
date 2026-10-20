@@ -2485,38 +2485,6 @@
   }
  },
  {
-  "rule_id": "T-VOLUME-01",
-  "domain": "volume",
-  "source_file": "src/lib/algorithms.js",
-  "authority": "src/lib/algorithms.js:25 VOLUME_LANDMARKS, :277 getVolumeStatus",
-  "decision": "",
-  "thresholds": "workingSets<=0 or non-finite -> below; <mev -> below; <=mev+2 -> minimum; <=mav -> optimal; <=mrv -> near_mrv; else over_mrv. Per- muscle mev/mav/mrv table hardcoded (e.g. chest mev6/mav14/mrv22, back mev10/mav16/mrv25, quads mev8/mav14/mrv20 \u2014 full table at lines 25-59)",
-  "precedence": "zero-work short-circuit fires even for a muscle with mev=0 (front_delts) so the heatmap never shows \"optimal\" before any set is logged",
-  "direct_case": [
-   "TRN-62",
-   "TRN-63",
-   "TRN-64"
-  ],
-  "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
-  "safety_case": [],
-  "safety_na_reason": null,
-  "whole_scenario_ids": [
-   "TRN-62",
-   "TRN-63",
-   "TRN-64"
-  ],
-  "property_test_ids": [],
-  "status": "WHOLE_CHAIN_PROVEN",
-  "oracle": {
-   "expected": null,
-   "authority_source": null,
-   "suspected_defect": false,
-   "notes": null
-  }
- },
- {
   "rule_id": "T-VOLUME-02",
   "domain": "volume",
   "source_file": "src/lib/algorithms.js",

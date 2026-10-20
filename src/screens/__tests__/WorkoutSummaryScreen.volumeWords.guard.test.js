@@ -24,6 +24,7 @@
 const fs = require('fs');
 const path = require('path');
 
+const { volumeGroupLines, volumeToneLine, VOLUME_BAND_LABELS, VOLUME_TONE_LABELS } = require('../../lib/volumeBandLabels');
 const SRC = fs.readFileSync(path.resolve(__dirname, '..', 'WorkoutSummaryScreen.js'), 'utf8');
 const SECTION = SRC.slice(SRC.indexOf('musclesWorked.length > 0 && ('), SRC.indexOf('COMP-005 + D2: block-end recap'));
 const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
@@ -40,27 +41,29 @@ describe('the band words come from the one judgement', () => {
 
   // RE-ANCHORED 2026-10-02 (closing review S4): the colour words went, because the
   // light and colour-blind-safe themes draw other colours for the same bands.
-  test('the tooltip names the bands in words and never a colour, and never "too much"', () => {
-    for (const band of ['Too few to hold size', 'Holds your size', 'Usual range for growth', 'Higher range for a focus', 'More than needed']) {
-      expect(SECTION).toContain(`${band}: `);
-    }
+  // Item 14: the (i) reads the shared tables (volumeBandLabels.js), so all eight
+  // group labels and the four tone words appear, with their ranges from WEEKLY_BANDS.
+  test('the tooltip is built from the shared tables, names every band and never a colour or "too much"', () => {
+    expect(SECTION).toContain('${volumeGroupLines()}');
+    expect(SECTION).toContain('${volumeToneLine()}');
+    const lines = volumeGroupLines();
+    for (const band of Object.values(VOLUME_BAND_LABELS)) expect(lines).toContain(`${band}: `);
+    expect(lines).toContain('Holds size, some growth: 6 to 10 sets');
+    expect(lines).toContain('More than needed: over 42 sets');
+    expect(lines).toContain('Higher range for a focus: 20 to 30 sets, for a muscle you picked to bring up in your plan');
+    expect(lines).toContain('Above the usual range: 20 to 30 sets, for a muscle your plan did not raise');
+    Object.values(VOLUME_TONE_LABELS).forEach((w) => expect(volumeToneLine()).toContain(w));
     expect(SECTION).not.toMatch(/\b(Green|Yellow|Red|Blue|Grey) = /);
+    expect(`${lines}${volumeToneLine()}`).not.toMatch(/Too much|Near the limit|too much|stud(y|ies)|research/);
     expect(code(SECTION)).not.toMatch(/Too much|Near the limit|too much/);
   });
 });
 
 describe('the tooltip\'s own lines (W1, W2, W3): they describe, and say what the figure is', () => {
-  // RE-ANCHORED 2026-10-11 (founder: "'More than most studies' etc what the heck is that meant to mean to a human"; "No 'ai talk'"): the bands in plain words, no "studies".
-  test('the beyond line says more is not known to help (no "consider doing a little less")', () => {
-    expect(SECTION).toContain("'More than needed: over 42 sets\\n\\n'");
-    expect(SECTION).not.toMatch(/stud(y|ies)|research/i);
-    expect(SECTION).not.toMatch(/consider doing a little less|next week\\n/);
-  });
-
-  test('the focus line says what a focus range is for, and the closing line says what the plan\'s role does', () => {
-    expect(SECTION).toContain("'Higher range for a focus: 20 to 30 sets, for a muscle you picked to bring up in your plan\\n'");
-    expect(SECTION).toContain('A muscle your plan raised is read against the higher range, and one it did not reads as above the usual range from 20 sets.');
-    expect(SECTION).not.toMatch(/right at the floor|one or two more sets/);
+  test('the credit sentence stays, and the hand-typed band lines are gone', () => {
+    expect(SECTION).toContain('A set counts once for the muscle it works most and half for each muscle that helps.');
+    expect(SECTION).not.toContain("'More than needed: over 42 sets");
+    expect(SECTION).not.toMatch(/consider doing a little less|next week\\n|right at the floor|one or two more sets/);
   });
 
   test('a history reopen counts sets and claims no "this week"; the live card keeps its sentence', () => {
