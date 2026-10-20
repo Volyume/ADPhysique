@@ -303,11 +303,101 @@ describe('§18 scenario matrix', () => {
     expect(rx.repsTarget).toBe(11); // beat rule still ran despite the very-hard rating
   });
 
-  test('32. Layoff 10 days — MUST skip advance/anchor logic (LS-04)', () => {
+  test('32. Layoff 20 days (threshold raised 7 to 14, G2 / item 17) — MUST skip advance/anchor logic (LS-04)', () => {
     const hist = [hSession(NOW - 20 * DAY, [{ weight: 80, reps: 12 }])];
-    const rx = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: 10 } }), 1);
+    const rx = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: 20 } }), 1);
     expect(rx.provenance).toBe(PROVENANCE.SENIOR_RECOVERY_HOLD);
     expect(rx.weight).not.toBe(82.5);
+  });
+
+  test('32b. G2 / item 17: 14 days or fewer is NOT a layoff; a drifting once-a-week day (7, 8, 9, 13, 14) is never cut', () => {
+    for (const d of [7, 8, 9, 13, 14]) {
+      const hist = [1, 2].map((n) => hSession(NOW - (d + (n - 1) * 7) * DAY, [{ weight: 72.5, reps: 10 }, { weight: 72.5, reps: 9 }]));
+      const rx = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: d } }), 1);
+      expect(rx.weight).toBe(72.5);
+      expect(rx.provenance).toBe(PROVENANCE.MATCH_LOAD_ADD_REP);
+    }
+  });
+
+  test('32c. G2 / item 17: 15 days IS a layoff and trims the LOAD only; reps are exactly last times (no plus one)', () => {
+    const hist = [1, 2].map((n) => hSession(NOW - (15 + (n - 1) * 7) * DAY, [{ weight: 72.5, reps: 10 }, { weight: 72.5, reps: 9 }]));
+    const rx = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: 15 } }), 1);
+    expect(rx.provenance).toBe(PROVENANCE.SENIOR_RECOVERY_HOLD);
+    expect(rx.weight).toBe(65.25); // 72.5 x 0.9, floored to the 0.25 grid
+    expect(rx.repsTarget).toBe(10); // exactly last time's 10 (no plus one), not the band floor 8
+  });
+
+  test('32c2. G2 / item 17: STRICT older-lifter property, a layoff never shows more reps than the same history without it', () => {
+    // Topped range, effort 2: the unflagged session ADVANCES to 75 x 8 (reps restart at the band floor).
+    // The layoff keeps the reset (65.25 x 8) rather than 65.25 x 12, which would be more reps than baseline.
+    const topped = [1, 2].map((n) => hSession(NOW - (15 + (n - 1) * 7) * DAY, [{ weight: 72.5, reps: 12 }]));
+    const base = resolveSetPrescription(packet({ rawHistory: topped }), 1);
+    const lay = resolveSetPrescription(packet({ rawHistory: topped, senior: { layoffDays: 15 } }), 1);
+    expect(base.repsTarget).toBe(8);
+    expect(lay.weight).toBe(65.25);
+    expect(lay.repsTarget).toBeLessThanOrEqual(base.repsTarget);
+    expect(lay.repsTarget).toBe(8);
+  });
+
+  test('32c3. G2 / item 17: behaviour table, once-a-week lift, 7 to 15 days: no layoff signal (baseline) vs the layoff signal the app sends for EVERY lifter (reps never above baseline)', () => {
+    const table = [];
+    for (const d of [7, 8, 9, 13, 14, 15]) {
+      const hist = [1, 2].map((n) => hSession(NOW - (d + (n - 1) * 7) * DAY, [{ weight: 72.5, reps: 10 }, { weight: 72.5, reps: 9 }]));
+      const std = resolveSetPrescription(packet({ rawHistory: hist }), 1);
+      const old = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: d } }), 1);
+      table.push([d, std.weight, std.repsTarget, old.weight, old.repsTarget]);
+      expect(old.repsTarget).toBeLessThanOrEqual(std.repsTarget);
+      expect(old.weight).toBeLessThanOrEqual(std.weight);
+    }
+    expect(table).toEqual([
+      [7, 72.5, 11, 72.5, 11], [8, 72.5, 11, 72.5, 11], [9, 72.5, 11, 72.5, 11],
+      [13, 72.5, 11, 72.5, 11], [14, 72.5, 11, 72.5, 11], [15, 72.5, 11, 65.25, 10],
+    ]);
+  });
+
+  test('32c4. G2 / item 17: the layoff applies to EVERY lifter at 15 days, standard or older (no age gate; the screen sends layoffDays unconditionally)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'ActiveWorkoutScreen.js'), 'utf8');
+    expect(src).toMatch(/const layoffDays = lastTs > 0 \? Math\.floor\(/);
+    const hist = [1, 2].map((n) => hSession(NOW - (15 + (n - 1) * 7) * DAY, [{ weight: 72.5, reps: 10 }, { weight: 72.5, reps: 9 }]));
+    // The packet has no age field at all: whoever the lifter is, the same input gives the same cut.
+    const rx = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: 15 } }), 1);
+    expect([rx.weight, rx.repsTarget]).toEqual([65.25, 10]);
+    const at14 = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: 14 } }), 1);
+    expect([at14.weight, at14.repsTarget]).toEqual([72.5, 11]);
+  });
+
+  test('32d. G2 / item 17: a finished block still resets reps to the band floor (only the layoff reset was dropped)', () => {
+    const hist = [hSession(NOW - 7 * DAY, [{ weight: 80, reps: 12 }])];
+    const rx = resolveSetPrescription(packet({ rawHistory: hist, senior: { blockFinished: true } }), 1);
+    expect(rx.repsTarget).toBe(8);
+  });
+
+  test('32e. G2 / item 17: topped range, effort unknown or very hard — load holds and reps go up to last time\'s reps, not capped at band max', () => {
+    for (const difficulty of [null, 5]) {
+      const hist = [1, 2].map((n) => hSession(NOW - n * 7 * DAY, [{ weight: 72.5, reps: 15 }], { difficulty }));
+      const rx = resolveSetPrescription(packet({ rawHistory: hist }), 1);
+      expect(rx.weight).toBe(72.5);
+      expect(rx.repsTarget).toBe(15);
+    }
+    // At or under the band max nothing changes (12 stays 12).
+    const same = [1, 2].map((n) => hSession(NOW - n * 7 * DAY, [{ weight: 72.5, reps: 12 }], { difficulty: null }));
+    expect(resolveSetPrescription(packet({ rawHistory: same }), 1).repsTarget).toBe(12);
+  });
+
+  test('32f. G2 / item 17: explainPrescription names the layoff and the consecutive miss, and nothing else', () => {
+    const { explainPrescription, prescriptionReasonCopy } = require('../livePrescription');
+    const lay = [1, 2].map((n) => hSession(NOW - (15 + (n - 1) * 7) * DAY, [{ weight: 72.5, reps: 10 }]));
+    const a = explainPrescription(packet({ rawHistory: lay, senior: { layoffDays: 15 } }));
+    expect(a.layoff).toEqual({ days: 15, fromWeight: 72.5, toWeight: 65.25 });
+    expect(prescriptionReasonCopy(a).title).toBe('Eased after a break');
+    const miss = [7, 14].map((d) => hSession(NOW - d * DAY, [{ weight: 72.5, reps: 7 }]));
+    const b = explainPrescription(packet({ rawHistory: miss, senior: { layoffDays: 7 } }));
+    expect(b.consecutiveMiss).toEqual({ fromWeight: 72.5, toWeight: 70 });
+    expect(prescriptionReasonCopy(b).title).toBe('Lowered to rebuild');
+    const plain = [7, 14].map((d) => hSession(NOW - d * DAY, [{ weight: 72.5, reps: 10 }]));
+    expect(prescriptionReasonCopy(explainPrescription(packet({ rawHistory: plain, senior: { layoffDays: 7 } })))).toBeNull();
   });
 
   test('33. Deload week — MUST NOT run progression; readiness MUST NOT touch it', () => {

@@ -149,6 +149,7 @@ function SessionSheets({
   revertSessionAdjustment,
   readinessReduces,
   readinessTweak,
+  prescriptionReason,
   dismissReadinessTweak,
   readinessRestoreLabel,
   showSwapModal,
@@ -1104,6 +1105,21 @@ function SessionSheets({
                     <Ionicons name="arrow-undo-outline" size={15} color={t.colors.primary} />
                     <Text style={[styles.adjustedRevertText, live.adjustedRevertText]}>{readinessRestoreLabel}</Text>
                   </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {/* G2 / item 17: why the opening suggestion is lower than last
+                  time (a break, or two sessions below the rep range). Same
+                  style as "Eased for today", on demand only, nothing on the
+                  set card (founder order 2026-08-17). */}
+              {prescriptionReason ? (
+                <View style={[styles.adjustedSection, live.adjustedSection]}>
+                  <View style={styles.adjustedHeader}>
+                    <Ionicons name="pulse-outline" size={14} color={t.colors.primary} />
+                    <Text style={[styles.adjustedTitle, live.adjustedTitle]}>{prescriptionReason.title}</Text>
+                  </View>
+                  <Text style={[styles.adjustedReason, live.adjustedReason]}>{prescriptionReason.reason}</Text>
+                  <Text style={[styles.adjustedSignal, live.adjustedSignal]}>{prescriptionReason.signal}</Text>
                 </View>
               ) : null}
 

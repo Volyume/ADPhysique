@@ -100,6 +100,8 @@ import {
   resolveSetPrescription,
   resolveBarLoadStep,
   assembleEvidencePacket,
+  explainPrescription,
+  prescriptionReasonCopy,
   detectLoadOverride,
   detectRepsOverride,
 } from '../lib/livePrescription';
@@ -1369,6 +1371,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       authored: packetBase.authored ?? null,
     });
   }, [packetBase, loggedSets, overrideLoad, overrideReps, readinessTweak, reEntryEaseActive, readinessReduces, readinessDismissed]);
+
+  // G2 / item 17: why the opening suggestion is lower than last time
+  // (layoff, consecutive miss). Shown ONLY in the Exercise info sheet, never
+  // on the set card (founder order 2026-08-17).
+  const prescriptionReason = useMemo(
+    () => (packet ? prescriptionReasonCopy(explainPrescription(packet)) : null),
+    [packet],
+  );
 
   // The Wave-3 readinessDrivesTarget seniority flag retired with the
   // in-card coach line it ordered (founder device order 2026-08-17).
@@ -2994,6 +3004,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           at: workout?.startedAt ?? workout?.started_at ?? null,
           difficulty: workout?.sessionDifficulty ?? workout?.session_difficulty ?? null,
           isDeload: false,
+          // G2 / item 17: which block week the session belonged to, so the
+          // recovery week can skip sessions already done inside it. Ignored
+          // by assembleEvidencePacket.
+          mesocycleWeekId: workout?.mesocycleWeekId ?? workout?.mesocycle_week_id ?? null,
           sets: sessionSets,
         });
       }
@@ -3009,7 +3023,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       } catch (_e) { stampedHistory = rawHistory; }
 
       // Layoff: days since this exercise was last trained (design section
-      // 10.5) - the resolver applies the >7-day 0.9 reduction itself.
+      // 10.5) - the resolver applies the more-than-14-day 0.9 reduction itself, to every lifter (no age gate).
       const lastTs = (rawHistory[0]?.sets || []).reduce((m, s) => Math.max(m, s.createdAt ?? s.created_at ?? 0), 0);
       const layoffDays = lastTs > 0 ? Math.floor((Date.now() - lastTs) / (24 * 60 * 60 * 1000)) : null;
 
@@ -3077,19 +3091,39 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // than a separate setTargets/currentSet write: the resolver's own
           // SENIOR_RECOVERY_HOLD branch below is what actually seeds the box.
           if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id && !localAuthored) {
-            const week1Sets = await getWeek1SetsForExercise(currentWeek.mesocycleId, exercise.id);
+            // G2 / item 17 (owner 2026-10-20): the recovery week starts from
+            // what the lifter actually used LAST time (their most recent
+            // session of this exercise), not the block's week-1 weights, so
+            // "the same exercises and weights" (weeklyCoach deloadNote) is
+            // true. Week-1 sets stay as the fallback when there is no
+            // earlier session. Fewer sets still come from weeklyAllocation.
+            // A session already done inside the recovery week is skipped, so
+            // a second recovery session never halves the reps twice.
+            const lastBeforeRecovery = rawHistory.find(
+              (h) => !(h.mesocycleWeekId && h.mesocycleWeekId === currentWeek.id),
+            );
+            const lastSessionSets = (lastBeforeRecovery?.sets || []).filter(
+              (r) => (r?.setType ?? r?.set_type ?? 'straight') !== 'warmup' && Number(r?.weight) > 0,
+            );
+            const week1Sets = lastSessionSets.length > 0
+              ? lastSessionSets.map((r) => ({
+                weight: r.weight,
+                actualReps: r.actualReps ?? r.actual_reps ?? r.reps,
+                setType: r.setType ?? r.set_type ?? 'straight',
+                rir: r.rir,
+              }))
+              : await getWeek1SetsForExercise(currentWeek.mesocycleId, exercise.id);
             if (cancelled) return;
             if (week1Sets.length > 0) {
-              // Use first-half prescription (week-1 weight, 50% reps) as default
+              // First-half prescription: the weight used last time, 50% reps
               const deloadTargets = generateDeloadPrescription(week1Sets, true);
               if (deloadTargets.length > 0) {
                 localDeloadTargets = deloadTargets.map(t => ({ weight: t.weight, reps: t.reps }));
                 deloadRirSeed = deloadTargets[0]?.rir ?? null;
                 // C18: describe what THIS prescription actually changed,
-                // measured against the block's week-1 baseline, rather than
-                // asserting a generic reduction. Today's first-half recovery
-                // prescription keeps the load and halves the reps at RIR 4, so
-                // claiming lighter loads would be untrue on it.
+                // measured against the baseline it was built from, rather
+                // than asserting a generic reduction. Built from last time's
+                // weights, so "lighter weights" is never claimed.
                 setRecoveryDifferences(
                   describePrescriptionDifferences(week1Sets, deloadTargets),
                 );
@@ -7034,6 +7068,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           revertSessionAdjustment={revertSessionAdjustment}
           readinessReduces={readinessReduces}
           readinessTweak={readinessTweak}
+          prescriptionReason={prescriptionReason}
           dismissReadinessTweak={dismissReadinessTweak}
           readinessRestoreLabel={readinessRestoreLabel}
           showSwapModal={showSwapModal}

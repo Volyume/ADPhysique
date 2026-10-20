@@ -611,12 +611,12 @@ export const SCENARIOS = [
     id: 'LSO-24',
     family: 'liveSet',
     rules: ['T-LIVESET-09'],
-    why: 'ORACLE T-LIVESET-09 (layoff >7d applies 0.9 cap multiplier)',
+    why: 'ORACLE T-LIVESET-09 (layoff >14d applies 0.9 cap multiplier; threshold raised from 7 by G2 / item 17)',
     run: 'liveSet',
     facts: {
       packet: packet({
         rawHistory: [hSession(NOW - 20 * DAY, [{ weight: 80, reps: 12 }])],
-        senior: { layoffDays: 10 },
+        senior: { layoffDays: 20 },
       }),
       position: 1,
     },
