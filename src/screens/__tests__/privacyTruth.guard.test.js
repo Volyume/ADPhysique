@@ -220,10 +220,11 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(start32).toBeGreaterThan(-1);
     const entry32 = sheet.slice(start32, sheet.indexOf('],', start32));
     expect(entry32).toContain('The workout logger has been completely revamped.');
-    expect(entry32).toContain('Record videos of your sets and share them, with your lifts and PRs on top.');
+    expect(entry32).toContain('Record videos of your sets and share them on share cards, with your lifts and PRs on top. Your videos stay private on your device unless you choose to share them.');
     expect(entry32).toContain('Community has been improved');
-    // Founder 2026-10-20: no privacy clause on the video line; "never
-    // uploaded" is untrue once the person shares a video.
+    // Founder 2026-10-20: private on the device unless shared; "never
+    // uploaded" is untrue once the person shares a video, and no
+    // privacy-policy wording.
     expect(entry32).not.toMatch(/never uploaded|privacy policy|Privacy and legal/i);
     expect({ bad: /\bclips?\b|email|plan again/i.test(entry32) }).toEqual({ bad: false });
     // 3.1.0: the Android setup fix, with the same three founder lines.
