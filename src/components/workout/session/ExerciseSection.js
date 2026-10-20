@@ -210,6 +210,15 @@ export default function ExerciseSection({
           <View style={styles.state}>
             <Text style={live.doneText} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{`${doneCount} of ${totalSetCount}`}</Text>
           </View>
+        ) : isActive && onPressHeader ? (
+          // Item 18 (option A): the active header's right slot was empty, so the
+          // tap that opens the exercise guide had no visible cue. The glyph is
+          // decoration (the whole header is the button, and its hint says
+          // "Opens the exercise guide"); it sits in the same 36 dp column as the
+          // done tick and the footer's overflow, on the same centre line.
+          <View style={styles.state} testID="volyume-exercise-info-cue" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+            <Ionicons name="information-circle-outline" size={iconSize.md} color={t.colors.textSecondary} />
+          </View>
         ) : null}
       </TouchableOpacity>
 
