@@ -25,6 +25,8 @@
  * Pure. No React, no I/O.
  */
 
+import { WEEKLY_BANDS } from './plan/science';
+
 export const VOLUME_BAND_LABELS = Object.freeze({
   below_maintenance: 'Too few to hold size',
   maintenance: 'Holds your size',
@@ -36,12 +38,45 @@ export const VOLUME_BAND_LABELS = Object.freeze({
   beyond_studied: 'More than needed',
 });
 
+// Item 14: four words that appear in NO group label above, so a word never
+// means two things (a list's "Holds size, some growth" is 6 to 10 sets only; the
+// legend's old tone word of the same name was 2 to 10).
 export const VOLUME_TONE_LABELS = Object.freeze({
-  below: 'Too few to hold size',
-  building: 'Holds size, some growth',
-  growth: 'Range for growth',
-  beyond: 'More than needed',
+  below: 'Low',
+  building: 'Steady',
+  growth: 'Growing',
+  beyond: 'Very high',
 });
+
+/**
+ * The set ranges behind the tables, read from the one band table
+ * (plan/science.js WEEKLY_BANDS) so no screen types them by hand.
+ */
+const B = WEEKLY_BANDS;
+export const VOLUME_GROUP_RANGES = Object.freeze({
+  below_maintenance: `under ${B.maintenanceFrom} sets a week`,
+  maintenance: `${B.maintenanceFrom} to ${B.maintenanceTop} sets`,
+  between: `${B.maintenanceTop} to ${B.normalFrom} sets`,
+  normal_growth: `${B.normalFrom} to ${B.normalTop} sets`,
+  focus_range: `${B.normalTop} to ${B.focusTop} sets, for a muscle you picked to bring up in your plan`,
+  above_normal: `${B.normalTop} to ${B.focusTop} sets, for a muscle your plan did not raise`,
+  top_of_studied: `${B.focusTop} to ${B.studiedTop} sets`,
+  beyond_studied: `over ${B.studiedTop} sets`,
+});
+
+/** The eight group lines, "Label: range", in list order (the (i) behind a list). */
+export function volumeGroupLines() {
+  return Object.keys(VOLUME_BAND_LABELS)
+    .map((g) => `${VOLUME_BAND_LABELS[g]}: ${VOLUME_GROUP_RANGES[g]}`)
+    .join('\n');
+}
+
+/** The one sentence that names the four colours and what each folds. */
+export function volumeToneLine() {
+  const L = VOLUME_TONE_LABELS;
+  return `The colours are ${L.below} (under ${B.maintenanceFrom} sets), ${L.building} (${B.maintenanceFrom} to ${B.normalFrom}), `
+    + `${L.growth} (${B.normalFrom} to ${B.studiedTop}) and ${L.beyond} (over ${B.studiedTop}).`;
+}
 
 /**
  * The display words for a group. `fallback` is returned for a group the map has

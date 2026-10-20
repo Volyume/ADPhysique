@@ -510,9 +510,9 @@ const REPEAT_TABLE = [
     run: 'interBlock', must: [{ kind: 'throwsNever' }],
   },
   {
-    id: 'TMP-R17', family: 'temporal', rules: ['T-VOLUME-01'],
-    why: 'ORACLE T-VOLUME-01: repeated invocation, landmarks seam',
-    facts: { _fn: 'getVolumeStatus', workingSets: 10, muscle: 'chest' },
+    id: 'TMP-R17', family: 'temporal', rules: ['T-VOLUME-08'],
+    why: 'ORACLE T-VOLUME-08: repeated invocation, landmarks seam (T-VOLUME-01 and getVolumeStatus retired in item 14; the seam is kept on mergeLandmarkPrecedence)',
+    facts: { _fn: 'mergeLandmarkPrecedence', opts: { manual: {}, adapted: { chest: { mev: 10, mav: 18, mrv: 26, isAdapted: true } }, research: { chest: { mv: 4, mev: 6, mav: 14, mrv: 22 } } } },
     run: 'landmarks', must: [{ kind: 'throwsNever' }],
   },
   {

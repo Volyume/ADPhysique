@@ -33,7 +33,6 @@ import {
   shouldDeload,
   detectPlateau,
   detectProgressionConsistency,
-  getVolumeStatus,
   computeAdaptiveLandmarks,
   detectLaggingMuscles,
 } from '../../lib/algorithms';
@@ -503,12 +502,9 @@ export const ENTRIES = {
   // ── T-PROGRAMME-11: interBlock.js block ledger classification ──────────────
   interBlock: (scenario) => classifyMuscleBlock(scenario.facts.input, scenario.facts.ctx),
 
-  // ── T-VOLUME-01/04/07/08: display classifier, adaptive bands, precedence ───
+  // ── T-VOLUME-04/07/08: adaptive bands, precedence (T-VOLUME-01 retired with getVolumeStatus) ───
   landmarks: (scenario) => {
-    const fn = scenario.facts?._fn || 'getVolumeStatus';
-    if (fn === 'getVolumeStatus') {
-      return getVolumeStatus(scenario.facts.workingSets, scenario.facts.muscle, scenario.facts.customLandmarks ?? null);
-    }
+    const fn = scenario.facts?._fn || 'computeAdaptiveLandmarks';
     if (fn === 'computeAdaptiveLandmarks') {
       return computeAdaptiveLandmarks(scenario.facts.history, scenario.facts.baseDefaults);
     }

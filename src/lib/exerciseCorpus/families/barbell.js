@@ -1849,6 +1849,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand tall with the bar across your upper back, feet under your hips.",
     execution: "Step one foot back and lower that knee towards the floor, then push back to standing through the front heel.",
+    watch: "Letting the front heel lift throws the load onto the knee, so keep your weight through the whole front foot.",
   },
   {
     name: "Barbell Rollout",
@@ -2011,6 +2012,7 @@ export default [
     loadCharacter: "grind",
     setup: "Rest the bar on your upper back and set one foot behind you on a bench, front foot a stride ahead.",
     execution: "Lower your back knee towards the floor over the front leg, then push back up through the front heel.",
+    watch: "Standing too close to the bench drives the front knee forward, so step out until your shin is near vertical.",
   },
   {
     name: "Cambered Bar Bench Press",

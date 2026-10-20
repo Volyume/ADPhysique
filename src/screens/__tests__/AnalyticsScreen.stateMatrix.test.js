@@ -1535,13 +1535,12 @@ describe('D214 lane 3 — the strip under it: "This week so far", logged sets, t
     // RE-PINNED under D219 lane A5 (design 5.3): the three tones are Below
     // maintenance, Within the studied range and Beyond the studied range; the
     // highest is an information colour, never the error token.
-    expect(text).toContain('Too few to hold size');
-    expect(text).toContain('Enough sets');
-    expect(text).toContain('More than needed');
-    expect(text).not.toMatch(/Too much|Under the range|Inside the range/);
+    // Item 14: the strip's legend is the figure legend's four tone words.
+    ['Low', 'Steady', 'Growing', 'Very high'].forEach((w) => expect(text).toContain(w));
+    expect(text).not.toMatch(/Enough sets|Too much|Under the range|Inside the range/);
     const c = resolveTheme({}).colors;
     const fills = swatchFills(tree);
-    expect(fills).toEqual([c.textMuted, c.success, c.macroCarb]);
+    expect(fills).toEqual([c.textMuted, c.volumeMinimum, c.success, c.volumeBeyond]);
     const bar = hostNodes(tree, (n) => n.props.testID === 'volume-strip-bar')[0];
     const segmentColours = bar.children.map((child) => StyleSheet.flatten(child.props.style).backgroundColor);
     expect(segmentColours.length).toBe(2);

@@ -502,12 +502,48 @@ describe('D214 recovery and volume-minimum tokens', () => {
     expect(colors.volumeMinimum).not.toBe(colors.success);
   });
 
-  // In the ordinary palettes blue and green differ by hue, which sighted
-  // readers keep. Under the colour-blind-safe tables hue is what is lost, so
-  // there the two bands must also differ by lightness.
-  test.each(palettes.filter((p) => p.prefs.colorBlindSafe))('$name: "Just enough" differs from success by lightness', ({ prefs }) => {
+  // Item 14: the four volume tones (Low, Steady, Growing, Very high) must stay
+  // apart in EVERY palette, including as a colour-blind reader sees them. The
+  // simulation is Machado et al. 2009 (severity 1.0) in linear RGB, compared as
+  // CIELAB distance; 10 is a clearly visible gap. Each tone also clears 3:1 on
+  // the card surface (the swatches are graphical marks), and none is red.
+  const MACHADO = {
+    none: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.01182, 0.04294, 0.968881]],
+    protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+    tritanopia: [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.3039]],
+  };
+  function labOf(hex, kind) {
+    const lin = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    const m = MACHADO[kind];
+    const [r, g, b] = m.map((row) => Math.min(1, Math.max(0, row[0] * lin[0] + row[1] * lin[1] + row[2] * lin[2])));
+    const X = 0.4124 * r + 0.3576 * g + 0.1805 * b;
+    const Y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const Z = 0.0193 * r + 0.1192 * g + 0.9505 * b;
+    const f = (v) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116);
+    const fx = f(X / 0.95047); const fy = f(Y); const fz = f(Z / 1.08883);
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+  }
+  const dE = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+  test.each(palettes)('$name: the four volume tones are four separate colours, 3:1 on the card, none red', ({ prefs }) => {
     applyAccessibility(prefs);
-    expect(ratio(colors.volumeMinimum, colors.success)).toBeGreaterThanOrEqual(1.5);
+    const tones = [colors.textMuted, colors.volumeMinimum, colors.success, colors.volumeBeyond];
+    expect(new Set(tones).size).toBe(4);
+    tones.forEach((hex) => expect(ratio(hex, colors.surface)).toBeGreaterThanOrEqual(3));
+    expect(tones).not.toContain(colors.error);
+    expect(tones).not.toContain(colors.warning);
+    expect(colors.volumeBeyond).not.toBe(colors.macroCarb);
+    for (const kind of Object.keys(MACHADO)) {
+      for (let i = 0; i < tones.length; i += 1) {
+        for (let j = i + 1; j < tones.length; j += 1) {
+          expect(dE(labOf(tones[i], kind), labOf(tones[j], kind))).toBeGreaterThanOrEqual(10);
+        }
+      }
+    }
   });
 
   test('the default and light palettes keep the hex "Just enough" always had (no visual change outside colour-blind-safe)', () => {

@@ -564,20 +564,9 @@ DEFECT: none (RA6-2 is a documented FIXED historical defect).
 
 ```
 RULE: T-VOLUME-01
-LOCK: MUST classify status: workingSets<=0 or non-finite -> below;
-      <mev -> below; <=mev+2 -> minimum; <=mav -> optimal; <=mrv ->
-      near_mrv; else over_mrv, using the per-muscle mev/mav/mrv table
-      (16 muscles, e.g. chest 6/14/22, back 10/16/25, quads 8/14/20).
-      HOLD/no-change: the zero-work short-circuit fires even for mev=0
-      muscles (front_delts) so the heatmap never shows "optimal" before
-      any set is logged.
-MUST_NOT: n/a — this is a pure display classifier with no senior gate to
-      violate.
-BOUNDARIES: <mev below; <=mev+2 minimum; <=mav optimal; <=mrv near_mrv;
-      else over_mrv (all inclusive <= at the upper edge of each band).
-SOURCE: ARCH — src/lib/algorithms.js:25/277 ("population starting points,
-      not precise prescriptions" per file header).
-DEFECT: none.
+RETIRED 2026-10 (item 14): getVolumeStatus had no consumer in src and was removed, so this
+      display classifier no longer exists. Every volume surface reads volumeJudgement.judgeWeek.
+      Ledger entry and TRN-62..64 removed with it; TMP-R17 now exercises mergeLandmarkPrecedence (T-VOLUME-08).
 ```
 
 ```

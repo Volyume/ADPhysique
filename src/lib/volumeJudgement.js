@@ -113,7 +113,7 @@ export function toneColors(c) {
     [TONE.BELOW]: c.textMuted,
     [TONE.BUILDING]: c.volumeMinimum,
     [TONE.GROWTH]: c.success,
-    [TONE.BEYOND]: c.macroCarb,
+    [TONE.BEYOND]: c.volumeBeyond,
   };
 }
 

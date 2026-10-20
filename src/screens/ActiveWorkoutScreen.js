@@ -6377,9 +6377,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Stage A (D220): the session title and its note, then the
               session sheet: collapsed headers above, the active exercise as
               a full section, collapsed headers below. The active section's
-              header carries the name (the tap that used to open the details
-              is its chevron) and its footer carries Add set, Swap and the
-              overflow that the title row used to hold. */}
+              header carries the name (tapping the header opens the exercise
+              guide; an information glyph in its right-hand slot says so) and
+              its footer carries Add set, Swap and the overflow that the title
+              row used to hold. */}
           <SessionHeader name={sessionTitle} startTime={workoutStartTime} />
           {collapsedSectionsBefore}
           {/* Keyed by the slot and its exercise, never the entry object: the

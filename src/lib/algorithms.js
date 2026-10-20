@@ -386,41 +386,6 @@ export function calculateExcludedWeeklyVolume(sets, exerciseMap = {}) {
   return excludedByMuscle;
 }
 
-// Algorithm 5: Volume Status
-// Returns a status string, not a colour: this module is pure and must not import
-// the theme. Callers resolve the colour with volumeStatusColor(status) from
-// theme.js so the colour-blind-safe and high-contrast palette swaps apply.
-// (A2-038: colours used to be hardcoded hex here and bypassed the palette.)
-export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
-  const landmarks = customLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-  if (!landmarks) return { status: 'unknown', label: 'Not enough data yet', landmarks: null };
-
-  const { mev, mav, mrv } = landmarks;
-
-  // Zero work is always 'below', regardless of mev. Without this short-circuit,
-  // muscles with mev=0 (front_delts, get plenty of indirect work from
-  // pressing) read as 'optimal' green on the body heatmap before the user
-  // has logged a single set, which makes the diagram look wrong.
-  // CALC-4: a non-finite set count (NaN from corrupt/missing data) used to fall
-  // through every comparison to 'over_mrv' ("Too much"). Treat it as no work.
-  if (!Number.isFinite(workingSets) || workingSets <= 0) {
-    return { status: 'below', label: 'Below target', landmarks };
-  }
-  if (workingSets < mev) {
-    return { status: 'below', label: 'Below target', landmarks };
-  }
-  if (mev > 0 && workingSets <= mev + 2) {
-    return { status: 'minimum', label: 'Just enough', landmarks };
-  }
-  if (workingSets <= mav) {
-    return { status: 'optimal', label: 'Good range', landmarks };
-  }
-  if (workingSets <= mrv) {
-    return { status: 'near_mrv', label: 'Getting close', landmarks };
-  }
-  return { status: 'over_mrv', label: 'Too much', landmarks };
-}
-
 // Default load increment for a progression step. Gym weight is stored in the
 // user's display unit (kg|lbs) and is never converted, so the jump has to match
 // the plates that unit actually comes in: 2.5/1.25 kg, or 5/2.5 lb. This mirrors
