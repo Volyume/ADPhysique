@@ -1271,7 +1271,7 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={[styles.planOptionTitle, live.planOptionTitle]}>Week ahead</Text>
             </View>
             <Text style={[styles.planOptionDesc, live.planOptionDesc]}>
-              Build seven dated days and a shopping list. Existing logged food is left alone.
+              Build seven dated days and a shopping list. Nothing is added to your diary until you tap Add this week.
             </Text>
             <Button title="Build week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
@@ -1614,7 +1614,7 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Text style={[styles.planActionTitle, live.planActionTitle]}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
                 <Text style={[styles.planActionSub, live.planActionSub]}>
                   {isDayPlan
-                    ? 'Adds these meals to today. Existing logged food is left alone.'
+                    ? `Adds these meals to ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}. Existing logged food is left alone.`
                     : 'Adds the week from the date shown. Any day that already has food logged is left alone.'}
                 </Text>
               </View>
