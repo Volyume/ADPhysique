@@ -73,6 +73,9 @@ describe('the emphatic set is curated: committing actions only', () => {
       // committing action on the join screen, as Create profile is on
       // CommunityJoinScreen.
       'screens/ChallengeJoinScreen.js',
+      // Set a new password (item 2, 2026-10-20): "Save password" is the one
+      // committing action on the screen the reset link opens.
+      'screens/SetNewPasswordScreen.js',
     ]);
     for (const [file] of emphatic) expect(allowed.has(file)).toBe(true);
     expect(emphatic.length).toBeGreaterThan(10);
