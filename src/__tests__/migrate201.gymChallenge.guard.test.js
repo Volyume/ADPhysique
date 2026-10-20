@@ -112,7 +112,7 @@ describe('migrate_201 gym challenge', () => {
   });
 
   it('carries the required header notes', () => {
-    ['Purpose:', 'Applied locally:', 'Applied remotely:  NO', 'Safe to re-run:', 'Rollback:'].forEach((h) => {
+    ['Purpose:', 'Applied locally:', 'Applied remotely:  YES', 'Safe to re-run:', 'Rollback:'].forEach((h) => {
       expect(SQL).toContain(h);
     });
   });

@@ -12,7 +12,12 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_199` (198 and 199 applied 2026-10-17 09:31:56 and 09:31:59 UTC
+> `migrate_201` (200 and 201 applied 2026-10-20 03:55:09 and 03:55:14 UTC
+> under the founder's "run against production 200 201", through the
+> apply-named-sql workflow, run 13: growth telemetry (catalogue, batch RPC,
+> six-month purge, service-role views and digest; GROWTH_TELEMETRY on from
+> 3.2.0) and the gym challenge (scoring, board, draws, gate readings,
+> free-for-life grants; no challenge created); 198 and 199 applied 2026-10-17 09:31:56 and 09:31:59 UTC
 > under the founder's "run against production 198 199", through the
 > apply-named-sql workflow: member email, prefs and topics, the app
 > check-in, campaigns, automations, the runner's pg_cron job (its function
@@ -90,7 +95,7 @@ is absolute — all user data stays in Dublin (one founder exception,
 Resend, which sends from Ireland and keeps its records in the United States
 under the standard contract clauses; the privacy policy says so). Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_201`, applied through 199 except 049 HELD; 200 and 201 written, not applied; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_201`, applied through 201 except 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

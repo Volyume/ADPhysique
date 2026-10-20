@@ -320,8 +320,9 @@ describe('growth events wait for the server (GROWTH_TELEMETRY)', () => {
   const path = require('path');
   const { EVENT_SCHEMAS } = require('../schema');
 
-  test('the flag ships OFF, until migrate_200 is applied', () => {
-    expect(jest.requireActual('../../sync/featureFlags').GROWTH_TELEMETRY).toBe(false);
+  test('the flag is ON now that migrate_200 is applied (2026-10-20)', () => {
+    // ON since migrate_200 was applied (2026-10-20).
+    expect(jest.requireActual('../../sync/featureFlags').GROWTH_TELEMETRY).toBe(true);
   });
 
   test('every schema event is new with migrate_200: none is in migrate_001 to migrate_199', () => {

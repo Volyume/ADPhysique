@@ -243,9 +243,19 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry21).toContain('Community has been improved');
     expect({ bad: /\bclips?\b|email|plan again/i.test(entry21) }).toEqual({ bad: false });
   });
-  test('the running version has a What\'s new entry', () => {
+  // Versions the founder released with no What's new sheet, by explicit
+  // instruction. 3.2.0, founder 2026-10-20: "Bump the version. Do not change
+  // the what's new." (A version with no entry shows nothing; the sheet is
+  // built that way.)
+  const NO_WHATS_NEW = Object.freeze(['3.2.0']);
+
+  test('the running version has a What\'s new entry, unless the founder released it without one', () => {
     const app = JSON.parse(readRepoFile('app.json'));
     const sheet = readRepoFile('src', 'components', 'WhatsNewSheet.js');
+    if (NO_WHATS_NEW.includes(app.expo.version)) {
+      expect(sheet).not.toContain(`'${app.expo.version}': [`);
+      return;
+    }
     expect(sheet).toContain(`'${app.expo.version}': [`);
   });
 

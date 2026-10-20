@@ -31,12 +31,10 @@
 --                    event carries calm mode or a flag.
 --
 -- Applied locally:   no (cloud-only objects)
--- Applied remotely:  NO. Founder runs it: "run against production 200".
---                    Until then the app keeps the growth events off
---                    (sync/featureFlags.js GROWTH_TELEMETRY = false): they
---                    are dropped on the device, never queued, and the older
---                    events flow as before. Turn the flag on in the build
---                    after this lands.
+-- Applied remotely:  YES, 2026-10-20 03:55:09 UTC, under the founder's "run
+--                    against production 200 201" (apply-named-sql run 13),
+--                    verified read-only. GROWTH_TELEMETRY is on from build
+--                    3.2.0; earlier builds never send the growth events.
 -- Safe to re-run:    yes (IF NOT EXISTS, CREATE OR REPLACE, ON CONFLICT DO
 --                    UPDATE for catalogue rows, cron unscheduled by name
 --                    before scheduling).
