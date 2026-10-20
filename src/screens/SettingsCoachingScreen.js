@@ -144,7 +144,7 @@ export default function SettingsCoachingScreen() {
         <SettingRow
           icon="heart-outline"
           label="Calmer coaching"
-          sub="Quieter progress prompts, and coaching never pushes for more while it is on. Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change. The safety limits on calories and training load are always on, in both modes."
+          sub={'Quieter progress prompts, and coaching never pushes for more while it is on. Your plan, your numbers and your weight figures do not change. Calmer coaching:\n\u2022 Hides your Community counts, presence, group boards and challenge board from other members\n\u2022 Stops new automatic posts from your workouts (posts already on the feed stay)\n\u2022 Stops reminders to come back, and keeps the monthly recap neutral\n\u2022 Switches off photo prompts, comparisons and share cards\n\u2022 Turns the PR vibration into a plain tap\n\u2022 Quietens Home\'s comparison prompts\nThe safety limits on calories and training load are always on, in both modes.'}
           showArrow={false}
           rightElement={
             <Switch
