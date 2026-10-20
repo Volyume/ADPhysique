@@ -16,10 +16,11 @@
  */
 
 let mockReduceMotion = false;
+let mockHapticsEnabled = true;
 
 jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
-  default: { getState: () => ({ accessibility: { reduceMotion: mockReduceMotion } }) },
+  default: { getState: () => ({ accessibility: { reduceMotion: mockReduceMotion, hapticsEnabled: mockHapticsEnabled } }) },
 }));
 
 const mockExpoNotificationAsync = jest.fn(() => Promise.resolve());
@@ -47,6 +48,7 @@ describe('haptics rich curves (D17)', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     mockReduceMotion = false;
+    mockHapticsEnabled = true;
     mockExpoNotificationAsync.mockClear();
     mockExpoImpactAsync.mockClear();
     RNHapticFeedback.triggerPattern.mockClear();
@@ -155,10 +157,10 @@ describe('haptics rich curves (D17)', () => {
     });
   });
 
-  describe('reduce-motion setting suppresses both paths', () => {
-    test('iOS: reduce motion silences the richer curve entirely', async () => {
+  describe('the Haptics switch (item 11) suppresses both paths; Reduce motion does not', () => {
+    test('iOS: Haptics off silences the richer curve entirely', async () => {
       Platform.OS = 'ios';
-      mockReduceMotion = true;
+      mockHapticsEnabled = false;
       await haptics.restDone();
       await haptics.prAchieved();
       jest.runAllTimers();
@@ -167,15 +169,25 @@ describe('haptics rich curves (D17)', () => {
       expect(mockExpoImpactAsync).not.toHaveBeenCalled();
     });
 
-    test('Android: reduce motion silences the legacy ladder identically', async () => {
+    test('Android: Haptics off silences the legacy ladder identically', async () => {
       Platform.OS = 'android';
-      mockReduceMotion = true;
+      mockHapticsEnabled = false;
       await haptics.restDone();
       await haptics.prAchieved();
       jest.runAllTimers();
       expect(RNHapticFeedback.triggerPattern).not.toHaveBeenCalled();
       expect(mockExpoNotificationAsync).not.toHaveBeenCalled();
       expect(mockExpoImpactAsync).not.toHaveBeenCalled();
+    });
+
+    test('Reduce motion on, Haptics on: haptics still fire (iOS and Android)', async () => {
+      mockReduceMotion = true;
+      mockHapticsEnabled = true;
+      Platform.OS = 'android';
+      await haptics.restDone();
+      jest.runAllTimers();
+      expect(mockExpoNotificationAsync.mock.calls.length + mockExpoImpactAsync.mock.calls.length
+        + RNHapticFeedback.triggerPattern.mock.calls.length).toBeGreaterThan(0);
     });
   });
 });

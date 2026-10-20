@@ -7,8 +7,8 @@
  * (setLogged, prAchieved, restDone, error...) reads at the callsite
  * and the actual feedback type lives here, where it's easy to refine.
  *
- * Honours the "reduce motion" accessibility preference: when on, all
- * haptics no-op so a sensitive user gets a quiet experience.
+ * Honours the separate Haptics switch (accessibility.hapticsEnabled, default
+ * on): when off, all haptics no-op. Reduce motion no longer touches haptics.
  *
  * AX-09 (launch accessibility audit, 2026-07-12): `accessibility.reduceMotion`
  * is now the EFFECTIVE value (systemReduceMotion || the user's own in-app
@@ -27,8 +27,11 @@ import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 import useAppStore from '../store/useAppStore';
 
+// Stage 2 item 11 (owner answer): haptics have their own switch,
+// accessibility.hapticsEnabled, default on (absent counts as on). Reduce
+// motion, the app's own or the phone's, no longer turns haptics off.
 function reduceMotion() {
-  try { return !!useAppStore.getState().accessibility?.reduceMotion; }
+  try { return useAppStore.getState().accessibility?.hapticsEnabled === false; }
   catch (_) { return false; }
 }
 

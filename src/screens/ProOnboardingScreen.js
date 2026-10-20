@@ -3102,7 +3102,7 @@ onBack={coachingMode ? () => navigation.goBack() : undefined}
                     default, so the step says exactly what that means
                     before the one button that creates the profile. */}
                 <Text style={[styles.fieldHint, live.fieldHint]}>
-                  Every session you finish is shared with everyone in Community: exercises, sets, the total lifted and any PRs. Turn it off any time from your Training profile.
+                  Every session you finish is shared with the people who follow you in Community: exercises, sets, the total lifted and any PRs. Turn it off any time from your Training profile.
                 </Text>
                 <View style={[styles.rulesCard, live.rulesCard]}>
                   <Text style={[styles.fieldLabel, live.fieldLabel]}>Four rules</Text>

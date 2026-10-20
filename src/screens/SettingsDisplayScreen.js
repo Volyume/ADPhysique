@@ -17,15 +17,6 @@ const THEME_OPTIONS = [
   { value: 'system', label: 'Match phone' },
 ];
 
-// Food-energy display unit. kcal is the default; kJ matches EU food labelling
-// (which gives kilojoules first). Display-only, it never changes a stored
-// value, a nutrition target, or anything the coaching engine computes, so it
-// takes effect immediately with no reload.
-const ENERGY_OPTIONS = [
-  { value: 'kcal', label: 'kcal' },
-  { value: 'kj', label: 'kJ' },
-];
-
 // CP-10 stage 5 (docs/ux-world-class-audit-2026-07-09/
 // CP-10-restart-free-theming-plan.md): live theming is now complete across
 // every screen (Stage 3) and Skia/chart consumer (Stage 4), so Appearance,
@@ -53,7 +44,6 @@ export default function SettingsDisplayScreen() {
   }, [accessibilityLoaded, loadAccessibility]);
 
   const currentTheme = accessibility.theme ?? 'dark';
-  const currentEnergy = accessibility.energyUnit ?? 'kcal';
   // CP-10 stage 3: live theme (src/hooks/useTheme.js). This screen is where
   // the Appearance/larger-text/contrast/colour-blind toggles themselves
   // live, so its own chrome and section labels flip live the instant a
@@ -68,7 +58,7 @@ export default function SettingsDisplayScreen() {
   };
 
   return (
-    <SettingsPage title="Display & accessibility">
+    <SettingsPage title="Display">
       <View style={[styles.section, live.section]}>
         <Text style={[local.title, liveText.title]}>Appearance</Text>
         <Text style={[local.sub, liveText.sub]}>
@@ -89,31 +79,6 @@ export default function SettingsDisplayScreen() {
                 }}
                 accessibilityRole="radio"
                 accessibilityLabel={opt.label}
-                style={local.segChip}
-                labelStyle={local.segLabel}
-              />
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={[styles.section, live.section]}>
-        <Text style={[local.title, liveText.title]}>Energy units</Text>
-        <Text style={[local.sub, liveText.sub]}>
-          How food energy is shown. kJ (kilojoules) matches the energy on EU food labels. This changes the
-          display only. Your targets and coaching stay the same.
-        </Text>
-        <View style={[local.segment, liveText.segment]} accessibilityRole="radiogroup">
-          {ENERGY_OPTIONS.map((opt) => {
-            const active = currentEnergy === opt.value;
-            return (
-              <Chip
-                key={opt.value}
-                label={opt.label}
-                selected={active}
-                onPress={() => { if (!active) { haptics.selection(); setAccessibilityPref('energyUnit', opt.value); } }}
-                accessibilityRole="radio"
-                accessibilityLabel={opt.value === 'kj' ? 'Kilojoules' : 'Kilocalories'}
                 style={local.segChip}
                 labelStyle={local.segLabel}
               />
@@ -242,7 +207,7 @@ export default function SettingsDisplayScreen() {
         <SettingRow
           icon="pause-circle-outline"
           label="Reduce motion"
-          sub="Turns off PR celebration particles, rest timer animations, and other large transitions. Useful if on-screen motion makes you feel unwell."
+          sub="Turns off PR celebration particles, rest timer animations, and other large transitions. Does not change vibration; use Haptics for that. Useful if on-screen motion makes you feel unwell."
           showArrow={false}
           rightElement={
             <Switch
@@ -250,6 +215,20 @@ export default function SettingsDisplayScreen() {
               onValueChange={v => { haptics.selection(); setAccessibilityPref('reduceMotionUserPref', v); }}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={accessibility.reduceMotionUserPref ? t.colors.primary : t.colors.textMuted}
+            />
+          }
+        />
+        <SettingRow
+          icon="phone-portrait-outline"
+          label="Haptics"
+          sub="Small vibrations when you log a set, finish a rest or hit a PR. On by default. Separate from Reduce motion."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={accessibility.hapticsEnabled !== false}
+              onValueChange={(v) => { if (v) haptics.selection(); setAccessibilityPref('hapticsEnabled', v); }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={(accessibility.hapticsEnabled !== false) ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

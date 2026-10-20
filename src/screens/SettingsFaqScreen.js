@@ -35,7 +35,7 @@ export const FAQS = [
   {
     key: 'rest-timer',
     q: 'How does the rest timer work?',
-    a: 'The rest timer starts on its own after you log a set, counting down to your chosen rest period. You can adjust it by 15 seconds either way or skip it outright. Set your own default rest time, and switch auto-start on or off, from Settings > Workout & units.',
+    a: 'The rest timer starts on its own after you log a set, counting down to your chosen rest period. You can adjust it by 15 seconds either way or skip it outright. Set your own default rest time, and switch auto-start on or off, from Settings > Workout.',
   },
   {
     key: 'weekly-coach',

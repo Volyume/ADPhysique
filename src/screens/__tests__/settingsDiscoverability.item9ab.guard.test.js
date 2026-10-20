@@ -26,8 +26,8 @@ const COACHING_REMINDERS = fs.readFileSync(path.join(__dirname, '..', 'CoachingR
 const NOTIF_SETTINGS = fs.readFileSync(path.join(__dirname, '..', 'NotificationSettingsScreen.js'), 'utf8');
 
 describe('Item 9(a): SettingsScreen subtitles no longer overlap on "check-ins"', () => {
-  test('the Notifications and reminders row subtitle drops "check-in" (not owned there)', () => {
-    const site = SETTINGS.indexOf("label=\"Notifications and reminders\"");
+  test('the Notifications row subtitle drops "check-in" (not owned there)', () => {
+    const site = SETTINGS.indexOf("label=\"Notifications\"");
     expect(site).toBeGreaterThan(-1);
     const window = SETTINGS.slice(site, site + 200);
     const subMatch = window.match(/sub="([^"]*)"/);

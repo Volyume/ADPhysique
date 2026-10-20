@@ -1555,9 +1555,9 @@ export default function BodyMetricsScreen() {
           icon="scale-outline"
           label="Weight units"
           sub={`Shown in ${bwu === 'st' ? 'stones and pounds' : (bwu === 'lbs' ? 'pounds' : 'kilograms')}`}
-          // SettingsWorkout lives in ProfileTab; a bare navigate from the
+          // SettingsUnits lives in ProfileTab; a bare navigate from the
           // Progress stack is the F4 dead-tap class.
-          onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'SettingsWorkout')}
+          onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'SettingsUnits')}
         />
       </NavGroup>
     );

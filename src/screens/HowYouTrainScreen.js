@@ -1434,8 +1434,8 @@ export default function HowYouTrainScreen() {
         <SettingRow
           icon="battery-half-outline"
           label="My energy varies, or I keep sessions short"
-          sub="Two things help here: set a session length under Workout and units, which shapes the next time your plan is built, and add a temporary change here for a rough patch."
-          accessibilityLabel="My energy varies, or I keep sessions short. Two things help here: set a session length under Workout and units, which shapes the next time your plan is built, and add a temporary change here for a rough patch. Opens Workout and units."
+          sub="Two things help here: set a session length under Workout, which shapes the next time your plan is built, and add a temporary change here for a rough patch."
+          accessibilityLabel="My energy varies, or I keep sessions short. Two things help here: set a session length under Workout, which shapes the next time your plan is built, and add a temporary change here for a rough patch. Opens Workout."
           onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
         />
 

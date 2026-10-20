@@ -25,7 +25,7 @@ const WORKOUT_SUMMARY = read('screens/WorkoutSummaryScreen.js');
 const RECAP_PAYLOAD = read('lib/shareCard/recapPayload.js');
 const ATHLETE_PROFILE = read('screens/AthleteProfileScreen.js');
 const SETTINGS_ROOT = read('screens/SettingsScreen.js');
-const SETTINGS_WORKOUT = read('screens/SettingsWorkoutScreen.js');
+const SETTINGS_UNITS = read('screens/SettingsUnitsScreen.js');
 const IMPORT_SCREEN = read('screens/ImportScreen.js');
 // RE-ANCHORED D214 addendum 4 (Body metrics, lane 7; spec section 6 table:
 // `p15UnitDisplayCopy.guard`): WeightTrendCard.js, the dead COMP-004 card this
@@ -122,13 +122,14 @@ describe('Athlete Profile uses the noun form "body weight", not compounded "body
 
 describe('Settings body-weight-unit preference reads "Body weight unit" (P-15)', () => {
   test('Settings root row sub-copy drops the hyphen', () => {
-    expect(SETTINGS_ROOT).toMatch(/sub="Body weight unit, default rest timer and rest alerts"/);
+    expect(SETTINGS_ROOT).toMatch(/sub="Session length, default rest timer and rest alerts"/);
+    expect(SETTINGS_ROOT).toMatch(/sub="Body weight and food energy"/);
     expect(SETTINGS_ROOT).not.toMatch(/Body-weight unit/);
   });
 
-  test('the actual preference label on SettingsWorkoutScreen drops the hyphen too (same setting, same defect)', () => {
-    expect(SETTINGS_WORKOUT).toMatch(/>Body weight unit<\/Text>/);
-    expect(SETTINGS_WORKOUT).not.toMatch(/Body-weight unit/);
+  test('the body-weight preference label, now on SettingsUnitsScreen, drops the hyphen too (same setting, same defect)', () => {
+    expect(SETTINGS_UNITS).toMatch(/>Body weight<\/Text>/);
+    expect(SETTINGS_UNITS).not.toMatch(/Body-weight unit/);
   });
 });
 

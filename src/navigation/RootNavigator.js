@@ -104,6 +104,7 @@ const SettingsWorkoutScreen = lazyScreen(() => require('../screens/SettingsWorko
 const SettingsAccountScreen = lazyScreen(() => require('../screens/SettingsAccountScreen').default);
 const SettingsProfileScreen = lazyScreen(() => require('../screens/SettingsProfileScreen').default);
 const SettingsCoachingScreen = lazyScreen(() => require('../screens/SettingsCoachingScreen').default);
+const SettingsUnitsScreen = lazyScreen(() => require('../screens/SettingsUnitsScreen').default);
 const SettingsDisplayScreen = lazyScreen(() => require('../screens/SettingsDisplayScreen').default);
 // CC26: the capability lane's settings home. UNGUARDED by law (CAP-19,
 // pinned by capabilityGuards.test.js) - core capability accommodation is
@@ -709,6 +710,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsUnits" component={SettingsUnitsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsDietary" component={SettingsDietaryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ headerShown: false }} />

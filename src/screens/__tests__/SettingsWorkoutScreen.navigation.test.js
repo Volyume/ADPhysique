@@ -44,14 +44,14 @@ describe('SettingsWorkoutScreen is registered like every other Settings sub-page
   });
 });
 
-describe('Settings root: "Workout & units" is a row, not an inline block (CP-6)', () => {
+describe('Settings root: "Workout" is a row, not an inline block (CP-6)', () => {
   test('renders a SettingRow that navigates to SettingsWorkout, matching sibling rows (icon + label + sub)', () => {
     // Haptics completion pass (2026-07-10): every Settings-root row now
     // fires haptics.selection() alongside its navigate() call; the regex
     // tolerates that one extra leading statement without loosening the
     // real pin (still a plain row, still navigating to SettingsWorkout).
     expect(SETTINGS_ROOT).toMatch(
-      /<SettingRow\s+icon="body-outline"\s+label="Workout & units"\s+sub="[^"]+"\s+onPress=\{\(\) => \{ (?:haptics\.selection\(\); )?navigation\.navigate\('SettingsWorkout'\); \}\}\s*\/>/,
+      /<SettingRow\s+icon="body-outline"\s+label="Workout"\s+sub="[^"]+"\s+onPress=\{\(\) => \{ (?:haptics\.selection\(\); )?navigation\.navigate\('SettingsWorkout'\); \}\}\s*\/>/,
     );
   });
 
@@ -65,18 +65,20 @@ describe('Settings root: "Workout & units" is a row, not an inline block (CP-6)'
 });
 
 describe('SettingsWorkoutScreen carries the moved block wholesale: same state, same persistence keys', () => {
-  test('body-weight unit segmented control (Stone/Kg/Lbs), wired to the same store setter', () => {
-    expect(SETTINGS_WORKOUT).toMatch(/BODY_WEIGHT_UNIT_OPTIONS/);
-    expect(SETTINGS_WORKOUT).toMatch(/setBodyWeightUnits/);
-    expect(SETTINGS_WORKOUT).toMatch(/accessibilityRole="radiogroup"/);
+  test('body-weight unit segmented control (Stone/Kg/Lbs) now lives on SettingsUnitsScreen (item 11), wired to the same store setter, and is gone from Workout', () => {
+    const UNITS = read('screens/SettingsUnitsScreen.js');
+    expect(SETTINGS_WORKOUT).not.toMatch(/BODY_WEIGHT_UNIT_OPTIONS|setBodyWeightUnits/);
+    expect(UNITS).toMatch(/BODY_WEIGHT_UNIT_OPTIONS/);
+    expect(UNITS).toMatch(/setBodyWeightUnits/);
+    expect(UNITS).toMatch(/accessibilityRole="radiogroup"/);
     // DD11 (design-consistency-audit-2026-08-06): the hand-rolled
     // TouchableOpacity segmented control was replaced with the shared Chip
     // primitive (accessibilityRole="radio", selected={active}); Chip computes
     // accessibilityState={{ checked: selected }} itself, so the radio
     // semantics are pinned via Chip's own props rather than a manually-set
     // accessibilityState here.
-    expect(SETTINGS_WORKOUT).toMatch(/accessibilityRole="radio"/);
-    expect(SETTINGS_WORKOUT).toMatch(/selected=\{active\}/);
+    expect(UNITS).toMatch(/accessibilityRole="radio"/);
+    expect(UNITS).toMatch(/selected=\{active\}/);
   });
 
   test('default rest timer stepper, auto-start switch and rest-finished-alert switch all wired to the same store setters', () => {
@@ -92,7 +94,7 @@ describe('SettingsWorkoutScreen carries the moved block wholesale: same state, s
     expect(SETTINGS_WORKOUT).toMatch(/requestExactAlarmAccess/);
   });
 
-  test('renders through the shared SettingsPage/BackHeader chrome with the "Workout & units" title', () => {
-    expect(SETTINGS_WORKOUT).toMatch(/<SettingsPage title="Workout & units">/);
+  test('renders through the shared SettingsPage/BackHeader chrome with the "Workout" title', () => {
+    expect(SETTINGS_WORKOUT).toMatch(/<SettingsPage title="Workout">/);
   });
 });
