@@ -1,6 +1,7 @@
 // D228 item 2, tier c: the line Body metrics prints in the weight's place under
 // an open flag, imported so the two screens can never say it differently.
 import { BODY_METRICS_FLAG_LINE } from '../bodyMetricsPolicy';
+import { formatBodyWeightRate } from '../units';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -131,6 +132,21 @@ export function buildConfidenceLine(level, weighIns = null) {
   return null;
 }
 
+/**
+ * Item 15: the fourth part of a decision, when it is looked at again, and
+ * from when a change takes effect. `pending` is true while an adjustment
+ * waits for the person's tap (never in Manual mode, which has no Apply and
+ * already says so above). Names the check-in day when it is known. Shown
+ * on every decision, hold weeks included; it states no weight and no food.
+ */
+export function buildTimingLine({ checkinDayName = null, pending = false } = {}) {
+  const again = checkinDayName
+    ? `Your coach looks at this again at your ${checkinDayName} check-in.`
+    : 'Your coach looks at this again at your next check-in.';
+  if (pending) return `A change starts from the moment you tap Apply. ${again}`;
+  return again;
+}
+
 // ─── The "Your week" rows (D206, founder order 2026-09-26) ─────────────────
 //
 // "Cut the duplicate": the Coaching decision screen printed the same few
@@ -217,8 +233,16 @@ export function buildWeekRows({
     // the lines the largest text size needs instead of clipping at two.
     push('weight', 'scale-outline', 'Body weight', BODY_METRICS_FLAG_LINE, null, null, true);
   } else {
-    if (weight?.value) push('weight', weight.icon ?? 'remove-outline', weight.label ?? '7-day trend', weight.value, null, weight.tooltip ?? null);
-    if (rate?.value) push('rate', 'analytics-outline', rate.label ?? 'Coaching trend', capitalise(rate.value), null, rate.tooltip ?? null);
+    // Item 15: ONE weight row, the coaching rate (the number the decision was
+    // made from). The scale reading moves into its info sheet. With no rate
+    // (an output from before C10F) the scale reading stays as it was.
+    if (rate?.value) {
+      const scale = weight?.value && weight.value !== 'No weights logged'
+        ? ` Your scale reading over the same seven days: ${weight.value}.` : '';
+      push('rate', 'analytics-outline', rate.label ?? 'Coaching trend', capitalise(rate.value), null, `${rate.tooltip ?? ''}${scale}`.trim() || null);
+    } else if (weight?.value) {
+      push('weight', weight.icon ?? 'remove-outline', weight.label ?? '7-day trend', weight.value, null, weight.tooltip ?? null);
+    }
   }
 
   // Food: never marked, and left out entirely under the safety verdict.
@@ -269,6 +293,25 @@ export function splitLead(text) {
  * The number is the engine's coachingRatePct (C10F), already rounded for
  * display; nothing is recalculated. Non-finite input returns null.
  */
+/**
+ * Item 15: the coaching rate in the person's own body-weight unit (kg users
+ * read kg a week; lb and stone users read lb a week, the app's one spelling
+ * of a rate, units.formatBodyWeightRate). Worked out from the engine's own
+ * %/wk and its smoothed weight, nothing re-judged. "Steady" inside the
+ * engine's 0.01 band. Null when either number is missing: no figure is
+ * better than the old %/wk. Weight figures: the caller withholds this row
+ * under withholdsWeightFigures.
+ */
+export function formatCoachingRateWeight(pct, weightKg, bodyWeightUnits = 'st') {
+  if (typeof pct !== 'number' || !Number.isFinite(pct)) return null;
+  if (Math.abs(pct) <= 0.01) return 'Steady';
+  if (typeof weightKg !== 'number' || !Number.isFinite(weightKg) || weightKg <= 0) return null;
+  const kgPerWeek = (pct / 100) * weightKg;
+  const out = formatBodyWeightRate(kgPerWeek, bodyWeightUnits);
+  // A rate that rounds to nothing in the person's unit reads as steady.
+  return /^[+-]?0 /.test(out) ? 'Steady' : out;
+}
+
 export function formatCoachingRate(pct) {
   if (typeof pct !== 'number' || !Number.isFinite(pct)) return null;
   if (Math.abs(pct) <= 0.01) return 'Steady';

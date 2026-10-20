@@ -163,8 +163,9 @@ import {
 import {
   DAY_NAMES_FULL,
   buildConfidenceLine,
+  buildTimingLine,
+  formatCoachingRateWeight,
   buildWeekRows,
-  formatCoachingRate,
   splitLead,
   weekRangeLabel,
   decisionAgeNote,
@@ -377,7 +378,7 @@ function NextWeekCard({
         <AdjustmentRow
           iconName="flame-outline"
           label="Calorie target stays the same"
-          note="No change needed this week."
+          note="Nothing in your week calls for a change to your calories."
         />
       )}
       {footer}
@@ -588,7 +589,7 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
           : weeksInDeficit >= 8
             ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
             : 'You have been in a calorie deficit for over eight weeks. '}
-        {'A short diet break, returning to maintenance calories for one to two weeks, can help your body settle back to its normal calorie burn and improve long-term fat loss. Consider taking a break before your next phase.'}
+        {'A short break at maintenance calories, for one to two weeks, lets your body settle back and helps the next stretch of the cut work better. It is a suggestion, and setting maintenance calories changes your target from the moment you tap the button.'}
       </Text>
       <Text style={[styles.dietBreakFootnote, live.dietBreakFootnote]}>
         Based on the MATADOR trial (2017). This is a suggestion, not a requirement.
@@ -2970,6 +2971,12 @@ export default function CoachOutputScreen({ navigation, route }) {
   // Item 12: the line names its basis (weigh-ins and the check-in); the old
   // "Only N weigh-ins" clause is part of the same sentence now.
   const confidenceLine = buildConfidenceLine(displayConfidence, weighInsThisWeek);
+  // Item 15: when the decision starts and when it is looked at again.
+  const hasPendingChange = (output?.adjustments?.calories && output.adjustments.calories.change !== 0 && !isApplied(output, 'calories'))
+    || (Number(output?.volumeSignal) !== 0 && !isApplied(output, 'training'))
+    || (!!output?.deloadSuggested && !isApplied(output, 'deload'))
+    || (!!output?.dietBreakSuggested && !isApplied(output, 'dietBreak'));
+  const timingLine = buildTimingLine({ checkinDayName, pending: !!hasPendingChange && !applyDisabled });
   const decisionFooter = (
     <View style={styles.decisionFooter}>
       {/* D93 / D-2: Manual mode strips the Apply pills; one line says who
@@ -2988,6 +2995,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={[styles.decisionWhy, live.decisionWhy, styles.decisionOutcomeText]}>{weeklyStory.outcome.text}</Text>
         </View>
       ) : null}
+      <Text style={[styles.decisionMeta, live.decisionMeta]}>{timingLine}</Text>
       {confidenceLine ? <Text style={[styles.decisionMeta, live.decisionMeta]}>{confidenceLine}</Text> : null}
       <View style={[styles.decisionRule, live.decisionRule]} />
       <LinkRow
@@ -3137,7 +3145,12 @@ export default function CoachOutputScreen({ navigation, route }) {
     // engine's own number; a stored output from before C10F carried only
     // the label, which reads as it always did.
     rate: (trend.coachingRateLabel || Number.isFinite(trend.coachingRatePct)) ? {
-      value: formatCoachingRate(trend.coachingRatePct) ?? trend.coachingRateLabel,
+      // Item 15: in the person's own body-weight unit, from the engine's own
+      // %/wk and smoothed weight; no figure at all when either is missing
+      // (never the old %/wk). Hidden under withholdsWeightFigures by
+      // buildWeekRows.
+      value: formatCoachingRateWeight(trend.coachingRatePct, trend.ewma7, bodyWeightUnits || 'st')
+        ?? (Number.isFinite(trend.coachingRatePct) ? null : trend.coachingRateLabel),
       label: 'Coaching trend',
       tooltip: 'The rate this week\'s decision was made from. It smooths out one-off spikes and measures across the time that actually passed since your last regular weigh-ins, so it can differ a little from the raw scale reading.',
     } : null,
@@ -3199,7 +3212,13 @@ export default function CoachOutputScreen({ navigation, route }) {
 
         {/* The remaining adjustments, collapsed under one expander. Each card
             keeps its own Apply and "Applied" chip exactly. */}
-        {secondaryEls.length > 0 ? (
+        {/* Item 15: with two or fewer cards (always today) both show. */}
+        {secondaryEls.length > 0 && secondaryEls.length <= 2 ? (
+          <View>
+            {secondaryEls.map((el, i) => <View key={i}>{el}</View>)}
+          </View>
+        ) : null}
+        {secondaryEls.length > 2 ? (
           <CollapsibleSection
             title={`More adjustments (${secondaryEls.length})`}
             open={moreOpen}

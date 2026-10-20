@@ -203,7 +203,7 @@ describe('NUTRITION comprehension', () => {
     // chips became the "Your week" rows; the decision rate is its own
     // labelled row, built from the same value.
     expect(src).toMatch(/label: 'Coaching trend'/);
-    expect(src).toMatch(/value: formatCoachingRate\(trend\.coachingRatePct\) \?\? trend\.coachingRateLabel/);
+    expect(src).toMatch(/value: formatCoachingRateWeight\(trend\.coachingRatePct, trend\.ewma7, bodyWeightUnits \|\| .st.\)/);
   });
 
   test('Methodology never publishes the absolute calorie floors', () => {
