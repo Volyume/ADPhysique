@@ -160,12 +160,15 @@ export const WHATS_NEW = {
   // The video line is the founder's (2026-10-20): "say these videos remain
   // private on your device only, unless you choose to share them. The whole
   // point of it is sharing their videos in share cards." The old "never
-  // uploaded ... privacy policy" clause is gone (untrue once shared). What's
+  // uploaded ... privacy policy" clause is gone (untrue once shared). Plain
+  // British English, no technical terms (founder 2026-10-20: "PR is fine,
+  // technical terms is not"): no "share cards"; the user is told what it is
+  // and what it adds, not our names for it. What's
   // new changes only when the founder bumps the main version with new
   // user-facing features.
   '3.2.0': [
     { icon: 'barbell-outline', text: 'The workout logger has been completely revamped. Logging, fixing a set and finishing a workout are all quicker and smoother.' },
-    { icon: 'videocam-outline', text: 'Record videos of your sets and share them on share cards, with your lifts and PRs on top. Your videos stay private on your device unless you choose to share them.' },
+    { icon: 'videocam-outline', text: 'You can now record videos of your sets and share them, with your lifts and PRs shown over the video. Your videos stay private on your device unless you choose to share them.' },
     { icon: 'people-outline', text: 'Community has been improved, with smoother feeds, chats and profiles.' },
   ],
   // 3.1.0 (2026-10-18): the Android setup fix (setup no longer stalls on the

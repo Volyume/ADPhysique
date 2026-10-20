@@ -220,7 +220,10 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(start32).toBeGreaterThan(-1);
     const entry32 = sheet.slice(start32, sheet.indexOf('],', start32));
     expect(entry32).toContain('The workout logger has been completely revamped.');
-    expect(entry32).toContain('Record videos of your sets and share them on share cards, with your lifts and PRs on top. Your videos stay private on your device unless you choose to share them.');
+    expect(entry32).toContain('You can now record videos of your sets and share them, with your lifts and PRs shown over the video. Your videos stay private on your device unless you choose to share them.');
+    // Founder 2026-10-20: plain British English, no technical terms ("PR is
+    // fine, technical terms is not"). Users do not know our internal names.
+    expect(entry32).not.toMatch(/share card/i);
     expect(entry32).toContain('Community has been improved');
     // Founder 2026-10-20: private on the device unless shared; "never
     // uploaded" is untrue once the person shares a video, and no
