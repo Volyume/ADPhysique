@@ -32,7 +32,9 @@ export const CHALLENGE_FINISHED_LINE = 'This challenge has finished. Thank you t
 
 export const COACHING_NOTE = 'In the challenge, coaching adds up to 20 more points.';
 
-// Founder decision 2026-10-19 (SPEC sections 0 and 5). Worded so that nobody
-// else is said to pay today.
-export const FREE_FOR_LIFE_JOIN_LINE = 'Joining also keeps Volyume free for you for life, even if we ever introduce paid plans.';
-export const FREE_FOR_LIFE_LANDING_LINE = 'Volyume is free. Join through the challenge and it stays free for you for life, even if we ever introduce paid plans.';
+// Founder decision 2026-10-20 (supersedes 2026-10-19: joining no longer
+// grants it). Free for life is earned by finishing with a final score of 50
+// or more; leaving before the end ends the chance. Says nothing about the
+// rest of the app staying free.
+export const FREE_FOR_LIFE_JOIN_LINE = 'Completing a challenge with a final score of 50 or more earns free for life.';
+export const FREE_FOR_LIFE_LANDING_LINE = 'Volyume is free. Completing a challenge with a final score of 50 or more earns free for life.';
