@@ -28,7 +28,7 @@ import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/notifications/channels';
-import { installGlobalHandlers, logError } from './src/lib/errorLog';
+import { installGlobalHandlers, logError, logWarn } from './src/lib/errorLog';
 import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
 import { captureFirstTouch, warmFirstTouch } from './src/lib/attribution';
 import { readInstallReferrerOnce } from './src/lib/challenges/pending';
@@ -462,6 +462,12 @@ function CrashRecoveryToast({ priorCrash }) {
   return null;
 }
 
+// True when an OTA check/fetch failed only because the device has no network.
+function isOfflineError(e) {
+  const msg = String((e && e.message) || e || '').toLowerCase();
+  return /network request failed|offline|no internet|internet connection|unable to resolve host|failed to download|timed out|econnrefused|enotfound/.test(msg);
+}
+
 export default function App() {
   const accessibilityLoaded = useAppStore(s => s.accessibilityLoaded);
   const loadAccessibility = useAppStore(s => s.loadAccessibility);
@@ -631,27 +637,27 @@ export default function App() {
     return () => { try { subscription?.remove?.(); } catch (_) {} };
   }, []);
 
-  // OTA update check — runs once on mount, production builds only.
-  // Silently downloads the update and prompts the user to restart.
+  // OTA update check: one explicit check at launch, production builds only
+  // (checkAutomatically is NEVER in app.json, so this is the only path). The
+  // update downloads in the background and expo-updates applies it on the
+  // next cold start: no reloadAsync, no prompt, and start-up never waits on
+  // it. F9: failures are reported with the stage name only (no user data);
+  // an offline device is a warning, not an error. Always non-fatal.
   useEffect(() => {
     async function checkForUpdate() {
       if (__DEV__) return; // only in production builds
+      let stage = 'check';
       try {
         const update = await Updates.checkForUpdateAsync();
         if (update.isAvailable) {
+          stage = 'fetch';
           await Updates.fetchUpdateAsync();
-          Alert.alert(
-            'Update available',
-            'A new version of Volyume has been downloaded. Restart to apply it.',
-            [
-              { text: 'Later' },
-              { text: 'Restart now', onPress: () => Updates.reloadAsync() },
-            ],
-            { cancelable: true }
-          );
         }
-      } catch (_) {
-        // Silently ignore — update check is non-critical
+      } catch (e) {
+        try {
+          if (isOfflineError(e)) logWarn('App.otaUpdate', 'Update check skipped while offline', { stage });
+          else logError('App.otaUpdate', e, { stage });
+        } catch (_) { /* reporting must never throw */ }
       }
     }
     checkForUpdate();
