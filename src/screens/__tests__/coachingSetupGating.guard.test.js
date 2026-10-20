@@ -23,7 +23,7 @@ describe('coaching setup gating', () => {
     expect(src).toMatch(/useCoachingSetUp\(\)/);
   });
 
-  it.each(['DiaryScreen', 'MealPlanScreen', 'NutritionTargetsScreen', 'WeeklyCheckInScreen', 'CoachOutputScreen'])(
+  it.each(['MealPlanScreen', 'NutritionTargetsScreen', 'WeeklyCheckInScreen', 'CoachOutputScreen'])(
     '%s returns the card after its last hook',
     (name) => {
       const src = read(`${name}.js`);
@@ -39,6 +39,23 @@ describe('coaching setup gating', () => {
       expect(after).not.toMatch(/\buse[A-Z][A-Za-z]*\(/);
     },
   );
+
+  // Founder decision 2026-10-20 ("Open the diary"): the Diary no longer
+  // gates. It renders for a person without coaching, with the compact setup
+  // row at the top, totals only, and no link to Targets.
+  it('DiaryScreen renders for a person without coaching: compact row, no gate, no targets link', () => {
+    const src = read('DiaryScreen.js');
+    expect(src).not.toMatch(/CoachingSetupGate/);
+    expect(src).not.toMatch(/if \(!coachingSetUp\) \{\n\s+return/);
+    expect(src).toMatch(/\{!coachingSetUp \? \(\n\s+<View style=\{styles\.setupRowWrap\}>\n\s+<CoachingSetupCard surface="nutrition" variant="nutrition" mode="compact" onPress=\{\(\) => openCoachingSetup\(navigation\)\} \/>/);
+    expect(src).toMatch(/targets=\{coachingSetUp \? effectiveTargets : null\}/);
+    expect(src).toMatch(/totalsOnly=\{!coachingSetUp\}/);
+    expect(src).toMatch(/\{loaded && coachingSetUp && !effectiveTargets \? \(/);
+    // The compact row sits above the day pager.
+    expect(src.indexOf('mode="compact"')).toBeLessThan(src.indexOf('styles.dayPagerCard'));
+    // Safety reads are untouched.
+    expect(src).toMatch(/const bankingAvailable = !!targets && !targetWasFloored\(targets\) && !edFlagOpen;/);
+  });
 
   it('DiaryScreen stands its only writing effect (the calorie bank clean-up) down when not set up', () => {
     const src = read('DiaryScreen.js');

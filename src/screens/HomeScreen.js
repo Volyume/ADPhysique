@@ -138,6 +138,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { deriveSafetyState, withholdsWeightFigures } from '../lib/safetyState';
 import CoachingSetupCard from '../components/CoachingSetupCard';
+import { resolveCoachingCardMode, snoozeCoachingCard } from '../lib/coachingSetup';
 import useCoachingSetUp, { openCoachingSetup } from '../hooks/useCoachingSetUp';
 import useScreenReady from '../lib/telemetry/useScreenReady';
 // Campaign 22 Phase 2 Stage 1 copy contract item 5: the check-in nudge's
@@ -202,6 +203,23 @@ export default function HomeScreen({ navigation, route }) {
   // person has given no baseline, so Home never asks for a daily weigh-in
   // or counts down to a check-in they cannot do; the setup card stands in.
   const coachingSetUp = useCoachingSetUp();
+  // The setup card is full at most once a day, then one quiet row; "Not now"
+  // quietens it (src/lib/coachingSetup.js). null until the read resolves (a
+  // few ms) so nobody sees the full card flash and collapse.
+  const [coachingCardModeState, setCoachingCardModeState] = useState(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id || coachingSetUp) return undefined;
+      let cancelled = false;
+      // The full card shows at most once a day, so on a return visit while
+      // it is still up it becomes the row at once (no full-then-row jump).
+      setCoachingCardModeState((prev) => (prev === 'full' ? 'compact' : prev));
+      resolveCoachingCardMode(user.id, 'home').then((next) => {
+        if (!cancelled) setCoachingCardModeState(next);
+      });
+      return () => { cancelled = true; };
+    }, [user?.id, coachingSetUp]),
+  );
   // R9 (D70): insets and reduceMotion left with the raw intent Modal -
   // the shared BottomSheet owns both now.
   // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
@@ -3099,8 +3117,12 @@ export default function HomeScreen({ navigation, route }) {
             today's weight is logged it is one quiet line in this pane. The
             weigh-in strip itself moved up under the Community row (founder
             order 2026-09-26, see there). ── */}
-        {user?.id && !coachingSetUp ? (
-          <CoachingSetupCard surface="home" onPress={() => openCoachingSetup(navigation)} />
+        {user?.id && !coachingSetUp && coachingCardModeState ? (
+          <CoachingSetupCard surface="home"
+            mode={coachingCardModeState}
+            onPress={() => openCoachingSetup(navigation)}
+            onNotNow={() => { snoozeCoachingCard(user.id); setCoachingCardModeState('compact'); }}
+          />
         ) : null}
         {user?.id && coachingSetUp && evidencePanelItem && (
           <EvidencePanel

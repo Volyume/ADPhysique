@@ -97,7 +97,7 @@ const REBUILD_FAILED_MESSAGE = "Could not rebuild your plan. Your training setup
 // macros: nutrition targets are recalculated only from the Coach tab (Update goal
 // plan / Nutrition targets), which is the single place body composition and
 // goal drive the calorie maths.
-export default function PlanUpdateScreen({ navigation }) {
+export default function PlanUpdateScreen({ navigation, route }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, saveLocalProfile } = useAppStore(useShallow(s => ({
@@ -124,6 +124,16 @@ export default function PlanUpdateScreen({ navigation }) {
   // brings this screen's own equipment field into view.
   const scrollRef = useRef(null);
   const equipmentYRef = useRef(0);
+  // Train's "Training style" line opens here with { focus: 'style' }: scroll
+  // once to the style section after it has laid out (never when it is hidden).
+  const styleYRef = useRef(null);
+  const styleScrolledRef = useRef(false);
+  const focusStyle = route?.params?.focus === 'style';
+  const scrollToStyleOnce = () => {
+    if (!focusStyle || styleScrolledRef.current || styleYRef.current == null) return;
+    styleScrolledRef.current = true;
+    scrollRef.current?.scrollTo?.({ y: Math.max(0, styleYRef.current - spacing.md), animated: true });
+  };
   const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
   const [saving, setSaving] = useState(false);
   // Plan diff/preview (ULTIMATE-PLANDIFF-01): a pre-commit dry-run + diff sheet.
@@ -573,7 +583,10 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Training style (founder ruling 2026-10-19): not competing only ── */}
         {archetypeApplies(selectedGoal) ? (
-          <>
+          <View
+            testID="plan-update-style-section"
+            onLayout={(e) => { styleYRef.current = e.nativeEvent.layout.y; scrollToStyleOnce(); }}
+          >
             <SectionLabel style={styles.sectionLabelSpaced}>Your training style</SectionLabel>
             <Text style={[styles.sectionSub, live.sectionSub]}>
               How your plan shares out its work. The muscle map shows where the extra work goes.
@@ -582,7 +595,7 @@ export default function PlanUpdateScreen({ navigation }) {
               value={trainingArchetype}
               onChange={(v) => { trackNow('archetype_chosen', { archetype: v, surface: 'plan_update' }); setTrainingArchetype(v); }}
             />
-          </>
+          </View>
         ) : null}
 
         {/* ── Weak points (only for goals that support them) ── */}

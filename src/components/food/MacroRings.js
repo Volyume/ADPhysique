@@ -128,7 +128,7 @@ function Ring({ size, stroke, progress, progressTarget, plannedProgress = 0, tin
 // `moreIsFine` marks a macro with no upper-bound shame (fibre): it shows a
 // "Ng to go" remaining hint while under target but NEVER an "over" readout,
 // since more fibre is not a deviation to flag.
-function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false, tint }) {
+function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false, tint, plain = false }) {
   // CP-10 stage 4: `tint` was a default PARAMETER reading the frozen module
   // `colors` singleton (every real caller in this file already passes an
   // explicit tint, so this default is defensive); resolved against the
@@ -158,12 +158,14 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
           {planned > 0 ? <Text style={[styles.macroBarPlanned, live.macroBarPlanned]}>{`  +${formatNumber(Math.round(planned))} planned`}</Text> : null}
         </Text>
       </View>
+      {plain ? null : (
       <View style={[styles.macroTrack, live.macroTrack]}>
         {plannedProgress > progress ? (
           <View style={[styles.macroFillPlanned, live.macroFillPlanned, { width: `${Math.round(plannedProgress * 100)}%`, backgroundColor: resolvedTint }]} />
         ) : null}
         <View style={[styles.macroFill, live.macroFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: resolvedTint }]} />
       </View>
+      )}
       {(sub || remainingText) ? (
         <View style={styles.macroBarSubRow}>
           <Text style={[styles.macroBarSub, live.macroBarSub]}>{sub ?? ''}</Text>
@@ -174,7 +176,10 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
   );
 }
 
-export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onPress }) {
+// `totalsOnly` (founder decision 2026-10-20, diary open before coaching is set
+// up): the day's calories and macros as plain numbers, no ring, no bar track,
+// no target, remaining or over figure. Eaten totals only.
+export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onPress, totalsOnly = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const kcal = Math.round(rollup?.kcal_total ?? 0);
@@ -301,6 +306,15 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         </View>
       ) : null}
       <View style={styles.kcalRow}>
+        {totalsOnly ? (
+          <View style={styles.totalsKcal}>
+            <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalValue, live.kcalValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
+            <Text style={[styles.kcalSubLabel, live.kcalSubLabel]}>{energyUnitLabel(energyUnit)}</Text>
+            {hasPlanned ? (
+              <Text style={[styles.kcalPlanned, live.kcalPlanned]}>{`+${formatEnergy(plannedKcal, energyUnit)} planned`}</Text>
+            ) : null}
+          </View>
+        ) : (
         <View style={styles.kcalRingWrap}>
           <Ring
             size={KCAL_SIZE}
@@ -338,6 +352,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
             ) : null}
           </View>
         </View>
+        )}
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
             <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
@@ -360,13 +375,14 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           target={pTarget}
           planned={plannedP}
           primary
+          plain={totalsOnly}
           tint={t.colors.macroProtein}
           sub={proteinPerKgToday != null ? `${proteinPerKgToday} g/kg bodyweight today` : null}
         />
-        <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} tint={t.colors.macroCarb} />
-        <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} tint={t.colors.macroFat} />
+        <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} tint={t.colors.macroCarb} plain={totalsOnly} />
+        <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} tint={t.colors.macroFat} plain={totalsOnly} />
         {showFibre ? (
-          <MacroBar label="Fibre" value={fibre} target={fibreTarget} moreIsFine tint={t.colors.macroFibre} />
+          <MacroBar label="Fibre" value={fibre} target={fibreTarget} moreIsFine tint={t.colors.macroFibre} plain={totalsOnly} />
         ) : null}
       </View>
       {macroSplit ? (
@@ -400,6 +416,7 @@ const styles = StyleSheet.create({
     width: KCAL_SIZE, height: KCAL_SIZE,
     alignItems: 'center', justifyContent: 'center',
   },
+  totalsKcal: { alignItems: 'flex-start' },
   kcalCentre: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center', justifyContent: 'center',

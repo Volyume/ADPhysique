@@ -38,6 +38,7 @@ import EatenTimePicker from './EatenTimePicker';
 // for why (another agent's WIP was live in this file at build time).
 import MicronutrientDetail from './MicronutrientDetail';
 import { touchTarget } from '../../styles/layout';
+import { trackNow } from '../../lib/telemetry/growth';
 
 // Ultimate-Audit item 12 (raw/cooked basis toggle): the curated food key
 // behind a food_ref, or null for anything that isn't a curated staple
@@ -252,6 +253,7 @@ export default function FoodDetailSheet({
       if (g != null) setAmount(String(Math.max(1, kitchenRound(g))));
     }
     setWeightState(next);
+    try { trackNow('weight_basis_switched', { where: 'food', basis: next }); } catch (_) { /* telemetry only */ }
   };
   // The Stepper's bounds are servingEntry's own: never below 1 g and never
   // above MAX_ENTRY_GRAMS, expressed in the chosen unit on the 0.1 grid the

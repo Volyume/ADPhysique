@@ -25,9 +25,9 @@ import {
 import { logWarn, logInfo } from '../errorLog';
 import { isDeletedAccountFkError } from '../sync/telemetry';
 import { ALLOWED_EVENTS } from './events';
-import { sanitisePayload, allowedBeforeConsent, isDebugLoggedSignal, SCHEMA_BY_NAME } from './schema';
+import { sanitisePayload, allowedBeforeConsent, isDebugLoggedSignal, SCHEMA_BY_NAME, ADDED_IN_202 } from './schema';
 import { noteSessionEvent, publicRoute } from './session';
-import { GROWTH_TELEMETRY } from '../sync/featureFlags';
+import { GROWTH_TELEMETRY, TELEMETRY_202_EVENTS } from '../sync/featureFlags';
 
 // Founder decision 2026-10-19 (telemetry brief, answer 4): nothing that
 // touches health leaves the device before Article 9 consent; failure and
@@ -131,6 +131,8 @@ export async function postEvent(userId, event, payload = null) {
   // DROPPED here, not queued, so no row is ever persisted that the server
   // would refuse. Legacy events are unaffected.
   if (!GROWTH_TELEMETRY && SCHEMA_BY_NAME[event]) return null;
+  // The same rule for the names migrate_202 adds (TELEMETRY_202_EVENTS).
+  if (!TELEMETRY_202_EVENTS && ADDED_IN_202.has(event)) return null;
   if (!ALLOWED_EVENTS.has(event)) {
     // Surface a typo rather than letting it sit dark. logWarn already routes to
     // the console in dev (errorLog), so a separate console.warn is redundant

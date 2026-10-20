@@ -175,3 +175,38 @@ export function tierLabel(tier) {
 export function scoreLine(c) {
   return `Your score: ${n(c?.total)} of 100`;
 }
+
+// Usage data for challenge_viewed counts only these five parts. Food and
+// weigh-in are never read: a withheld entrant (calm mode or an open ED flag)
+// is credited those parts in full without logging (migrate_201), so they,
+// the total and the draw tier all lean upward for withheld people and could
+// hint at who is withheld. These five do not read the gate at all.
+const TELEMETRY_PART_KEYS = ['train', 'week', 'stronger', 'community', 'checkin'];
+
+/**
+ * The sum of the five non-food parts (out of 90, never the on-screen total)
+ * as one of five bands, or null with no score.
+ */
+export function corePointsBand(parts) {
+  if (!parts || typeof parts !== 'object') return null;
+  const t = TELEMETRY_PART_KEYS.reduce((sum, k) => sum + n(parts[k]), 0);
+  if (t < 20) return '0-19';
+  if (t < 40) return '20-39';
+  if (t < 60) return '40-59';
+  if (t < 75) return '60-74';
+  return '75-90';
+}
+
+/**
+ * The coarse fields `challenge_viewed` carries, the same two fields for every
+ * entrant whether or not the screen hides their score: the band of the five
+ * non-food parts (out of 90) and how many of them are full. Never a raw
+ * score, the total, the tier, a part's points, food or weigh-in, or the
+ * withheld flag. Empty only when no score loaded at all.
+ */
+export function challengeTelemetryFields(score) {
+  if (!score) return {};
+  const partsFull = TELEMETRY_PART_KEYS
+    .filter((k) => n(score.max?.[k]) > 0 && n(score.parts?.[k]) >= n(score.max?.[k])).length;
+  return { points_band_90: corePointsBand(score.parts) ?? '0-19', parts_full: partsFull };
+}

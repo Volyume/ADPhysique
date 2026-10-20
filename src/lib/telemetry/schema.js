@@ -72,6 +72,7 @@ const CODE = Object.freeze({ type: 'code' });
 const SETUP_SURFACES = ['nutrition', 'meal_plan', 'targets', 'checkin', 'coach_output', 'coach_home', 'home', 'goal_setup', 'challenge', 'unknown'];
 const CHALLENGE_SOURCES = ['link', 'gym_invite', 'code'];
 const CHALLENGE_STATUSES = ['upcoming', 'active', 'ended', 'closed'];
+const CHALLENGE_POINTS_BANDS = ['0-19', '20-39', '40-59', '60-74', '75-90'];
 const ARCHETYPES = ['balanced', 'v_taper', 'x_frame', 'upper_density', 'powerbuilder', 'minimalist'];
 const SHARE_SURFACES = ['workout', 'week', 'pr', 'clip', 'progress', 'other'];
 const AUDIENCES = ['followers', 'public', 'gym', 'external', 'none'];
@@ -107,7 +108,9 @@ export const EVENT_SCHEMAS = Object.freeze([
     { step: int(1, 8), field: enumOf('sex', 'age', 'height', 'weight', 'phase', 'archetype', 'experience', 'session_length', 'days', 'equipment', 'plan_choice', 'other'), mode: enumOf('full', 'coaching_setup') }),
   ev('onboarding_completed', 'onboarding', 'progression', 'Setup finished.',
     { path: enumOf('coaching', 'quick_start'), mode: enumOf('full', 'coaching_setup'), duration: bucketOf('minutes') }),
-  ev('coaching_setup_card_shown', 'onboarding', 'retention', 'A "Set up coaching" card was shown to a quick-start person (once a day per surface).',
+  ev('coaching_setup_card_shown', 'onboarding', 'retention', 'A "Set up coaching" card was shown to a quick-start person, full or as the short row (once a day per surface and form).',
+    { surface: enumOf(...SETUP_SURFACES), mode: enumOf('full', 'compact') }),
+  ev('coaching_setup_card_snoozed', 'onboarding', 'retention', 'A quick-start person tapped "Not now" on the "Set up coaching" card (it shows as a short row for 7 days).',
     { surface: enumOf(...SETUP_SURFACES) }),
   ev('coaching_setup_started', 'onboarding', 'progression', 'A quick-start person opened coaching setup.',
     { entry: enumOf(...SETUP_SURFACES) }),
@@ -147,9 +150,16 @@ export const EVENT_SCHEMAS = Object.freeze([
     { source: enumOf(...CHALLENGE_SOURCES), status: enumOf(...CHALLENGE_STATUSES) }),
   ev('challenge_joined', 'challenge', 'progression', 'A person joined a gym challenge.',
     { source: enumOf(...CHALLENGE_SOURCES), coaching: BOOL }),
-  ev('challenge_viewed', 'challenge', 'retention', 'An entrant opened their gym challenge.',
-    { status: enumOf(...CHALLENGE_STATUSES), tier: enumOf('main', 'second', 'none') }),
+  // No tier and no total: a withheld entrant is credited food and weigh-in in
+  // full (migrate_201), so both lean upward for them. Only the five non-food
+  // parts, the same two fields for everyone.
+  ev('challenge_viewed', 'challenge', 'retention', 'An entrant opened their gym challenge: the band of their train, week, stronger, community and check-in points (out of 90) and how many of those five parts are full.',
+    { status: enumOf(...CHALLENGE_STATUSES), points_band_90: enumOf(...CHALLENGE_POINTS_BANDS), parts_full: int(0, 5) }),
   ev('challenge_withdrawn', 'challenge', 'retention', 'An entrant left a gym challenge.'),
+
+  // ── Food ─────────────────────────────────────────────────────────────
+  ev('weight_basis_switched', 'food', 'progression', 'The person switched a weight between raw or dry and cooked: the whole day, one meal item or one food, or the shopping list basis. No food or amount.',
+    { where: enumOf('day', 'meal_item', 'food', 'shopping'), basis: enumOf('raw', 'cooked') }),
 
   // ── Check-in and coach ───────────────────────────────────────────────
   ev('checkin_completed', 'coach', 'progression', 'A weekly check-in was submitted.',
@@ -234,7 +244,21 @@ export function sanitisePayload(event, payload) {
 }
 
 /** True for the signals that also go to the on-device debug log in development. */
+// Development builds also echo these into the debug log whatever their signal,
+// so the start path, training style, raw or cooked switch, challenge and
+// coaching card events can be watched on a device.
+export const DEBUG_ECHO_EVENTS = Object.freeze(new Set([
+  'onboarding_path_chosen', 'archetype_chosen', 'weight_basis_switched',
+  'challenge_join_viewed', 'challenge_joined', 'challenge_viewed', 'challenge_withdrawn',
+  'coaching_setup_card_shown', 'coaching_setup_card_snoozed', 'coaching_setup_started',
+]));
+
 export const isDebugLoggedSignal = (event) => {
   const s = SCHEMA_BY_NAME[event];
-  return !!s && ['friction', 'performance', 'confusion'].includes(s.signal);
+  return !!s && (['friction', 'performance', 'confusion'].includes(s.signal) || DEBUG_ECHO_EVENTS.has(event));
 };
+
+// Event names the server learns in migrate_202. Until it is applied
+// (TELEMETRY_202_EVENTS off, src/lib/sync/featureFlags.js) the transport drops
+// them, as it dropped every schema event before migrate_200.
+export const ADDED_IN_202 = Object.freeze(new Set(['weight_basis_switched', 'coaching_setup_card_snoozed']));

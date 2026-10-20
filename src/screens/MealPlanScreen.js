@@ -80,6 +80,7 @@ import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
 import { logError } from '../lib/errorLog';
 import { touchTarget } from '../styles/layout';
 import FeatureSeen from '../components/FeatureSeen';
+import { trackNow } from '../lib/telemetry/growth';
 
 // The week is scheduled onto real dates when added to the diary (day i ->
 // today + i, see applyPlanWeekToDiary), so the picker labels each day with its
@@ -671,6 +672,9 @@ export default function MealPlanScreen({ navigation, route }) {
   const groceryTickKey = (label, name) => `${label}::${name}`;
   const rebuildGroceryList = useCallback((patch) => {
     const basis = patch.basis ?? groceryBasis;
+    if (patch.basis && patch.basis !== groceryBasis) {
+      try { trackNow('weight_basis_switched', { where: 'shopping', basis: patch.basis === 'prep' ? 'cooked' : 'raw' }); } catch (_) { /* telemetry only */ }
+    }
     const repeat = patch.repeat ?? groceryRepeat;
     setGroceryBasis(basis);
     setGroceryRepeat(repeat);
@@ -904,8 +908,8 @@ export default function MealPlanScreen({ navigation, route }) {
 
   // Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
   // NA-nutrition-1): record which basis the user will weigh this plate item
-  // in. Pure label -- grams, macros and totals are untouched (no conversion
-  // exists anywhere in the app), so the day's totals never move when this is
+  // in. Only the grams shown convert (src/lib/food/cookYield.js); calories
+  // and macros are untouched, so the day's totals never move when this is
   // set. Persists the same way a swap does: rewrite the slot's items array in
   // the stored plan JSON and push it through updateMealPlan.
   // The day-wide switch: every paired item in the day to one weight state,
@@ -924,6 +928,7 @@ export default function MealPlanScreen({ navigation, route }) {
     try {
       await updateMealPlan(user.id, record.id, nextPlan);
       setRecord({ ...record, plan: nextPlan });
+      try { trackNow('weight_basis_switched', { where: 'day', basis: value }); } catch (_) { /* telemetry only */ }
     } catch (e) {
       logError('MealPlanScreen.setDayWeightState', e, {});
       toast.show('That raw or cooked choice was not saved. Try again in a moment.', { variant: 'error' });
@@ -934,6 +939,8 @@ export default function MealPlanScreen({ navigation, route }) {
     if (!user?.id || !record || !day) return;
     const slot = day.slots.find((s) => s.slot === slotKey);
     if (!slot?.items?.[itemIndex]) return;
+    const itemKey = (slot.items[itemIndex].foodRef || '').startsWith('curated:') ? slot.items[itemIndex].foodRef.slice(8) : null;
+    if (planItemWeight(slot.items[itemIndex], itemKey)?.state === value) return;
     const newItems = slot.items.map((it, i) => (i === itemIndex ? { ...it, weightState: value } : it));
     const newSlot = { ...slot, items: newItems };
     const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));
@@ -943,6 +950,7 @@ export default function MealPlanScreen({ navigation, route }) {
     try {
       await updateMealPlan(user.id, record.id, nextPlan);
       setRecord({ ...record, plan: nextPlan });
+      try { trackNow('weight_basis_switched', { where: 'meal_item', basis: value }); } catch (_) { /* telemetry only */ }
     } catch (e) {
       logError('MealPlanScreen.setItemWeightState', e, { slotKey });
       toast.show('That raw or cooked choice was not saved. Try again in a moment.', { variant: 'error' });
@@ -1326,7 +1334,7 @@ export default function MealPlanScreen({ navigation, route }) {
               <Chip
                 label="Raw or dry"
                 selected={dayWeightStates.every((w) => w === 'raw')}
-                onPress={() => handleSetDayWeightState('raw')}
+                onPress={() => { if (!dayWeightStates.every((w) => w === 'raw')) handleSetDayWeightState('raw'); }}
                 disabled={busy}
                 style={styles.weightChoiceChip}
                 labelStyle={[styles.weightChoiceChipText, live.weightChoiceChipText]}
@@ -1337,7 +1345,7 @@ export default function MealPlanScreen({ navigation, route }) {
               <Chip
                 label="Cooked"
                 selected={dayWeightStates.every((w) => w === 'cooked')}
-                onPress={() => handleSetDayWeightState('cooked')}
+                onPress={() => { if (!dayWeightStates.every((w) => w === 'cooked')) handleSetDayWeightState('cooked'); }}
                 disabled={busy}
                 style={styles.weightChoiceChip}
                 labelStyle={[styles.weightChoiceChipText, live.weightChoiceChipText]}

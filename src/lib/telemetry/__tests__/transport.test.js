@@ -36,10 +36,12 @@ jest.mock('expo-application', () => ({ nativeApplicationVersion: '3.2.0' }));
 // below exercise the transport with the growth events switched on; the M2
 // tests switch them off. The real flag's shipped value is pinned separately.
 let mockGrowthOn = true;
+let mock202On = true;
 jest.mock('../../sync/featureFlags', () => {
   const mod = { ...jest.requireActual('../../sync/featureFlags') };
   // A live read, so a test can flip it (an object spread would freeze the value).
   Object.defineProperty(mod, 'GROWTH_TELEMETRY', { enumerable: true, get: () => mockGrowthOn });
+  Object.defineProperty(mod, 'TELEMETRY_202_EVENTS', { enumerable: true, get: () => mock202On });
   return mod;
 });
 
@@ -371,8 +373,57 @@ describe('growth events wait for the server (GROWTH_TELEMETRY)', () => {
 
   test('the transport reads the flag from featureFlags', () => {
     const src = fs.readFileSync(path.join(__dirname, '../transport.js'), 'utf8');
-    expect(src).toContain("import { GROWTH_TELEMETRY } from '../sync/featureFlags'");
+    expect(src).toContain("import { GROWTH_TELEMETRY, TELEMETRY_202_EVENTS } from '../sync/featureFlags'");
     expect(src).toContain('if (!GROWTH_TELEMETRY && SCHEMA_BY_NAME[event]) return null;');
+  });
+});
+
+// The two names first declared in 3.3 reach the server's catalogue only in
+// migrate_202; until it is applied they are dropped, like every schema event
+// was before migrate_200.
+describe('migrate_202 names wait for the server (TELEMETRY_202_EVENTS)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { ADDED_IN_202, SCHEMA_BY_NAME } = require('../schema');
+  const sql = fs.readFileSync(path.resolve(__dirname, '../../../../supabase/migrate_202_telemetry_catalogue_3_3.sql'), 'utf8');
+
+  afterEach(() => { mock202On = true; });
+
+  test('the flag is OFF until migrate_202 is applied', () => {
+    expect(jest.requireActual('../../sync/featureFlags').TELEMETRY_202_EVENTS).toBe(false);
+  });
+
+  test('every migrate_202 name is declared in the schema and catalogued by 202', () => {
+    expect(ADDED_IN_202.size).toBe(2);
+    ADDED_IN_202.forEach((name) => {
+      expect({ name, declared: !!SCHEMA_BY_NAME[name] }).toEqual({ name, declared: true });
+      expect({ name, catalogued: sql.includes(`'${name}'`) }).toEqual({ name, catalogued: true });
+    });
+  });
+
+  test('202 also records the new fields on challenge_viewed and coaching_setup_card_shown', () => {
+    for (const field of ['"points_band_90"', '"parts_full"', '"mode"']) expect(sql).toContain(field);
+  });
+
+  test('off: the 202 names are dropped, not persisted', async () => {
+    mock202On = false;
+    expect(await postEvent('user-1', 'weight_basis_switched', { where: 'day', basis: 'raw' })).toBeNull();
+    expect(await postEvent('user-1', 'coaching_setup_card_snoozed', { surface: 'home' })).toBeNull();
+    expect(db.recordEngineTelemetry).not.toHaveBeenCalled();
+  });
+
+  test('off: the other schema events still flow', async () => {
+    mock202On = false;
+    expect(await postEvent('user-1', 'archetype_chosen', { archetype: 'v_taper', surface: 'plan_update' })).toBe('local-row-id-1');
+  });
+
+  test('on: a 202 name is persisted with its declared fields only', async () => {
+    mock202On = true;
+    expect(await postEvent('user-1', 'weight_basis_switched', { where: 'food', basis: 'cooked', grams: 120 })).toBe('local-row-id-1');
+    const payload = db.recordEngineTelemetry.mock.calls[0][2];
+    expect(payload.where).toBe('food');
+    expect(payload.basis).toBe('cooked');
+    expect(payload.grams).toBeUndefined();
   });
 });
 

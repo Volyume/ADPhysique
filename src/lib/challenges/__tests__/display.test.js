@@ -117,3 +117,36 @@ test('the terms link is the server URL as given, or null when there is nothing s
   expect(termsLink(null)).toBeNull();
   expect(termsLink({ terms_url: 'javascript:alert(1)' })).toBeNull();
 });
+
+// Usage data for challenge_viewed: the band of the five non-food parts (out of
+// 90) and a count of those that are full, the same two fields for everyone.
+// The total, tier, food and weigh-in lean upward for a withheld entrant
+// (credited in full without logging), so none of them is read.
+describe('challengeTelemetryFields', () => {
+  const { challengeTelemetryFields, corePointsBand } = require('../display');
+  const max = { train: 40, week: 15, stronger: 15, community: 10, checkin: 10, food: 6, weighin: 4 };
+  const parts = (sum) => ({ train: sum, week: 0, stronger: 0, community: 0, checkin: 0 });
+
+  test('bands the five non-food parts out of 90', () => {
+    expect([0, 19, 20, 39, 40, 59, 60, 74, 75, 90].map((v) => corePointsBand(parts(v))))
+      .toEqual(['0-19', '0-19', '20-39', '20-39', '40-59', '40-59', '60-74', '60-74', '75-90', '75-90']);
+    expect(corePointsBand(null)).toBeNull();
+  });
+
+  test('counts full parts among the five non-food parts', () => {
+    const p = { train: 40, week: 15, stronger: 9, community: 10, checkin: 5, food: 6, weighin: 4 };
+    expect(challengeTelemetryFields({ total: 89, parts: p, max })).toEqual({ points_band_90: '75-90', parts_full: 3 });
+  });
+
+  test('food, weigh-in, the total and the withheld flag never change the fields', () => {
+    const base = { train: 30, week: 11, stronger: 9, community: 6, checkin: 5 };
+    const a = challengeTelemetryFields({ total: 61, withheld: false, tier: 'second', parts: { ...base, food: 0, weighin: 0 }, max });
+    const b = challengeTelemetryFields({ total: 71, withheld: true, tier: 'main', parts: { ...base, food: 6, weighin: 4 }, max });
+    expect(a).toEqual(b);
+    expect(Object.keys(a).sort()).toEqual(['parts_full', 'points_band_90']);
+  });
+
+  test('no score: nothing', () => {
+    expect(challengeTelemetryFields(null)).toEqual({});
+  });
+});

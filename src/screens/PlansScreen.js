@@ -30,6 +30,8 @@ import {
   getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder, getAllExercises,
   getProgrammePlanFacts } from '../lib/database';
 import { isAuthoredFacts } from '../lib/library/authored';
+import { planTrainingStyleLabel } from '../lib/trainingArchetypes';
+import { touchTarget } from '../styles/layout';
 // D228 Q4-A: the ONE style-lock rule (PlanUpdateScreen and ProGoalSetupScreen
 // read the same module), so a block boundary cannot disagree with them.
 import { styleLockFromTags } from '../lib/exercise/styleLock';
@@ -246,6 +248,8 @@ export default function PlansScreen({ navigation }) {
   const [activeBlockId, setActiveBlockId] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // The training style the active plan was built with (display only); null hides the line.
+  const [activePlanStyle, setActivePlanStyle] = useState(null);
   useScreenReady('Plans', loaded);
   // D109-3: the Plan tools count for the "Avoided movements" row. Loaded
   // independently of loadData's Promise.all batch (own failure mode, own
@@ -384,6 +388,13 @@ export default function PlansScreen({ navigation }) {
       // free user. Guard EVERY setter: only the newest request paints.
       if (req !== ledgerLoadRef.current) return;
       setActivePlanData(active || null);
+      // One read of the active plan's facts (the same read the screen makes
+      // elsewhere); best-effort, a failure just hides the style line.
+      // Not awaited, so the rest of the screen never waits on it.
+      (active ? getProgrammePlanFacts(active.id).catch(() => null) : Promise.resolve(null)).then((styleFacts) => {
+        if (req !== ledgerLoadRef.current) return;
+        setActivePlanStyle(planTrainingStyleLabel(styleFacts, { styleLocked: !!styleLockFromTags(active?.tags) }));
+      });
       // FB-15 (D96): the finished block's id, so the decision card can offer
       // the summary that informs the decision.
       setActiveBlockId(block?.id ?? null);
@@ -1442,6 +1453,20 @@ export default function PlansScreen({ navigation }) {
                 <Text style={[styles.activePlanMeta, live.activePlanMeta]}>
                   {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}
                 </Text>
+              ) : null}
+              {activePlanStyle ? (
+                <TouchableOpacity
+                  testID="active-plan-style"
+                  style={styles.activePlanStyleRow}
+                  onPress={() => navigation.navigate('PlanUpdate', { focus: 'style' })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Training style, ${activePlanStyle}. Change in Adjust training`}
+                >
+                  <Text style={[styles.activePlanMeta, live.activePlanMeta, styles.activePlanStyleText]}>
+                    Training style: {activePlanStyle}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={14} color={t.colors.textSecondary} />
+                </TouchableOpacity>
               ) : null}
               {/* D139 (finding: "the one good block definition sat behind a
                   tooltip on a secondary screen while 'Week N of M' hid
@@ -2520,6 +2545,8 @@ const styles = StyleSheet.create({
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black },
   activePlanName: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
+  activePlanStyleRow: { flexDirection: 'row', alignItems: 'center', minHeight: touchTarget.minimum, gap: spacing.xs },
+  activePlanStyleText: { flexShrink: 1 },
   activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
   // D139: the block-position line plus its InfoTooltip, as true row
   // siblings (AX-11 law: never nest a touchable inside another).

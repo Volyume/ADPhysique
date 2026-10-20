@@ -15,7 +15,21 @@ import fs from 'fs';
 import path from 'path';
 import {
   isCoachingSetUp, canFinishCoachingSetup, missingCoachingFields, COACHING_SETUP_COPY,
+  coachingCardModeFor, resolveCoachingCardMode, snoozeCoachingCard,
 } from '../coachingSetup';
+
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const store = new Map();
+  const api = {
+    __store: store,
+    __failRead: false,
+    __failWrite: false,
+    getItem: jest.fn(async (k) => { if (api.__failRead) throw new Error('read'); return store.has(k) ? store.get(k) : null; }),
+    setItem: jest.fn(async (k, v) => { if (api.__failWrite) throw new Error('write'); store.set(k, v); }),
+  };
+  return { __esModule: true, default: api };
+});
+jest.mock('../errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
 
 const full = { sex: 'female', age: 31, heightCm: 165, weightKg: 62, trainingGoal: 'general' };
 
@@ -103,3 +117,74 @@ describe('nothing coaching reaches a quick-start person (adversarial review, rou
   });
 });
 
+
+describe('the setup card repeat control (founder 2026-10-20)', () => {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const DAY = 24 * 60 * 60 * 1000;
+  // Midday UK time, so adding whole days never crosses a day boundary oddly.
+  const T0 = Date.UTC(2026, 9, 21, 12, 0, 0);
+  beforeEach(() => {
+    AsyncStorage.__store.clear();
+    AsyncStorage.__failRead = false;
+    AsyncStorage.__failWrite = false;
+  });
+
+  test('existing copy keys keep their values, and the new ones are calm', () => {
+    expect(COACHING_SETUP_COPY.title).toBe('Set up coaching');
+    expect(COACHING_SETUP_COPY.action).toBe('Set up coaching');
+    expect(COACHING_SETUP_COPY.compact).toBe("Coaching isn't set up yet.");
+    expect(COACHING_SETUP_COPY.compactAction).toBe('Set up');
+    expect(COACHING_SETUP_COPY.notNow).toBe('Not now');
+  });
+
+  test('Today: full at most once a calendar day, the row after that', async () => {
+    expect(await resolveCoachingCardMode('u1', 'home', T0)).toBe('full');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + 60 * 1000)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + 5 * 60 * 60 * 1000)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + DAY)).toBe('full');
+    expect(await resolveCoachingCardMode('u2', 'home', T0)).toBe('full');
+  });
+
+  test('the Coach tab is the permanent way in: full on every visit without Not now', async () => {
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0)).toBe('full');
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 1000)).toBe('full');
+  });
+
+  test('Not now: the row for seven days, the full card back ONCE, then the row for good', async () => {
+    await snoozeCoachingCard('u1', T0);
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + DAY)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 7 * DAY - 1)).toBe('compact');
+    // The week is over: one full showing, on whichever surface comes first.
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 7 * DAY)).toBe('full');
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 7 * DAY + 1000)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + 9 * DAY)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + 60 * DAY)).toBe('compact');
+  });
+
+  test('a second Not now (on the return) makes it the row for good', async () => {
+    await snoozeCoachingCard('u1', T0);
+    await snoozeCoachingCard('u1', T0 + 8 * DAY);
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 30 * DAY)).toBe('compact');
+  });
+
+  test('pure mode table', () => {
+    const f = (state, surface = 'home') => coachingCardModeFor(state, { surface, today: '2026-10-21', now: T0 });
+    expect(f(null)).toBe('full');
+    expect(f({ fullDay: '2026-10-21' })).toBe('compact');
+    expect(f({ fullDay: '2026-10-21' }, 'coach_home')).toBe('full');
+    expect(f({ fullDay: '2026-10-20' })).toBe('full');
+    expect(f({ snoozedUntil: T0 + 1 })).toBe('compact');
+    expect(f({ snoozedUntil: T0 - 1 })).toBe('full');
+    expect(f({ snoozedUntil: T0 - 1, returnShown: true })).toBe('compact');
+    expect(f({ permanent: true }, 'coach_home')).toBe('compact');
+  });
+
+  test('a read failure shows the full card; a write failure is logged, not thrown', async () => {
+    AsyncStorage.__failRead = true;
+    expect(await resolveCoachingCardMode('u1', 'home', T0)).toBe('full');
+    AsyncStorage.__failRead = false;
+    AsyncStorage.__failWrite = true;
+    await expect(snoozeCoachingCard('u1', T0)).resolves.toBeUndefined();
+    expect(require('../errorLog').logError).toHaveBeenCalled();
+  });
+});

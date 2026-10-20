@@ -45,7 +45,7 @@ import {
 import { readPlannedPerWeek } from '../lib/challenges/plannedPerWeek';
 import {
   partRows, showCoachingCard, isWithheld, termsLink, daysLeftLine, drawLines, thresholdsLine, countsLine,
-  tierLabel, pointsText,
+  tierLabel, pointsText, challengeTelemetryFields,
 } from '../lib/challenges/display';
 import { datesLine } from './ChallengeJoinScreen';
 import { trackNow } from '../lib/telemetry/growth';
@@ -79,7 +79,7 @@ export default function ChallengeScreen({ navigation, route }) {
       setChallenge(c);
       setScore(s);
       setPhase('ready');
-      try { trackNow('challenge_viewed', { status: c.status, tier: s?.tier || 'none' }); } catch (_) { /* telemetry only */ }
+      try { trackNow('challenge_viewed', { status: c.status, ...challengeTelemetryFields(s) }); } catch (_) { /* telemetry only */ }
       // The board is its own best-effort read: a failure never costs the page.
       // A withheld caller's board is null, and nothing says why.
       challengeBoard(challengeId).then(setBoard).catch((e) => {

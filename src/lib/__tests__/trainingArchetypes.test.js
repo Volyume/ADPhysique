@@ -100,3 +100,30 @@ describe('onboarding step 7', () => {
     expect(src).toMatch(/trainingArchetype: effectiveArchetype,/);
   });
 });
+
+describe('planTrainingStyleLabel (Train card style line, display only)', () => {
+  const { planTrainingStyleLabel } = require('../trainingArchetypes');
+  const eng = (structure) => ({ structure: { version: 3, ...structure } });
+
+  test('null for every case that must show nothing', () => {
+    expect(planTrainingStyleLabel(null)).toBeNull();
+    expect(planTrainingStyleLabel(undefined)).toBeNull();
+    expect(planTrainingStyleLabel({ kind: 'authored', authored: { sessions: [] } })).toBeNull();
+    expect(planTrainingStyleLabel(eng({ category: 'general' }), { styleLocked: true })).toBeNull();
+    expect(planTrainingStyleLabel({})).toBeNull();
+    expect(planTrainingStyleLabel(eng({ category: 'bikini' }))).toBeNull();
+    expect(planTrainingStyleLabel(eng({ category: 'bikini', archetype: 'v_taper' }))).toBeNull();
+    expect(planTrainingStyleLabel(eng({ category: 'general', archetype: 'nonsense' }))).toBeNull();
+  });
+
+  test('absent archetype key is Balanced', () => {
+    expect(planTrainingStyleLabel(eng({ category: 'general' }))).toBe('Balanced');
+  });
+
+  test('each of the six options gives its own label', () => {
+    for (const o of ARCHETYPE_OPTIONS) {
+      expect(planTrainingStyleLabel(eng({ category: 'general', archetype: o.value }))).toBe(o.label);
+    }
+    expect(ARCHETYPE_OPTIONS).toHaveLength(6);
+  });
+});
