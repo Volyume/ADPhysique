@@ -47,6 +47,55 @@
 
 require('./mockPreamble');
 
+// 23 ChallengeScreen: the challenge RPC layer is the one network edge the
+// screen has (src/lib/challenges/api.js -> Community transport -> Supabase),
+// so it is mocked here with plausible data: an active gym challenge the persona
+// has joined, a score of 64 of 100 split per src/lib/challenges/copy.js
+// (core 40/15/15/10, coaching 10/6/4), and an eight-entry board by handle.
+// jest.mock factories may not close over module variables, hence the literals.
+jest.mock('../../src/lib/challenges/api', () => {
+  const id = 'ch-paper-render-1';
+  const challenge = {
+    id, title: 'Summer Strength Challenge', gym_name: 'Ironworks Gym, Leeds', status: 'active', total: 64,
+    starts_on: '2026-10-05', ends_on: '2026-11-29', days_left: 40,
+    main_threshold: 80, second_threshold: 50,
+    terms_url: 'https://volyume.app/challenge-terms',
+  };
+  const score = {
+    total: 64, withheld: false, tier: 'second', to_main: 16, to_second: 0,
+    parts: { train: 30, week: 11, stronger: 9, community: 6, checkin: 5, food: 2, weighin: 1 },
+    max: { train: 40, week: 15, stronger: 15, community: 10, checkin: 10, food: 6, weighin: 4 },
+    detail: {
+      training_days: 22, target_days: 29, weeks_hit: 5, weeks: 8, lifts_beaten: 3, posts_weeks: 4,
+      checkins: 4, checkins_target: 8, food_days: 12, food_cap: 36, weighin_weeks: 2,
+    },
+  };
+  const board = {
+    top: [
+      { name: 'iron_mara', score: 91 }, { name: 'liftwithsam', score: 86 }, { name: 'dev_squats', score: 79 },
+      { name: 'alexlifts', score: 64, me: true }, { name: 'hannah_h', score: 61 }, { name: 'bigtom88', score: 57 },
+      { name: 'pushpull_pri', score: 52 }, { name: 'gymrat_jo', score: 48 },
+    ],
+    me: { in_top: true, score: 64 },
+    counts: { main: 3, second: 9 },
+  };
+  return {
+    CHALLENGE_CONSENT_VERSION: 'challenge_consent_v2',
+    CHALLENGE_ERROR_CODES: ['not_found', 'not_allowed', 'invalid_input', 'network', 'unavailable'],
+    ChallengeError: class ChallengeError extends Error {},
+    myChallenges: jest.fn(async () => [challenge]),
+    challengeScore: jest.fn(async () => score),
+    challengeBoard: jest.fn(async () => board),
+    setChallengeTarget: jest.fn(async () => ({ planned_per_week: 4 })),
+    withdrawFromChallenge: jest.fn(async () => ({ withdrawn: true })),
+    getPublicChallenge: jest.fn(async () => null),
+    lookupChallenge: jest.fn(async () => null),
+    joinChallenge: jest.fn(async () => ({ challenge_id: id, joined: true })),
+    challengeForMyGym: jest.fn(async () => null),
+  };
+});
+const MOCK_CHALLENGE_ID = 'ch-paper-render-1';
+
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -195,6 +244,7 @@ const TAB_DEFS = [
   { key: 'PlansTab-1', name: 'PlansTab', title: 'Train', icon: 'barbell', iconOutline: 'barbell-outline' },
   { key: 'DiaryTab-1', name: 'DiaryTab', title: 'Nutrition', icon: 'nutrition', iconOutline: 'nutrition-outline' },
   { key: 'ProgressTab-1', name: 'ProgressTab', title: 'Progress', icon: 'stats-chart', iconOutline: 'stats-chart-outline' },
+  { key: 'CommunityTab-1', name: 'CommunityTab', title: 'Community', icon: 'people', iconOutline: 'people-outline' },
   { key: 'ProfileTab-1', name: 'ProfileTab', title: 'Coach', icon: 'pulse', iconOutline: 'pulse-outline' },
 ];
 function buildTabBarElement(focusedIndex, nestedRouteName) {
@@ -323,6 +373,37 @@ function workoutSummaryParams(seed) {
   };
 }
 
+// ── App-map screen helpers ───────────────────────────────────────────────
+// 21: ProOnboardingScreen holds its step in local state and resumes from the
+// per-user draft the wizard itself saves (proOnboardingDraft.saveDraft), so
+// the training-style step (7) is reached by saving a draft the app's own way.
+// The persona is signed in, so the wizard starts past the account step.
+async function prepareOnboardingStep7(seed) {
+  const { saveDraft } = require('../../src/lib/proOnboardingDraft');
+  await saveDraft(seed.userId, 7, {
+    firstName: 'Alex', localBWUnits: 'kg', bodyWeight: '82', bodyFat: '', localHeightUnits: 'metric',
+    sex: 'male', age: '29', heightCm: '180', experience: 'intermediate',
+    sessionLengthMinutes: 60, daysPerWeek: 4, equipment: 'full_gym',
+    trainingGoal: 'general', trainingPhase: 'lean_gain', planWeakPoints: [],
+  });
+}
+// 13: earlier screens' mounts each run Community's background refresh against
+// the mocked-empty transport, which overwrites the seeded "me" cache; the hub
+// would then show the logged-out Join card. Write the seeded cache again just
+// before this mount (same key, same value seedPersona wrote).
+async function restoreCommunityMe(seed) {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const communityProfile = require('../../src/lib/community/profile');
+  await AsyncStorage.setItem(communityProfile.meCacheKey(seed.userId), JSON.stringify(seed.communityMe));
+}
+// 22: the real, deterministic day-plan generator, from the persona's saved
+// nutrition target (fixed seed so the plan is the same on every run).
+async function prepareDayMealPlan(seed) {
+  const { generateAndSaveDayPlan } = require('../../src/lib/food/mealPlanService');
+  const res = await generateAndSaveDayPlan(seed.userId, ENV.useAppStore.getState().userProfile, { seed: 7 });
+  if (res && res.error) throw new Error(`meal plan seed failed: ${res.error}`);
+}
+
 // ── Screen configs ─────────────────────────────────────────────────────
 function screenConfigs(seed) {
   return [
@@ -338,8 +419,8 @@ function screenConfigs(seed) {
     { n: '10', name: 'LiftProgressScreen' },
     { n: '11', name: 'BodyMetricsScreen' },
     { n: '12', name: 'WeeklyCheckInScreen' },
-    { n: '13', name: 'CommunityHubScreen', tabBarIndex: 0, tabBarNested: 'Community' },
-    { n: '14', name: 'YouScreen' },
+    { n: '13', name: 'CommunityHubScreen', tabBarIndex: 4, prepare: restoreCommunityMe },
+    { n: '14', name: 'YouScreen', tabBarIndex: 5 },
     { n: '15', name: 'SettingsScreen' },
     { n: '16', name: 'WorkoutHistoryScreen' },
     // Audit 2026-10-01 (progress, recovery heatmap, consistency): the three
@@ -347,8 +428,15 @@ function screenConfigs(seed) {
     { n: '17', name: 'RecoveryScreen', tabBarIndex: 3, tabBarNested: 'Recovery' },
     { n: '18', name: 'ConsistencyScreen', tabBarIndex: 3, tabBarNested: 'Consistency' },
     { n: '19', name: 'VolumeHeatmapScreen', tabBarIndex: 3, tabBarNested: 'VolumeHeatmap' },
+    // App-map set: onboarding choice, the wizard at its training-style step,
+    // a built day meal plan, and a joined gym challenge.
+    { n: '20', name: 'StartChoiceScreen' },
+    { n: '21', name: 'ProOnboardingScreen', prepare: prepareOnboardingStep7 },
+    { n: '22', name: 'MealPlanScreen', prepare: prepareDayMealPlan },
+    { n: '23', name: 'ChallengeScreen', params: { id: MOCK_CHALLENGE_ID } },
   ];
 }
+const BASE_SCREEN_COUNT = 23;
 const LIGHT_SCREENS = new Set(['01', '04', '06', '17', '18', '19']);
 const DAY_ZERO_SCREENS = new Set(['01', '04', '06', '07', '17', '18', '19']);
 
@@ -366,6 +454,7 @@ async function processScreen(config, seed, theme, variant = {}) {
     ENV.useAppStore.setState(personaStoreState(seed, storeOverride));
     if (theme === 'light') ENV.useAppStore.setState({ accessibility: { ...ENV.useAppStore.getState().accessibility, theme: 'light' } });
 
+    if (config.prepare) await config.prepare(seed);
     // eslint-disable-next-line global-require
     const Screen = require(`../../src/screens/${config.name}`).default;
     const tabBarEl = config.tabBarIndex !== undefined ? buildTabBarElement(config.tabBarIndex, config.tabBarNested) : null;
@@ -422,7 +511,7 @@ test('seed the persona and paper-render every screen in dark theme', async () =>
 
   global.__PAPER_RENDER_SEED__ = seed;
   jest.useRealTimers();
-  expect(REPORT.screens.length).toBe(19);
+  expect(REPORT.screens.length).toBe(BASE_SCREEN_COUNT);
 });
 
 // ── Test 1b: day-zero pass (01/04/06/07, fresh account, dark theme) ──────
@@ -459,7 +548,7 @@ test('paper-render the day-zero variant for Home, Analytics, Diary and Plans', a
   }
 
   jest.useRealTimers();
-  expect(REPORT.screens.length).toBe(19 + configs.length);
+  expect(REPORT.screens.length).toBe(BASE_SCREEN_COUNT + configs.length);
 });
 
 // ── Test 1c: the Welcome screen's product captures (01/02/06) ───────────
@@ -568,7 +657,7 @@ const STORE_CAPTURES = [
   { n: '07', file: 'recovery-speed', config: RECOVERY_STORE_CONFIG, scrollToText: 'Your recovery speed' },
   { n: '08', file: 'nutrition', configN: '06' }, // DiaryScreen, Nutrition (tab 2)
   { n: '09', file: 'weekly-coaching', configN: '05' }, // CoachOutputScreen, no tab bar
-  { n: '10', file: 'community', configN: '13' }, // CommunityHubScreen, from Today (tab 0)
+  { n: '10', file: 'community', configN: '13' }, // CommunityHubScreen, Community (tab 4)
 ];
 
 test('paper-render the store listing screenshots (Play + App Store)', async () => {
@@ -668,7 +757,7 @@ test('paper-render the light theme variant for Home, Analytics and Diary', async
   jest.useRealTimers();
   // 16 dark + DAY_ZERO_SCREENS.size day-zero (test 1b, already pushed) + this
   // pass's own light screens.
-  expect(REPORT.screens.length).toBe(19 + DAY_ZERO_SCREENS.size + configs.length);
+  expect(REPORT.screens.length).toBe(BASE_SCREEN_COUNT + DAY_ZERO_SCREENS.size + configs.length);
 });
 
 afterAll(async () => {

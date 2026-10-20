@@ -603,6 +603,7 @@ async function seedPersona() {
   report.lowerExercises = LOWER_EXERCISES;
   report.lastWeekMonday = lastWeekMonday;
   report.diaryTotalKcal = diaryTotalKcal;
+  report.communityMe = me;
 
   return report;
 }

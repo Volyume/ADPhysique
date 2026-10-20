@@ -1,6 +1,16 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-20 — 3.2.0 MERGED; CURRENT APP MAP ★
+`release/3.2.0` merged to main (e9bfd86a) over a green tree (lint OK;
+32,066 passed, 17 skipped). What's new 3.2.0 video line is the founder's
+plain-words ruling ("PR is fine, technical terms is not"). The code-derived
+map is `CURRENT-APP-MAP.md` (repo root), screenshots in `screenshots/current/`
+from `scripts/paper-render` (six-tab bar fixed; screens 20-23 added). Old maps
+carry superseded headers. Open founder question: the iPhone challenge link
+text (universal links off), options A/B/C as put in chat.
+
+===============================================================================
 ## ★ 2026-10-20 — MIGRATIONS 200 AND 201 APPLIED; 3.2.0 BUMP ON `release/3.2.0` ★
 Founder: "run against production 200 201. Bump the version. Do not change the what's new." Pre-flight (read only): pg_cron 1.6.4, every dependency present, neither migration nor job present. Applied through `apply-named-sql.yml` run 13 from main 807661b2: 200 at 03:55:09 UTC, 201 at 03:55:14 UTC (tracked in `claude_schema_migrations`). Verified read only: 145 catalogue rows with the older names kept; `record_engine_telemetry_batch`; jobs `engine-telemetry-purge` and `gym-challenge-gate-readings`; RLS on every new table, no client table grants; anon only on `gym_challenge_public`; founder functions refused to app users; no analysis view readable by clients; no challenge created. GROWTH_TELEMETRY now on (`src/lib/sync/featureFlags.js`). Version 3.2.0 in package.json, package-lock.json and app.json; What's new carries the logger, set videos and Community lines of 3.0.0 and 3.1.0 without the video line's privacy clause (founder: "Keep the same sheet and details ... nobody has even had 3 yet"; What's new changes only when the founder bumps the main version with new user-facing features), and `privacyTruth.guard.test.js` covers the entry. Sources: `supabase/README.md` (200, 201 rows and status), `docs/gym-challenge-2026-10-19/SPEC.md`, the decisions register ("Growth telemetry", "Gym challenge"). Next: the founder's build of 3.2.0 and the device checklist (in chat).
 

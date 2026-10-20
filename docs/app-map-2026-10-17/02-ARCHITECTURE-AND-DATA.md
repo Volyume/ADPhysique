@@ -1,3 +1,5 @@
+> ⚠ SUPERSEDED (2026-10-20): the current app map is `CURRENT-APP-MAP.md` at the repository root, built from the code with screenshots in `screenshots/current/`. This file is kept for history; do not build from it.
+
 # Volyume: architecture and data map (version 3.0.0)
 
 Snapshot taken 2026-10-17 from the repository on branch `audit/final-2026-10-17`. This document is self-contained: it is written so that someone with no repository access can read it and suggest improvements.

@@ -1,3 +1,5 @@
+> ⚠ SUPERSEDED (2026-10-20): the current app map is `CURRENT-APP-MAP.md` at the repository root, built from the code with screenshots in `screenshots/current/`. This file is kept for history; do not build from it.
+
 # FULL APP PRODUCT MAP — HANDOVER COMPANION
 
 **Deliverable:** `docs/_FULL-APP-PRODUCT-MAP.md` (15,150 lines).

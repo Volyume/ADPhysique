@@ -1,3 +1,5 @@
+> ⚠ SUPERSEDED (2026-10-20): the current app map is `CURRENT-APP-MAP.md` at the repository root, built from the code with screenshots in `screenshots/current/`. This file is kept for history; do not build from it.
+
 > ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. May 2026 inventory on a retired branch (already self-noted as superseded below). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
 
 # Volyume — Screen & Component Inventory
