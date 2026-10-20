@@ -175,3 +175,33 @@ export function tierLabel(tier) {
 export function scoreLine(c) {
   return `Your score: ${n(c?.total)} of 100`;
 }
+
+// The parts usage data may count. Food and weigh-in are never among them: a
+// withheld entrant's screen hides those parts, so counting them would let the
+// data tell who is withheld. The total does not depend on the gate (gated days
+// still credit food and weigh-in), so its band is safe for everyone.
+const TELEMETRY_PART_KEYS = ['train', 'week', 'stronger', 'community', 'checkin'];
+
+/** The total as one of five bands for usage data, or null with no score. */
+export function scoreBand(total) {
+  if (total == null || !Number.isFinite(Number(total))) return null;
+  const t = Number(total);
+  if (t < 25) return '0-24';
+  if (t < 50) return '25-49';
+  if (t < 70) return '50-69';
+  if (t < 85) return '70-84';
+  return '85-100';
+}
+
+/**
+ * The coarse score fields `challenge_viewed` carries: the total's band and how
+ * many of the five non-food parts are full. Never a raw score, a part's points,
+ * the food or weigh-in parts, or the withheld flag. Empty with no score.
+ */
+export function challengeTelemetryFields(score) {
+  if (!score) return {};
+  const band = scoreBand(score.total);
+  const partsFull = TELEMETRY_PART_KEYS
+    .filter((k) => n(score.max?.[k]) > 0 && n(score.parts?.[k]) >= n(score.max?.[k])).length;
+  return band ? { score_band: band, parts_full: partsFull } : { parts_full: partsFull };
+}

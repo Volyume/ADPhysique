@@ -182,3 +182,14 @@ export const RECIPE_COOKED_WEIGHT_PUSH = true;
  * function present, the purge job scheduled.
  */
 export const GROWTH_TELEMETRY = true;
+
+/**
+ * TELEMETRY_202_EVENTS: the two usage events first declared in 3.3
+ * (weight_basis_switched, coaching_setup_card_snoozed) are new names the
+ * server's catalogue learns in supabase/migrate_202_telemetry_catalogue_3_3.sql.
+ * The server refuses a name it does not know, so while 202 is not applied the
+ * transport DROPS these two (src/lib/telemetry/transport.js), never queues
+ * them. Turn on only after 202 is applied under the founder's "run against
+ * production 202". Pinned by src/lib/telemetry/__tests__/transport.test.js.
+ */
+export const TELEMETRY_202_EVENTS = false;
