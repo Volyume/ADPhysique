@@ -215,6 +215,15 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry20).toContain('Settings, under Privacy and legal');
     expect(entry20).toContain('Community has been improved');
     expect({ bad: /\bclips?\b/i.test(entry20) }).toEqual({ bad: false });
+    // 3.2.0: founder, "Keep the same sheet and details": the same three lines.
+    const start32 = sheet.indexOf("'3.2.0': [");
+    expect(start32).toBeGreaterThan(-1);
+    const entry32 = sheet.slice(start32, sheet.indexOf('],', start32));
+    expect(entry32).toContain('The workout logger has been completely revamped.');
+    expect(entry32).toContain('Videos stay on your phone and are never uploaded');
+    expect(entry32).toContain('Settings, under Privacy and legal');
+    expect(entry32).toContain('Community has been improved');
+    expect({ bad: /\bclips?\b|email|plan again/i.test(entry32) }).toEqual({ bad: false });
     // 3.1.0: the Android setup fix, with the same three founder lines.
     const start31 = sheet.indexOf("'3.1.0': [");
     expect(start31).toBeGreaterThan(-1);
@@ -243,19 +252,9 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry21).toContain('Community has been improved');
     expect({ bad: /\bclips?\b|email|plan again/i.test(entry21) }).toEqual({ bad: false });
   });
-  // Versions the founder released with no What's new sheet, by explicit
-  // instruction. 3.2.0, founder 2026-10-20: "Bump the version. Do not change
-  // the what's new." (A version with no entry shows nothing; the sheet is
-  // built that way.)
-  const NO_WHATS_NEW = Object.freeze(['3.2.0']);
-
-  test('the running version has a What\'s new entry, unless the founder released it without one', () => {
+  test('the running version has a What\'s new entry', () => {
     const app = JSON.parse(readRepoFile('app.json'));
     const sheet = readRepoFile('src', 'components', 'WhatsNewSheet.js');
-    if (NO_WHATS_NEW.includes(app.expo.version)) {
-      expect(sheet).not.toContain(`'${app.expo.version}': [`);
-      return;
-    }
     expect(sheet).toContain(`'${app.expo.version}': [`);
   });
 
