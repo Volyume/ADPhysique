@@ -716,7 +716,7 @@ function SessionSheets({
                   setShowOverflow(false);
                   appAlert(
                     'How logging works',
-                    `${GLOSSARY.rep} ${GLOSSARY.set} Enter weight and reps, then tap the check when done. Use exercise options for form tips, warm-ups, swaps and session settings.`,
+                    `${GLOSSARY.rep} ${GLOSSARY.set} Enter weight and reps, then tap the check when done. Tap the exercise name to see its info and form tips. Use exercise options for warm-ups, swaps and session settings.`,
                   );
                 }}
                 accessibilityRole="button"
