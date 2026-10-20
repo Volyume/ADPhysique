@@ -63,8 +63,9 @@
 --
 -- Applied locally:   tested on a local Postgres 16 with stub tables
 --                    (docs/gym-challenge-2026-10-19/sql-test, SPEC section 8).
--- Applied remotely:  NO. Founder phrase required: "run against production
---                    201". Depends on migrate_017 (ed_pattern_flags),
+-- Applied remotely:  YES, 2026-10-20 03:55:14 UTC, under the founder's "run
+--                    against production 200 201" (apply-named-sql run 13),
+--                    verified read-only. Depends on migrate_017 (ed_pattern_flags),
 --                    migrate_160 (_community_caller, _community_clean_text,
 --                    user_body_profile), migrate_162 (gym_venues,
 --                    community_profiles.gym_id and other_gym_ids),

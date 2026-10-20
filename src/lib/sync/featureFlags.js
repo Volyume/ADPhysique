@@ -176,10 +176,9 @@ export const RECIPE_COOKED_WEIGHT_PUSH = true;
  * the legacy events (sign_in, workout_completed, structure_refused and the
  * rest) are unaffected and keep flowing.
  *
- * Turn on after migrate_200 is applied: flip to true in the landing after the
- * apply, once the supabase/README status block says APPLIED, the migration
- * header is edited to match, and the guard in
- * src/lib/telemetry/__tests__/transport.test.js is re-pinned in the same
- * landing.
+ * ON since migrate_200 was APPLIED 2026-10-20 03:55:09 UTC under the
+ * founder's "run against production 200 201" (apply-named-sql run 13) and
+ * verified read-only: 145 catalogue rows, the older names kept, the batch
+ * function present, the purge job scheduled.
  */
-export const GROWTH_TELEMETRY = false;
+export const GROWTH_TELEMETRY = true;

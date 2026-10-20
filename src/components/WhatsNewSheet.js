@@ -155,6 +155,22 @@ export const WHATS_NEW = {
   // 2.14.0 (2026-10-12): the new plan builder (register D222) and the
   // calorie choice inside the range (D226); the privacy notice rides inside
   // the Community line.
+  // 3.2.0 (2026-10-20): founder, "Keep the same sheet and details ...
+  // nobody has even had 3 yet": the logger, set videos and Community lines.
+  // The video line is the founder's (2026-10-20): "say these videos remain
+  // private on your device only, unless you choose to share them. The whole
+  // point of it is sharing their videos in share cards." The old "never
+  // uploaded ... privacy policy" clause is gone (untrue once shared). Plain
+  // British English, no technical terms (founder 2026-10-20: "PR is fine,
+  // technical terms is not"): no "share cards"; the user is told what it is
+  // and what it adds, not our names for it. What's
+  // new changes only when the founder bumps the main version with new
+  // user-facing features.
+  '3.2.0': [
+    { icon: 'barbell-outline', text: 'The workout logger has been completely revamped. Logging, fixing a set and finishing a workout are all quicker and smoother.' },
+    { icon: 'videocam-outline', text: 'Record videos of your sets and share them on social media with your workout stats on top: your best lifts, PRs, total weight lifted and more. Add a filter, a quote or your own words, and trim it to the best part. Your videos stay private on your device unless you choose to share them.' },
+    { icon: 'people-outline', text: 'Community has been improved, with smoother feeds, chats and profiles.' },
+  ],
   // 3.1.0 (2026-10-18): the Android setup fix (setup no longer stalls on the
   // spinner). The same three founder lines as 3.0.0, the privacy notice
   // inside them as before; a new Android user stuck on 3.0.0 never saw them.

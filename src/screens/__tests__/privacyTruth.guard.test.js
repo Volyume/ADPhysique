@@ -215,6 +215,21 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry20).toContain('Settings, under Privacy and legal');
     expect(entry20).toContain('Community has been improved');
     expect({ bad: /\bclips?\b/i.test(entry20) }).toEqual({ bad: false });
+    // 3.2.0: founder, "Keep the same sheet and details": the logger, videos and Community.
+    const start32 = sheet.indexOf("'3.2.0': [");
+    expect(start32).toBeGreaterThan(-1);
+    const entry32 = sheet.slice(start32, sheet.indexOf('],', start32));
+    expect(entry32).toContain('The workout logger has been completely revamped.');
+    expect(entry32).toContain('Record videos of your sets and share them on social media with your workout stats on top: your best lifts, PRs, total weight lifted and more. Add a filter, a quote or your own words, and trim it to the best part. Your videos stay private on your device unless you choose to share them.');
+    // Founder 2026-10-20: plain British English, no technical terms ("PR is
+    // fine, technical terms is not"). Users do not know our internal names.
+    expect(entry32).not.toMatch(/share card/i);
+    expect(entry32).toContain('Community has been improved');
+    // Founder 2026-10-20: private on the device unless shared; "never
+    // uploaded" is untrue once the person shares a video, and no
+    // privacy-policy wording.
+    expect(entry32).not.toMatch(/never uploaded|privacy policy|Privacy and legal/i);
+    expect({ bad: /\bclips?\b|email|plan again/i.test(entry32) }).toEqual({ bad: false });
     // 3.1.0: the Android setup fix, with the same three founder lines.
     const start31 = sheet.indexOf("'3.1.0': [");
     expect(start31).toBeGreaterThan(-1);
