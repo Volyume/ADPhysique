@@ -39,7 +39,7 @@ import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
-import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
+import { todayLocalKey, parseLocalDay, localDayKey } from '../lib/dayKey';
 import { shiftDate } from '../lib/food/diaryDates';
 // Campaign 17B job 4: stated vs observed, from CONFIRMED intake only.
 import { mealCountObservation } from '../lib/food/habits';
@@ -58,8 +58,11 @@ import {
   setMealPinOnActivePlan,
   regenerateActiveMealPlan,
   planConflictsWithExclusions,
-  applyPlanDayToDiary,
+  applyPlanDayMerging,
   applyPlanWeekToDiary,
+  planDayMergePlan,
+  describeDayMerge,
+  describeWeekMerge,
   repeatPlanDayOnActivePlan,
   swapMealInPlan,
   swapFoodInMeal,
@@ -67,7 +70,7 @@ import {
   excludedRoleAlternatives,
 } from '../lib/food/mealPlanService';
 import {
-  updateMealPlan, getFoodEntriesForDay, clearPlannedDay, recordFoodSwap,
+  updateMealPlan, getFoodEntriesForDay, recordFoodSwap,
   getFoodEntriesForRange, getRollupsForRange,
 } from '../lib/food/db';
 // Campaign 17A job 3: what a food swap MEANS, in the user's own words.
@@ -523,10 +526,15 @@ export default function MealPlanScreen({ navigation, route }) {
     if (!user?.id || !day) return;
     setBusy(true);
     try {
-      if (clearPlannedFirst) await clearPlannedDay(user.id, planStartDate);
-      const n = await applyPlanDayToDiary(user.id, day, { entryDate: planStartDate });
-      const verb = clearPlannedFirst ? `replaced the plan for ${planStartLabel}` : `added to ${planStartLabel}`;
-      toast.show(n > 0 ? `${n} ${n === 1 ? 'food' : 'foods'} ${verb}.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
+      // Item 24: only the plan meals whose diary meal holds no eaten food are
+      // added; a replace clears every planned row on the date first (and only
+      // when something is going to be added). Eaten food is never touched.
+      const res = await applyPlanDayMerging(user.id, day, { entryDate: planStartDate, replacePlanned: !!clearPlannedFirst });
+      const n = res.logged;
+      toast.show(
+        describeDayMerge(res, planStartLabel, mealSlotLabel, !!clearPlannedFirst),
+        { variant: n > 0 ? 'success' : 'info' },
+      );
       // A successful add lands the user on the result (founder 2026-07-03:
       // staying here read as nothing happening). Diary is this stack's
       // root, so navigate pops back to it; the toast rides the transition
@@ -569,12 +577,32 @@ export default function MealPlanScreen({ navigation, route }) {
       );
       return;
     }
-    // Real eaten food is present: never delete it. Add the plan alongside,
-    // clearing only stale planned scaffolding so the plan can't double up.
+    // Real eaten food is present: never delete it. Only the plan meals whose
+    // diary meal is empty are added; meals that already hold food are skipped
+    // and named. Planned rows, if any, are replaced as a group.
     if (eatenCount > 0) {
+      const { entries: wouldAdd, skippedSlots } = planDayMergePlan(day, existing, planStartDate);
+      const skippedNames = skippedSlots.map(mealSlotLabel).join(', ');
+      if (wouldAdd.length === 0 && skippedSlots.length > 0) {
+        appAlert(
+          'Food already logged',
+          `Every meal in this plan already has food logged on ${planStartLabel} (${skippedNames}), so nothing would be added.`,
+          [{ text: 'OK', style: 'cancel' }],
+        );
+        return;
+      }
+      if (skippedSlots.length === 0 && plannedCount === 0) {
+        await writeLogDay(false);
+        return;
+      }
+      const lines = [
+        `You have already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten on ${planStartLabel}. That food stays.`,
+        skippedSlots.length ? `Skipped, already logged: ${skippedNames}. The rest of the plan is added.` : 'The plan is added.',
+        plannedCount > 0 ? 'Planned meals already on this day are replaced.' : null,
+      ].filter(Boolean);
       appAlert(
         'Food already logged',
-        `You have already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten on ${planStartLabel}. This will not remove it; the planned meals are added alongside.`,
+        lines.join(' '),
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Add plan', onPress: () => writeLogDay(plannedCount > 0) },
@@ -588,28 +616,54 @@ export default function MealPlanScreen({ navigation, route }) {
 
   // Feature B: schedule the whole week into the diary (today onward), without
   // overwriting any day that already has food logged.
-  const handleLogWeek = useCallback(async () => {
-    if (!user?.id || !plan || busy) return;
+  const runLogWeek = useCallback(async (planned) => {
+    if (!user?.id || !plan) return;
     setBusy(true);
     try {
-      const { addedDays, skippedDays } = await applyPlanWeekToDiary(user.id, plan, { startDate: planStartDate });
-      if (addedDays === 0) {
-        toast.show('Those days already have food logged, so nothing changed.', { variant: 'info' });
-      } else {
-        const skipNote = skippedDays > 0 ? ` ${skippedDays} day${skippedDays === 1 ? '' : 's'} left as-is.` : '';
-        toast.show(`${addedDays} day${addedDays === 1 ? '' : 's'} added to your diary.${skipNote}`, { variant: 'success' });
-        // Same landing rule as writeLogDay: a successful add returns the
-        // user to the diary they just filled, with the same one-shot
-        // `justAddedPlan` teach signal.
-        navigation.navigate('Diary', { justAddedPlan: true });
-      }
+      const res = await applyPlanWeekToDiary(user.id, plan, { startDate: planStartDate, planned });
+      toast.show(describeWeekMerge(res, mealSlotLabel), { variant: res.addedDays > 0 ? 'success' : 'info' });
+      // Same landing rule as writeLogDay: a successful add returns the
+      // user to the diary they just filled, with the same one-shot
+      // `justAddedPlan` teach signal.
+      if (res.addedDays > 0) navigation.navigate('Diary', { justAddedPlan: true });
     } catch (e) {
       logError('MealPlanScreen.logWeek', e, { days: plan?.days?.length ?? 0 });
       toast.show('The week was not added to your diary. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
-  }, [user?.id, plan, busy, planStartDate, toast, navigation]);
+  }, [user?.id, plan, planStartDate, toast, navigation]);
+
+  // Item 24: when any of the seven days already holds planned meals, offer to
+  // replace them (clearPlannedDay per day, the Day button's own scope) or to
+  // leave those days as they are. Eaten food is never touched either way.
+  const handleLogWeek = useCallback(async () => {
+    if (!user?.id || !plan || busy) return;
+    let anyPlanned = false;
+    try {
+      const count = Array.isArray(plan.days) ? plan.days.length : 0;
+      const start = parseLocalDay(planStartDate);
+      for (let i = 0; i < count && !anyPlanned; i += 1) {
+        const d = new Date(start.getTime());
+        d.setDate(d.getDate() + i);
+        // eslint-disable-next-line no-await-in-loop
+        const rows = (await getFoodEntriesForDay(user.id, localDayKey(d.getTime()))) || [];
+        anyPlanned = rows.some((r) => r.is_planned);
+      }
+    } catch (e) {
+      logError('MealPlanScreen.readWeekEntries', e); // the check falls back to "none planned"; the cause is kept
+    }
+    if (!anyPlanned) { await runLogWeek('leave'); return; }
+    appAlert(
+      'Replace planned meals?',
+      'Some of these days already have planned meals. Replace them with this plan, or leave those days as they are. Food you have logged stays either way.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Leave those days', onPress: () => runLogWeek('leave') },
+        { text: 'Replace planned meals', style: 'destructive', onPress: () => runLogWeek('replace') },
+      ],
+    );
+  }, [user?.id, plan, busy, planStartDate, runLogWeek]);
 
   // "Repeat this day" (audit §15 item 6): copy the day in view onto another
   // day of the same week plan, reusing its already-assembled meals as-is
@@ -1614,8 +1668,8 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Text style={[styles.planActionTitle, live.planActionTitle]}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
                 <Text style={[styles.planActionSub, live.planActionSub]}>
                   {isDayPlan
-                    ? `Adds these meals to ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}. Existing logged food is left alone.`
-                    : 'Adds the week from the date shown. Any day that already has food logged is left alone.'}
+                    ? `Adds the meals that are still empty on ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}. Food you have logged stays, and planned meals already there are replaced.`
+                    : 'Adds the week from the date shown, into meals that are still empty. Food you have logged stays, and you can choose to replace planned meals.'}
                 </Text>
               </View>
             </View>

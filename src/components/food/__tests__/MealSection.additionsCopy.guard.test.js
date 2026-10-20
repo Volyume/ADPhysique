@@ -28,6 +28,10 @@ describe('MealSection diary "season to taste" row reads as optional, pick-any', 
   });
 
   test('carries the optional, pick-any register', () => {
-    expect(MEAL_SECTION).toContain('Optional extras, add any you fancy: ');
+    // Item 23 (2026-10-20): the row uses the curated sheet's own sentence,
+    // ADDITIONS_INTRO ("Optional extras. Add any you fancy for flavour. ..."),
+    // so the diary and the sheet read the same.
+    expect(MEAL_SECTION).toContain('{ADDITIONS_INTRO} ');
+    expect(MEAL_SECTION).not.toContain('Optional extras, add any you fancy: ');
   });
 });

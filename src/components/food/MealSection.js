@@ -8,7 +8,8 @@ import Card from '../Card';
 import Chip from '../Chip';
 import Button from '../Button';
 import { formatEnergy, formatNumber, energyUnitLabel, spokenEnergy } from '../../lib/format';
-import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../../lib/food/mealAdditions';
+import { getMealAdditionsForEntries, filterAdditionsForProfile, ADDITIONS_INTRO } from '../../lib/food/mealAdditions';
+import { foldedRowLabel } from '../../lib/food/mealSlots';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
 import { SwipeableEntryRow } from './EntryRow';
@@ -180,12 +181,17 @@ export default function MealSection({
   // curated-meal match and the filter run in a memo keyed on the entries.
   const excludeTags = useAppStore((s) => s.userProfile?.mealPlanExcludeTags);
   const seasonAdds = useMemo(() => {
-    const rawSeasonAdds = hasEntries && !selectionMode ? getMealAdditionsForEntries(entries) : null;
+    // Item 23: the tip is about a meal still to be eaten, so it reads only the
+    // planned rows (the existing is_planned flag, no new marker). Once the
+    // meal is marked eaten, or when a curated meal was logged straight away,
+    // there is nothing left to season and the row is gone.
+    const plannedRows = entries.filter((e) => e.is_planned);
+    const rawSeasonAdds = plannedRows.length && !selectionMode ? getMealAdditionsForEntries(plannedRows) : null;
     const filteredSeasonAdds = rawSeasonAdds
       ? filterAdditionsForProfile(rawSeasonAdds, { mealPlanExcludeTags: excludeTags })
       : null;
     return filteredSeasonAdds && filteredSeasonAdds.length ? filteredSeasonAdds : null;
-  }, [hasEntries, selectionMode, entries, excludeTags]);
+  }, [selectionMode, entries, excludeTags]);
   // L05-D1/D6 (design-usability audit 2026-07-09, founder-gated build): a
   // logged row already opens for edit on tap (EntryRow's own accessibility
   // label says "Tap to edit"), but a sighted user had no visual cue at all.
@@ -193,12 +199,33 @@ export default function MealSection({
   // presented as editable when the diary can be written to and the card
   // is not currently a multi-select target.
   const showRowEditHint = !selectionMode && !readOnly;
+  // Item 22 (view only): rows stored under an old meal name (Breakfast,
+  // Lunch, Dinner) are drawn in this numbered card. Own rows come first, then
+  // each old-named group in a stable order; the old names are named once, as
+  // a sub-line under the card title. The stored meal_slot never changes.
+  const { rows, oldNames } = useMemo(() => {
+    const tagged = entries.map((entry, i) => ({
+      entry, i, oldName: foldedRowLabel(entry.meal_slot, slot.key, slot.label),
+    }));
+    tagged.sort((a, b) => (a.oldName ? 1 : 0) - (b.oldName ? 1 : 0)
+      || (a.oldName && b.oldName && a.oldName !== b.oldName
+        ? String(a.entry.meal_slot).localeCompare(String(b.entry.meal_slot)) : 0)
+      || a.i - b.i);
+    const names = [];
+    for (const r of tagged) if (r.oldName && !names.includes(r.oldName)) names.push(r.oldName);
+    return { rows: tagged.map((r) => r.entry), oldNames: names };
+  }, [entries, slot.key, slot.label]);
   return (
     <Card padding="none" style={styles.card}>
       <View style={styles.header}>
         {/* D230 R16: the meal name is a heading, so the screen-reader
             heading rotor walks the Diary meal by meal. */}
-        <Text style={[styles.mealName, live.mealName]} accessibilityRole="header">{slot.label}</Text>
+        <View style={styles.titleBlock}>
+          <Text style={[styles.mealName, live.mealName]} accessibilityRole="header">{slot.label}</Text>
+          {oldNames.length ? (
+            <Text style={[styles.oldName, live.oldName]}>{`Includes ${oldNames.join(" and ")}`}</Text>
+          ) : null}
+        </View>
         {eatenEntries.length > 0 ? (
           <Text
             style={[styles.subtotal, live.subtotal]}
@@ -261,7 +288,7 @@ export default function MealSection({
       {/* D2: rows animate in/out and siblings glide into freed space, so a
           delete or add is no longer a jump-cut. Keys are entry ids (stable),
           which AnimatedRow requires. */}
-      {entries.map((e) => (
+      {rows.map((e) => (
         <AnimatedRow key={e.id} style={styles.entryRowOuter}>
           <View style={styles.entryFlex}>
             <SwipeableEntryRow
@@ -296,7 +323,7 @@ export default function MealSection({
               heading (src/lib/food/mealAdditions.js), so this inline row can't
               be misread as a checklist. */}
           <Text style={[styles.seasonText, live.seasonText]}>
-            <Text style={[styles.seasonLabel, live.seasonLabel]}>Optional extras, add any you fancy: </Text>
+            <Text style={[styles.seasonLabel, live.seasonLabel]}>{ADDITIONS_INTRO} </Text>
             {seasonAdds.map((a) => a.name).join(', ')}.
           </Text>
         </View>
@@ -428,6 +455,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   markEatenText: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  titleBlock: { flexShrink: 1 },
+  oldName: { ...type.caption, color: colors.textMuted },
   seasonRow: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
@@ -450,6 +479,7 @@ function buildLiveStyles(t) {
     plannedRowText: { color: t.colors.textMuted },
     markEatenButton: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     markEatenText: { color: t.colors.textPrimary },
+    oldName: { color: t.colors.textMuted },
     seasonRow: { borderTopColor: t.colors.borderSubtle },
     seasonText: { color: t.colors.textSecondary },
     seasonLabel: { color: t.colors.textMuted },

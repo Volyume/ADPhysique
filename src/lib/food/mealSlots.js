@@ -155,6 +155,28 @@ export function buildMealSlots(entries = [], mealsPerDay = DEFAULT_MEALS_PER_DAY
   return [...byKey.values()].sort((a, b) => slotOrder(a.key) - slotOrder(b.key));
 }
 
+// Item 22 (view only): where an old-named meal is DRAWN. Breakfast, Lunch and
+// Dinner sit inside Meal 1, 2 and 3 (never past the person's last meal), the
+// same places the history import and currentSlotForLegacy put them. 'snack'
+// is not folded: it keeps its own card, and only while it holds food. Any
+// other key is returned as is. The stored meal_slot is never rewritten.
+const FOLD_PLACE = { breakfast: 1, lunch: 2, dinner: 3 };
+export function foldedMealSlot(slotKey, mealsPerDay = DEFAULT_MEALS_PER_DAY) {
+  const place = FOLD_PLACE[slotKey];
+  if (!place) return slotKey;
+  const n = Math.max(1, Math.trunc(Number(mealsPerDay)) || DEFAULT_MEALS_PER_DAY);
+  return `meal_${Math.min(place, n)}`;
+}
+
+// The old meal name to show as a label on a row drawn inside a numbered card,
+// or null when the row is in its own card or the name matches the card's.
+export function foldedRowLabel(entrySlot, cardKey, cardLabel) {
+  if (!FOLD_PLACE[entrySlot] || entrySlot === cardKey) return null;
+  const name = mealSlotLabel(entrySlot);
+  if (String(name).trim().toLowerCase() === String(cardLabel || '').trim().toLowerCase()) return null;
+  return name;
+}
+
 // The highest numbered meal that has an entry (so the ladder never hides a
 // logged meal). Returns 0 when no numbered meals are logged.
 export function highestLoggedMeal(entries = []) {

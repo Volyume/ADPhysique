@@ -25,6 +25,10 @@ import {
   buildDayPlanSnapshot,
   applyPlanDayToDiary,
   applyPlanWeekToDiary,
+  applyPlanDayMerging,
+  planDayMergePlan,
+  describeDayMerge,
+  describeWeekMerge,
   planNextWeek,
   resyncBankedPlannedFood,
   repeatPlanDay,
@@ -211,21 +215,84 @@ describe('applyPlanWeekToDiary (Feature B — schedule the week, non-destructive
 
   beforeEach(() => { jest.clearAllMocks(); db.getFoodEntriesForDay.mockResolvedValue([]); });
 
-  test('logs empty days, leaves days that already have entries untouched', async () => {
+  test('a day with eaten food gets only the meals whose diary meal is empty (item 24)', async () => {
     db.getFoodEntriesForDay
-      .mockResolvedValueOnce([{ id: 'e1' }]) // day 0 already has food -> skip
+      .mockResolvedValueOnce([{ id: 'e1', meal_slot: 'meal_1' }]) // day 0: Meal 1 eaten -> skipped, named
       .mockResolvedValueOnce([]); // day 1 empty -> add
+    const twoMeals = { slots: [
+      { slot: 'meal_1', items: [{ foodRef: 'curated:x', quantityG: 100, kcal: 100, proteinG: 10, carbsG: 5, fatG: 2 }] },
+      { slot: 'meal_2', items: [{ foodRef: 'curated:y', quantityG: 100, kcal: 100, proteinG: 10, carbsG: 5, fatG: 2 }] },
+    ] };
+    const res = await applyPlanWeekToDiary('u1', { days: [twoMeals, twoMeals] }, { startDate: '2026-06-15' });
+    expect(res.addedDays).toBe(2);
+    expect(res.loggedItems).toBe(3);
+    expect(res.days[0]).toEqual({ date: '2026-06-15', addedSlots: ['meal_2'], skippedSlots: ['meal_1'], keptPlanned: false });
+    expect(db.logFoodEntries).toHaveBeenCalledTimes(2);
+    expect(db.clearPlannedDay).not.toHaveBeenCalled();
+    expect(db.logFoodEntries.mock.calls[0][1].every((e) => e.isPlanned === true)).toBe(true);
+  });
+
+  test('a day whose every meal is eaten adds nothing and is counted as skipped', async () => {
+    db.getFoodEntriesForDay.mockResolvedValue([{ id: 'e1', meal_slot: 'meal_1' }]);
     const res = await applyPlanWeekToDiary('u1', plan, { startDate: '2026-06-15' });
-    expect(res.skippedDays).toBe(1);
-    expect(res.addedDays).toBe(1);
-    expect(res.loggedItems).toBe(1);
-    expect(db.logFoodEntries).toHaveBeenCalledTimes(1); // only the empty day was written
-    expect(batchedEntries()).toHaveLength(1);
-    expect(batchedEntries()[0].isPlanned).toBe(true); // written as scaffolding
+    expect(res.addedDays).toBe(0);
+    expect(res.skippedDays).toBe(2);
+    expect(db.logFoodEntries).not.toHaveBeenCalled();
+  });
+
+  test('planned rows: "leave" (default) skips the whole day, "replace" clears then adds', async () => {
+    db.getFoodEntriesForDay.mockResolvedValue([{ id: 'p1', is_planned: 1, meal_slot: 'meal_1' }]);
+    const left = await applyPlanWeekToDiary('u1', plan, { startDate: '2026-06-15' });
+    expect(left.addedDays).toBe(0);
+    expect(left.days.every((d) => d.keptPlanned)).toBe(true);
+    expect(db.clearPlannedDay).not.toHaveBeenCalled();
+    expect(db.logFoodEntries).not.toHaveBeenCalled();
+    const replaced = await applyPlanWeekToDiary('u1', plan, { startDate: '2026-06-15', planned: 'replace' });
+    expect(replaced.addedDays).toBe(2);
+    expect(db.clearPlannedDay).toHaveBeenCalledTimes(2);
+    expect(db.logFoodEntries).toHaveBeenCalledTimes(2);
+  });
+
+  test('an old-named Breakfast row blocks Meal 1 (it is drawn there)', () => {
+    const r = planDayMergePlan(
+      { slots: [{ slot: 'meal_1', items: [{ foodRef: 'curated:x', quantityG: 100 }] }, { slot: 'meal_2', items: [{ foodRef: 'curated:y', quantityG: 100 }] }] },
+      [{ meal_slot: 'breakfast' }], '2026-06-15',
+    );
+    expect(r.skippedSlots).toEqual(['meal_1']);
+    expect(r.addedSlots).toEqual(['meal_2']);
+  });
+
+  test('a snack row does not block a numbered meal', () => {
+    const r = planDayMergePlan(
+      { slots: [{ slot: 'meal_4', items: [{ foodRef: 'curated:x', quantityG: 100 }] }] },
+      [{ meal_slot: 'snack' }], '2026-06-15',
+    );
+    expect(r.skippedSlots).toEqual([]);
+  });
+
+  test('a replace that has nothing to add clears nothing', async () => {
+    db.getFoodEntriesForDay.mockResolvedValue([{ id: 'e1', meal_slot: 'meal_1' }, { id: 'p1', is_planned: 1, meal_slot: 'meal_2' }]);
+    const res = await applyPlanDayMerging('u1', itemDay('curated:x'), { entryDate: '2026-06-15', replacePlanned: true });
+    expect(res.logged).toBe(0);
+    expect(db.clearPlannedDay).not.toHaveBeenCalled();
+  });
+
+  test('the toast sentences name what was added and skipped', () => {
+    const label = (k) => ({ meal_1: 'Meal 1', meal_2: 'Meal 2', meal_3: 'Meal 3' }[k]);
+    expect(describeDayMerge({ logged: 4, addedSlots: ['meal_2', 'meal_3'], skippedSlots: ['meal_1'] }, 'Tue 21 Oct', label))
+      .toBe('Added Meal 2 and Meal 3 to Tue 21 Oct. Skipped Meal 1, already logged.');
+    expect(describeDayMerge({ logged: 0, addedSlots: [], skippedSlots: ['meal_1'] }, 'Tue', label))
+      .toBe('Nothing added. Meal 1 already has food logged.');
+    expect(describeDayMerge({ logged: 3, addedSlots: ['meal_1'], skippedSlots: [] }, 'Tue', label, true))
+      .toBe('Replaced the plan for Tue: Meal 1.');
+    expect(describeWeekMerge({ addedDays: 2, days: [
+      { date: '2026-06-15', addedSlots: ['meal_2'], skippedSlots: ['meal_1'], keptPlanned: false },
+      { date: '2026-06-16', addedSlots: [], skippedSlots: [], keptPlanned: true },
+    ] }, label)).toBe('2 days added to your diary. Skipped, already logged: Meal 1 on Mon. Left as planned: Tue.');
   });
 
   test('an empty plan does nothing', async () => {
-    expect(await applyPlanWeekToDiary('u1', { days: [] })).toEqual({ addedDays: 0, skippedDays: 0, loggedItems: 0 });
+    expect(await applyPlanWeekToDiary('u1', { days: [] })).toEqual({ addedDays: 0, skippedDays: 0, loggedItems: 0, days: [] });
     expect(db.logFoodEntries).not.toHaveBeenCalled();
   });
 });

@@ -191,7 +191,23 @@ export default function MyMealsScreen({ navigation, route }) {
         },
       });
       setOpened(null);
-      navigation.goBack();
+      // Item 28: this screen is opened over the add-food screen, so a plain
+      // goBack left the person on the add-food screen needing one more close.
+      // When that screen is directly beneath (and is not in its pick-a-food
+      // mode), close both and land on the diary, as a plate log does.
+      let popped = false;
+      try {
+        const routes = navigation.getState?.()?.routes ?? [];
+        const idx = routes.findIndex((r) => r.key === route?.key);
+        const below = idx > 0 ? routes[idx - 1] : null;
+        if (below?.name === 'FoodSearch' && !below.params?.pickMode && typeof navigation.pop === 'function') {
+          navigation.pop(2);
+          popped = true;
+        }
+      } catch (err) {
+        logError('MyMeals.closeBoth', err); // falls back to the single close below
+      }
+      if (!popped) navigation.goBack();
     } catch (e) {
       logError('MyMeals.applySavedMeal', e, { mealSlot, itemCount: entries.length });
       toast.show('That meal was not added. Try again in a moment.', { variant: 'error' });
@@ -199,7 +215,7 @@ export default function MyMealsScreen({ navigation, route }) {
       loggingRef.current = null;
       setLogging(false);
     }
-  }, [opened, userId, mealSlot, entryDate, navigation, toast]);
+  }, [opened, userId, mealSlot, entryDate, navigation, route?.key, toast]);
 
   // "Edit this meal": the list as shown becomes the editor's starting state.
   function startEdit(drafts) {

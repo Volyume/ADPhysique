@@ -46,6 +46,7 @@ import { normalisePreferences, mealAllowed, savedMealAllowed } from './planPrefe
 import { foodExcluded } from './foodRoles';
 import { CURATED_MEALS, dietAllows } from './curatedMeals';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
+import { foldedMealSlot, DEFAULT_MEALS_PER_DAY } from './mealSlots';
 import { track } from '../engineTelemetry';
 
 import { curatedKeyOfRef, nativeState, convertCookGrams } from './cookYield';
@@ -933,37 +934,137 @@ function plannedEntriesForDay(day, entryDate) {
 }
 
 /**
- * Schedule a whole week plan into the diary (Feature B — "Plan my week").
- * Maps day i -> startDate + i (default: today) and logs that day's meals to its
- * date. NON-DESTRUCTIVE: a date that already has any food logged is left
- * untouched (we never clobber a day you've already eaten / logged), so this is
- * safe to run again after adding more food. Returns a summary the UI narrates.
- *
- * (Follow-up, needs a cloud migration: an `is_planned` flag would let us mark
- * planned meals distinctly and regenerate in place; this v1 fills empty days.)
+ * Item 24 (founder answers 2026-10-20): what a plan day adds to a date that
+ * already holds rows. Pure. The plan meals whose DIARY meal holds no eaten
+ * food are added; a meal that already has eaten food is skipped and named.
+ * Planned rows (is_planned) never block a meal: they are replaced as a group
+ * by the caller (clearPlannedDay), so they do not count as "has food".
+ * An old-named row (Breakfast, Lunch, Dinner) counts toward the numbered meal
+ * it is drawn in (foldedMealSlot), so a logged Breakfast blocks Meal 1.
+ * Returns { entries, addedSlots, skippedSlots } (slot keys, plan order).
  */
-export async function applyPlanWeekToDiary(userId, plan, { startDate } = {}) {
+export function planDayMergePlan(day, existingRows, entryDate) {
+  const planSlots = (day?.slots || []).length;
+  const n = Math.max(planSlots, DEFAULT_MEALS_PER_DAY);
+  const eaten = new Set();
+  for (const row of existingRows || []) {
+    if (row?.is_planned) continue;
+    eaten.add(foldedMealSlot(row?.meal_slot, n));
+  }
+  const all = plannedEntriesForDay(day, entryDate);
+  const entries = [];
+  const addedSlots = [];
+  const skippedSlots = [];
+  for (const e of all) {
+    const key = foldedMealSlot(e.mealSlot, n);
+    if (eaten.has(key)) {
+      if (!skippedSlots.includes(e.mealSlot)) skippedSlots.push(e.mealSlot);
+      continue;
+    }
+    entries.push(e);
+    if (!addedSlots.includes(e.mealSlot)) addedSlots.push(e.mealSlot);
+  }
+  return { entries, addedSlots, skippedSlots };
+}
+
+/**
+ * Add one plan day to a date, filling only the diary meals that hold no eaten
+ * food (planDayMergePlan). `replacePlanned` clears every planned row on that
+ * date first (the same clearPlannedDay the Replace button always used), and
+ * only when there is something to add, so a refusal never strips the day.
+ * Eaten rows are never touched. Returns { logged, addedSlots, skippedSlots }.
+ */
+export async function applyPlanDayMerging(userId, day, { entryDate, replacePlanned = false, existing = null } = {}) {
+  if (!userId || !day || !entryDate) return { logged: 0, addedSlots: [], skippedSlots: [] };
+  const rows = existing || await getFoodEntriesForDay(userId, entryDate);
+  const { entries, addedSlots, skippedSlots } = planDayMergePlan(day, rows, entryDate);
+  if (entries.length === 0) return { logged: 0, addedSlots: [], skippedSlots };
+  if (replacePlanned) await clearPlannedDay(userId, entryDate);
+  const ids = await logFoodEntries(userId, entries);
+  return { logged: ids.length, addedSlots, skippedSlots };
+}
+
+/**
+ * Schedule a whole week plan into the diary (Feature B — "Plan my week").
+ * Maps day i -> startDate + i (default: today). Item 24: each day adds only
+ * the plan meals whose diary meal holds no eaten food (applyPlanDayMerging),
+ * so one coffee no longer blocks a whole day. A day that holds PLANNED rows is
+ * handled by `planned`: 'replace' clears them and adds the plan, 'leave'
+ * (the default, as before) skips the whole day so it is never doubled. Eaten
+ * food is never touched. Returns the totals the UI narrates plus `days`, one
+ * { date, addedSlots, skippedSlots, keptPlanned } per day.
+ */
+export async function applyPlanWeekToDiary(userId, plan, { startDate, planned = 'leave' } = {}) {
   const days = Array.isArray(plan?.days) ? plan.days : [];
-  if (!userId || days.length === 0) return { addedDays: 0, skippedDays: 0, loggedItems: 0 };
+  if (!userId || days.length === 0) return { addedDays: 0, skippedDays: 0, loggedItems: 0, days: [] };
   const start = startDate || todayLocalKey();
   const startDateObj = parseLocalDay(start);
   let addedDays = 0;
   let skippedDays = 0;
   let loggedItems = 0;
+  const perDay = [];
   for (let i = 0; i < days.length; i += 1) {
     const d = new Date(startDateObj.getTime());
     d.setDate(d.getDate() + i);
     const date = localDayKey(d.getTime());
-    // Skip any day that already has entries — actual OR previously-planned —
-    // so re-running never overwrites real food or duplicates the scaffolding.
     // eslint-disable-next-line no-await-in-loop
-    const existing = await getFoodEntriesForDay(userId, date);
-    if (Array.isArray(existing) && existing.length > 0) { skippedDays += 1; continue; }
+    const existing = (await getFoodEntriesForDay(userId, date)) || [];
+    const hasPlanned = existing.some((row) => row?.is_planned);
+    if (hasPlanned && planned !== 'replace') {
+      skippedDays += 1;
+      perDay.push({ date, addedSlots: [], skippedSlots: [], keptPlanned: true });
+      continue;
+    }
     // eslint-disable-next-line no-await-in-loop
-    const n = await applyPlanDayToDiary(userId, days[i], { entryDate: date });
-    if (n > 0) { addedDays += 1; loggedItems += n; }
+    const res = await applyPlanDayMerging(userId, days[i], { entryDate: date, replacePlanned: hasPlanned, existing });
+    perDay.push({ date, addedSlots: res.addedSlots, skippedSlots: res.skippedSlots, keptPlanned: false });
+    if (res.logged > 0) { addedDays += 1; loggedItems += res.logged; } else { skippedDays += 1; }
   }
-  return { addedDays, skippedDays, loggedItems };
+  return { addedDays, skippedDays, loggedItems, days: perDay };
+}
+
+/**
+ * The sentence the Add day / Add week toast shows (item 24: name what was
+ * added and what was skipped). Pure. `labelOf(slotKey)` gives a meal's own
+ * name (custom names included); `dateLabel` names the day.
+ */
+export function describeDayMerge({ logged, addedSlots, skippedSlots }, dateLabel, labelOf, replaced = false) {
+  const join = (keys) => {
+    const names = keys.map(labelOf);
+    if (names.length <= 1) return names.join('');
+    return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  };
+  if (logged <= 0) {
+    return skippedSlots.length
+      ? `Nothing added. ${join(skippedSlots)} already ${skippedSlots.length === 1 ? 'has' : 'have'} food logged.`
+      : 'Nothing to log on this day.';
+  }
+  const head = `${replaced ? 'Replaced the plan for' : 'Added'} ${replaced ? `${dateLabel}: ${join(addedSlots)}.` : `${join(addedSlots)} to ${dateLabel}.`}`;
+  return skippedSlots.length
+    ? `${head} Skipped ${join(skippedSlots)}, already logged.`
+    : head;
+}
+
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** The week toast. Pure. Names the days and meals that were skipped. */
+export function describeWeekMerge(result, labelOf) {
+  const { addedDays = 0, days = [] } = result || {};
+  const dayName = (date) => WEEKDAY_SHORT[parseLocalDay(date).getDay()];
+  const kept = days.filter((d) => d.keptPlanned).map((d) => dayName(d.date));
+  const skipped = days.filter((d) => d.skippedSlots.length).map(
+    (d) => `${d.skippedSlots.map(labelOf).join(', ')} on ${dayName(d.date)}`,
+  );
+  if (addedDays === 0) {
+    const why = [];
+    if (kept.length) why.push(`${kept.join(', ')} already ${kept.length === 1 ? 'has' : 'have'} planned meals`);
+    if (skipped.length) why.push(`already logged: ${skipped.join('; ')}`);
+    return `Nothing added${why.length ? `. ${why.join('; ')}` : ''}.`.replace('..', '.');
+  }
+  const parts = [`${addedDays} day${addedDays === 1 ? '' : 's'} added to your diary.`];
+  if (skipped.length) parts.push(`Skipped, already logged: ${skipped.join('; ')}.`);
+  if (kept.length) parts.push(`Left as planned: ${kept.join(', ')}.`);
+  return parts.join(' ');
 }
 
 /**

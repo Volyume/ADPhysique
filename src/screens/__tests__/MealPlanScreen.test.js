@@ -441,10 +441,12 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain('Hold a swappable food, or open its swap list, and choose "Don\\\'t suggest again" to leave it out of future plans.');
     expect(source).toContain('Review the meals and add the plan when it looks right.');
     expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
-    // The date is the real one: "today" only when the plan is for today.
-    expect(source).toContain("`Adds these meals to ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}. Existing logged food is left alone.`");
-    expect(source).not.toContain("'Adds these meals to today.");
-    // The Build week card does not promise anything about logged food: it adds nothing.
+    // Item 24 / F4 (2026-10-20): the card names the diary day it writes to and
+    // says what the button really does; the Build week card no longer claims
+    // to leave logged food alone, because it writes nothing to the diary.
+    expect(source).toContain('Adds the meals that are still empty on ${planStartDate === todayLocalKey() ? \'today\' : planStartLabel}. Food you have logged stays, and planned meals already there are replaced.');
+    expect(source).toContain('Adds the week from the date shown, into meals that are still empty. Food you have logged stays, and you can choose to replace planned meals.');
+    expect(source).not.toContain('Adds these meals to today');
     expect(source).toContain('Build seven dated days and a shopping list. Nothing is added to your diary until you tap Add this week.');
     expect(source).not.toContain('Build seven dated days and a shopping list. Existing logged food is left alone.');
     expect(source).toContain('accessibilityLabel="Refresh meals"');
