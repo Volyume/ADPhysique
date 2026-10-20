@@ -300,8 +300,9 @@ export function stateOf(foodKey) {
 /**
  * Whether a curated food has a meaningful raw/cooked weighing choice, i.e.
  * its table entry is NOT already 'ready' (eaten as weighed: cooked meat,
- * fruit, dairy...). Drives whether the food-logging and meal-plan surfaces
- * show the "Weigh: Raw / Cooked" choice at all (Ultimate-Audit item 12).
+ * fruit, dairy...). It does NOT decide whether the "Weigh: Raw / Cooked"
+ * choice shows: the surfaces use hasCookToggle (cookYield.js), which also
+ * needs a CoFID pair (Ultimate-Audit item 12).
  */
 export function hasWeightChoice(foodKey) {
   return stateOf(foodKey) !== 'ready';
