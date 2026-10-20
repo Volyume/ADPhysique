@@ -10,6 +10,7 @@
  * Pure.
  */
 import { ARCHETYPES, TIERS, archetypeCategory, rulebookCategory } from './structure/rulebook';
+import { isAuthoredFacts } from './library/authored';
 
 export const ARCHETYPE_OPTIONS = Object.freeze([
   Object.freeze({ value: 'balanced', label: 'Balanced', description: 'Every muscle trained evenly. The all-round plan.' }),
@@ -28,6 +29,24 @@ export function archetypeApplies(trainingGoal) {
 /** A stored value as a known style key, else null (never guessed). */
 export function normaliseArchetype(value) {
   return typeof value === 'string' && ARCHETYPES[value] ? value : null;
+}
+
+/**
+ * The training style a saved plan was built with, as its label, or null when
+ * none should be shown. Display only. The structure engine records its
+ * research category (not the style's) in facts.structure.category and writes
+ * facts.structure.archetype only when the style changed the rule set, so a
+ * general plan with no archetype key was built as Balanced. Null for: no
+ * facts, an authored plan, a style-locked library plan, no structure facts,
+ * a competing category (the picker hides there too) and an unknown key.
+ */
+export function planTrainingStyleLabel(facts, { styleLocked = false } = {}) {
+  if (!facts || styleLocked || isAuthoredFacts(facts)) return null;
+  const structure = facts.structure;
+  if (!structure || typeof structure !== 'object' || structure.category !== 'general') return null;
+  const key = Object.prototype.hasOwnProperty.call(structure, 'archetype') ? structure.archetype : 'balanced';
+  const option = ARCHETYPE_OPTIONS.find((o) => o.value === key);
+  return option ? option.label : null;
 }
 
 // The muscle map draws lats and upper back as one back, both glutes as one.
