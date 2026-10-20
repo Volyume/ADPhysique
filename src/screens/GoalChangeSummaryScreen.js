@@ -8,10 +8,10 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
 import BackHeader from '../components/BackHeader';
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
-import { getOpenEdPatternFlag } from '../lib/database';
+import useSafetyState from '../hooks/useSafetyState';
 // F-16 REVISED (parity, 2026-09-11): the ONE line shown when a kit answer
 // installed a library plan, shared with first run and Adjust training.
 import { libraryKitInstalledLine } from '../lib/startWithPlan';
@@ -167,29 +167,20 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
     planInstalledKit = null, planInstalledName = null,
   } = route.params || {};
   const planKeptOnPurpose = planKeptReason === 'style_lock';
+  // Item 10: a goal or phase save never touches the plan; training is set on Train.
+  const planOnTrain = planKeptReason === 'training_on_train';
   // The person's energy unit (kcal or kJ), read as CoachOutputScreen reads it.
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
-  // D7 (founder decision, 2026-07-03): the same ED-flag check
-  // ProSetupCompleteScreen performs. Under an open flag (or an unknown flag
-  // state, fail closed, matching that screen) the deficit-phase framing and
-  // the eight-week diet-break notice give way to the neutral register; the
-  // goal-change receipt itself stays honest. Tier-blind by construction.
-  const [edFlagOpen, setEdFlagOpen] = useState(true); // closed until proven clear
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const userId = useAppStore.getState().user?.id;
-        const flag = userId ? await getOpenEdPatternFlag(userId) : null;
-        if (!cancelled) setEdFlagOpen(!!flag);
-      } catch (_) { /* unknown state stays closed */ }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // D7 (founder decision, 2026-07-03), now through src/lib/safetyState.js
+  // (proposal 10, owner answer): under an open ED flag, calm mode, or a failed
+  // or unknown read (fail closed, `suppressed` starts true) the deficit-phase
+  // framing and the eight-week diet-break notice give way to the neutral
+  // register; the goal-change receipt itself stays honest. Tier-blind.
+  const edFlagOpen = useSafetyState().suppressed;
 
   const goalChanged = previous.goal && next.goal && previous.goal !== next.goal;
   const phaseChanged = previous.phase && next.phase && previous.phase !== next.phase;
@@ -248,7 +239,9 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             <Text style={[styles.heroTitle, live.heroTitle]}>Goals updated</Text>
             <Text style={[styles.heroBody, live.heroBody]}>
               {anyChanged
-                ? `Your plan and nutrition targets have been updated to match. Here's a breakdown of what shifted and why.`
+                ? (planOnTrain
+                  ? `Your nutrition targets have been updated to match. Here's a breakdown of what shifted and why.`
+                  : `Your plan and nutrition targets have been updated to match. Here's a breakdown of what shifted and why.`)
                 : `Nothing meaningful changed. Your plan and nutrition stay as they were.`}
             </Text>
           </View>
@@ -324,7 +317,9 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
             <Text style={[styles.nextText, live.nextText]}>
-              {planKeptOnPurpose
+              {planOnTrain
+                ? 'Your training plan stays as it is. Your goal and phase do not change it. To change your training, use Adjust training plan on the Train tab.'
+                : planKeptOnPurpose
                 ? `Your ${planStyleLabel ?? 'library'} plan stays as it is, so your next session is unchanged. To train differently, choose another ${planStyleLabel ?? 'library'} plan in the Plan Library.`
                 : planInstalledKit
                   ? `${libraryKitInstalledLine(planInstalledKit, planInstalledName)} It is now your active plan and your next session comes from it. Review the full plan from Train.`

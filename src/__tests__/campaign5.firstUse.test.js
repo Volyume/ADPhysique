@@ -385,7 +385,9 @@ describe('PLAN: activating a plan says what it does, once, on every path (C5-P10
       'screens/PlanDetailScreen.js',
       'screens/PlansScreen.js',
       'screens/ManualBuilderScreen.js',
-      'screens/ProGoalSetupScreen.js',
+      // Item 10: ProGoalSetupScreen left this list because it no longer
+      // activates a plan; Adjust training plan owns every rebuild.
+      'screens/PlanUpdateScreen.js',
     ]) {
       expect(read(f)).toContain('confirmPlanSwitchMidBlock');
     }
