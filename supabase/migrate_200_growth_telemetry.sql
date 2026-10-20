@@ -181,7 +181,7 @@ INSERT INTO public.telemetry_event_catalogue (name, area, signal, description, f
   ('archetype_chosen', 'plan', 'progression', 'A training style was chosen.', '{"archetype":{"type":"enum","values":["balanced","v_taper","x_frame","upper_density","powerbuilder","minimalist"]},"surface":{"type":"enum","values":["onboarding","plan_update","goal_setup"]}}'::jsonb, false, '3.2'),
   ('workout_discarded', 'workout', 'friction', 'A started workout was thrown away.', '{"sets":{"type":"bucket","kind":"count"},"duration":{"type":"bucket","kind":"minutes"}}'::jsonb, false, '3.2'),
   ('workout_abandoned', 'workout', 'friction', 'A workout was left open and found unfinished at a later launch.', '{"age":{"type":"bucket","kind":"age"},"sets":{"type":"bucket","kind":"count"}}'::jsonb, false, '3.2'),
-  ('exercise_swapped', 'workout', 'friction', 'An exercise was swapped during a workout.', '{"scope":{"type":"enum","values":["session","programme"]},"cause":{"type":"enum","values":["constraint","style","choice"]}}'::jsonb, false, '3.2'),
+  ('exercise_swapped', 'workout', 'friction', 'An exercise was swapped during a workout.', '{"scope":{"type":"enum","values":["session","programme"]},"cause":{"type":"enum","values":["style","choice"]}}'::jsonb, false, '3.2'),
   ('workout_session_summary', 'workout', 'progression', 'A finished workout, as counts of what happened in it.', '{"edits":{"type":"bucket","kind":"count"},"swaps":{"type":"bucket","kind":"count"},"rest_timer_uses":{"type":"bucket","kind":"count"},"warmups_added":{"type":"bucket","kind":"count"},"discarded_sets":{"type":"bucket","kind":"count"}}'::jsonb, false, '3.2'),
   ('food_search_empty', 'food', 'friction', 'A food search found nothing.', '{"query_length":{"type":"bucket","kind":"count"}}'::jsonb, false, '3.2'),
   ('food_scan_result', 'food', 'progression', 'A barcode or label scan ended.', '{"method":{"type":"enum","values":["barcode","label"]},"outcome":{"type":"enum","values":["found","not_found","cancelled","saved_custom","error"]}}'::jsonb, false, '3.2'),
@@ -200,7 +200,7 @@ INSERT INTO public.telemetry_event_catalogue (name, area, signal, description, f
   ('challenge_viewed', 'challenge', 'retention', 'An entrant opened their gym challenge.', '{"status":{"type":"enum","values":["upcoming","active","ended","closed"]},"tier":{"type":"enum","values":["main","second","none"]}}'::jsonb, false, '3.2'),
   ('challenge_withdrawn', 'challenge', 'retention', 'An entrant left a gym challenge.', '{}'::jsonb, false, '3.2'),
   ('help_opened', 'app', 'confusion', 'An explanation (info tooltip or help) was opened.', '{"topic":{"type":"code"},"screen":{"type":"route"}}'::jsonb, false, '3.2'),
-  ('feature_seen', 'app', 'exposure', 'A new feature was seen for the first time.', '{"feature":{"type":"enum","values":["start_choice","archetype_cards","warmup_chip","shopping_list_days","raw_cooked_toggle","coaching_setup_card","declined_today_card"]}}'::jsonb, false, '3.2'),
+  ('feature_seen', 'app', 'exposure', 'A new feature was seen for the first time.', '{"feature":{"type":"enum","values":["start_choice","archetype_cards","warmup_chip","shopping_list_days","raw_cooked_toggle","coaching_setup_card"]}}'::jsonb, false, '3.2'),
   ('experiment_exposed', 'app', 'exposure', 'The person was placed in one arm of an A/B test (once per test).', '{"experiment":{"type":"code"},"variant":{"type":"enum","values":["a","b","c","d"]}}'::jsonb, false, '3.2'),
   ('exit_reason_given', 'app', 'retention', 'An optional one-tap reason at a moment of leaving.', '{"moment":{"type":"enum","values":["workout_discard","setup_leave","reminders_off"]},"reason":{"type":"enum","values":["no_time","felt_off","app_problem","just_browsing","too_many_questions","not_ready","too_many_reminders","not_useful","other"]}}'::jsonb, false, '3.2'),
   ('reminders_turned_off', 'app', 'retention', 'A reminder category was switched off.', '{"category":{"type":"enum","values":["checkin","weigh_in","training","meals","community","all","other"]}}'::jsonb, false, '3.2'),
@@ -315,7 +315,8 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   WITH gone AS (
-    DELETE FROM public.engine_telemetry WHERE occurred_at < now() - interval '6 months' RETURNING 1
+    -- By the server's receipt time: a phone's clock can be wrong (review M, 2026-10-20).
+    DELETE FROM public.engine_telemetry WHERE received_at < now() - interval '6 months' RETURNING 1
   )
   SELECT count(*)::int FROM gone;
 $$;
@@ -357,7 +358,7 @@ SELECT DISTINCT ON (user_id) user_id,
        occurred_at AS chosen_at
 FROM public.engine_telemetry
 WHERE event = 'onboarding_path_chosen'
-ORDER BY user_id, occurred_at;
+ORDER BY user_id, occurred_at DESC;  -- the path the person ended up taking
 
 -- Where do people stop in setup? One row per week, mode, step.
 CREATE OR REPLACE VIEW public.v_onboarding_funnel AS
@@ -370,13 +371,22 @@ WITH steps AS (
   FROM public.engine_telemetry e
   WHERE e.event IN ('onboarding_step_viewed', 'onboarding_step_completed')
     AND (e.payload_json->>'step') ~ '^[0-9]+$'
+    -- Current wizard numbering only (wizard 2; D160): a completed step from
+    -- an older wizard numbers its steps differently.
+    AND (e.event = 'onboarding_step_viewed' OR e.payload_json->>'wizard' = '2')
+), finished AS (
+  SELECT DISTINCT user_id FROM public.engine_telemetry WHERE event = 'onboarding_completed'
 )
 SELECT s.week, s.mode, COALESCE(p.path, 'coaching') AS path, s.step,
        count(DISTINCT s.user_id) FILTER (WHERE s.event = 'onboarding_step_viewed') AS users_reached,
-       count(DISTINCT s.user_id) FILTER (WHERE s.event = 'onboarding_step_completed') AS users_completed,
-       round(100.0 * (1 - count(DISTINCT s.user_id) FILTER (WHERE s.event = 'onboarding_step_completed')::numeric
+       -- The last step sends no step_completed: finishing setup completes it.
+       count(DISTINCT s.user_id) FILTER (WHERE s.event = 'onboarding_step_completed'
+                                           OR (s.event = 'onboarding_step_viewed' AND f.user_id IS NOT NULL)) AS users_completed,
+       round(100.0 * (1 - count(DISTINCT s.user_id) FILTER (WHERE s.event = 'onboarding_step_completed'
+                                           OR (s.event = 'onboarding_step_viewed' AND f.user_id IS NOT NULL))::numeric
          / NULLIF(count(DISTINCT s.user_id) FILTER (WHERE s.event = 'onboarding_step_viewed'), 0)), 1) AS drop_pct
 FROM steps s
+LEFT JOIN finished f ON f.user_id = s.user_id
 LEFT JOIN public.v_user_paths p ON p.user_id = s.user_id
 GROUP BY s.week, s.mode, COALESCE(p.path, 'coaching'), s.step;
 
@@ -501,9 +511,9 @@ SELECT s.app_version, s.platform, s.measure, count(*) AS samples,
 FROM samples s JOIN ord o ON o.bucket = s.bucket
 GROUP BY s.app_version, s.platform, s.measure;
 
--- Each person's engagement status (lists people: service role only; the
--- source for targeted surveys through member email, whose own opt-out and
--- ED-flag exclusion still apply).
+-- Each person's engagement status (lists people: service role only). For
+-- understanding how people use the app; not a source for emailing anyone
+-- (review 2026-10-20: that purpose is not disclosed).
 CREATE OR REPLACE VIEW public.v_engagement_status AS
 WITH last AS (
   SELECT user_id, max(day) AS last_active_day FROM public.v_user_activity_days GROUP BY user_id

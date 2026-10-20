@@ -90,12 +90,21 @@ export default function PrivacyPolicyScreen() {
         </Section>
 
         <Section title="Usage data">
+          {/* Growth telemetry (migrate_200, review 2026-10-20): every sentence
+              matches the build: counts and categories only, private screens
+              reported as "Private", nothing before consent except slowness and
+              failures, six months by server receipt time. */}
           <Body>
-            Volyume keeps first-party usage telemetry to see which features get
-            used and where the app is slow: things like which screens open, when
-            a sync runs, and whether a purchase flow completes. It is tied to a
-            pseudonymous account id, not your name, and it never includes your
-            training, food, or body data.
+            Volyume keeps first-party usage data to see which features get used, where people get stuck and
+            where the app is slow. It records which screens open and for how long, when something fails or takes
+            too long, and counts of what happens in the app, such as how many sets a finished workout had or
+            whether you logged food that day. It never includes the content: no weights, foods, amounts, notes,
+            names or messages, and nothing about injuries and limitations or Volyume's wellbeing checks. It is
+            tied to a pseudonymous account id, not your name.
+          </Body>
+          <Body>
+            Before you agree to the health data terms, the only usage data recorded is whether the app was slow or
+            failed. Usage data is kept for six months and then deleted, and it is used only to improve the app.
           </Body>
           <Body>
             We do not use third-party analytics or tracking tools, and we do not
