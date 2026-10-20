@@ -1,6 +1,8 @@
-# Customer-facing proposals, October 2026: Stage 1 (confirm)
+# Customer-facing proposals, October 2026: Stages 1 and 2
 
-Stage 1 only: findings from the code, no prototypes or renders yet. Version 3.2.0. Owner approval needed before Stage 2.
+Stage 2 (before and after) added 2026-10-20 for the items the owner kept. Nothing is built until the owner approves each item.
+
+Stage 1: findings from the code. Version 3.2.0. Owner approval needed before Stage 2.
 
 ## Summary
 
@@ -34,6 +36,47 @@ Stage 1 only: findings from the code, no prototypes or renders yet. Version 3.2.
 | 34 | "Free for life" and other "free" wording | Partly confirmed | wording (strings) + server (grant rule) + docs/legal | n | y only if the grant moves to completion (owner-run) | L | H | 6 |
 | 36 | Calm mode everywhere | Partly confirmed | logic + server (post check) + wording (Settings text) | n | y for the post check; n for handler and Settings text | M (handler + text), L with the server migration | H | 4 |
 | 41 | Over-the-air updates | Partly confirmed | native config (app.json, eas.json) + logic (App.js update alert) | y | n | M | M | 3 |
+
+## Stage 2 summary
+
+| # | Item | Status | Change type | Native code? | Server migration? | Effort | Risk | Prototype branch | Owner questions |
+|---|---|---|---|---|---|---|---|---|---|
+| F1 | Stale form overwrites newer setup | Confirmed (run on the real screen) | logic (form reloads when the saved profile changes) | n | n | S | Low | proposal/10-setup-screens | 1 |
+| F2 | Old weight written back | Confirmed (read, then run) | logic (save write) | n | n | S | Low | proposal/10-setup-screens | 0 |
+| F3 | Add-food default meal (route with no meal) | Built (prototype); no live route found that reaches it | logic (default meal slot) | n | n | part of 22 | part of 22 | proposal/22-diary | see 22 |
+| F4 | Add this day / Add this week card and alert strings | Built (prototype), part of 24 | wording + logic (see 24) | n | n | part of 24 | part of 24 | proposal/22-diary | see 24 |
+| F5 | Tip pointing at a deleted row | Confirmed | wording | n | n | S | Low | none (no code changed) | 1 |
+| F6 | Nutrition Targets: no silent male default | Confirmed | logic (initial state and prefill guard) | n | n | S | Low to Medium | proposal/03-setup-wording | 2 |
+| F7 | "Date of birth" on an age field | Confirmed | wording | n | n | S | Low | none (no code changed) | 0 |
+| F8 | Website still sells Pro | Confirmed | wording (four public pages and the privacy mirror) | n | n | M | Medium | none (no code changed) | 4 |
+| F9 | Update-check error reporting | Partly confirmed (with 41) | logic (stage-tagged error report) | y (with 41) | n | part of 41 | part of 41 | proposal/02-sign-in | see 41 |
+| 2 | Same sign-in options on iPhone and Android | Partly confirmed | logic + UI + native config (iOS plugin option) + console setup | y (iOS plugin option only) | n (dashboard auth settings only) | L | Medium-High | proposal/02-sign-in | 3 |
+| 3 | Training-focus setup step | Confirmed | wording (chip label) + logic (draft-resume clamp) | n | n | S | Low | proposal/03-setup-wording | 3 |
+| 4 | Sensitive questions and "Prefer not to say" for sex | Confirmed (wording) | wording (one line under each field) | n | n | S | Low | proposal/03-setup-wording | 3 |
+| 6 | Coaching autonomy levels | Confirmed (Coached copy); deload branch is not dead | wording (copy) + decision on the deload branch | n | n | S (copy); S to M (deload) | Low (copy); Medium for deload options (b) or (c) | proposal/03-setup-wording | 2 |
+| 8 | "Injuries & limitations" offer on Today | Confirmed | UI (position) | n | n | S | Low | proposal/08-today-settings-community | 1 |
+| 10 | Two screens that change the same setup | Confirmed; prototyped | UI + logic (save order, form reload) | n | n | M-L | Medium | proposal/10-setup-screens | 4 |
+| 11 | Settings layout, reminders, units, haptics | Confirmed | UI (grouping, new Units screen) + wording; haptics switch (logic) | n | n | M | Low to Medium | proposal/08-today-settings-community | 3 |
+| 12 | Ticks and confidence that don't match the data | Confirmed; prototyped | wording + UI (neutral marks, suppression) | n | n | S to M | Low-Medium | proposal/12-ticks-decisions | 2 |
+| 14 | One set of words and colours for muscle-volume status | Confirmed; built as prototype | wording + UI (colour tokens) | n | n | M | Low-Medium | proposal/14-volume-instructions | 3 |
+| 15 | Coaching decision explanations | Prototyped (main decision types) | wording + UI (card rows, collapse rule, footer) | n | n | M | Medium | proposal/12-ticks-decisions | 3 |
+| 16 | Rename "Help" in the exercise card | Confirmed | wording (plus 2 pinned test edits) | n | n | S | Low | none (no code changed) | 0 |
+| 17 | Weight and rep suggestions in the logger | Confirmed | logic (layoff, topped hold, recovery anchor) + wording (reason text) | n | n | M | Medium | proposal/17-suggestions | 5 |
+| 18 | Make exercise instructions easier to find | Built (prototype) | UI (header icon) + wording (two Watch lines) | n | n | S | Low | proposal/14-volume-instructions | 0 |
+| 22 | Empty "Meal 1-4" cards in the diary | Confirmed | UI (view-only folding and labels) + logic (slot fold) | n | n | M | Medium | proposal/22-diary | 1 |
+| 23 | Seasoning tips in the diary | Confirmed | wording (tip text) + logic (planned rows only) | n | n | S | Low | proposal/22-diary | 0 |
+| 24 | "Add this day / Add this week" skip rule | Partly confirmed | wording (card and alerts) + logic (skip and replace rules, toast) | n | n | M | Medium | proposal/22-diary | 1 |
+| 25 | Weekly cap on oily fish in meal plans | Confirmed; prototype built | logic (engine cap; setting UI not built) | n | n | M | Medium | proposal/25-meal-plans | 3 |
+| 26 | Meal plan readability | Confirmed; prototype built | wording + UI (number format, hint, button) | n | n | S | Low | proposal/25-meal-plans | 1 |
+| 27 | More raw/cooked weight conversions | Partly confirmed; prototype built | logic (pair data) + wording (label) | n | n | S | Low | proposal/25-meal-plans | 1 |
+| 28 | Taps to log a repeat meal | Not confirmed on a device (inferred) | UI (navigation only) | n | n | S | Low | proposal/22-diary | 0 |
+| 30 | Privacy and transparent coaching in the app's own words | Confirmed | wording (Welcome lines) | n | n | S | Medium | none (no code changed) | 2 |
+| 31 | Community defaults | Confirmed, with one correction to Stage 1 | UI + logic (feed and audience defaults) + wording | n | n | S to M | Medium | proposal/08-today-settings-community | 2 |
+| 32 | Challenge screen | Built (prototype) | UI (footer padding, board title) | n | n | S | Low | proposal/14-volume-instructions | 1 |
+| 34 | "Free for life" and other "free" wording | Partly confirmed | wording (strings; grant rule not in this batch) | n | n (not in this batch) | S now; L with the rule | High | none (no code changed) | 2 |
+| 36 | Calm mode everywhere | Partly confirmed | wording (Settings text only) | n | n | S | Low | none (no code changed) | 2 |
+| 41 | Over-the-air updates | Partly confirmed | native config (app.json, eas.json) + logic (App.js update check) | y | n | M | Medium | proposal/02-sign-in | 3 |
+| 20 (checklist only) | Rest timer when the phone is locked | Checklist only; behaviour already in the repo | none (verification checklist) | n | n | S | Low | none | 0 |
 
 ## 02. Same sign-in options on iPhone and Android
 Status: Partly confirmed (code side confirmed; Supabase dashboard and Google/Apple console state is not in the repo, so Not confirmed)
@@ -1507,3 +1550,1716 @@ Status: Partly confirmed (no-URL runtime behaviour not confirmed; node_modules a
 - App.js:653-655 update-check failures not reported to Sentry.
 - SessionSheets.js:719 "Use exercise options for form tips…" points at a deleted row (:765-768).
 - migrate_201 header says applied 2026-10-20 (not verified; CLAUDE.md status agrees).
+
+# Stage 2: before and after
+
+## F1. Stale form overwrites newer setup
+Status: Confirmed by running the real screen (harness repro), not only by reading.
+Evidence: Before: `c2-repro-before.log` (Coach form: save after another screen changed days to 5 writes days 4; test "F1" fails: Expected 5, Received 4). `c2-repro-before-trainform.log` (Train form left mounted, store profile changes days 4 to 5, the form still shows 4: Expected 5, Received 4). After: `c2-repro-after.log`, 4 passed. Honesty note: the harness's `useFocusEffect` mock fires when the callback identity changes, so "focus regained" is emulated by the profile change re-running the effect; the real navigator also fires it on each focus.
+Before: form fields are seeded once at mount (ProGoalSetupScreen.js 139-232, PlanUpdateScreen.js:109-137); the bottom-tab stack keeps the form mounted.
+After: both screens call `useFocusEffect` and reload every field from the profile when `setupFormSignature(userProfile)` differs from the signature they last seeded (`src/lib/setupFormSeed.js`). An unchanged profile never reseeds, so edits survive a trip to a sub-screen (Avoided movements, the preview sheet). The Coach form additionally builds `updatedProfile` on `useAppStore.getState().userProfile` and no longer writes training keys.
+Not changing: the signature covers only setup fields; name, weight etc. never trigger a reseed.
+Files: src/lib/setupFormSeed.js (new), ProGoalSetupScreen.js, PlanUpdateScreen.js.
+Safety and privacy: none touched. Data/sync/migrations: none. Native: no. Server migration: no.
+Tests: as above (new unit + repro). Effort S. Risk Low: a form in progress is replaced only when the saved profile actually changed.
+Questions: none. Known limit: if the person has unsaved edits AND the profile changed elsewhere, the saved profile wins silently. Should a line say so? (owner call)
+
+---
+
+## F2. Old weight written back
+Status: Confirmed (read, then run).
+Evidence: ProGoalSetupScreen.js (pre-change) 585-587 writes `{...wp, weightKg: latestWeightKg}`; 643 then saves `updatedProfile`, built at 463 from the render-time `userProfile`, so `weightKg` goes back to the enrolment value. Run: persona with profile weight 60 and logged weigh-ins about 82.29: `WRITES weightKg/days: [[82.29,4],[82.29,4],[82.29,4],[60,4],[60,4],[60,4]]` in `c2-repro-before.log`; the last write is 60; test "F2" fails. After: test passes (last write is the weigh-in).
+Before / After: before the final profile save carries the enrolment weight; after `updatedProfile.weightKg = latestWeightKg` is set whenever it differs, and the profile spread is the latest stored one.
+Not changing: the EWMA / latest-weight choice for the calculation; the intermediate write-back (kept, now consistent).
+Safety: the weight feeds the target calculation, whose floors are untouched. Weight figures are still not shown under calm (no display added).
+Data/sync: profile write only. Native/migration: no/no. Tests: repro + `setupFormSeed.test.js` guard. Effort S. Risk Low.
+Questions: none.
+
+---
+
+## F5. Tip pointing at a deleted row
+
+Status: Confirmed. Owner answer: "remove it or point at the exercise name" (Fix regardless).
+
+Evidence:
+- `src/components/workout/session/SessionSheets.js:719` (inside the "How logging works" alert) says "Use exercise options for form tips, warm-ups, swaps and session settings."
+- The "Exercise info" row was deleted (`SessionSheets.js:765-767`). Form guidance now opens from tapping the exercise name (`ActiveWorkoutScreen.js:6362` `onPressHeader={handleOpenExerciseDetails}`), which shows the structured instructions (`SessionSheets.js:1110-1116`).
+- The exercise options menu holds warm-ups, swaps and session settings, not form tips (Stage 1 16 list).
+- Pinned: `src/__tests__/ActiveWorkoutScreen.usability.guard.test.js:139`.
+
+Before (exact): `Use exercise options for form tips, warm-ups, swaps and session settings.`
+After, option A (proposed): `Use exercise options for warm-ups, swaps and session settings. Tap the exercise name for form tips.`
+After, option B (alternative): `Use exercise options for warm-ups, swaps and session settings.`
+
+Not changing: the rest of the alert body (`Enter weight and reps, then tap the check when done.`).
+
+Files: `src/components/workout/session/SessionSheets.js:719`; test `src/__tests__/ActiveWorkoutScreen.usability.guard.test.js:139` (edit to the new string).
+
+Safety and privacy: none touched.
+Data, sync, migrations: none. Native: no. Server: no.
+Tests: one pinned edit (above). Baseline not run for this suite (outside the 11 suites); run it after the edit.
+Effort: S. Risk: Low.
+Questions for the owner: Q-F5: option A or option B.
+
+---
+
+## F6. Nutrition Targets: no silent 'male' default
+
+Status: Confirmed. Owner answer quoted: "NutritionTargetsScreen.js:405 sex defaults to 'male': show nothing until profile loaded; no silent defaults." Interpretation I implemented: the two pills show nothing selected until the profile has loaded, and stay unselected if the profile holds no sex; the person then chooses. A tap before the load finishes is ignored. If you meant hiding the pills altogether until loaded, that is question 1.
+
+Evidence: `const [sex, setSex] = useState('male')` (NT:405). The prefill sets it only `if (profile?.sex)` (NT:597). So a profile with no sex, a failed profile read, or a tap-through before the read finishes all calculate as male. The calculation is gated by `formComplete` (NT:653), which only requires `sex` truthy, so the default silently satisfies the gate. A male default raises the calorie floor (1500) and the FFM fraction (0.78) in `nutritionEngine`, so the silent default is not neutral for a female or unknown-sex profile.
+
+Before and after, behaviour table (real names):
+
+| Scenario | Today | Proposed |
+|---|---|---|
+| Screen opens, `getUserBodyProfile` not yet returned | `sex === 'male'`, Male pill selected | `sex === null`, neither pill selected; a tap on a pill is ignored until `profileLoaded` |
+| Profile loads with `sex: 'female'` | Female selected (replaces default) | Female selected |
+| Profile loads with `sex: 'male'` | Male selected | Male selected |
+| Profile loads, no sex (legacy or quick-start account) | Male stays selected; `formComplete` true once age, height, weight, consent filled; targets calculate as male without the person choosing | Neither selected; `formComplete` false (`sex &&` at NT:653) so "Set my targets" / "Calculate targets" stay disabled until the person picks |
+| Profile read throws or `user.id` missing | Male selected | Neither selected, `profileLoaded` set in `finally`, person chooses |
+| Stored value not male/female (e.g. `'other'`) | `setSex('other')`, no pill selected, `formComplete` true (truthy) | Ignored (only exactly `'male'` or `'female'` accepted), neither selected, `formComplete` false |
+| Collapsed summary line ("Male · 29 · 5 ft 11 in ...") when `sex` is unset | Would print "Female" (any non-male) | Prints the line without a sex part |
+| Female nutrition awareness card (`femaleNutritionAwareness(sex)`, NT:1914 at base) | `sex` always set | returns null for null, card not shown (unchanged helper) |
+| Calm mode / open ED flag | n/a to this field | Unchanged. Sex has no safety-state dependence; the full form still hides Training status under `suppressed` |
+
+Renders: fresh account, quick card, where the default shows: ![F6-before-nt-quick-fresh.png](img/F6-before-nt-quick-fresh.png) (Male selected) and ![F6-after-nt-quick-fresh.png](img/F6-after-nt-quick-fresh.png) (none selected). Full form, normal / calm / open ED flag for the persona (whose profile does hold a sex, so Male is selected before and after; these prove nothing else changed and that the new lines sit correctly in each state): ![F6-before-nt-full-normal.png](img/F6-before-nt-full-normal.png) / ![F6-after-nt-full-normal.png](img/F6-after-nt-full-normal.png), ![F6-after-nt-full-calm.png](img/F6-after-nt-full-calm.png), ![F6-before-nt-full-calm.png](img/F6-before-nt-full-calm.png), ![F6-after-nt-full-edflag.png](img/F6-after-nt-full-edflag.png), ![F6-before-nt-full-edflag.png](img/F6-before-nt-full-edflag.png). In calm and ED states Training status and its line are absent and "Aggressive cut" is filtered, same as before.
+
+Not changing (calorie-adjacent, stated so you can see where the line is): `calculateNutritionTargets`, `kcalFloorForSex`, FFM floor, rapid-loss gate, energy-availability caution, `strictestBounds`, `floorInputsFromProfile`, `applyChoiceToResults`, `handleCalculate` (its first line `if (!formComplete) return;` already blocks a null sex and is untouched), consent gate, every default other than sex (activity 'moderate' is not touched; see questions). No floor or ED file is edited.
+
+Files: `src/screens/NutritionTargetsScreen.js` only (initial state, `profileLoaded`, prefill guard, two `onSelect`s, summary line).
+
+Safety and privacy: this change can only make the calculation refuse to run until sex is chosen; it removes a path where the male floor and FFM fraction applied by accident. It adds no new input to any engine call. ED states rendered above.
+
+Data, sync, migrations: none. Native: no. Server migration: no.
+
+Tests: new `src/screens/__tests__/NutritionTargetsScreen.noSexDefault.test.js` (4 tests, real screen with the data boundary mocked): neither pill selected and a tap ignored before load; no-sex profile leaves both empty then a tap chooses; male and female profiles show correctly; `'other'` is not shown as a choice. Verified to fail on the old screen: against base `NutritionTargetsScreen.js` 2 of the 4 fail (the two that assert "nothing selected"), the other two pass on both. After: 4 of 4 pass. Existing NT tests: `NutritionTargetsScreen.rangeValidate.test.js` had to change (it never chose a sex and relied on the default; its helper now taps "Male" first); the others (`returnTo`, `energySlider`, guards) pass unchanged. Files: also `src/screens/__tests__/NutritionTargetsScreen.rangeValidate.test.js`.
+
+Effort: S. Risk: Low to Medium. Main risk: a person with a legacy profile now has to tap a pill once on this screen; nothing else changes for anyone whose profile has a sex.
+
+Questions for the owner:
+1. "Show nothing": pills visible but unselected (built), or pills hidden until the profile has loaded?
+2. This screen still defaults `activity` to 'moderate' and `bfSource` to 'visual' before prefill. Not touched (not sex, and activity feeds TDEE). Want the same "no silent default" treatment there? It is a separate calorie-adjacent change.
+
+---
+
+## F7. "Date of birth" on an age field
+
+Status: Confirmed.
+
+Evidence:
+- `src/screens/SettingsProfileScreen.js:288` label "Date of birth".
+- `src/screens/SettingsProfileScreen.js:289` sub "Enter your age. Used for calorie floors and nutrition targets."
+- The stored value is an age: the comment at `SettingsProfileScreen.js:149-150` says "captured as age everywhere in the app (there is no date picker)".
+- No test pins "Date of birth". The only other occurrence in src is a code comment (`src/lib/effectiveMaintenance.js:121`).
+
+Before / After:
+
+| file:line | Before | After |
+|---|---|---|
+| src/screens/SettingsProfileScreen.js:288 | `Date of birth` | `Age` |
+
+Not changing: the sub line at :289 (already says age), storage, calculations.
+
+Files: `src/screens/SettingsProfileScreen.js:288`.
+Safety and privacy: none touched (it is a health-adjacent field label; the wording makes it more accurate).
+Data, sync, migrations: none. Native: no. Server: no.
+Tests: none pinned. Optional: a source guard that the Profile label reads "Age".
+Effort: S. Risk: Low.
+Questions: none.
+
+---
+
+## F8. Website still sells Pro
+
+Status: Confirmed. The live pages describe Free and Pro tiers, prices (£2.99/month, £19.99/year), a 14-day trial, Restore Purchases and refunds. The app is fully free (D137, `src/lib/proGate.js` `FULL_ACCESS_FOR_ALL = true`). Nothing in the copy may promise the app stays free.
+
+Evidence and before / after, per file.
+
+### public/index.html (homepage)
+
+| # | file:line | Before (exact) | After (exact) |
+|---|---|---|---|
+| H1 | :203 | `<p>Log your sessions and, on Pro, your food. The local database on your device is the source of truth.</p>` | `<p>Log your sessions and your food. The local database on your device is the source of truth.</p>` |
+| H2 | :255 | `<p class="lead">The training core is free and permanent, a real product on its own. Nutrition and the weekly coaching decision are Pro.</p>` | `<p class="lead">Volyume is free. Training, nutrition and the weekly coaching decision are all included in one app.</p>` |
+| H3 | :257-268 (the Free plan card) | kicker `<h3>Free</h3><span class="price">Always free</span>`; `<p class="desc">The training core, permanent.</p>`; list of six items (Full workout logging; Plan library, 31 built-in training plans; Custom plan building; Exercise library, 551 exercises plus your own; Training history; Personal bests and progress tracking) | Single card: kicker `<h3>Free</h3><span class="price">Free</span>`; `<p class="desc">Everything in Volyume, in one app.</p>`; list = the six items above plus the seven Pro items (Nutrition, macros and food diary; Barcode scanning; Over 29,000 UK foods, searchable offline; Meal planning; Progress Scan, a progress score from your own photos; Weekly Precision Coaching, the change-or-hold decision; Advanced progression) |
+| H4 | :269-283 (the Pro plan card, `class="plan pro"`) | whole card: `£2.99/month or £19.99/year`, "Everything nutrition and coaching." and its list | deleted |
+| H5 | :286-296 (`<!-- TRIAL -->` section "Trying Pro", trial-box, two paragraphs and fine print) | "Start with 14 days of full Pro, no card needed..." and the two paragraphs and "The price Google Play shows at the point of purchase is the one that applies." | whole section deleted |
+| H6 | :93 and :102-107 (CSS) | `.plan.pro{...}`; `.trial-box`, `.trial-box p`, `.trial-box p:last-child`, `.trial-box .concise`, `.trial-box .fine` | deleted (dead after H4 and H5). `.plan .price` at :96 stays (used by the Free card). |
+| H7 | :357-370 (HTML comment block shipped in the page) | QA notes including "Free: ...", "Pro: ...", `Pricing "£2.99/month or £19.99/year"`, "Google Play price at purchase is authoritative", "Trial wording (14-day cardless in-app + 7-day store offer, up to 21 days, cancel any time)", "barcode scanning is Pro (never free)" | delete the nine lines that name Pro, price, trial or "never free"; keep the rest of the comment |
+
+Kept unchanged on the homepage: the "What it looks like" section, the Steps section, "Privacy: no adverts" style lines, and the `<!-- deploy -->` comment at the foot.
+
+### public/support/index.html
+
+| # | file:line | Before (exact) | After (exact) |
+|---|---|---|---|
+| S1 | :7 meta description | `Help with Volyume: getting started, Pro subscriptions, billing, your data, and how to contact us.` | `Help with Volyume: getting started, your data, and how to contact us.` |
+| S2 | :83 intro | `Help with Volyume — getting started, your Pro subscription, billing, your data, and how to reach us.` | `Help with Volyume — getting started, your data, and how to reach us.` |
+| S3 | :88 | `Create an account, answer the onboarding questions about your training and goals, and Volyume builds your plan. The free tier includes the plan library, training builder, workout logging, the exercise library, personal bests, and progress stats.` | `Create an account, answer the onboarding questions about your training and goals, and Volyume builds your plan. Everything in Volyume is free, including the plan library, training builder, workout logging, the exercise library, personal bests and progress stats.` |
+| S4 | :89 | `Pro adds the food diary, barcode scanning, smart meal suggestions, nutrition targets and macros, steps, weekly check-ins, and the Precision Coaching adjustments that adapt your plan as you go.` | `It also includes the food diary, barcode scanning, smart meal suggestions, nutrition targets and macros, steps, weekly check-ins, and the Precision Coaching adjustments that adapt your plan as you go.` |
+| S5 | :92-99, section "2 Your Pro subscription" | heading `Your Pro subscription`; "Pro is available monthly or annually, and starts with a free trial. You can use everything in Pro during the trial, and you are reminded before it converts to a paid subscription."; two bullets (Monthly, Annual); "Prices are shown in your local currency at the point of purchase. Your subscription is billed by the App Store on iPhone and by Google Play on Android, and managed there." | heading `Subscriptions`; body `Volyume has no subscription and no price to pay. Nothing in the app asks you to pay.` Legacy text is kept only if Q-F8-1 says yes (see below). |
+| S6 | :103-109, section "3 Manage, cancel, or change your plan" | "Subscriptions are controlled by the store..."; iPhone and Android bullets; "Refunds are handled by the store: Apple via reportaproblem.apple.com, Google via the Play Store order history." | section deleted. Kept only as legacy text if Q-F8-1 says yes. |
+| S7 | :113-115, section "4 Restore a purchase" | "If you reinstall the app or switch devices, open the Subscription screen in Volyume and tap Restore Purchases. ... and Pro will return." | section deleted (no restore screen is registered; Stage 1 34). Kept only as legacy text if Q-F8-1 says yes. |
+| S8 | :129, section 7 "Delete your account" | `If you have an active subscription, cancel it in the App Store or Google Play (step 3) so it does not renew.` | `If you have ever paid for Volyume through the App Store or Google Play, cancel it there so it does not renew.` Only if Q-F8-1 says yes; otherwise delete the sentence. |
+| S9 | section numbers | 1, 2, 3, 4 are removed or replaced; 5, 6, 7 renumber to 2, 3, 4 | renumber; check "(step 3)" references |
+
+Legacy text (use only if Q-F8-1 = yes), exact:
+> If you bought Volyume Pro before it became free, your subscription is managed in the App Store or Google Play: open Settings, tap your name, then Subscriptions, then Volyume on iPhone; or open the Play Store app, tap your profile, then Payments and subscriptions, then Subscriptions, then Volyume on Android. Cancelling stops the next renewal.
+
+### public/privacy.html, public/privacy/index.html, docs/web/privacy.html (three identical copies)
+
+Byte-identical today. Tests require them to stay identical (`memberEmailWebsite.guard.test.js:287`, `privacyTruth.guard.test.js` "three hosted HTML copies"). Apply every edit to all three.
+
+| # | line | Before (exact) | After (exact) |
+|---|---|---|---|
+| P1 | :160 | `<li>Apple App Store and Google Play for subscription purchases</li>` | Delete the line, if Q-F8-2 says there are no legacy purchases. If there are, keep it unchanged. |
+| P2 | :185 | `... Your explicit consent, which you give when you join. Joining a challenge also keeps Volyume free for you for life.` | `... Your explicit consent, which you give when you join. Completing a challenge [rule pending owner Q1] also earns Volyume free for you for life.` |
+| P3 | :192 | `We keep one thing after deletion: a one-way hash of your email address, held only to stop the 14-day free trial being restarted by deleting and re-registering. ...` | Owner decision Q-F8-3. Proposed text, if the hash is kept: `We keep one thing after deletion: a one-way hash of your email address, held to [purpose stated by the owner]. It holds no readable email or other personal data, and is never used to contact you or rebuild your account.` If the hash is no longer written, delete the sentence. The code still writes it on deletion (`supabase/migrate_097_deletion_log_anonymise.sql`, `user_email_hash`); this batch does not change that. |
+| P4 | :214 | `If we discover an account belongs to someone under 13, we delete the account and refund any active subscription.` | If Q-F8-1 says no legacy subscribers: `If we discover an account belongs to someone under 13, we delete the account.` If yes: keep unchanged. |
+
+Not changing: the default-on Community sharing paragraphs (pinned by privacyTruth.guard.test.js), the Article 9 and consent text, support addresses.
+
+### public/privacy-policy.md (not in the four pages, same sentences; listed for completeness)
+- :104 same sentence as P2 (edit identically).
+- :73 table row `| Apple App Store / Google Play | Subscription purchases | ... |` follows Q-F8-2.
+- :126 same as P4 (follows Q-F8-1).
+
+Safety and privacy (F8):
+- No safety rule, calorie, ED or consent text is touched. The privacy copy edits are legal wording, so the owner signs off the legal lines (Q-F8-2 to Q-F8-4).
+- The hash line (P3) describes a data-retention step. This batch does not change what is stored.
+
+Data, sync, migrations: none in this batch. Server behaviour for the hash is not changed. Native: no. Server: no.
+
+Tests affected:
+- `src/screens/__tests__/privacyTruth.guard.test.js`: forbidden-phrase list (lines 84-97) and default-on Community disclosure (identical copies). New copy must not use "Physique Scan metadata", "Download my data", "RevenueCat", etc. The new copy does not.
+- `src/__tests__/memberEmailWebsite.guard.test.js:287`: identity of public/privacy/index.html and the two other copies.
+- `src/__tests__/marketingClaimsGuard.test.js:60`: reads public/get/index.html (see item 34 row 14), not the homepage.
+- No test reads public/index.html or public/support/index.html.
+- Baseline: the suites above PASS on the unchanged tree.
+
+Effort: M (about 40 lines across 4 files plus the mirror). Risk: Medium. Main risk: legal wording in the privacy pages (P1 to P4) and the legacy-subscriber question.
+
+Questions for the owner:
+- Q-F8-1: Did any user pay for Pro before it became free (App Store or Google Play subscriptions still active or in the refund window)? (a) No, delete the legacy text in S5 to S8 and P1 and P4. (b) Yes, keep the legacy paragraph and the store and refund lines. Which?
+- Q-F8-2: Are there any store purchases left to process? If none, delete the processor line (P1, :73 in privacy-policy.md). If some, keep the line.
+- Q-F8-3: The trial-abuse hash (P3): (a) keep it and name its purpose, (b) stop writing it (server change, not in this batch) and delete the sentence.
+- Q-F8-4: Refund wording (S6, P4): only needed under Q-F8-1 (b). Confirm the refund wording with the store's current policy, not from this repo.
+
+---
+
+## 2. Same sign-in options on iPhone and Android
+
+Status: Partly confirmed. Code side confirmed. The Supabase dashboard, Google Cloud and Apple Developer state are not readable from the repo, and I cannot read them.
+
+### Evidence
+- `src/components/auth/OAuthButtons.js:41` Apple only when `Platform.OS === 'ios'`; `:70` Google only when `Platform.OS !== 'ios'`; comment `:65-69` gives "failed to determine clientID" as the reason.
+- `src/lib/supabase.js:574` `GoogleSignin.configure({ webClientId })`, no `iosClientId` anywhere. `:637` `signInWithApple` already falls back to `_signInWithOAuthProvider('apple')` on non-iOS, so Apple-on-Android needs no new app code, only the button and console setup.
+- `app.json:254` Google plugin is a bare string, no options.
+- No `linkIdentity`, `unlinkIdentity`, `getUserIdentities` or `updateUser` in `src` or `App.js`. `authDeepLink.js:168` `setSession` only signs the person in after a reset link; `AuthSheet.js:262-268` says "request half only".
+- `SettingsAccountScreen.js:25` shows only `user?.email || 'Signed in'`.
+- Installed supabase-js is declared `^2.43.4` (`package.json:85`). `node_modules` is the main checkout's, so I did not verify the installed minor. Check the installed version has `linkIdentity` and `unlinkIdentity` before building (INFERRED they exist in 2.4x; `getUserIdentities` may be later, and `user.identities` from `getUser()` is the fallback).
+
+### Owner answers implemented
+- "(a) Apple on Android plus linking." Apple button on Android; Google button on iPhone; both everywhere.
+- "(b) rely on Supabase automatic linking for same verified email; report the current dashboard setting; for a different email (Apple relay) show on sign-in screen: 'If you signed up with Apple, use Apple to sign in.'"
+- "Owner does all three setups." Steps below.
+- "Yes: reset link lets people set a new password (new screen + updateUser)."
+- "Yes, remove a method, never the last."
+
+### Dashboard setting: what I can and cannot say
+I cannot read the Supabase dashboard auth settings, so whether same-email automatic linking is on for this project is NOT CONFIRMED. The repo has no auth config file (`supabase/` holds migrations only). INFERRED from Supabase's documented default only: a sign-in whose provider returns the same verified email attaches to the existing user. The owner checks it in Supabase dashboard > Authentication > Sign In / Providers (the "User Signups" / account linking area; wording moves, so look for "Allow manual linking" and any automatic-linking note) and on each provider's page for "Confirm email". Manual linking (needed for the Sign-in methods section) is a separate switch, "Enable manual linking" in the same Authentication settings.
+
+### Before and after: screens (annotated wireframes)
+Before, iPhone sign-in sheet (`AuthSheet.js` via `OAuthButtons`):
+```
+[ Continue with Apple (native white button) ]
+[ Continue with email ]
+```
+Before, Android:
+```
+[ G  Continue with Google ]
+[ Continue with email ]
+```
+After, both platforms (prototype, `OAuthButtons.js`):
+```
+[ Continue with Apple ]        (native button on iPhone, styled button on Android)
+[ G  Continue with Google ]
+If you signed up with Apple, use Apple to sign in.     (muted caption, new `note` prop, passed by AuthSheet)
+[ Continue with email ]  /  Forgot your password?
+```
+Prototype note: `type.caption` is not confirmed to exist in `theme.js`; the real build must pick an existing type token (`docs/rules/styling.md`). The same component is used by `ProOnboardingScreen.js:2518` (account step) and dormant `ProUpgradeScreen.js:572`; both inherit both buttons, so the onboarding account step also changes. The `ProUpgradeScreen.oauth.guard` regex still passes.
+
+### Before and after: strings
+| Where | Before | After |
+|---|---|---|
+| `OAuthButtons.js:41,70` | Apple iOS only, Google non-iOS only | both on both |
+| AuthSheet, under the buttons (new) | none | "If you signed up with Apple, use Apple to sign in." |
+| `SettingsAccountScreen.js` new section | none | "Sign-in methods": rows "Apple", "Google", "Email and password", each "Connected" or "Connect"; "Disconnect" on a connected row |
+| Disconnect when only one left | n/a | row shows no Disconnect; sub text "This is your only way to sign in." |
+| Disconnect confirm (new) | n/a | title "Disconnect Google?" body "You will no longer be able to sign in with Google. You can connect it again later." buttons "Cancel" / "Disconnect" |
+| New screen "Choose a new password" | none | title "Choose a new password"; fields "New password", "Confirm new password"; button "Save password"; success toast "Password saved."; error "That did not work. Try again, or request a new link." |
+
+Sign-in methods wireframe (Account):
+```
+Sign-in methods
+  Apple              Connect
+  Google             Connected    Disconnect
+  Email and password Connected    (only method? then no Disconnect)
+```
+Linking mechanics (INFERRED, verify against installed supabase-js): `supabase.auth.linkIdentity({provider})` uses the browser OAuth flow, so linking Google on an iPhone goes through web OAuth, not the native sheet. Unlink is `unlinkIdentity(identity)`; Supabase itself refuses when only one identity remains, and the UI also hides the button. Email as a method is added with `updateUser({ email, password })`, which sends a confirmation mail (not linkIdentity).
+
+Set-new-password screen (prototype not built, outline): opened from the recovery deep link once `authDeepLink.js:168` has signed the person in (`action: 'signedIn'` with the recovery kind from `authCallbackState`, :127-145). The handler routes to the new screen instead of Home; the screen calls `supabase.auth.updateUser({ password })`. It must stay behind RootNavigator's consent gate and must not be reachable without a session. Use existing password rules from `EmailPasswordFields.js`. Lib wrapper in `supabase.js`, never a screen calling the client directly.
+
+### Phone-switch scenarios: today vs proposed
+| Scenario | Today (function) | Proposed |
+|---|---|---|
+| Google on Android, now iPhone | iPhone shows Apple + email (`OAuthButtons.js:41,70`). No Google. Reaches the account only by Apple returning the same real email AND the project auto-linking (NOT CONFIRMED), else a new empty account | Google button on iPhone (`signInWithGoogle` with `iosClientId`). Same Google account, same user. Needs owner Google iOS setup |
+| Apple, real email, iPhone, now Android | Google + email only. Reaches the account only if Google returns the same email and auto-link is on | Apple button on Android (`signInWithApple` -> `_signInWithOAuthProvider('apple')`). Same Apple identity, same user. Needs Apple Services ID setup |
+| Apple "Hide my email", iPhone, now Android | No route. Google returns a different email, so a separate empty account | Sign in with Apple on Android gives the same Apple identity (the relay address is stable per app/team), so same account. Note under buttons tells people to use Apple. If they have already made a second Google account, auto-linking cannot merge it (different email). Not solved, see question 1 |
+| Email account, either phone | Email form works. Reset link signs them in, no way to set a password | Same, plus the set-new-password screen after a reset link |
+| Apple or Google account asks "Forgot password" | Reset email goes nowhere useful (INFERRED, no password) | Unchanged. Note under buttons is the only cue |
+| Signed in, wants a second method | Not possible | Account > Sign-in methods > Connect (`linkIdentity`), needs manual linking enabled. Gives one user with several methods, which is also how an Apple-relay person can add Google or email on the phone they still have |
+
+Honest limit: nothing in the app can merge two accounts that already exist. A person who made a second empty account before this change keeps two accounts. Linking works only from a signed-in session.
+
+### Owner setup steps (exact; none done by me)
+Dashboard names move, so match by label.
+1. Google iOS client ID (Google Cloud Console, project that holds the existing web client)
+   1. APIs and Services > Credentials > Create credentials > OAuth client ID > Application type iOS.
+   2. Bundle ID `app.volyume` (`app.json:24`). Save; copy the iOS client ID and the "iOS URL scheme" (reversed client ID, `com.googleusercontent.apps.<id>`).
+   3. Give me the iOS client ID and URL scheme. I put the client ID in `GoogleSignin.configure({ webClientId, iosClientId })` (`supabase.js:574`) and the scheme in `app.json` as the plugin option `["@react-native-google-signin/google-signin", { "iosUrlScheme": "<scheme>" }]` (native change).
+   4. Supabase dashboard > Authentication > Sign In / Providers > Google > "Authorized Client IDs": add the iOS client ID after the web client ID, comma separated. Keep the nonce setting as it is today (INFERRED: the native sheet and `signInWithIdToken` need the client ID listed; verify against current Supabase Google docs).
+2. Apple Services ID and key for Android (Apple Developer account)
+   1. Identifiers > register a Services ID (for example `app.volyume.signin`), enable Sign in with Apple, Configure: primary App ID the existing `app.volyume`; Domains `<project-ref>.supabase.co`; Return URL `https://<project-ref>.supabase.co/auth/v1/callback`.
+   2. Keys > create a key with Sign in with Apple enabled for `app.volyume`; download the `.p8` once; note Key ID and Team ID.
+   3. Supabase > Authentication > Providers > Apple: enable; Client IDs = existing iOS bundle ID `app.volyume` plus the Services ID; paste the generated client secret (JWT built from the .p8, Key ID, Team ID, Services ID). INFERRED from Supabase docs: this secret expires after at most 6 months, so the owner needs a recurring reminder to regenerate it. If it lapses, Apple sign-in fails on Android only (the native iPhone path uses the ID token and is not affected, INFERRED).
+   4. Supabase > Authentication > URL Configuration: confirm `volyume://` is in Redirect URLs (the Google web flow comment at `supabase.js:477-481` already assumes it).
+3. Supabase identity linking
+   1. Authentication settings: check and report the current automatic-linking behaviour (I cannot read it).
+   2. Turn on "Enable manual linking" (needed for `linkIdentity`/`unlinkIdentity`).
+   3. Confirm email confirmation is required for email sign-ups; automatic same-email linking is only safe when providers return verified emails.
+   4. Tell me what you see before I build.
+
+### Native/config flags
+| Change | Native? |
+|---|---|
+| Google on iPhone: `iosUrlScheme` plugin option in `app.json` | YES, config change, needs a new iOS build |
+| `iosClientId` in `GoogleSignin.configure` | JS only, but useless without the build above |
+| Apple on Android | No native code. Button + owner console only. Ships OTA once the runtime matches |
+| Sign-in methods section, new password screen | JS only |
+| Supabase and provider settings | Dashboard, not repo |
+
+### Not changing
+Consent gate order, identity lock (no anonymous, sign-out wipe), `user_id` never mutated by linking, Apple button stays on iPhone (Guideline 4.8), email/password stays, `AUTH_COPY.duplicate`.
+
+### Files
+`src/components/auth/OAuthButtons.js`, `AuthSheet.js`, `src/screens/SettingsAccountScreen.js`, `src/lib/supabase.js`, `src/lib/authDeepLink.js` (route recovery to the new screen), new `SetNewPasswordScreen.js` + registration, `app.json`, the stale comment at `ProOnboardingScreen.js:2511-2515`.
+
+### Safety and privacy
+Consent gate untouched (all new paths land in RootNavigator). Identity lock kept. EU residency: token exchange with Supabase Dublin only; Apple and Google are the identity providers already used. No telemetry events added. Calorie/ED/calm rules not touched. No new dependencies.
+
+### Data, sync, migrations
+No local schema, no sync change, no migration. Auth settings are dashboard-only.
+
+### Native code: yes (iOS plugin option only). Server migration: no.
+
+### Tests
+- Changed in the prototype: `src/components/auth/__tests__/authForm.test.js` "iOS hides Google (no iOS client id) and keeps Apple" now asserts Google IS shown on iOS. This test pins the old rule, so it is a pinned-test change for the owner's approval. It is not a founder-rule test (no CLAUDE.md rule covers it).
+- New tests needed: Android shows Apple; the note renders; Sign-in methods hides Disconnect with one identity; set-new-password calls `updateUser` and handles errors; deep link recovery routes to the new screen only with a session.
+- Run: the four suites above pass (614).
+
+### Effort, Risk
+Effort L (three owner setups + linking UI + new screen). Risk Med-High: wrong linking rules can strand accounts that hold health data; the Android Apple flow has not been run on a device.
+
+### Questions for the owner
+1. A person who already has two accounts (Apple relay on iPhone, new Google on Android) cannot be merged by this plan. Accept that, or add a manual merge request path later?
+2. After a reset, should the new-password screen also appear for an Apple/Google-only account that requests a reset (no password yet), or only for accounts that already have a password?
+3. Device check before shipping: Apple on Android is unproven on a real phone. Do you want it gated behind a remote flag, or ship straight?
+
+---
+
+## 03. Training-focus step (relabel only), plus the "Step 0 of 5" draft-resume risk
+
+Status: Confirmed. The relabel is one string. The "Step 0 of 5" risk is confirmed by a render and a unit test; how often a person can reach it is not established (see Evidence, last bullet).
+
+Owner answers implemented (quoted from ANSWERS.md): "Full setup from 'Set up coaching'; chip label 'Training focus'; protein stays after category; keep dropdown; no split. Also confirm the 'Step 0 of 5' risk when a full-setup draft resumes through coaching mode; propose the smallest fix (draft per mode, or clamp step to the mode's steps)."
+
+Evidence:
+- Chip text is `STEP_LABELS[step - 1]` (POS:365), printed by `ProOnboardingHeader` (POS:385-388). Internal step 7 is `'Targets'` at POS:132. Pinned by `ProOnboardingScreen.communityStep.guard.test.js:50` (the exact array).
+- Coaching header number is `COACHING_STEPS.indexOf(step) + 1` with `COACHING_STEPS = [2, 3, 4, 7, 8]` (POS:361, 386). Any step not in that list prints 0.
+- Coaching mode restores a draft with `setStep(s => Math.max(s, ... resumeStep))` (POS:1059 at base). The draft key is per user, not per mode (`proOnboardingDraft.js:21`, `draftKey`), and a full-setup run saves drafts for steps 2 to 7 (`MIN_STEP 2`, `MAX_STEP 7`, draft file :31-32).
+- Coaching mode never leaves step 4 for 5: Continue from 4 goes to 7 (POS:1387 at base, 1392 on the branch), Back from 7 goes to 4 (POS:1105 at base, 1110 on the branch). So a restored step 5 or 6 is outside the mode's own flow, and Continue from it would walk through "Your gym" (with the Community join choice) and "Injuries" screens that coaching setup is meant to skip.
+- Concrete repro, rendered (![03-before-coaching-draft5.png](img/03-before-coaching-draft5.png)): sign in as a person with a saved full-setup draft parked on step 5 (answers for steps 2 to 4 present), open `CoachingSetup` (route `mode: 'coaching'`, RootNavigator:727). Header reads **"Step 0 of 5 - Your gym"** above "Where you train, and Community". Same draft parked on step 6 gives "Step 0 of 5 - Injuries & limitations" (reproduced by the unit test's arithmetic, not separately rendered). Drafts parked on 2, 3, 4 or 7 print correctly in coaching mode.
+- How a person gets there (OBSERVED vs not): `StartChoiceScreen` sends anyone with a saved draft straight to the full `ProOnboarding` (StartChoice:70-79) and `quickStart` is only reachable from the choice screen, so a draft and a completed first run together need a path I did not find. I could not name a user journey that produces it today. The code allows it, the render proves the symptom when it happens, and the clamp costs one line. Treat it as a latent defect, not an observed one. Not confirmed on a device.
+
+Before: step 7 chip reads "Step 6 of 7 - Targets" (full, adult), "Step 5 of 6 - Targets" (under 18), "Step 4 of 5 - Targets" (coaching). Title "Set your training focus" is unchanged underneath.
+
+After: same numbers, chip "Training focus". Per the owner's order nothing else on the step changes (order, dropdown, protein collapsible, no split).
+
+String table:
+
+| Where | Before | After | file:line (before to after) |
+|---|---|---|---|
+| Step 7 chip label | `Targets` | `Training focus` | POS:132 to POS:133 (`STEP_LABELS`) |
+| Guard test pin | `... 'Injuries & limitations', 'Targets', 'Check-in rhythm'` | `... 'Injuries & limitations', 'Training focus', 'Check-in rhythm'` | `ProOnboardingScreen.communityStep.guard.test.js:50` |
+
+Side effect to flag: the chip now reads "Step 6 of 7 - Training focus" directly above the title "Set your training focus", so label and title say the same thing. That follows from the owner's chosen label; if it reads as repetition on device, the title could change instead (question 1).
+
+Renders, step 7 (both rendered at the same state, only the chip differs; `03-before-*` and `03-after-*`):
+- Non-competitor (`trainingGoal: 'general'`): ![03-before-noncompetitor.png](img/03-before-noncompetitor.png), ![03-after-noncompetitor.png](img/03-after-noncompetitor.png). Shows the style picker ("Your training style") because a non-competitor has one.
+- Competitor (`classic_physique`): ![03-before-competitor.png](img/03-before-competitor.png), ![03-after-competitor.png](img/03-after-competitor.png). No style picker (hidden for a competing category, POS:775), bring-up chips shown.
+- Coaching mode, clean path (draft on step 7): ![03-before-coaching-clean.png](img/03-before-coaching-clean.png), ![03-after-coaching-clean.png](img/03-after-coaching-clean.png) ("Step 4 of 5 - Targets" to "Step 4 of 5 - Training focus").
+- Coaching mode, full-setup draft on step 5: ![03-before-coaching-draft5.png](img/03-before-coaching-draft5.png) ("Step 0 of 5 - Your gym") and ![03-after-coaching-draft5.png](img/03-after-coaching-draft5.png) ("Step 4 of 5 - Training focus", resumed on step 7).
+
+Fix options for the draft risk, compared:
+
+| | Draft per mode | Clamp the resumed step (prototyped) |
+|---|---|---|
+| Change | `draftKey(userId, mode)` adds a mode suffix; every caller (`StartChoiceScreen` resume check, `clearDraft` at POS:2397, `saveDraft`/`loadDraft`, `loadBuildProgress` pairing) passes the mode; a completed coaching run must clear both keys | One pure helper `clampResumeStep(step, modeSteps)` (`proOnboardingDraft.js`), one wrapper at the restore that clamps the loaded draft's step before the existing minor and sex-gate lines run (POS:1006-1011 on the branch) |
+| Size | About 6 files plus tests; the build-progress record (`BUILD_KEY_PFX`) is keyed the same way and would need the same split | 1 helper, 1 changed line, no storage change |
+| Effect on a parked full draft | A full draft is invisible to coaching setup: the person answers steps 2 to 4 again | Answers for steps 2 to 4 are reused (they are in the draft), and the person lands on step 7 |
+| Existing stored drafts | Old keys have no mode, so they need a migration rule or are orphaned | No change to storage, nothing to migrate |
+| Risk | Medium: StartChoice's "has a draft, skip the choice" check and the cleanup both depend on the key | Low: the sex-gate clamp (POS:1065, `Math.min(resumeStep, 2)` when sex is invalid) and the minor-on-step-5 rule are kept as they were |
+
+Prototype (clamp): `clampResumeStep(5, COACHING_STEPS)` and `(6, ...)` return 7; steps already in the list are unchanged; beyond the last step it holds the last step; an empty or missing list changes nothing. Applied only when `coachingMode`.
+
+Not changing: step order, the category dropdown, protein after category, the "This step sets" chips, telemetry step numbers, `TOTAL_STEPS = 8`, the draft ceiling, the sex gate, minor rule, Community step.
+
+Files: `src/screens/ProOnboardingScreen.js` (label, resume line, import), `src/lib/proOnboardingDraft.js` (helper), `src/screens/__tests__/ProOnboardingScreen.communityStep.guard.test.js` (pin moves with the label).
+
+Safety and privacy: none touched. No calorie floor, ED logic or consent gate is read or changed. The sex-gate clamp on restore is kept (pinned in the new test).
+
+Data, sync, migrations: no schema, no sync, no telemetry change (`onboarding_step_viewed` still carries the internal step number, schema untouched). Native code: no. Server migration: no.
+
+Tests:
+- Existing, updated: `ProOnboardingScreen.communityStep.guard.test.js` (label pin only; the `resumeStep` pin at :247 is untouched).
+- New: `src/lib/__tests__/proOnboardingDraft.coachingResume.test.js` (8 tests): the header arithmetic "Step 0" repro for steps 5 and 6, every draftable step 2 to 7 resumes on a step coaching runs, 5 and 6 go forward to 7 never back, the call is gated on `coachingMode`, the sex-gate clamp is still present, the label is "Training focus".
+- Pinned founder-rule lines: `proOnboarding.sexGate.test.js:61-62` and `ProOnboardingScreen.communityStep.guard.test.js:247` pin the minor-on-step-5 line and the sex-gate `setStep` line verbatim. My first version rewrote the first of them and the full run caught it (1 failing guard). I changed the design, not the tests: the clamp now wraps the loaded draft before those lines, so both pinned lines are byte-for-byte unchanged and the sex clamp stays last. Both pass.
+- Result: new test file 8 of 8 pass; both guards pass; 28 suites, 255 tests pass in the final targeted run (list in the record below).
+
+Effort: S (relabel plus clamp). Risk: Low. The clamp is the only logic; the main risk is none beyond the pinned test moving.
+
+Questions for the owner:
+1. Label and title now both say "training focus" on one screen. Keep both, or change the title (for example "What are you focused on?")?
+2. Clamp (prototyped, recommended by size only, your call) or draft per mode?
+3. Where a draft is parked on step 5 or 6 and resumed through coaching: land on step 7 (prototyped), or on step 4 so the person reviews their training week first?
+
+---
+
+## 04. Sensitive questions: one "who can see this" line under every field
+
+Status: Confirmed for wording. Owner answer quoted: "Every sensitive field in setup, Profile and Nutrition Targets. No 'Prefer not to say'. Each 'who can see this' line written from the actual sync behaviour." Sex stays two options, required, no default.
+
+Which fields (all of them, per answer 1(a)): setup sex, age, height, body weight, body fat; Profile sex, height, "Date of birth" (age); Nutrition Targets sex, age, height, weight, body fat (each in both the quick card and the full form). Training status (NT:1265-1273 at base) already carries "Kept on this phone only." and is left as it is (below). Cycle tracking is on Settings > Coaching, outside the three screens named, so not touched.
+
+### What syncs where (file:line proof)
+
+| Field | Where it goes | Proof | Who can read the cloud copy |
+|---|---|---|---|
+| Sex | Cloud `user_body_profile.sex` and `profiles.sex`; the profile blob also travels with the preference sync | `sync.js:1559-1560` (`sex: p.sex ?? null`); `sync/tables/profiles.js:39` (`['sex','sex']`), `:64` (`_validSex`), `:253-256` (never unsets); `sync.js:1880-1884` (`@volyume_user_profile_` is a synced pref) | Own-row policies: `migrate_007_pro_rls_hardening.sql:30,51-52` (`user_body_profile`), `migrate_005_rls_hardening.sql:32-33` (`users_profile`) |
+| Age | Saved as a date of birth worked out from the age (`dateOfBirthFromAgeYears`) to `user_body_profile.date_of_birth`; the profile blob's `age` also syncs | `sync.js:1562`; SP:169; POS:2110 ff. | same |
+| Height | `user_body_profile.height_cm` and the profile blob | `sync.js:1563`; SP:144 | same |
+| Body weight | `body_metrics.body_weight` (365-day push window) | `sync/tables/bodyComposition.js:84`, `:40` (`PUSH_WINDOW_DAYS`); setup writes it at POS:2086-2095 | `migrate_005_rls_hardening.sql:161-162` |
+| Body fat % | `body_metrics.body_fat_percent`, `body_fat_source` | `bodyComposition.js:94-95` (`body_fat_percent`, `body_fat_source`) | same |
+| Training status | Phone only: secure store, "never sent to the cloud, Sentry, analytics, the coach report or any share card" | `src/lib/trainingStatus.js:2-8` (file header), `KEY` :25 | n/a |
+| Cycle tracking (outside the 3 screens) | Phone only, AsyncStorage, "Not synced to the cloud" | `src/lib/cyclePrefs.js:12-14` | n/a |
+| Community / share cards | Weight, body fat, height and age are on the refusal list that Community checks before any write and again in SQL | `community/validation.js:65-68` (`SENSITIVE_COMMUNITY_KEYS`). Sex is NOT on that list; no code under `src/lib/community` or `src/lib/shareCard` reads sex (grep, non-test files) | n/a |
+| Nutrition Targets inputs (sex, age, height) | Used to calculate and not written back by this screen: NT imports no `saveUserBodyProfile`, `saveLocalProfile` or `setUserProfile`; the saved targets row holds numbers only | NT save paths :683, :868 (`saveNutritionTargets`); `database.js:7682-7697` (INSERT lists bmr, tdee, kcal, macros, phase, goal, no sex/age/height) | targets row: `migrate_009_nutrition_targets.sql:39-42` |
+| Nutrition Targets weight and body fat | If there is no weigh-in for today, written as today's weight and body fat to the body-metric log | NT:887-900 on the branch (`logBodyMetric`, guarded by `hasToday`) | as body weight |
+
+What I did NOT verify and so did not write: that nobody at Volyume or Supabase can technically read these rows (the service role bypasses row policies by design). So the lines say "No other Volyume user can see it", which is exactly what the row policies and the Community refusal list establish, and nothing broader. If you want "only you", that is a stronger claim that needs your say-so (question 2).
+
+### Wording (all strings new except where marked)
+
+Shared in one new file `src/lib/sensitiveFieldNotes.js` so the three screens cannot drift and one test can guard them. Static copy: it never reads safety state and is the same in normal, calm and open-ED-flag states.
+
+| # | Where | Before | After (line added under the field) | file:line (before to after) |
+|---|---|---|---|---|
+| 1 | Setup, sex | hint above: "Used by the calorie formula and safety floors. This stays private." | hint above: "Used by the calorie formula and safety floors." plus under the pills: "Saved to your Volyume account so it comes back if you change phone. No other Volyume user can see it." | POS:2602 to POS:2607, new line POS:2616 |
+| 2 | Setup, age | hint: "Used with your height and weight to set your calorie targets." (kept) | plus: "Saved to your account as a date of birth worked out from your age, so it comes back if you change phone. No other Volyume user can see it." | POS:2615 (kept at :2621), new POS:2633 |
+| 3 | Setup, height | hint: "Used with your weight and age to set your calorie targets." (kept) | plus: "Saved to your Volyume account so it comes back if you change phone. No other Volyume user can see it." | POS:2631 (:2638), new POS:2693 |
+| 4 | Setup, body weight | hint: "This sets your starting trend and first calorie target. Update it from Today once setup is complete." (kept) | plus: "Saved with your weight history in your Volyume account. No other Volyume user can see it." | POS:2691 (:2699), new POS:2757 |
+| 5 | Setup, body fat | hint: "Enter your best current estimate or a measured value. Leave it blank only if you genuinely do not know." (kept) | plus: "Saved with your weigh-ins in your Volyume account. No other Volyume user can see it." | POS:2807 (:2816), new POS:2845 |
+| 6 | Profile, sex | sub: "Used for calorie floors and nutrition targets. Changes apply on your next weekly check-in." (kept) | plus under the chips: line 1 | SP:242 (:243), new SP:263 |
+| 7 | Profile, height | sub: "Used for calorie floors and nutrition targets." (kept) | plus: line 3 | SP:270 (:272), new SP:283 |
+| 8 | Profile, "Date of birth" | sub: "Enter your age. Used for calorie floors and nutrition targets." (kept) | plus: line 2 | SP:289 (:292), new SP:296 |
+| 9 | NT, sex (quick and full) | none | "Used only to work out these targets. This screen does not save it to your Profile. No other Volyume user can see it." | new NT:1098, NT:1193 |
+| 10 | NT, age (quick and full) | none | same sentence as 9 | new NT:1103, NT:1200 |
+| 11 | NT, height (quick and full) | none | same sentence as 9 | new NT:1113, NT:1212 |
+| 12 | NT, weight (quick and full) | only "Entered in kilograms, whatever unit you display elsewhere." (kept, NT:1115, :1212 at base) | plus under the field: "If you have not weighed in today, this is saved as today's weight in your Volyume account. No other Volyume user can see it." | new NT:1131, NT:1232 |
+| 13 | NT, body fat (full form only; the quick card has no body-fat field) | none | "Saved with today's weight when that is saved, in your Volyume account. No other Volyume user can see it." | new NT:1246 |
+| 14 | NT, training status | "Kept on this phone only. Enhanced lets the weekly coach accept faster weight gain during a building phase." | unchanged; already says who can see it, and the field stays hidden under calm mode or an open ED flag | NT:1265-1273 base |
+
+Observation on 6 to 8: the Profile row labelled "Date of birth" takes an age. That mismatch is F7, a separate item for another batch; I left the label alone and wrote the age line so it reads right either way.
+
+Observation on 9 to 11: three identical sentences in a row on the quick card is repetitive (see render). One shared line under the Height field of that card would read lighter, but the answer says "every sensitive field", so I kept one each (question 1).
+
+The existing consent card on the quick card (NT:1131 at base, "Your body data is stored on this device and synced to your Volyume account ... never shared with anyone beyond the secure EU service that stores your Volyume data") already states the same thing in general terms; the new lines are consistent with it and do not repeat the EU wording. Sentry/telemetry: not part of any line (no value of these fields goes there; `sentryScrub` untouched).
+
+Renders (normal state; helper lines are static so calm and open-ED-flag differ only by what the screen already hides):
+- Setup baseline (sex, age, height, weight): ![04-before-setup-step2-baseline.png](img/04-before-setup-step2-baseline.png), ![04-after-setup-step2-baseline.png](img/04-after-setup-step2-baseline.png).
+- Setup body composition (body fat): ![04-before-setup-step3-bodyfat.png](img/04-before-setup-step3-bodyfat.png), ![04-after-setup-step3-bodyfat.png](img/04-after-setup-step3-bodyfat.png).
+- Settings Profile: ![04-before-profile.png](img/04-before-profile.png), ![04-after-profile.png](img/04-after-profile.png).
+- Nutrition Targets quick card (fresh account): ![04-before-nutrition-targets-quick.png](img/04-before-nutrition-targets-quick.png), ![04-after-nutrition-targets-quick.png](img/04-after-nutrition-targets-quick.png).
+- Nutrition Targets full form (persona, "Adjust" pressed): ![04-before-nutrition-targets-full.png](img/04-before-nutrition-targets-full.png), ![04-after-nutrition-targets-full.png](img/04-after-nutrition-targets-full.png).
+- Calm and open-ED-flag renders of the full form are under F6 (![F6-after-nt-full-calm.png](img/F6-after-nt-full-calm.png), ![F6-before-nt-full-calm.png](img/F6-before-nt-full-calm.png), ![F6-after-nt-full-edflag.png](img/F6-after-nt-full-edflag.png), ![F6-before-nt-full-edflag.png](img/F6-before-nt-full-edflag.png)); in both, "Training status" and its line are hidden exactly as before, and the new lines are present.
+- Maximum accessibility text size: the harness renders at the default size only. A line of two to three short sentences under each field will wrap to more lines at the largest size; this needs the phone pass in the checklist.
+
+Not changing: "Biological sex" stays two options with no "Prefer not to say" (the unknown-sex path is not defined end to end; Stage 1 table stands), required, no default; the "used for" hints; consent gate; training status line; Settings > Coaching cycle line.
+
+Files: new `src/lib/sensitiveFieldNotes.js`; `src/screens/ProOnboardingScreen.js`, `src/screens/SettingsProfileScreen.js`, `src/screens/NutritionTargetsScreen.js` (render the lines, add one `sensitiveNote` style each).
+
+Safety and privacy: no calorie floor, FFM floor, ED logic or consent gate read or changed. The new copy is static, never reads tier or safety state, no em dash (guarded), British English. The lines make privacy claims, so each one is pinned to the code it describes by `sensitiveFieldNotes.test.js` (a future change to what syncs fails the test instead of leaving a false line). Calm mode: unchanged.
+
+Data, sync, migrations: none. Native: no. Server migration: no.
+
+Tests: new `src/lib/__tests__/sensitiveFieldNotes.test.js` (10 tests, all pass): no dash, every line says who can see it, each field renders its line (NT: 2 of each in quick and full, body fat once), and the claims hold (user_body_profile push carries sex, date_of_birth, height_cm; body_metrics carries weight and body fat; Community refusal keys; NT never writes the profile; the targets INSERT holds no sex, age or height). No existing test changed for this item (`This stays private.` is not pinned anywhere).
+
+Effort: S. Risk: Low (copy), with one real risk: a privacy line that stops being true. Mitigated by the claim tests.
+
+Questions for the owner:
+1. One line under every field (as built, three repeats on the NT quick card), or one shared line on that card?
+2. "No other Volyume user can see it" is what the code proves. Do you want the stronger "Only you can see it"? That would need your confirmation about who at Volyume or Supabase can read rows.
+3. Age line says "worked out from your age". Keep that detail, or the same plain sentence as sex and height?
+
+---
+
+## 06. Autonomy: Coached copy (wording only), and the "dead" deload branch
+
+Status: Coached copy confirmed wrong and fixed in the prototype. **The deload branch is NOT dead; removal not done, report below.**
+
+Owner answer quoted: "Leave control, keep choices, Manual as today. Coached copy 'Your coach applies each week's changes for you' is wrong: changes apply only when the Coaching decision screen is opened; propose matching wording. Remove dead deload branch CoachOutputScreen.js:2630 with a test showing behaviour unchanged."
+
+### Copy
+
+Evidence: the auto-apply is a `useEffect` on the Coaching decision screen (`CoachOutputScreen.js:2616-2680` at base; the screen title is "Coaching decision", :3156), gated on `output`, `user.id`, no apply in flight, no open hold (`output.autoApplyHoldActive`), and the current or last-reviewed week only (:2622-2631). No other caller found.
+
+| Where | Before | After | file:line |
+|---|---|---|---|
+| Settings > Coaching, Autonomy, Coached chosen | "Your coach applies each week's changes for you. Anything safety-related still waits for your confirmation." | "Your coach applies each week's changes when you open your Coaching decision. Anything safety-related still waits for your confirmation." | SC:236 to SC:238 |
+| Guard test | `toContain("Your coach applies each week's changes for you.")` | `toContain("Your coach applies each week's changes when you open your Coaching decision.")` and `not.toContain("changes for you.")` | `CoachOutputScreen.d16Autonomy.guard.test.js:163` |
+
+Checked and left alone (still true): Collaborative "Your coach suggests each change. You tap to apply it." and Manual "Your coach shows each change and the reason. You make the change yourself." (SC); the Manual footer "Change modes in Settings, under Coaching." (CoachOutputScreen:2975); `MethodologyScreen.js:119` "Unless you have chosen Coached mode in Settings, every change it suggests waits until you accept it" (true: Coached applies on opening, and holds still wait).
+Render: ![06-before-settings-coaching-coached.png](img/06-before-settings-coaching-coached.png), ![06-after-settings-coaching-coached.png](img/06-after-settings-coaching-coached.png) (persona with `coachAutonomy: 'coached'`).
+Why "open your Coaching decision" and not "open the Coach tab": the effect lives in CoachOutputScreen only; the Coach tab itself does not apply anything. If you prefer, "when you open this week's Coaching decision".
+
+### The deload branch (STOP: contradicts Stage 1)
+
+Stage 1 said `deloadSuggested` is in the hold list (`weeklyCoach.js:2201-2211`), so `if (output.deloadSuggested)` at CoachOutputScreen:2630 (2652 at base HEAD; the brief's :2630 is the older number) can never be reached in Coached mode. That is true of the engine's own output and false of what the screen holds:
+
+- `CoachOutputScreen.js:2174-2178` (base): after `runWeeklyCoach` returns, on an **authored plan** (`isActivePlanAuthored`) the screen overwrites `result.deloadSuggested = !!triggers?.suggested` and `result.deloadNote`. It does not touch `result.autoApplyHoldActive`, which the engine computed without knowing about this override (`weeklyCoach.js:2201-2211`).
+- `result` is what becomes `output` (`setOutput(persistedResult)`, :2406).
+- So for a Coached person on an authored plan whose reduction triggers fire, `output.deloadSuggested === true` and `output.autoApplyHoldActive === false`: the effect reaches line 2652 and calls `handleApplyDeload()`. That is live behaviour, and it is a deload being auto-applied, the one thing the Settings copy and the D16 comment ("deload forces confirm-first") say never happens.
+
+So "remove the dead branch, behaviour unchanged" cannot be done as written: removing it changes what Coached users on authored plans experience (the deload would no longer auto-apply and the effect would fall through to the training and calorie applies below it, because the branch today ends with `return`).
+
+I did not interpret. Options, no recommendation:
+- (a) Leave the branch. Fix only the stale comment ("Deload supersedes...") if wanted. Behaviour unchanged, deload still auto-applies on authored plans.
+- (b) Make it match the stated rule: the screen sets `result.autoApplyHoldActive = true` when it sets `result.deloadSuggested = true` (CoachOutputScreen:2175), then the branch really is dead and can be removed. Behaviour change: Coached users on authored plans get a tap-to-apply deload card like Collaborative users. Needs a test that pins both states.
+- (c) Keep auto-applying the authored deload on purpose (it is the plan's own reduction week), keep the branch, and change the copy to say so. Safety-adjacent (it is a hold-list item in the engine), so this is your call.
+
+Not done, nothing in the prototype touches CoachOutputScreen.js. No test was written for removal. Evidence for the claim above is source lines only; I did not run an authored-plan Coached scenario on a device.
+
+Not changing: the three modes, their default (Collaborative), the stored `coachAutonomy`, Manual's "no Apply buttons", every hold, every clamp and floor in `coachApply.js`, the engine.
+
+Files: `src/screens/SettingsCoachingScreen.js`; `src/screens/__tests__/CoachOutputScreen.d16Autonomy.guard.test.js`.
+
+Safety and privacy: copy only. ED-safety, holds and floors untouched. The new sentence is more honest about when anything applies.
+
+Data, sync, migrations: none (`coachAutonomy` still in the profile blob). Native: no. Server migration: no.
+
+Tests: existing `CoachOutputScreen.d16Autonomy.guard.test.js` updated (anchor moved with the sentence); no new test (no logic changed).
+
+Effort: S for copy. The deload decision is S to M depending on (a), (b) or (c). Risk: Low (copy); Medium for (b) or (c) because it decides whether a deload may apply without a tap.
+
+Questions for the owner:
+1. Deload: (a), (b) or (c) above?
+2. Copy: "when you open your Coaching decision" as written, or "when you open this week's Coaching decision"?
+
+---
+
+## Batch B2: Test and lint record (prototype branch `proposal/03-setup-wording`, commits e7b41b2 and 4385939, local only)
+
+- `npm run lint` (final tree): `eslint . --max-warnings 0`, exit 0, no output after the command line.
+- Full `npm test -- --silent` (run on the first commit, 1,786 of 1,787 suites): `Test Suites: 3 failed, 1 skipped, 1783 passed`; `Tests: 8 failed, 17 skipped, 32114 passed, 32139 total`. The 3 failures and what became of them:
+  1. `ProOnboardingScreen.communityStep.guard.test.js` (my change rewrote a pinned line): fixed in code as described under item 3; passes.
+  2. `NutritionTargetsScreen.rangeValidate.test.js` (6 tests): the suite filled age, height, weight and consent but never chose a sex, passing only because of the silent 'male' default. That is F6 doing its job. I updated the suite's helper to tap "Male" first (it is a legitimate existing-test change, flagged for your sight); passes, 6 of 6.
+  3. `ShareCardScreen.videoAudit2.test.js` (1 test, "Play before the tone"): timing-sensitive, in code this batch does not touch. It passes 21 of 21 on the base commit and 21 of 21 on this branch when run alone. I treat it as load flakiness (the full run was under CPU contention from the two render runs), not as caused by this batch; not investigated further.
+- Targeted re-run after the fixes (`ShareCardScreen.videoAudit2`, `ProOnboardingScreen*`, `NutritionTargetsScreen*`, `CoachOutputScreen.d16*`, `sensitiveFieldNotes`, `proOnboardingDraft*`, `proOnboarding*`): `Test Suites: 28 passed, 28 total`, `Tests: 255 passed, 255 total`. I did not re-run the whole suite a second time (about 40 minutes under load); the two code fixes are inside the suites re-run above.
+- Paper render after the final change: re-run, `21-...-coaching-draft5.png` is pixel-identical to the earlier after image.
+
+---
+
+## Batch B2: Device checklist (physical Android, EAS build; for the founder's phone pass, covers B2 only)
+
+1. Start the app signed in with a profile that has a sex. Open Nutrition Targets. Expected: the Male or Female pill that matches Settings > Profile is selected; the "Used only to work out these targets..." line sits under Sex, Age and Height, and the weight line under Weight.
+2. Sign in with an account whose profile has no sex (or use a quick-start account that has not done setup), open Nutrition Targets. Expected: neither pill selected; the main button stays off until you tap one. ED-safety: open Settings > Coaching, turn calm mode on, return. Expected: the screen still has no pre-selected sex; Training status is hidden; the new lines remain.
+3. Open Settings > Profile. Expected: a line under the sex chips, under Height and under "Date of birth", each ending "No other Volyume user can see it."
+4. Start the full setup (a new test account), reach "Set your starting baseline". Expected: sex hint no longer says "This stays private"; each of sex, age, height, weight has a line under it. Continue to "Add your starting body composition": line under body fat.
+5. Continue to "Set your training focus". Expected: chip "Step 6 of 7 - Training focus" (adult). Under 18 shows "Step 5 of 6 - Training focus".
+6. From a quick-start account use "Set up coaching" on the Coach tab. Expected: chip "Step 4 of 5 - Training focus" on that step. To test the draft case you need a full-setup draft parked on the gym step on an account that has completed first run; I could not construct that journey in the app, so the clamp is covered by the unit test only.
+7. Settings > Coaching > Autonomy > Coached. Expected: "Your coach applies each week's changes when you open your Coaching decision. Anything safety-related still waits for your confirmation."
+8. At the phone's largest text size, repeat steps 1, 3 and 4. Expected: every new line wraps and stays readable, nothing is cut off or overlaps the field above.
+
+---
+
+## 8. Injuries offer on Today (Part A only)
+
+Status: Confirmed. Owner answer implemented: "Directly under the main card. 'No thanks' stays per phone. 'Skip for now' keeps today's behaviour. No question in coaching-mode setup."
+
+Evidence: `src/screens/HomeScreen.js` offer block was at :2798-2803, before the "Primary workout area" ternary (:2822 to :3109). Show gate unchanged: `!initialLoading && hytNothingSetUp && !hytOfferDismissed && (totalSessions > 0 || welcomeDismissed) && shownBannerKey == null`.
+
+Before: offer sits above the main card in every state (render ![08-before-today-midplan.png](img/08-before-today-midplan.png): offer, then "Upper A" card). Day-zero before image ![08-before-today-day0.png](img/08-before-today-day0.png) shows the Welcome card state (offer hidden by gate while Welcome shows).
+
+After: the same JSX block moved to directly after the main-area ternary closes (now between the ternary and the post-hero cards: CoachingSetupCard / EvidencePanel, last-session footer, challenge row, Community intro). `PlanRebuildNote` and `PlanRebuildChoiceCard` now come before the main card, unchanged.
+Renders (dark):
+- Mid-plan, nothing set up: ![08-after-today-midplan.png](img/08-after-today-midplan.png) (Upper A card, then offer).
+- New user, Welcome dismissed, no plan: ![08-after-today-newuser.png](img/08-after-today-newuser.png) (no-plan card and "Start your first workout" card, then offer).
+- After "No thanks" (key `@volyume_hyt_offer_<userId>` = 'true'): ![08-after-today-nothanks.png](img/08-after-today-nothanks.png) (offer absent).
+
+Not changing: all text of the card, both buttons, the gate, the per-phone AsyncStorage dismissal, onboarding Step 6 "Skip for now", coaching-mode setup (no question added).
+
+Behaviour table:
+| Scenario | Today | Proposed |
+|---|---|---|
+| Eligible, plan with next workout | offer above hero card | offer directly under hero card |
+| Eligible, active workout / week complete / block decision / no plan | above the main card | directly under it |
+| Welcome card showing | offer hidden | hidden (gate unchanged) |
+| Banner holds attention slot (`shownBannerKey != null`) | hidden | hidden |
+| "No thanks" or "Set it up" | writes key, hidden for good on that phone | same |
+| Onboarding "Skip for now" | nothing written, offer shown later | same |
+
+Files: `src/screens/HomeScreen.js` (one block moved, comment updated). Safety and privacy: none touched; the capability data stays on its own consent path. Data/sync/migrations: none. Native: no. Server migration: no.
+Tests: `howYouTrainEntries.guard.test.js` pins the gate string only; still passes. New position guard in `j2.settingsHapticsCommunity.test.js`: pass.
+Effort S. Risk Low (position only; one open observation below).
+Questions for the owner: (1) In the new-user render the offer lands above the weigh-in "0 of 3" strip but below "Start your first workout". If you meant it directly under the very first card only, say so; otherwise this is what "under the main card" gives.
+
+---
+
+## 10. Two setup screens (Option B)
+Images: ![10-before-coach-update-goal-and-phase.png](img/10-before-coach-update-goal-and-phase.png), ![10-after-coach-update-goal-and-phase.png](img/10-after-coach-update-goal-and-phase.png), ![10-before-train-adjust-training-plan.png](img/10-before-train-adjust-training-plan.png), ![10-after-train-adjust-training-plan.png](img/10-after-train-adjust-training-plan.png)
+
+Status: Confirmed (Stage 1) and prototyped. Items marked PROTOTYPED are in the branch; DESCRIBED are specified here but not built.
+
+### Evidence
+Stage 1 section 10 (PROPOSALS.md). New observations this stage:
+- The two forms offer different day choices: Coach form 3, 4, 5, 6 (render `10-before-coach...`); Train form 2, 3, 4, 5, 6 (`10-before-train...`). A person on 2 days sees no selection on the Coach form and a save there moves them off 2. Option B removes the Coach copy, so Train's 2-6 is the only one.
+- `userProfile` inside each screen is a live store subscription (useShallow, ProGoalSetupScreen.js:~140, PlanUpdateScreen.js:~103), so the profile spread is current at render time. What goes stale is the FORM STATE (days, equipment, etc. seeded once with useState) and, inside one save, the render-time `userProfile` closure (F2).
+
+### Field-by-field: today vs proposed, with storage
+| Field | Today | Proposed owner | Stored in |
+|---|---|---|---|
+| Physique category `trainingGoal` | both screens | Train only | profile blob |
+| Training style `trainingArchetype` | both | Train only | profile blob |
+| Weak points `planWeakPoints` | both | Train only | profile blob |
+| Experience | both | Train only | profile blob |
+| Days per week | both (Coach 3-6, Train 2-6) | Train only (2-6) | profile blob |
+| Session length | both | Train only | profile blob |
+| Equipment (stored via `generationEquipmentFor`) | both | Train only | profile blob |
+| Recovery rating | both | Train only | profile blob |
+| Phase / focus (`trainingPhase`, `goalPhase`, `goal`, `phaseStartedAt` on change, `goalStartDate`) | Coach only | Coach only | profile blob |
+| Protein approach | Coach only | Coach only | profile blob + `nutrition_targets` row |
+| Show date | Coach only | Coach only | `peak_week_plans` row |
+| Calorie and macro targets | Coach save recalculates; Train never | Coach only | AsyncStorage `NUTRITION_KEY` + `saveNutritionTargets` |
+| `weightKg`, `bodyFatPct/Source` side writes | Coach | Coach | profile blob |
+
+PROTOTYPED on the Coach form: category, style, weak points, experience, days, session, equipment, recovery removed (ProGoalSetupScreen.js, the render shows phase, a "Training setup" read-out with a link, then protein). The save no longer writes any of those keys (`updatedProfile` carries phase, goalPhase, goal, phaseStartedAt, proteinApproach, goalStartDate only, on top of the latest stored profile). The Coach form still reads days, session, experience and the category from the profile (no editing) because the target calculation, show-date applicability and plan preview need them.
+Show date still appears for competition categories (read from the profile category).
+
+### Strings (exact)
+| Where | Before | After |
+|---|---|---|
+| YouScreen.js:549 row sub | "Change goal, phase, schedule, equipment or experience." | "Change your goal, phase, protein target or show date." |
+| Coach form, new block (ProGoalSetupScreen.js, after the focus dropdown) | none | Label "Training setup"; "{n} days a week, {m} minutes a session. Your category, training style, days, equipment and recovery are set on the Train tab."; button "Adjust training plan" (opens PlanUpdate via navigateCrossTab 'PlansTab') |
+| PlanUpdateScreen.js:~591 intro | "Adjust your training setup and rebuild the plan around it. Your calorie and macro targets stay as they are. Update those from the Coach tab." | "Adjust your training setup and rebuild the plan around it. Your goal, phase, protein target and calorie and macro targets are set on the Coach tab." plus button "Update goal and phase" (navigateCrossTab 'ProfileTab', 'ProGoalSetup') |
+| Train form, under days, shown only when days or experience differ from the saved profile | none | "Your calorie and macro targets stay as they are. Your coach will update them at your next check-in on {day}." (no day: "...at your next check-in.") and button "Update now" (opens the Coach form, whose save recalculates targets) |
+| PlansScreen.js:88-91 card sub | "Change schedule, equipment, experience, division or weak points. Volyume previews the rebuild before it replaces your active plan." | not changed in prototype; stays accurate under B |
+| ProGoalSetupScreen footer | "Changing your goals updates your plan targets immediately. Your coach adjusts at your next check-in on {day}." | unchanged |
+| Coach primary button "Review my plan changes" | label | unchanged in prototype. Stage 1 conflict 4 (it saves goal and targets, preview concerns plan only) still stands; with the new order the button now only commits after the preview, so the label becomes accurate for the plan half. Owner may still want "Review and save" (question 2). |
+
+### Wireframe: Train form after, days changed (the render shows the unchanged state; the note appears only on change, not drawn by the harness)
+```
+< Adjust training
+Adjust your training setup and rebuild the plan around it. Your goal, phase, protein
+target and calorie and macro targets are set on the Coach tab.
+[ Update goal and phase ]            (secondary)
+... category / style / experience ...
+TRAINING DAYS PER WEEK     [2][3][4][5*][6]      (5 changed from 4)
+ Your calorie and macro targets stay as they are. Your coach will update them at your
+ next check-in on Thursday.
+ [ Update now ]                      (secondary)
+SESSION LENGTH ...
+```
+
+### Behaviour: save order (scenario -> today -> proposed; real functions)
+| Scenario | Today (ProGoalSetupScreen.runSave) | Proposed (PROTOTYPED) |
+|---|---|---|
+| Save, preview confirmed | targets (`saveNutritionTargets`, `NUTRITION_KEY`), `saveLocalProfile`, `setPeakWeekShowDate`, then `prepareStartWithPlan` -> sheet -> `commitStartWithPlan` | `prepareStartWithPlan` -> sheet -> `commitStartWithPlan`, then `persistGoalAndTargets()` (targets, profile, show date), then GoalChangeSummary |
+| Preview declined ("Not yet", or "Allow more equipment" / avoided / manual exits that resolve false) | everything saved, plan not rebuilt (split-brain) | `previewDeclined` -> toast "Nothing was changed. Your goal, targets and plan stay as they were" and return; no profile, targets or show-date write (repro test) |
+| Plan prepare fails (`!prep.ok`) or commit fails | goal and targets saved, warning toast | unchanged: `persistGoalAndTargets()` still runs, warning toast still shown (question 1) |
+| Style-locked plan, library kit installed | save first, plan untouched | persist runs after the (non-)plan step; plan untouched |
+| Mid-block confirm | `confirmPlanSwitchMidBlock` asked before the preview | unchanged position (before preview). Not changed in prototype; moving it after the preview is the item-10 conflict 3 fix and is DESCRIBED only |
+| Block kept when exercises unchanged | Train: `keepsBlockOnRebuild` keeps it. Coach: `commitStartWithPlan` has no `keepBlock`, always new block | DESCRIBED, NOT built: pass the Coach preview's diff through `keepsBlockOnRebuild` (planDiff) and `keepBlock` into `generateAndSavePlan`. `startWithPlan.js:162-163` must accept it. Owner answer: "Always keep the block when exercises unchanged." |
+| Train save | preview + diff first, `generateAndSavePlan(keepBlock)`, profile after plan succeeds (FF-002) | unchanged |
+| Train days/experience change | targets untouched, intro says so | same, plus the line and "Update now" above |
+
+### Safety and privacy
+- Calm-mode aggressive-cut gate: lives only in NutritionTargetsScreen.js:1059 and :1282; neither setup screen offers an aggressive cut (`TRAINING_PHASES` has one cut, `mild_cut`). Unchanged and not weakened. The Coach form still cannot reach aggressive_cut.
+- ED-neutral summary: GoalChangeSummaryScreen.js:181-191, 215-224 still reads `getOpenEdPatternFlag` directly (not safetyState.js) and is untouched in the prototype. The brief says safety reads go through safetyState.js; I did not re-implement or alter it. Proposed build step: replace that direct read with `useSafetyState()`/`deriveSafetyState`. Decision needed (question 3): `suppressed` also includes calm mode and failed reads, so under calm the summary would turn neutral, which it is not today. Not rendered: the three states (normal, calm, ED flag) of GoalChangeSummary are unchanged by this prototype, so no new before/after images are claimed for them.
+- Calorie floors sit inside `calculateNutritionTargets`, untouched. Targets are still skipped (stored targets kept) when sex/age/height/weight is missing. The weight write now sends the latest weigh-in to the profile (F2).
+- No tier reads, no new dependency, no migration.
+
+### Data, sync, migrations
+No schema change. Same profile blob and `saveLocalProfile` -> `syncAll`. The Coach save now writes fewer keys (it no longer includes the eight training keys; it spreads the latest stored profile so they are preserved). New pure helper `src/lib/setupFormSeed.js`.
+
+### Native code / Server migration
+No / No.
+
+### Tests
+- Existing, FAIL in the prototype (expected consequences of removing the Coach-form fields; these pin the old form, rewrite at build):
+  - `src/screens/__tests__/ProGoalSetupScreen.styleLock.guard.test.js` ("the training-setup fields are withheld and the reason takes their place": expects setExperience, setDaysPerWeek... inside the `!styleLock` branch).
+  - `src/screens/__tests__/equipmentOptions.shared.guard.test.js` (3 tests: Coach form passes `EQUIPMENT_OPTIONS`, stores `equipment: generationEquipmentFor(equipment)`, shows `libraryKitOfferLine`). These are F-16 guards for the kit answer. With B the kit-answer handling lives only on Train; the kit branch in the Coach form (`libraryKit`, `installLibraryPlanForKit`) is now dead and should be removed at build, with the guard moved to Train. These are not founder-rule tests; I have not edited them. Flagging per "pinned test conflict".
+- Run in the worktree: `npx jest src/screens src/lib/__tests__/setupFormSeed.test.js src/__tests__/screen-mount.test.js`: Test Suites 2 failed, 382 passed, 384 total; Tests 4 failed, 4537 passed, 4541 total (the four above). ESLint on the changed files: 0 errors, 18 warnings (unused imports/setters left in the Coach form, to remove at build).
+- New (committed): `src/lib/__tests__/setupFormSeed.test.js`, 5 passed (signature, focus reload wiring, F2 wiring, Coach save carries no training keys, declined returns before persist). Source-level only.
+- New behavioural repros on the real screens (harness, not CI): `scripts/paper-render/c2-repro.test.js`.
+- Not run: `npm run lint && npm test` for the whole repo (prototype). Device checklist not written (prototype, no build).
+
+### Effort / Risk
+Effort M-L (the block-kept-on-Coach change, the dead-kit-code removal and test rewrites are the L part). Risk Med: save-order and plan-rebuild paths for paying users.
+
+### Questions for the owner
+1. If the plan fails to build (an error, not a decline), keep today's "goal and targets saved, plan did not rebuild", or save nothing as for a decline? Prototype keeps today's.
+2. Rename the Coach button from "Review my plan changes" (it also saves goal and targets) to "Review and save"?
+3. Make the ED-neutral change summary use `safetyState.suppressed` (adds calm mode and failed-read) rather than the open-flag read it uses now?
+4. Confirm the Coach form should still rebuild the plan on a phase change at all (the preview stays), given it no longer edits any training field.
+
+---
+
+## 11. Settings
+
+Status: Confirmed; owner layout implemented. Owner answer quoted: "Layout: Training: Injuries & limitations, Coaching, Workout | Nutrition: Nutrition targets, Dietary needs | Reminders: Notifications, Coaching reminders | Display & accessibility: Display, Units, Home screen widget (Android) | Privacy & data: Your data, Privacy and legal, Community | Account & help: Account, Profile, Help and about."
+
+Renders: ![11-before-settings.png](img/11-before-settings.png) (flat card of 15 rows) and ![11-after-settings.png](img/11-after-settings.png) (six headings, 16 rows; the widget row shows because the harness is Android).
+
+### Row mapping, old to new (nothing lost)
+| Old row (SettingsScreen.js line) | New place | Notes |
+|---|---|---|
+| Injuries & limitations (:42) | Training, row 1 | text unchanged |
+| Account (:52) | Account & help | unchanged |
+| Profile (:57) | Account & help | unchanged |
+| Coaching (:62) | Training, row 2 | unchanged |
+| Workout & units (:73) | Training "Workout" | renamed; keeps session length, default rest timer, auto-start, open rest view, rest finished alert, sounds, exact alarms; body-weight control moved to Units |
+| Nutrition targets (:78) | Nutrition | unchanged |
+| Dietary needs (:83) | Nutrition | unchanged |
+| Notifications and reminders (:96) | Reminders "Notifications" | renamed; screen title already "Notifications" |
+| Coaching reminders (:101) | Reminders | unchanged label |
+| Display and accessibility (:106) | Display & accessibility "Display" | renamed; page title "Display"; Energy units control moved to Units; Haptics switch added |
+| (none) | Display & accessibility "Units" | NEW screen `SettingsUnitsScreen`: Body weight (Stone/Kg/Lbs, same store setter `setBodyWeightUnits`), Energy (kcal/kJ, same `accessibility.energyUnit`) |
+| Home screen widget, Android only (:111) | Display & accessibility | unchanged alert |
+| Your data (:122) | Privacy & data | unchanged |
+| Community (:136) | Privacy & data | unchanged cross-tab jump |
+| Privacy and legal (:144) | Privacy & data | unchanged |
+| Help and about (:150) | Account & help | unchanged |
+
+Contents of the Coaching, Dietary, Privacy, Data, Account, Profile and About screens are untouched. Headings use the existing `SectionHeader` primitive.
+
+### Wording table
+| Where | Before | After |
+|---|---|---|
+| SettingsScreen.js:73-77 | label "Workout & units", sub "Body weight unit, default rest timer and rest alerts" | label "Workout", sub "Session length, default rest timer and rest alerts" |
+| :96-100 | label "Notifications and reminders", sub "Training reminder, meal reminders and quiet hours" | label "Notifications", sub "Training reminder, getting-started nudges, welcome-back note, Community alerts, meal-log reminders and quiet hours" |
+| :101-105 | sub "Weigh-in and weekly check-in schedule" | sub "Morning weigh-in, weekly check-in, missed check-in follow-up and planned-meal confirmation" |
+| :106-110 | label "Display and accessibility", sub "Appearance, energy units, text size, contrast, motion" | label "Display", sub "Appearance, text size, contrast, colour-blind palette, motion and haptics" |
+| new | none | label "Units", sub "Body weight and food energy" |
+| YouScreen.js:558-563 (Coach tab) | "Reminders for your weekly check-in, weigh-ins and logging." | "Reminders for your weigh-ins, weekly check-in, missed check-ins and planned meals." (the old "logging" implied food-log reminders, which live in Notifications) |
+| SettingsWorkoutScreen.js page title | "Workout & units" | "Workout" |
+| SettingsDisplayScreen.js page title | "Display & accessibility" | "Display" |
+| SettingsDisplayScreen.js Reduce motion sub (:245) | "Turns off PR celebration particles, rest timer animations, and other large transitions. Useful if on-screen motion makes you feel unwell." | "...large transitions. Does not change vibration; use Haptics for that. Useful if on-screen motion makes you feel unwell." |
+| new Haptics row | none | label "Haptics", sub "Small vibrations when you log a set, finish a rest or hit a PR. On by default. Separate from Reduce motion." |
+| Stale references renamed | "under Workout and units" (HowYouTrainScreen.js:1437-1438), "Settings > Workout & units" (SettingsFaqScreen.js:38), comment restEnd.js:44 | "under Workout", "Settings > Workout", comment |
+
+Two reminder screens are kept (owner: "Keep two reminder screens under one 'Reminders' heading; each subtitle lists full contents ... don't merge schedulers"). Planned-meal confirm stays on Coaching reminders. No scheduler code touched.
+
+### Units (evidence for "height only if a real setting")
+OBSERVED: no persisted height unit exists. Profile takes feet and inches only (`SettingsProfileScreen.js:82-130`, stored as cm); the metric/imperial switch is form-local state in onboarding (`ProOnboardingScreen.js:738`, `useState('imperial')`, never saved to the store). So Units has body weight and energy only, no height row. Gym weights stay kg-only; the Body weight text says "Gym weights stay in kg." The Body metrics "Weight units" door (`BodyMetricsScreen.js:1560`) now opens SettingsUnits (it used to open Workout); `SettingsUnits` is registered in the Profile-tab stack beside `SettingsDisplay` (`RootNavigator.js:713`). `SettingsWorkout` stays registered everywhere it was (HowYouTrain and capability routes rely on it).
+
+### Haptics behaviour table
+| Scenario | Today (`haptics.js` `reduceMotion()`) | Proposed (`hapticsOff()` reads `accessibility.hapticsEnabled === false`) |
+|---|---|---|
+| Fresh install | haptics on | on (`hapticsEnabled: true` default in `useAppStore.js` accessibility) |
+| In-app Reduce motion on | all haptics silent | haptics still on; animations reduced |
+| Phone's own reduce-motion/remove-animations on | all haptics silent (AX-09 side effect) | haptics still on |
+| Haptics switch off | no such switch | every named haptic (impact, notification, selection, prAchieved, restDone and the iOS rich curves) is a no-op |
+| Existing installs with a stored a11y blob lacking the key | n/a | key absent counts as on (`!== false`), so nobody is silenced by the upgrade |
+| Persistence and sync | n/a | rides the existing `setAccessibilityPref` path: AsyncStorage `A11Y_PREFS_KEY` plus `pushPrefSoon`, exactly like `energyUnit`; no new key, no schema change |
+Not covered: a person who previously had haptics silenced only because their phone's reduce-motion was on will now feel haptics again until they switch Haptics off. That follows from the owner answer; stating it so it is not a surprise. Rest-finished locked-phone alert is a notification, not this helper, and is untouched (INFERRED from stage 1, not re-traced).
+
+Not changing: calm-mode `RecordLine` selection haptic, notification handler, rest alert sound/vibrate switches, all scheduler and ED-suppression code.
+Files: `src/screens/SettingsScreen.js`, new `src/screens/SettingsUnitsScreen.js`, `SettingsWorkoutScreen.js` (body-weight block removed; leftover unused imports `Text`, `Ionicons`, `BODY_WEIGHT_UNIT_OPTIONS`, `bodyWeightUnits`, `setBodyWeightUnits`, `liveLocal` need removing in the build, they raise lint warnings only), `SettingsDisplayScreen.js`, `src/lib/haptics.js`, `src/store/useAppStore.js`, `src/navigation/RootNavigator.js`, `BodyMetricsScreen.js`, `YouScreen.js`, `HowYouTrainScreen.js`, `SettingsFaqScreen.js`, `src/lib/notifications/restEnd.js` (comment).
+Safety and privacy: no ED-safety code, notification gating or consent touched; weight/food reminder suppression untouched. Haptics pref carries no personal data.
+Data, sync, migrations: none. Pref syncs through the existing accessibility JSON. Native: no. Server migration: no.
+Effort M. Risk Low to Med (many pinned copy tests, below; routes: `SettingsUnits` must be registered in any stack that links to it, today only the Profile tab does, and it is reached via `navigateCrossTab`).
+Questions for the owner: (1) The Display row label and page title are now "Display" under the heading "Display & accessibility", as in your table. (2) Reduce motion text now says it does not change vibration; say if you prefer shorter. (3) Home screen widget row sits under Display & accessibility exactly as listed.
+
+---
+
+## 0. SAFETY FIRST (answer to the brief): YES, the screen showed the verdict under an open ED flag
+
+Evidence: a real render of CoachOutputScreen (the live runWeeklyCoach recompute, persona with an open ED flag raised through database.raiseEdPatternFlag, stored check-in calsAdherence 'no'). Before: image ![12-15-before-decision-ed.png](img/12-15-before-decision-ed.png). The rendered text contained "Calories / Under target" and "Food logged / 1 of 7 days" (weight rows were already withheld). Same under calm (![12-15-before-decision-calm.png](img/12-15-before-decision-calm.png)). Cause: viewCopy.buildWeekRows had no suppressed input (viewCopy.js, CALORIE_VALUES row, `if (cals && CALORIE_VALUES[cals])`).
+Fix (first change): buildWeekRows takes `suppressed`; CoachOutputScreen passes `safety.suppressed || edPatternOpen || calmMode` (safety = useSafetyState, i.e. src/lib/safetyState.js; nothing re-implemented). Suppressed: Calories row left out, every row's mark set to null. After render: image ![12-15-after-decision-ed.png](img/12-15-after-decision-ed.png) and ![12-15-after-decision-calm.png](img/12-15-after-decision-calm.png): Calories row gone; Food logged count stays (a count, no verdict).
+Judgement call to confirm (Q1 below): I kept the plain "Food logged n of 7 days" count and the confidence line under suppression (owner said the confidence line may stay). I also removed the attention marks (energy, soreness, sleep, joints) under suppression, per the owner's "no good/bad marker".
+
+---
+
+## Item 12
+
+Status: Confirmed, prototyped.
+Evidence: PROPOSALS.md item 12; owner answer "Min 5 logged food days... Tick only for good outcome, neutral marker for logged... Under suppressed (incl calm) hide Calories verdict and any good/bad marker; confidence line may stay."
+Before / After (exact strings):
+
+| Surface | Before | After | file |
+|---|---|---|---|
+| Today food row, 1 to 4 days | "Food logged on 1 of the last 7 days" with green tick | "Not enough food logged to judge (1 of the last 7 days)" with a small grey dot | home/evidencePanel.js (food row) |
+| Today food row, 5+ days | tick, same label | tick, "Food logged on 5 of the last 7 days" | same |
+| Today sessions row | tick when >=1 | neutral dot (logged is not a verdict); open ring if none | same |
+| Today weigh-ins row | tick when target met | unchanged (a target met is a good outcome) | same |
+| Today morning weight row | tick | neutral dot | same |
+| Quick check-in Nutrition, under 5 diary days | "Off your target" / "Hit your target" + tick | "Not enough food logged to judge" + dot; quick path kept | WeeklyCheckInScreen.js renderFastCheckIn |
+| Quick check-in Nutrition, 5+ days | tick always, even "Off your target" | tick only for "Hit your target"; "Off your target" gets a dot | same |
+| Quick check-in Training | tick always | tick only for hit/exceeded; dot for struggled/dropped | same |
+| Quick check-in Weight, Progress scan | tick | dot | same |
+| Decision confidence | "Confidence: high. A full week of data sits behind this decision." plus "Only N morning weigh-in(s) was/were logged this week." under 4 | "Confidence: high. Based on 6 morning weigh-ins and your check-in." Medium: "Confidence: medium. Based on N morning weigh-ins and your check-in. That is less to go on than usual, so your coach waits an extra week before changing your calorie target." Low: "...Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target." | viewCopy.buildConfidenceLine |
+
+Behaviour table:
+| Scenario | Today | Proposed |
+|---|---|---|
+| Today panel, calm / ED flag / SCOFF / failed read | no rows (neutral variant) | unchanged (render shows identical text) |
+| Quick check-in, calm / ED | Nutrition row dropped | unchanged; ticks also gone (all dots) |
+| Decision screen, calm / ED | Calories verdict shown | hidden; no marks |
+| Quick check-in with 1 to 4 logged days | verdict from deriveCalsAdherence | says cannot judge |
+Not changing: deriveCalsAdherence, CALS_ADHERENCE_BAND, assessDataConfidence, any engine maths or floors. The confidence basis uses only the weigh-in count already on the screen (weigh-ins and check-in are exactly assessDataConfidence's inputs; sessions and food are not, so the line does not claim them).
+Files: src/lib/home/evidencePanel.js, src/components/home/EvidencePanel.js, src/screens/WeeklyCheckInScreen.js, src/lib/coachOutput/viewCopy.js, src/screens/CoachOutputScreen.js.
+Safety and privacy: suppression via safetyState only; no weight figure added; confidence line quotes a count, never a weight.
+Data, sync, migrations: none. Native: none.
+Images: ![12-15-before-today-normal.png](img/12-15-before-today-normal.png), ![12-15-before-today-calm.png](img/12-15-before-today-calm.png), ![12-15-before-today-ed.png](img/12-15-before-today-ed.png), ![12-15-after-today-normal.png](img/12-15-after-today-normal.png), ![12-15-after-today-calm.png](img/12-15-after-today-calm.png), ![12-15-after-today-ed.png](img/12-15-after-today-ed.png), ![12-15-before-quickcheckin-normal.png](img/12-15-before-quickcheckin-normal.png), ![12-15-before-quickcheckin-calm.png](img/12-15-before-quickcheckin-calm.png), ![12-15-before-quickcheckin-ed.png](img/12-15-before-quickcheckin-ed.png), ![12-15-after-quickcheckin-normal.png](img/12-15-after-quickcheckin-normal.png), ![12-15-after-quickcheckin-calm.png](img/12-15-after-quickcheckin-calm.png), ![12-15-after-quickcheckin-ed.png](img/12-15-after-quickcheckin-ed.png), ![12-15-before-decision-normal.png](img/12-15-before-decision-normal.png), ![12-15-before-decision-calm.png](img/12-15-before-decision-calm.png), ![12-15-before-decision-ed.png](img/12-15-before-decision-ed.png), ![12-15-after-decision-normal.png](img/12-15-after-decision-normal.png), ![12-15-after-decision-calm.png](img/12-15-after-decision-calm.png), ![12-15-after-decision-ed.png](img/12-15-after-decision-ed.png) (in ). Harness limit: the persona has 1 logged food day, so the 5+ day tick is shown by unit test, not an image.
+Effort S to M, Risk Low-Medium (fast path wording only; stored answer unchanged).
+Questions: Q1 keep "Food logged n of 7" under suppression (current prototype) or hide? Q2 below 5 days the quick check-in still submits the derived 'yes'/'no' (so the engine may count a one-day answer as reported adherence, coachContext.js:244-275). Should it store 'untracked' instead? That changes engine input, so I did not.
+
+---
+
+## 14. Volume words and colours
+Status: Confirmed, built as prototype. Owner: "Strip: four tones as the figure legend... propose four tone words distinct from every group label. Separate by hue, checked in all four palettes incl colour-blind; no red for 'too much'; run theme contrast tests."
+
+### Four tone words (none appears in any of the eight group labels)
+| Band(s) | Sets/week | Group label (lists, unchanged) | Old tone word | NEW tone word | Old colour token | NEW colour token |
+|---|---|---|---|---|---|---|
+| below_maintenance | under 2 | Too few to hold size | Too few to hold size (same words as the group = clash) | **Low** | textMuted | textMuted |
+| maintenance, between | 2 to 10 | Holds your size / Holds size, some growth | Holds size, some growth (same words as one group, wider meaning) | **Steady** | volumeMinimum | volumeMinimum |
+| normal_growth, focus_range, above_normal, top_of_studied | 10 to 42 | Usual range for growth / Higher range for a focus / Above the usual range / Close to the upper limit | Range for growth | **Growing** | success | success |
+| beyond_studied | over 42 | More than needed | More than needed | **Plenty** | macroCarb | **volumeBeyond (new)** |
+The strip's third set ("Enough sets" 2 to 42, volumeStrip.js:95-100) is gone: the strip now uses these four.
+
+### Colours (hex, hue, contrast on card surface, min CIELAB distance under simulated colour vision; script `$S/e2b/hue.js`, Machado 2009)
+| Palette | Low / Steady / Growing / Plenty | BEFORE min dE (normal/deut/prot/trit) | AFTER min dE |
+|---|---|---|---|
+| dark | #9C9C9C / #56B4E9 / #4CAF50 / **#E69F00** (was #56B4E9) | 0 / 0 / 0 / 0 (Steady = Plenty) | 37.2 / 36.0 / 31.8 / 18.3 |
+| light | #5C5C5A / #1E78B4 / #2E7D32 / **#9A5B00** (was #1E78B4) | 0 (Steady = Plenty) | 41.2 / 22.7 / 16.0 / 20.2 |
+| dark colour-blind | #9C9C9C / **#009E73** (was #0072B2) / #56B4E9 / **#E69F00** (was #56B4E9) | 0 (Growing = Plenty) | 37.2 / 12.6 / 19.3 / 16.1 |
+| light colour-blind | #5C5C5A / #009E73 / #0072B2 / **#9A5B00** (was #1E78B4) | 3.6 (Growing ~ Plenty) | 43.1 / 18.7 / 27.7 / 15.7 |
+All tones >= 3:1 on card surface (lowest 3.42, light colour-blind Steady). No red or warning token. Orange is the one "Plenty" hue in every palette (violet was tried: fails deuteranopia, dE 3.2 dark / 1.3 light).
+Renders: ![14-before-progress-dark.png](img/14-before-progress-dark.png), ![14-before-progress-light.png](img/14-before-progress-light.png), ![14-before-progress-darkcvd.png](img/14-before-progress-darkcvd.png), ![14-before-progress-lightcvd.png](img/14-before-progress-lightcvd.png), ![14-before-heatmap-dark.png](img/14-before-heatmap-dark.png), ![14-before-heatmap-light.png](img/14-before-heatmap-light.png), ![14-before-heatmap-darkcvd.png](img/14-before-heatmap-darkcvd.png), ![14-before-heatmap-lightcvd.png](img/14-before-heatmap-lightcvd.png), ![14-before-summary-dark.png](img/14-before-summary-dark.png), ![14-before-summary-light.png](img/14-before-summary-light.png), ![14-before-summary-darkcvd.png](img/14-before-summary-darkcvd.png), ![14-before-summary-lightcvd.png](img/14-before-summary-lightcvd.png), ![14-after-progress-dark.png](img/14-after-progress-dark.png), ![14-after-progress-light.png](img/14-after-progress-light.png), ![14-after-progress-darkcvd.png](img/14-after-progress-darkcvd.png), ![14-after-progress-lightcvd.png](img/14-after-progress-lightcvd.png), ![14-after-heatmap-dark.png](img/14-after-heatmap-dark.png), ![14-after-heatmap-light.png](img/14-after-heatmap-light.png), ![14-after-heatmap-darkcvd.png](img/14-after-heatmap-darkcvd.png), ![14-after-heatmap-lightcvd.png](img/14-after-heatmap-lightcvd.png), ![14-after-summary-dark.png](img/14-after-summary-dark.png), ![14-after-summary-light.png](img/14-after-summary-light.png), ![14-after-summary-darkcvd.png](img/14-after-summary-darkcvd.png), ![14-after-summary-lightcvd.png](img/14-after-summary-lightcvd.png) (24 images, side by side).
+
+### Surfaces
+| Surface | Today | After |
+|---|---|---|
+| Progress strip legend (AnalyticsScreen via stripLegendItems) | Too few to hold size / Enough sets / More than needed (3) | Low / Steady / Growing / Plenty (4); bar segments by the same 4 tones |
+| Heatmap figure legend (BodyDiagramHeatmap.js:303-306) | old tone words | new tone words (reads VOLUME_TONE_LABELS) |
+| Heatmap lists, workout summary badges, weekly volume review (CoachReviewScreen VolumeRow) | 8 group labels | unchanged labels; badge/dot colour uses new Plenty colour |
+| Recovery detail (muscleDetail.js:251) | sentence from judgement.line, no colour | not changed, not a legend surface |
+| "Your week" = Weekly story screen | no volume status (WeeklyStoryScreen.js / weeklyStory.js have no band or volume code, grep) | LEFT OUT, as instructed |
+
+### Tooltips read the shared tables (new `volumeGroupLines()`, `volumeToneLine()`, `VOLUME_GROUP_RANGES` in `volumeBandLabels.js`, ranges from `WEEKLY_BANDS`)
+| Where | Before | After |
+|---|---|---|
+| WorkoutSummaryScreen.js:2105-2113 | 5 of 8 labels hand-typed, no "Holds size, some growth", "Above the usual range" or "Close to the upper limit" | all 8 "Label: range" lines + "The colours are Low (under 2 sets), Steady (2 to 10), Growing (10 to 42) and Plenty (over 42)." + credit sentence |
+| volumeStrip.js STRIP_TOOLTIP (:74-81) | prose bands + "The colour labelled Enough sets covers 2 to 42 sets a week." | opening, credit sentence, "A muscle is read against these bands:" + same 8 lines, plan sentence, same colours line |
+Example line: "Holds size, some growth: 6 to 10 sets".
+
+### Dead code
+Removed: `volumeColors`, `volumeStatusColors`, `volumeStatusColor`, `buildVolumeStatusColor` (theme.js, ~70 lines; no consumer in src) and `volumeStatusColor.test.js`.
+NOT removed, needs your call: `getVolumeStatus` (algorithms.js:394). Zero src consumers, but pinned by the coach-validation ledger: rule T-VOLUME-01 (ledger.json, ORACLE-LOCK.md), scenarios TRN-62/63/64, TMP-R17, harness `landmarks`, plus tests in algorithms.test.js and adductors.test.js. Removing it means retiring a locked oracle rule. I kept it and corrected its stale comment.
+
+Not changing: band thresholds, group labels, judgeWeek, recovery-week "Trained" neutral shade, macroCarb (food), volumeMinimum name.
+Files: theme.js, volumeBandLabels.js, volumeJudgement.js (toneColors beyond), progress/volumeStrip.js, WorkoutSummaryScreen.js, algorithms.js (comment), tests below.
+Safety and privacy: none touched (wording/colour only; no ED, calorie, telemetry or consent path). Whether volume surfaces hide under calm/ED flag: not changed, not checked. Data/sync/migrations: none. Native: no. Migration: no.
+Tests changed: theme.test.js (new test: 4 tones distinct, >=3:1, not error/warning, dE>=10 under normal, deuteranopia, protanopia, tritanopia, in all 6 palettes; replaced the lightness test), volumeStrip.test.js, BodyDiagramHeatmap.test.js/.recovery.test.js, volumeJudgement.test.js, AnalyticsScreen.d214.guard / stateMatrix, WorkoutSummaryScreen.volumeWords.guard.
+Effort M. Risk Low-Med: colour change visible to everyone; orange is near the brand amber in dark (#E69F00 vs #F5A623).
+Questions: (1) Orange for Plenty OK, given it sits near brand amber? (2) Words Low / Steady / Growing / Plenty OK? (3) Retire oracle rule T-VOLUME-01 and getVolumeStatus, or keep the function?
+
+---
+
+## Item 15
+
+Status: prototyped for the main decision types; goal-specific variants listed below as not yet rewritten.
+Owner answers implemented: both cards expanded when two or fewer; coaching rate only in kg/week, scale reading in info sheet, hidden under withholdsWeightFigures; check-in day named; calm softens judgement words only; new outputs only (stored outputs keep old text).
+
+Four-part shape: saw and means (engine note), what changes (the card headline, signed kcal or sets), from when and reviewed next (new footer line).
+
+| Decision | Before | After (normal) | After (calm) | file |
+|---|---|---|---|---|
+| Cut, too slow | "Weight is coming down slower than the target rate." | "Your weight trend is coming down more slowly than the rate you chose. Taking a little off your daily calories should bring it back on pace." | "Your weight trend is coming down, at a pace a little under the rate you chose. Taking a little off ..." | weeklyCoach.js calNote |
+| Cut, too fast | "Weight is dropping faster than the target rate. Slowing it down protects muscle." | "Your weight trend is dropping faster than the rate you chose. Adding a little to your daily calories slows it down, which protects muscle." | "...dropping at a pace a little above the rate you chose. Adding ..." | same |
+| Bulk, too slow | "Weight gain is below the target rate." | "Your weight trend is rising more slowly than the rate you chose. Adding a little to your daily calories should bring it back on pace." | "...rising, at a pace a little under the rate you chose. ..." | same |
+| Bulk, too fast | "Weight is going on faster than the target rate. Pulling back keeps fat gain in check." | "Your weight trend is rising faster than the rate you chose. Taking a little off your daily calories keeps fat gain in check." | "...rising at a pace a little above the rate you chose. ..." | same |
+| No calorie change | "No change needed this week." | "Nothing in your week calls for a change to your calories." | same | CoachOutputScreen.js NextWeekCard |
+| Volume +1 | "Recovery is solid, so your training carries on as planned, with room for small progress." | "Your recovery is solid, so there is room for a small step up in volume." | same | coachingGoals.js getTrainingNote (general) |
+| Volume +2 | "Recovery is excellent and performance is climbing, so your coach sees room for more work." | "Your recovery is excellent and your lifts are going up, so there is room for a bigger step up in volume." | same | same |
+| Volume hold | "Performance and recovery need to stabilise, so your coach is keeping your plan as it is before adding anything more." | "Your performance and recovery are still settling, so your volume stays as it is. Your coach adds nothing until both are steady." | same | same |
+| Volume down | "Recovery dipped this week, so your coach is easing your volume back a little." | "Your recovery dipped this week, so your coach is taking some sets out of each muscle group to give it time to come back." | same | same |
+| Fatigue (matrix deload note) | "Multiple signs are pointing to fatigue, so your coach is easing your training volume back." | "Several signs point to fatigue building up, so your coach is easing your training volume back." | same | same |
+| Diet break body (last sentence) | "A short diet break, returning to maintenance calories for one to two weeks, can help your body settle back to its normal calorie burn and improve long-term fat loss. Consider taking a break before your next phase." | "A short break at maintenance calories, for one to two weeks, lets your body settle back and helps the next stretch of the cut work better. It is a suggestion, and setting maintenance calories changes your target from the moment you tap the button." | same | CoachOutputScreen.js DietBreakCard |
+| Held: target not tried (5+ days) | "...Your logged intake averaged N kcal against a T kcal target, so this target has not really been tried yet. Worth giving it a fair run before the number changes." | "...You logged about N kcal a day against a T kcal target, so this target has not really been tried yet. Your coach gives it a fair run before changing the number." | same | weeklyCoach.js |
+| Held: target not tried (<5 days) | "...Worth giving it a fair run before the number changes." | "...Your coach gives it a fair run before changing the number." | same | same |
+| Held: awaiting last change | "...that change has not had long enough to show yet. Reversing it now would tell your coach nothing." | "...it has not had long enough to show in your weight trend. Changing it back now would tell your coach nothing." | same | same |
+| Footer, new line (every decision) | none | change pending: "A change starts from the moment you tap Apply. Your coach looks at this again at your Thursday check-in." Hold or applied: "Your coach looks at this again at your Thursday check-in." Manual: "These are suggestions, so nothing changes unless you make the change yourself. ..." No known day: "...at your next check-in." | same | viewCopy.buildTimingLine |
+| More adjustments | collapsed "More adjustments (1)" | both cards shown (collapse kept only for more than two) | | CoachOutputScreen.js |
+| Your week weight rows | "7-day trend +0.06kg" and "Coaching trend +0.09%/wk" | one row "Coaching trend +0.07 kg/week"; info sheet adds "Your scale reading over the same seven days: +0.06kg." Nothing under withholdsWeightFigures (unchanged). Calm keeps it (weight figures stay visible under calm) | | viewCopy.buildWeekRows, formatCoachingRateKg |
+
+Locked copy NOT touched, word for word (git diff shows no change to whyThisTemplates.js, nutritionEngine.js, edPatternDetector.js, wellbeing.js, coachApply.js):
+- rapid-loss calNote "Weight is dropping faster than the target rate and energy is low. Adding calories straight away to protect recovery." (weeklyCoach.js rapidLossOverride branch);
+- ffm_floor reason "Calorie target held. Your seven-day average intake of {n} kcal is at or below your safety floor of {f} kcal. Eating below this level for long stretches can compromise recovery and lean mass." and why "Your calorie target holds. Your seven-day average intake is at or below the safety floor for your lean mass.";
+- rapid_loss_corrected reason and why; ED lockout, cleared and rapid-loss blocks and RapidLossAlert (whyThisTemplates.js);
+- "Calories held. Wellbeing screen flagged restriction concerns."; intake_read_failed reason; the Beat UK block.
+Not changing: the deload note "A lighter week: ... with the same exercises and weights" (tied to item 17 Q4, per owner); the nine goal-specific variants of each training note (only the `general` variant is rewritten in the prototype; the rest follow the same shape in the build); other held reasons, WHY_LIBRARY and dietBreakNote (unchanged); persisted outputs keep their stored text (the screen reads stored notes).
+Safety and privacy: weight direction words stay under calm (owner Q4); only "slower/faster/below/above" judgement words soften. No kg figure under withholdsWeightFigures (rate row is inside that branch). No weight figure in any stored string (kg/week is computed on screen from stored %/wk and ewma7).
+Data, sync, migrations: none (new outputs only). Native: none.
+Images: ![12-15-before-decision-normal.png](img/12-15-before-decision-normal.png), ![12-15-before-decision-calm.png](img/12-15-before-decision-calm.png), ![12-15-before-decision-ed.png](img/12-15-before-decision-ed.png), ![12-15-after-decision-normal.png](img/12-15-after-decision-normal.png), ![12-15-after-decision-calm.png](img/12-15-after-decision-calm.png), ![12-15-after-decision-ed.png](img/12-15-after-decision-ed.png). Harness limit: the persona's decision has no calorie change or deload, so the calorie, deload, diet-break and held strings are shown from source diff and the engine, not rendered.
+Effort M, Risk Medium (many pinned strings).
+Questions: Q3 does the timing line belong on the hold-week card too (prototype: yes, always). Q4 kg/week for lb users (owner said kg/week; prototype always kg). Q5 goal-specific note variants: approve rewriting all 36 in the same shape?
+
+---
+
+## Batch D2: Tests
+Pinned strings/sources I updated in the prototype (evidence, not the build): scenarios.training.data.js (2 strings), campaign2.comprehension, campaign10f, checkinIntegrity.a7.guard, CoachOutputScreen.photoCorroborationCaption (the D99 "thinness keyed to count" rule is now met by the basis line always naming the count), coachOutputWeekRows, evidencePanel tests; added item 12/15 tests to coachOutputWeekRows.test.js. No founder-rule conflict.
+Full result: see final report line (npx jest and eslint on the worktree).
+
+---
+
+## Batch D2: Device checklist
+1. Today with 2 logged food days: food row says "Not enough food logged to judge (2 of the last 7 days)" with a dot, no tick. With 5+: tick.
+2. Quick check-in: Nutrition "Hit your target" ticks only with 5+ diary days; "Off your target" has a dot.
+3. Coaching decision: footer names your check-in day; confidence reads "Based on N morning weigh-ins and your check-in."
+4. Both Nutrition and Training cards show without opening anything.
+5. ED-safety: turn on calm, then (test account) an open ED flag: no Calories row, no marks on the decision; Today shows no rows; quick check-in no Nutrition row. With the flag open no kg/week row.
+6. Maximum text size: Today panel, quick check-in card and the decision footer wrap, nothing clips.
+
+---
+
+## 16. Rename "Help" in the exercise card
+
+Status: Confirmed. Owner answer (ANSWERS.md, item 16): "Stage 2: yes. 'More'. Update the two pinned tests."
+
+Evidence:
+- `src/screens/ActiveWorkoutScreen.js:6368` passes `moreHint={showInfoTipPulse ? 'Help' : null}`.
+- `src/components/workout/session/ExerciseSection.js:271` a11y label "More options for this exercise, including how logging works" (unchanged). `:273` renders the hint text beside the glyph.
+- The hint shows only while `@volyume_seen_workout_info` is unset (Stage 1 16, ActiveWorkoutScreen.js:2708-2713), and retires on the details or overflow tap (:1527-1540).
+
+Before / After (exact strings):
+
+| file:line | Before | After |
+|---|---|---|
+| src/screens/ActiveWorkoutScreen.js:6368 | `moreHint={showInfoTipPulse ? 'Help' : null}` | `moreHint={showInfoTipPulse ? 'More' : null}` |
+| src/components/workout/session/__tests__/ExerciseSection.test.js:171 | `const tree = render({ moreHint: 'Help' });` | `const tree = render({ moreHint: 'More' });` |
+| src/components/workout/session/__tests__/ExerciseSection.test.js:172 | `textHost(tree, 'Help');` | `textHost(tree, 'More');` |
+| src/__tests__/campaign5.firstUse.test.js:1401 | `expect(src).toContain("moreHint={showInfoTipPulse ? 'Help' : null}");` | `expect(src).toContain("moreHint={showInfoTipPulse ? 'More' : null}");` |
+
+Not changing: the a11y label (ExerciseSection.js:271), the once-only display rule, the overflow menu contents (SessionSheets.js:627-914).
+
+Files: ActiveWorkoutScreen.js, ExerciseSection test, campaign5.firstUse test.
+
+Safety and privacy: none of the listed rules is touched. No data, no telemetry key, no notification.
+
+Data, sync, migrations: none. Native code: no. Server migration: no.
+
+Tests: the two pinned test edits above (three expectations in ExerciseSection.test.js and one in campaign5.firstUse.test.js). Baseline PASS. Expect PASS after edit.
+
+Effort: S. Risk: Low. Main risk: a bare "More" tells a sighted user less than "Help" did. The accessibility label still says what it is for.
+
+Questions for the owner: none (answered).
+
+---
+
+## 17. Weight and rep suggestions in the logger
+Status: Confirmed. Owner answers implemented (quoted): "Layoff threshold 7 -> 14 days, load only, drop reps reset; show before/after for a once-a-week exercise whose day drifts one or two days. Topped range: up to last time's reps. Keep 2026-08-17 order (no card reason text); add reasons for layoff and consecutive-miss drop to existing Exercise info sheet, style of 'Eased for today'. Recovery week uses last week's weights with fewer sets/reps."
+
+### Evidence (line numbers are in the worktree after the change; originals in brackets)
+- Layoff test and reps reset: `src/lib/livePrescription.js` `determineWorkingLoad` [was :1157 `senior.layoffDays > 7`, :1163-1169 `repsOverride: band.min`, `seniorMultiplier 0.9`]. Day count: `ActiveWorkoutScreen.js:3008` `Math.floor((Date.now() - lastTs) / DAY)`, unchanged.
+- Topped hold: `nextSessionOpeningLoad` returns `HOLD_EFFORT_UNKNOWN` / `HOLD_EFFORT_VERY_HARD` (:491-499 original). Rep target step 6 of `resolveSetPrescription` clamped to `band.max` through `expectedReps` (which itself clamps to the band, :563-565 and :578-580).
+- Recovery week: `ActiveWorkoutScreen.js:3079-3100` called `getWeek1SetsForExercise` (`database.js:7318`) then `generateDeloadPrescription(week1Sets, true)` (`algorithms.js:1892`): weight kept, reps halved, RIR 4. Set COUNT in a recovery week does not come from this; it comes from `weeklyAllocation` (`ActiveWorkoutScreen.js:1295-1334`).
+- Item-15 note: `weeklyCoach.js:1956` "A lighter week: fewer sets this week, with the same exercises and weights."
+
+### Before
+See behaviour table. Short version: an exercise last logged 8 or more days ago loses 10% and drops to the band-floor reps; a topped range with effort unknown/very hard is told the band max even if you did more; a recovery week anchors on block week 1 weights; nothing explains the layoff cut or the consecutive-miss drop.
+
+### After
+Behaviour table below. All numbers in the "today" and "proposed" columns were produced by running the real `resolveSetPrescription` (band 8-12, compound, 2.5 kg step, effort 2 unless stated; the history sessions are one week apart).
+
+### Behaviour table: scenario -> today -> proposed (set 1, `resolveSetPrescription`)
+
+A. Once-a-week exercise, last two sessions 72.5 x 10 and 72.5 x 9, day drifts (days since last log = `layoffDays`)
+| Days since last logged | Today | Proposed |
+|---|---|---|
+| 7 | 72.5 x 11 (MATCH_LOAD_ADD_REP) | 72.5 x 11 (same) |
+| 8 | 65.25 x 8 (SENIOR_RECOVERY_HOLD) | 72.5 x 11 |
+| 9 | 65.25 x 8 | 72.5 x 11 |
+| 10 | 65.25 x 8 | 72.5 x 11 |
+| 13 | 65.25 x 8 | 72.5 x 11 |
+| 14 | 65.25 x 8 | 72.5 x 11 (14 is not "more than 14") |
+| 15 | 65.25 x 8 | 65.25 x 11 (load cut 10%, reps follow the ordinary rule) |
+| 21 | 65.25 x 8 | 65.25 x 11 |
+
+So a lift that drifts 7, 8, 9 days (or 13, 14) is never cut; at 15 it is, and the reps no longer fall from 11 to 8.
+
+B. Other layoff cases
+| Scenario | Today | Proposed |
+|---|---|---|
+| 8 days, last 72.5 x 12 topped, effort 2 | 65.25 x 8 | 75 x 8 (normal advance; not a layoff) |
+| 15 days, last 72.5 x 12 topped, effort 2 | 65.25 x 8 | 65.25 x 12 (cap at last load x 0.9; no advance; reps unchanged) |
+| 8 days, last 60 x 9 | 54 x 8 | 60 x 10 |
+| 15 days, last 60 x 9 | 54 x 8 | 54 x 10 |
+| 15 days AND two consecutive misses (72.5 x 7, 72.5 x 7) | 63 x 8 | 63 x 9 (drop to 70, then x 0.9) |
+| Block finished, awaiting decision (7 days) | cap at last load, reps = band min | unchanged (reps still reset; only the layoff reset was dropped) |
+
+C. Topped range, load holds (effort unknown or "very hard")
+| Scenario | Today | Proposed |
+|---|---|---|
+| Last two sessions 72.5 x 15, effort unknown | 72.5 x 12 (HOLD_EFFORT_UNKNOWN) | 72.5 x 15 |
+| Same, effort 5 | 72.5 x 12 (HOLD_EFFORT_VERY_HARD) | 72.5 x 15 |
+| Same, effort 2 (supports advance) | 75 x 8 | 75 x 8 (unchanged) |
+| Last 72.5 x 12, effort unknown (reps exactly band max) | 72.5 x 12 | 72.5 x 12 (unchanged) |
+| Sets 15, 14, 13 last time, effort unknown | set 1: 72.5 x 12 | set 1: 72.5 x 15 (rule is "up to last time's reps at this position") |
+
+Rule: only for the two hold provenances, rep target = max(ordinary target, last session's reps at that position), via `referenceFor`. Never past last time's reps.
+
+D. Recovery week (planned, `isDeload`), real numbers
+| Scenario | Today | Proposed |
+|---|---|---|
+| Week 5 last 72.5 x 8, block week 1 was 65 x 8 | 65 x 4, RIR 4 | 72.5 x 4, RIR 4 |
+| Week 5 last 72.5 x 8, week 1 was 80 x 8 (a fall since) | 80 x 4 (heavier than last week) | 72.5 x 4 |
+| No earlier session of this lift (new swap) | week-1 sets, else first-time | week-1 sets (fallback unchanged) |
+| Second recovery session in the same week | week-1 again (stable) | skips sessions already inside the recovery week (`mesocycleWeekId` match), so reps are not halved twice |
+| "Fewer sets" | from `weeklyAllocation` | unchanged (observed: the deload target row count is not what shortens the set count) |
+The info-banner list (`describePrescriptionDifferences`) is now measured against last time's sets, so it can say "fewer reps per set" and never "lighter weights". Item 15's note "fewer sets this week, with the same exercises and weights" (`weeklyCoach.js:1956`) is now true of the weights. Cite for item 15 Q4. (Note: the stale comment at `recoveryState.js:216-222` saying the first half "keeps the load" is now accurate.)
+
+E. Reasons (info sheet only, nothing on the card)
+| Scenario | Today | Proposed |
+|---|---|---|
+| Layoff cut applied | no explanation | Exercise info sheet section after "Eased for today" |
+| Consecutive-miss drop (two sessions below the rep floor) | no explanation | same section |
+| Readiness "Eased for today" | shown | unchanged |
+| Set card | no reason line | still none (2026-08-17 order kept; source guard comment at `ActiveWorkoutScreen.js:175-187` untouched) |
+
+Exact strings (new; `src/lib/livePrescription.js` `prescriptionReasonCopy`, drawn in `SessionSheets.js` just above the instructions block):
+| Case | Title | Reason | Signal line |
+|---|---|---|---|
+| Layoff | Eased after a break | It has been 15 days since you last did this lift, so today's suggestion starts a little lighter while you ease back in. | Last time you used 72.5 kg. Today's suggestion is 65.25 kg. |
+| Consecutive miss | Lowered to rebuild | Your last two sessions at 72.5 kg finished below the rep range, so today's suggestion steps down a little to help you build your reps back up. | Last time you used 72.5 kg. Today's suggestion is 70 kg. |
+No em dashes, British English, no shame wording. Kilograms only (gym weights kg). Reasons are computed from the start-of-exercise state, so they stay readable after sets are logged.
+
+### Info sheet render
+Not rendered. The paper-render harness reaches the Active workout screen (config 02) but `showExecution` is local `useState(false)` and the layoff needs seeded history of a specific age; forcing both is a harness edit out of proportion for a prototype whose wording is two short lines. Annotated wireframe (same card style as "Eased for today", sits between it and "Setup"):
+```
+BEFORE (exercise last done 15 days ago)         AFTER
+Bench press                                     Bench press
+Chest · Barbell                                 Chest · Barbell
+3 sets of 8-12 reps                             3 sets of 8-12 reps
+[Plan note]                                     [ pulse icon ] Eased after a break
+Setup ...                                       It has been 15 days since you last did this lift,
+Execution ...                                   so today's suggestion starts a little lighter while
+Watch ...                                       you ease back in.
+                                                Last time you used 72.5 kg. Today's suggestion is 65.25 kg.
+                                                [Plan note] Setup ... Execution ... Watch ...
+```
+The screenshot/maximum-text-size pass belongs to the device checklist below.
+
+### Not changing
+The 0.9 factor and the 0.25 grid; the block-finished cap and its band-floor reps; readiness easing; the consecutive-miss drop itself (still 72.5 -> 70); the recovery week's halved reps and RIR 4; set counts; every within-session rule (`adjustWeaker`, `adjustStronger`); the set card (no reason text); ED/nutrition/calorie code (not touched).
+
+### Files
+`src/lib/livePrescription.js` (LAYOFF_DAYS, `isLayoff`, layoff reps, topped hold reps, new `explainPrescription`, `prescriptionReasonCopy`); `src/screens/ActiveWorkoutScreen.js` (recovery anchor from last session, `mesocycleWeekId` on raw history, `prescriptionReason` memo + prop); `src/components/workout/session/SessionSheets.js` (new section).
+
+### Safety and privacy
+Training load only. No calorie floor, ED flag, consent, or tier code touched; no safetyState read needed. Engine functions stay pure and deterministic (`explainPrescription` and `prescriptionReasonCopy` are pure, no I/O, no randomness). Not touched: telemetry schema (no new event; the PROVENANCE vocabulary pin of 13 codes still passes because the layoff keeps SENIOR_RECOVERY_HOLD), Sentry scrub. No personal data added.
+
+### Data, sync, migrations
+None. No schema, no sync change, no migration. Native code: no. Server migration: no.
+
+### Tests (worktree, run exactly)
+Changed pinned scenario tests and why:
+| Test | Change | Why |
+|---|---|---|
+| `livePrescription.scenarios.test.js` 32 | `layoffDays` 10 -> 20, title says "20 days (threshold 7 to 14)" | 10 days is no longer a layoff |
+| `livePrescription.test.js` "§10.5 layoff" | `layoffDays` 10 -> 20 | same; 72 (80 x 0.9) still asserted |
+| `coachValidation/scenarios.liveset.data.js` LSO-24 | `layoffDays` 10 -> 20; `why` text ">14d" | oracle text for the threshold. LSO-25 (layoffDays 7, 80) still passes untouched. `coachValidation/ledger.json` mentions SENIOR_RECOVERY_HOLD/layoff; not edited (generated), flag for lead |
+| `campaign6.longitudinal.test.js` "7-day exercise gap" | title; source regexes now `LAYOFF_DAYS = 14`, `> LAYOFF_DAYS`, `layoff ? 0.9`; second test `layoffDays` 10 -> 20 | the pins read the source text |
+| `livePrescription.properties.test.js` flag `layoffDays>7` | label `layoffDays>14`, `layoffDays` 10 -> 20, AND the reps property relaxed for the layoff flag only: flagged reps may exceed baseline when flagged load is strictly lower | **Pinned-invariant conflict, see Questions.** Strict form fails because when the unflagged baseline ADVANCES the load, its reps restart at the band floor (8) while the layoff holds the old load with ordinary reps (up to 12). |
+New tests: scenarios 32b (7, 8, 9, 13, 14 days never cut), 32c (15 days: 65.25 x 11, not x 8), 32d (block-finished still band-floor reps), 32e (topped hold goes to 15; 12 stays 12), 32f (explain/copy), and `src/__tests__/g2.recoveryWeekLastWeights.guard.test.js` (72.5 x 8 -> 72.5 x 4; wiring pinned; coach note wording pinned).
+Results: targeted suites (`livePrescription*`, `campaign5/6`, `coachValidation`, `authoredCoach`, `algorithms`, `recoveryVisibility.production`, `ActiveWorkoutScreen.prVideo.guard`) all pass; `npm run lint` clean (eslint . --max-warnings 0, no output). Full `npx jest`: see line at the end of this file.
+
+### Device checklist (physical Android, EAS build; written for the founder)
+1. Pick a lift you did exactly 8 days ago (or edit a test lift's last date). Start a workout, open it. Expected: the box shows last time's weight (not 10% lighter) and reps one above last time; no coach line on the card.
+2. Repeat at 15 days since last logged. Expected: weight about 10% lighter (rounded to 0.25), reps near last time's; tap the exercise info. Expected: "Eased after a break" with days and both weights.
+3. Make two sessions at one weight below the rep floor, then open the lift. Expected: weight steps down one increment; the info sheet says "Lowered to rebuild".
+4. Last time you did 15 reps in an 8-12 plan, effort not rated. Expected: same weight, 15 reps.
+5. In a planned recovery week, open a lift: Expected: weight equals last session's, reps halved, banner lists "fewer reps per set". Do a second recovery session: reps are halved from the first session's original, not again.
+6. Readiness check below par on a layoff day: both "Eased for today" and the break section show; loads compose downward.
+7. Repeat 2 and 3 at the phone's maximum accessibility text size; the new section wraps and nothing is cut off.
+ED-safety: not weight/food/notification-adjacent; no ED cases apply.
+
+### Effort, Risk
+Effort M. Risk Medium: the resolver is the single authority for every set. Main risk: layoff no longer resets reps, so the first session back asks for ordinary reps at 90% load; and the relaxed property pin.
+
+### Questions for the owner
+1. PINNED PROPERTY CONFLICT: the engine property "a senior flag never makes the prescription MORE aggressive" compared `repsTarget` strictly. Dropping the layoff reps reset makes a layoff session show MORE reps (e.g. 11) than an unflagged session that advances the load (75 x 8). I relaxed it for the layoff flag only (reps may rise only if load is strictly lower). Accept that, or keep the strict pin and keep the band-floor reps only when the unflagged session would have advanced load?
+2. Boundary: "more than 14" (14 days is safe, 15 is a layoff, fortnightly lifts are cut) as built, or "14 or more" (a lift done every 14 days is cut)? I built the first because it keeps the existing "more than" wording.
+3. After a layoff, reps = last time's reps plus one (ordinary rule: 10 -> 11). Prefer exactly last time's reps (no +1) for a first session back?
+4. Recovery week "fewer sets": observed it comes from the weekly allocation, not the targets; I did not change set counts. Confirm that is what you meant by "fewer sets".
+5. `coachValidation/ledger.json` lists layoff oracle IDs; regenerate it at build time?
+
+### Full jest result (appended)
+`npx jest` over the worktree: 1783 of 1784 suites passed, 32104 tests passed, 3 failed, all in `src/__tests__/screen-mount.test.js` (186 s, run while another jest was also running). Re-run alone: 604 of 604 pass. I read that as load-induced timeouts (inference, not proven on the base commit). `npm run lint`: clean.
+
+---
+
+## 18. Instructions easier to find (option A)
+Status: Built. Owner: "Icon in the active header's empty right slot; render at largest text size; account for 'More'. Write the two missing Watch lines. Plan note stays above Setup. No custom prompt. Fix stale chevron comment."
+Before (![18-before-normal.png](img/18-before-normal.png), ![18-before-large.png](img/18-before-large.png)): active header = badge + name only. After (![18-after-normal.png](img/18-after-normal.png), ![18-after-large.png](img/18-after-large.png)): `information-circle-outline` (20 dp, textSecondary) in the right slot (ExerciseSection.js, the existing 36 dp `state` column), directly above the footer's overflow, same centre line. Whole header remains the one button; glyph is hidden from screen readers (hint "Opens the exercise guide" unchanged); only on active + pressable.
+"More" (item 16): the footer's pulse hint ("Help" today, renders in `18-after-*`) is a different row and column; the icon does not move it. At largest text the footer wraps (Film drops to a second row) as before; header name shrinks (min scale 0.75) and the icon keeps its 36 dp column. Harness limit: OS font scale not applied to Text; `-large` uses the app's larger-text table only.
+Watch lines (families/barbell.js, voice and 20-120 character contract checked by corpus.guard):
+| Exercise | New Watch line |
+|---|---|
+| Barbell Reverse Lunge | "Letting the front heel lift throws the load onto the knee, so keep your weight through the whole front foot." |
+| Bulgarian Split Squat (Barbell) | "Standing too close to the bench drives the front knee forward, so step out until your shin is near vertical." |
+Comment fix (ActiveWorkoutScreen.js ~6346): "the tap that used to open the details is its chevron" now says tapping the header opens the guide and an information glyph says so.
+Not changing: Plan note above Setup, no custom prompt, footer items, event names. Files: ExerciseSection.js, ActiveWorkoutScreen.js (comment), barbell.js, ExerciseSection.test.js (new test). Safety/privacy: none. Data/native/migration: none. Effort S, Risk Low (header width at largest text).
+Questions: none.
+
+---
+
+## 22. Meal cards: old names inside Meal 1 to 3 (plus F3)
+
+Status: Confirmed (real users with old history reach it; the render reproduces it).
+Owner answer implemented: "View-only: old-named meals (Breakfast/Lunch/Dinner) show inside Meal 1-3 with names kept as labels; nothing in storage moves; a 'snack' entry keeps its own card only when it holds food. Pre/post-workout stay hidden. Diary and meal-plan counts stay separate. F3 part of this." F3: "default to the numbered meal for the time of day."
+
+Evidence: ladder = Meal 1..N plus any slot holding rows (`buildMealSlots`, MSL:141-150); old keys were added as extra cards (DS:974). Seed `seedPersona.js:408-410` shows it.
+
+Before: a day with Breakfast/Lunch/Dinner food shows those three cards AND empty Meal 1 to 4 (![22-before-diary-seeded.png](img/22-before-diary-seeded.png), ![22-before-legacy-day.png](img/22-before-legacy-day.png)). Mixed day (Breakfast plus Meal 1 food): two separate cards (![22-before-mixed-day.png](img/22-before-mixed-day.png)).
+After: Breakfast, Lunch, Dinner rows are drawn inside Meal 1, 2, 3, each old-named group under a small label (the old name, shown once per group; own rows listed first; no label when the card was renamed to the same word). Empty Meal 4 remains. Snacks keeps its own card only because it holds food (![22-after-diary-seeded.png](img/22-after-diary-seeded.png), ![22-after-legacy-day.png](img/22-after-legacy-day.png), ![22-after-mixed-day.png](img/22-after-mixed-day.png)). Totals per card include the folded rows.
+
+Behaviour table (real functions):
+| Stored `meal_slot` | Today | Proposed |
+|---|---|---|
+| breakfast / lunch / dinner (4 meals) | own card + empty Meal 1-3 | inside Meal 1 / 2 / 3, labelled |
+| dinner with 2 meals/day | own card | inside Meal 2 (`foldedMealSlot`, never past last meal) |
+| snack with food | own "Snacks" card | unchanged |
+| snack, no food | no card | unchanged |
+| meal_N, preworkout, postworkout | as is | unchanged (pre/post hidden unless opted in or logged) |
+| edit sheet, delete, cloud row | stored key | unchanged (rows keep `meal_slot`) |
+
+String/code table:
+| Where | Before | After |
+|---|---|---|
+| MSL (new) | none | `foldedMealSlot(slotKey, mealsPerDay)`, `foldedRowLabel(entrySlot, cardKey, cardLabel)` (after MSL:163-185) |
+| DS:756-762 `entriesBySlot` | keyed on `e.meal_slot` | keyed on `foldedMealSlot(e.meal_slot, mealsPerDay)`, moved below `mealsPerDay` |
+| DS:974 | `buildMealSlots(viewEntries, ...)` | `buildMealSlots(slotRows, ...)` (throwaway folded rows) |
+| MS rows | plain list | `rows` memo, small label above an old-named group |
+| FSS:122 | `route?.params?.mealSlot ?? 'snack'` | route slot, else `inferMealSlotForHour(hour, ladder)` on today, Meal 1 on another day; ladder from `@volyume_meals_per_day` (default 4) |
+
+### F3. Add-food default meal (part of item 22)
+
+F3 note: every in-app route to the add-food screen passes a meal today (DS:1070, 1344, MM, RecipeBuilder, scanner), so the default is a safety net for deep or future routes; I did not find a live route that hits it. Not device-tested.
+Side effect to know: usuals/yesterday chips (DS:1007-1052) previously lent Breakfast recents to an empty Meal 1 only when Breakfast had no card; Breakfast now never has one, which is the same outcome for an empty Meal 1 (Meal 1 holding Breakfast food is not empty, so no chip).
+Not changing: storage, sync, import mapping, Add another meal, meal counts, pre/post.
+Files: MSL, DS, MS, FSS (+ tests). Safety/privacy: none touched (no floors, ED, consent, telemetry). Data/sync/migrations: none. Native: no. Server migration: no.
+Tests: new `MealSection.item22and23.test.js`, `H2.sourceGuards.test.js`, fold block in `mealSlots.test.js`. Effort M. Risk Med: the edit-sheet and Mark-as-eaten paths still use stored keys (checked: planned rows are always `meal_N`); Mark as eaten acts on `slot.key` = the folded card, planned rows are never legacy.
+Questions for the owner: (1) label placement is above the first row of the group; fine, or put the old name as a card sub-line instead?
+
+---
+
+## 23. Seasoning tip only on planned, not-yet-eaten rows
+
+Status: Confirmed. Owner: "Tip only on planned, not-yet-eaten rows (existing is_planned; no new marker). Same wording as curated sheet."
+Before: shows on any curated-looking meal, planned, eaten or logged straight from the curated sheet; text "Optional extras, add any you fancy: <list>." (MS:299). ![23-before-tip-planned.png](img/23-before-tip-planned.png), ![23-before-tip-eaten.png](img/23-before-tip-eaten.png) (tip present on both).
+After: only when the meal has `is_planned` rows, and it reads only those rows; text is the curated sheet's `ADDITIONS_INTRO`: "Optional extras. Add any you fancy for flavour. They will not change the meal's numbers." then the list. Gone after Mark as eaten (![23-after-tip-eaten.png](img/23-after-tip-eaten.png) no tip; ![23-after-tip-planned.png](img/23-after-tip-planned.png) tip with new wording).
+| Scenario | Today | Proposed |
+|---|---|---|
+| Plan added, not eaten | tip | tip (new wording) |
+| Marked eaten | tip stays | gone |
+| Curated meal logged directly | tip | gone |
+| Half eaten, planned rows too few to match | tip from all rows | none (only planned rows read) |
+Allergen filter (`filterAdditionsForProfile`) kept as is.
+Files: MS; pin `MealSection.additionsCopy.guard.test.js` updated to the new wording (the old string is the thing the owner asked to change; this is a deliberate re-point). Safety: allergen filter untouched. Effort S. Risk Low.
+
+---
+
+## 24. Add this day / Add this week (plus F4)
+
+Status: Partly confirmed (as Stage 1). Owner: "Add only plan meals whose diary meal is empty. Replace all planned rows on that day; no schema change. Name added and skipped. Week button offers 'Replace planned meals' too. F4 part of this."
+Rule implemented: a plan meal is added only if its diary meal holds no EATEN row (old-named rows count toward the meal they are drawn in). Planned rows never block; all planned rows on the date are cleared first (`clearPlannedDay`, once, and only when something is going to be added). Eaten rows never touched. New: `planDayMergePlan`, `applyPlanDayMerging`, `describeDayMerge`, `describeWeekMerge` (MPS); `applyPlanWeekToDiary(userId, plan, {startDate, planned: 'leave'|'replace'})` now returns `days[]` as well.
+
+Behaviour table (plan has Meals 1 to 4):
+| Scenario | Today (Day / Week) | Proposed Day | Proposed Week |
+|---|---|---|---|
+| Empty day | adds all; toast "N foods added to X" / day counted | same, toast "Added Meal 1, Meal 2, Meal 3 and Meal 4 to X." | day added |
+| One coffee in Meal 1 | Day: alert, adds alongside / Week: whole day skipped | alert "Food already logged": coffee stays, "Skipped, already logged: Meal 1. The rest of the plan is added."; toast "Added Meal 2, Meal 3 and Meal 4 to X. Skipped Meal 1, already logged." | adds Meals 2 to 4; summary "Skipped, already logged: Meal 1 on Wed." |
+| Coffee in a meal the plan lacks (e.g. Snacks) | as above | no skip, adds straight away, no alert | adds whole day |
+| Plan already added (planned only) | Day: "Replace planned meals?" / Week: skipped, no choice | unchanged alert, Replace clears all planned rows then adds all | alert "Replace planned meals?": Cancel / "Leave those days" / "Replace planned meals" |
+| Planned plus some eaten | Day: alert, clears planned, adds all / Week: skipped | alert lists skip and "Planned meals already on this day are replaced."; Meal with eaten food skipped | Replace: same per day; Leave: whole day left |
+| Every plan meal already eaten | Day adds alongside | alert "Every meal in this plan already has food logged on X (...), so nothing would be added." (OK only) | counted skipped, nothing cleared |
+| Water only | treated empty | same | same |
+| Future day | no special case | same (mark-eaten still hidden) | same |
+| Week button, no planned rows in 7 days | runs | n/a | runs straight away, no extra tap |
+Week toast: "3 days added to your diary. Skipped, already logged: Meal 1 on Wed. Left as planned: Tue." Nothing added: "Nothing added. Tue already has planned meals." etc.
+
+F4 and card strings:
+| Where | Before | After |
+|---|---|---|
+| MPL:1617 day card | "Adds these meals to today. Existing logged food is left alone." | "Adds the meals that are still empty on {today or date label}. Food you have logged stays, and planned meals already there are replaced." |
+| MPL:1618 week card | "Adds the week from the date shown. Any day that already has food logged is left alone." | "Adds the week from the date shown, into meals that are still empty. Food you have logged stays, and you can choose to replace planned meals." |
+| MPL:1274 Build week card | "...shopping list. Existing logged food is left alone." | "...shopping list. Nothing is added to your diary until you tap Add this week." |
+| MPL:529 Day alert 'Food already logged' | "...This will not remove it; the planned meals are added alongside." | see table |
+Images: ![24-before-day-card-today.png](img/24-before-day-card-today.png), ![24-after-day-card-today.png](img/24-after-day-card-today.png) (plan for today), ![24-before-day-card-other.png](img/24-before-day-card-other.png), ![24-after-day-card-other.png](img/24-after-day-card-other.png) (opened for a date two days ahead: before the card said "today"), ![24-before-week-card.png](img/24-before-week-card.png), ![24-after-week-card.png](img/24-after-week-card.png), ![24-before-build-card.png](img/24-before-build-card.png), ![24-after-build-card.png](img/24-after-build-card.png). Before and after differ only in these sentences.
+Not changing: "Replace planned meals?" alert for planned-only days, toast on replace, navigation to Diary with `justAddedPlan`, bank re-sync (`resyncBankedPlannedFood`), planned rows stay local-only.
+Safety: none (no weight/ED/notification path; the planned-meal nudge re-check inside `clearPlannedDay` still runs). Data: no schema. Native/server: no.
+Tests: updated `MealPlanScreen.test.js` (card strings) and `mealPlanService.test.js` (week test re-pointed: the old "skip any day with food" test pinned the rule the owner replaced; new tests for skip, leave/replace, fold, nothing-to-add-clears-nothing, sentences). `campaign17c` slice guard still passes (no `upsertSlotRecent`). Effort M. Risk Med: writes to the diary. Main risk: a skipped meal's plan food is simply absent that day; the owner chose this.
+Open: Replace in the Day alert path clears planned rows even in meals the new plan does not cover (the owner's "replace all planned rows on that day"). Week "Leave those days" skips a whole day that has any planned row (to avoid doubles); say if you want it finer.
+
+---
+
+## 25. Oily fish weekly cap
+Status: Confirmed, prototype built.
+Evidence: assembleWeekPlan Repeat branch builds one day x7 (mealPlanAssembler.js ~1100); variety penalty is per meal id only.
+Owner answers implemented: "Repeat mode: repeated day has no oily-fish meal. Count meals. Plain note on 5- and 7-day chips... Explicit swap/Keep always wins. Phone-only setting. Add NHS species keys now... Default cap 2."
+Before / After (same pescatarian persona, target 2400 kcal, seeds 1 to 6; digits = oily meals per day, days 1 to 7):
+
+| Mode | Seed | Today | Proposed (cap 2) |
+|---|---|---|---|
+| Repeat | 1 | 14 (2222222) | 0 |
+| Repeat | 2 | 7 (1111111) | 0 |
+| Repeat | 3 | 14 | 0 |
+| Repeat | 4 | 7 | 0 |
+| Mixed | 1 | 5 (2001101) | 2 (2000000) |
+| Mixed | 2 | 6 (1110111) | 2 (1100000) |
+| Mixed | 3 | 7 (2011012) | 2 (2000000) |
+| Mixed | 4 | 7 (1101112) | 2 (1100000) |
+| Varied | 1 | 5 (2001200) | 2 (2000000) |
+| Varied | 2 | 6 | 2 (1100000) |
+| Varied | 3 | 7 | 2 (2000000) |
+| Varied | 5 | 5 | 2 (2000000) |
+(Mixed/Varied seeds 5, 6 and Varied 4, 6 also reach exactly 2; full 18-row output: $S/i2-oily-table.txt.) Observation: the cap is used up on the first days, so oily fish clusters early in the week. A spread rule is possible; owner call (Q1).
+Behaviour (real functions): assembleWeekPlan({oilyFishCap=2}) passes oilyAllowed to assembleDayPlan: Repeat = 0 (or Infinity if cap >= 7); Mixed/Varied = cap minus meals used so far. Pins are placed first, are counted, and are never removed (test: pinned salmon meal stays in Repeat). Saved meals counted via items[].foodRef; slots get oily:true. Day plan (Build today): no cap. Tinned tuna (tuna_water) never counts. Deterministic: same seed same week (test).
+Chip note (MealPlanScreen.js shopping sheet, shown when dayCount 1, repeat 5 or 7, day has oily fish): "This day has an oily fish meal, so 5 days of it is 5 oily fish meals." / plural "This day has 2 oily fish meals, so 7 days of it is 14 oily fish meals." Not rendered (modal); no health lecture.
+NHS keys added (oilyFish.js): salmon, smoked_salmon, trout, mackerel, herring, kippers, sardines, pilchards, sprats, whitebait, anchovies, eel, carp, jack_fish, swordfish, fresh_tuna. Source: NHS at least one portion (~140 g cooked) a week; max 2 if pregnant, breastfeeding or planning; tinned tuna excluded. NHS page not fetched (no network); list is from the owner's answer, plus species named in Stage 1 spec.
+Not changing: day plans, Add this day/week, swaps (explicit choice wins), ED/calorie logic, nutritionEngine.
+Files: src/lib/food/oilyFish.js (new), mealPlanAssembler.js, MealPlanScreen.js, tests oilyFishCap.test.js (7 tests).
+Safety/privacy: none touched. Data: cap is a function argument defaulting to 2; the phone-only user setting (profile key + store allowlist setMealPlanPrefs, store/useAppStore.js ~2351, local-only like other mealPlan* keys) is NOT built in the prototype. No migration, no native, no telemetry.
+Effort M, Risk M (Repeat semantics; swap paths unchecked: swapMealInPlan/swapFoodInMeal can add salmon after build, by design).
+Questions: (1) spread oily meals across the week instead of the first days? (2) Setting UI wording and where it lives (not built). (3) Cap above 7 or "off" option?
+
+---
+
+## 26. Meal plan readability
+Status: Confirmed, prototype built. Owner: "History message once at top. '·' everywhere listed. Whole grams everywhere incl swap sheet and Today's Plate (add missing 'g'). 'Don't suggest again' everywhere: new button, alert, hint."
+| Where | Before | After |
+|---|---|---|
+| MealPlanScreen.js:1526 meal macros | P 41 g - C 23.9 g - F 19.5 g | P 41 g · C 24 g · F 20 g (render: "P 43 g · C 50 g · F 14 g") |
+| :1603 day total | 2,649 kcal - P 170.3 g - C 312.8 g - F 80.2 g | 2,649 kcal · P 170 g · C 313 g · F 80 g |
+| :1719 and :1819 swap rows (+ a11y labels) | 832 kcal - P 41.3 g | 832 kcal · P 41 g |
+| TodaysPlateTeaser.js:68 | 2,649 kcal - P 170.3 - C 312.8 - F 80.2 | 2,649 kcal · P 170 g · C 313 g · F 80 g |
+| Per-meal GENERIC_START line (:1532) | shown under every open meal | removed; header line (explainDay) stays once |
+| Hint :1434 | Tap a food to swap it. Hold a swappable food to leave it out of future plans. | Tap a food to swap it. Hold a swappable food, or open its swap list, and choose "Don't suggest again" to leave it out of future plans. |
+| Alert button :874 | Don't suggest it | Don't suggest again |
+| A11y label :1487 | ...long press to leave it out for good. | ...long press for Don't suggest again. |
+| Food swap sheet | no action | new "Don't suggest again" button (closes sheet, calls handleFlagFood, same alert and exclusion path) |
+Rounding is display only; stored totals stay 1 dp, so rounded meal figures can differ from the rounded day total by 1 g. Render images: ![26-27-before-plan22.png](img/26-27-before-plan22.png), ![26-27-after-plan22.png](img/26-27-after-plan22.png) and ![26-27-before-plan24.png](img/26-27-before-plan24.png), ![26-27-after-plan24.png](img/26-27-after-plan24.png). Not changed (out of lane): the Food Search row wording (FoodRow.js/FoodSearchScreen.js) still says its own text; coherence.test.js:172 pins it. Plan macros are not gated by calm or ED state today (unchanged; not checked beyond that).
+Files: MealPlanScreen.js, TodaysPlateTeaser.js. Tests: updated as listed. Native/server/data: none. Effort S, Risk L. Questions: should FoodRow's "don't suggest" wording also become "Don't suggest again"? (needs FoodSearch lane after I2/diary batch).
+
+---
+
+## 27. Raw/cooked conversions
+Status: Partly confirmed. Owner: "Average lentil ratio ~3.14 with source note. Prawns as listed. 'Weigh as listed' only on foods named cooked/dry with no pair. Turkey mince and quinoa as listed."
+New pairs (only one):
+| Food | Conserved | CoFID rows | Values (g/100 g) | Ratio (g cooked per g dry) |
+|---|---|---|---|---|
+| lentils | protein | 13-089 green/brown raw 24.3; 13-657 red split raw 25.6; 13-661 boiled 7.8; 13-658 boiled 8.1 | mean raw 24.95, mean boiled 7.95 | 3.138 (varieties 3.12 and 3.16) |
+No pair: prawns (as listed, 0.749 raw-to-grilled not used), turkey mince (no raw mince row), quinoa (no cooked row).
+Source note (cookYield.js comment on the lentils entry): "the curated 'Lentils (cooked)' does not say which lentil, so the ratio is the mean of the two CoFID varieties, protein as the conserved nutrient". Each source row is pinned by cookYield.test.js against assets/seed/cofid_uk.dat. Lentils now get the Raw/Cooked chips via the existing STATE 'cooked' entry; macros never change.
+"Weigh as listed": new weighAsListed(foodKey, name) in cookYield.js: true when there is no toggle and the name contains "cooked" or "dry". Shown as a muted line under the food row in the plan (render plan24: under "Turkey breast mince (cooked)" and "Quinoa (cooked)") and as " as listed" after grams in the shopping list for unpaired items. Eggs, vegetables, oats (name has no cooked/dry word) get nothing. Food detail sheet NOT done (FoodDetailSheet is shared with the concurrent diary batch); proposed there as a one-line "Weigh as listed" under the serving when no toggle: owner call.
+Stale comments fixed: MealPlanScreen.js (the NA-nutrition-1 comment above handleSetDayWeightState, now at ~909) and foodRoles.js defaultWeightStateFor doc (was 310-322). cookYield.js header no longer says lentils are unpaired. Also noticed, not changed: hasWeightChoice doc (foodRoles.js ~300) still says it drives the choice; it is now hasCookToggle.
+Tests: cookYield.test.js (averaged-pair row check, ratio 3.14, weighAsListed cases). Native/server: none. Effort S, Risk L (curated lentil macros are the app's own, not CoFID). Questions: add the label to the food detail sheet now?
+
+---
+
+## Batch I2: Device checklist (Android, EAS build)
+1. Settings, build a Mixed or Varied week on a pescatarian diet: at most 2 oily-fish meals across 7 days. Repeat: none, unless you Keep one.
+2. Build today with salmon, Shopping list, tap 5 days: the plain note appears; 1 and 3 days: none.
+3. Plan screen: macros read "P 41 g · C 24 g · F 20 g"; day total whole grams; swap rows whole grams; Nutrition tab Today's Plate shows "· P 171 g".
+4. Open a food's swap list: "Don't suggest again" opens the existing confirm; long press does the same.
+5. Lentils show Raw/Cooked chips; quinoa and turkey mince show "Weigh as listed".
+6. Maximum text size on the plan screen and shopping sheet. ED/calm: no change expected (no weight or calorie rules touched).
+
+---
+
+## 28. Repeat logging: the extra close after adding a saved meal
+
+Status: Not confirmed on a device (inferred from stack structure). Owner: "Only fix the extra close after adding a saved meal; confirm on device first (give the device check). No whole-meal chip."
+Before (MM:194 at base): after "Add to <meal>" it calls `navigation.goBack()`, landing back on the add-food screen it was opened over.
+After: if the route directly beneath MyMeals is `FoodSearch` and not in its pick-a-food mode (`pickMode`), `navigation.pop(2)` closes both and lands on the diary with the Undo toast; any other case, or any error, falls back to the old single `goBack()`. The edit-meal "Add a food" round trip (`pickMode: 'recipe'`) is not affected.
+Device check (Android, EAS build), before relying on this:
+1. Nutrition tab, tap "Add food" on an empty meal, tap More, tap Saved meals, tap a meal, tap "Add to Meal N". Expected before the fix: toast "<meal> added to Meal N." with Undo, but you are on the add-food screen. Expected after: you are on the Diary with the meal in Meal N and the Undo toast.
+2. Same, then tap Undo: the foods leave the diary.
+3. Add-food, type a food, add it (plate "Log 1"): closes to the Diary as before (unchanged).
+4. Saved meals, tap a meal, "Edit this meal", "Add a food", pick one: returns to the edit sheet, not the Diary.
+5. Recent tab row for a previously logged saved meal, "Add to Meal N": Diary.
+6. Largest phone text size: toast and Undo still readable and reachable.
+ED-safety: not weight/food-target adjacent (no energy figure computed). Files: MM. Tests: `H2.sourceGuards.test.js` (source guard only; navigation not unit-testable here). Effort S. Risk Low (fallback to old behaviour).
+
+---
+
+## Batch H2: Device checklist for the batch (physical Android, EAS build; also 22/23/24)
+1. A day with Breakfast/Lunch/Dinner food (old history): meals sit inside Meal 1 to 3 with the old name as a small label; Snacks only if it holds food; no empty duplicate cards. Tap a row: edit sheet opens, meal chip shows the old name selected.
+2. Add a meal plan day: tip under a planned meal; tap Mark as eaten: tip disappears.
+3. Add this day: empty day; day with one coffee in Meal 1; day already planned; all four read as in the table.
+4. Add this week twice; second time offers Replace / Leave.
+5. Maximum accessibility text size on Diary and the plan card (long sentences wrap; labels do not clip).
+6. Calm mode / open ED flag: no change in these screens (no safety state is read); confirm meal plan screen and diary look as before.
+
+---
+
+## Batch H2: Tests
+Targeted: `npx jest` over the diary, food and screens folders ran before my test additions with only the four expected re-points failing; after: the touched suites (mealSlots, mealPlanService, MealPlanScreen, MealSection guards, new files) pass 97+10 tests. Full `npm run lint && npm test` result is appended below.
+
+Full run in the worktree: `npm run lint` (eslint --max-warnings 0) clean; `npm test`: Test Suites 1785 passed, 1 skipped (1786); Tests 32119 passed, 17 skipped (32136), 0 failed.
+
+---
+
+## 30. Privacy and transparent coaching: Welcome screen lines
+
+Status: Confirmed. Welcome today has no privacy or coaching-nature line (Stage 1 30). Owner answer: "Welcome screen only. Don't touch consent screen; keep 'What leaves your phone'."
+
+Evidence:
+- `src/screens/WelcomeScreen.js:105` headline "Everything you need to build your physique."
+- `src/screens/WelcomeScreen.js:108` support "Training, nutrition, progress and coaching, connected in one app."
+- `src/screens/WelcomeScreen.js:146` "Completely free · No ads" (kept, owner answer item 34).
+- `src/screens/WelcomeScreen.js:147` "Get started"; `:150` sign-in link.
+- Harness: `scripts/paper-render/welcome.js` draws only the product captures, so no before/after image.
+
+Before (exact strings on Welcome today):
+- Headline, support line, "Completely free · No ads", "Get started", "Already have an account? Sign in". No privacy or coaching-nature line.
+
+After (exact new strings, both new, same style as the existing free line `styles.free`, WelcomeScreen.js:198 and :218):
+
+| where | Before | After |
+|---|---|---|
+| new line 1, directly under WelcomeScreen.js:146 | (none) | Your progress photos and workout videos stay on this phone. |
+| new line 2, directly under line 1 | (none) | Your coach isn't an AI chatbot. It follows fixed rules. |
+
+Text wireframe (Welcome, narrow phone, after):
+```
+[Volyume mark]
+Everything you need to build your physique.
+Training, nutrition, progress and coaching, connected in one app.
+[ three app screenshots, hero ]
+Completely free · No ads
+Your progress photos and workout videos stay on this phone.
+Your coach isn't an AI chatbot. It follows fixed rules.
+[ Get started ]
+Already have an account? Sign in
+```
+
+Not changing: the Article 9 consent screen (`src/screens/Article9ConsentScreen.js`, including "What leaves your phone" at :233-236), the headline, the support line, the free line, the buttons.
+
+Files: `src/screens/WelcomeScreen.js` only.
+
+Safety and privacy:
+- Consent gate (RootNavigator and Article9ConsentScreen): not touched.
+- Claim accuracy (Stage 1 30): "stay on this phone" is true for progress photo image files and workout videos. It does not cover label photos sent to Open Food Facts when that opt-in is on (`SettingsPrivacyScreen.js:114-115`, off by default), nor the anonymous measurement numbers from progress analysis (`Article9ConsentScreen.js:233-236`). The owner chose this wording, so the sentence is per the owner's answer, and the consent screen still discloses the rest.
+- "isn't an AI chatbot": Stage 1 found on-device machine-learning models (label text recognition, body-scan segmentation). The line says "chatbot" and "fixed rules", not "no AI". Flag for the owner (Q30-2).
+- Usage data: none. Error reports: none.
+
+Data, sync, migrations: none.
+Native code: no. Server migration: no.
+
+Tests: no existing test pins Welcome copy (WelcomeScreen is only mounted by screen-mount and similar suites). New test recommended: a source guard that both strings are in WelcomeScreen.js and that Article9ConsentScreen.js is unchanged. Re-run `screen-mount` and `LoginScreen` suites after the change.
+
+Effort: S. Risk: Medium. Main risk: the actions block is measured (`onLayout` sets actionsH) and the hero height follows the free height, so the hero shrinks by the added text height on small phones. Not checked on a device; needs a 360dp and maximum-text pass.
+
+Questions for the owner:
+- Q30-1: placement. Proposed: directly under the free line (above Get started). Alternative: above the free line, under the support line. (Owner chose the text, not the position.)
+- Q30-2: "isn't an AI chatbot" is accurate for the coach, but the app has on-device recognition models. Confirm you accept the wording as written (per answer, yes), or add a clause naming on-device recognition.
+
+---
+
+## 31. Community defaults
+
+Status: Confirmed with one correction to stage 1. Owner answer quoted: "Gym feed if gym set else Everyone, until 5 follows; then Following automatically. Keep switch + audience chips, Followers preselected. Onboarding same default (Followers), sentence updated, no new control. Server fallback unchanged."
+
+New finding (OBSERVED, `CommunityJoinScreen.js:210` before the change): the Join screen's `tpShare` started from `TP_DEFAULT_SHARE`, which has no `sessions_audience`, so no audience chip was selected and the create sent `sessions_audience: undefined`; the server then stored 'everyone' for an adult (migrate_186:252). So the "Everyone" default on Join came from the server fallback, not from a visible preselected chip.
+
+### Behaviour table
+| Scenario | Today | Proposed |
+|---|---|---|
+| Joined member opens Feed (`CommunityHubScreen.js` effect) | always `'following'` | `defaultFeedScope({joined, followingCount: me.profile.following_count, gymId: me.profile.gym_id})` |
+| Joined, gym set, < 5 follows | Following | My gym |
+| Joined, no gym, < 5 follows | Following | Everyone |
+| Joined, >= 5 follows | Following | Following |
+| Joined, follow count not in the payload | Following | Following (unknown count keeps today's value) |
+| Not joined | Everyone, read-only | Everyone, read-only |
+| Person taps a chip | their choice | their choice; the default never overrides it again (`scopeChosenRef`) |
+| Count or gym arrives after first paint | n/a | feed re-resolves once, only if no chip tapped |
+| Server cannot serve a scope (`out.fallback === 'scope'`) | back to Following | unchanged |
+| New adult, Join screen | no chip selected, server stores everyone, switch on | switch on, Followers chip preselected, sent explicitly; visibility chips unchanged ("Anyone" default) |
+| New adult, onboarding step | hard-coded `sessions_audience: 'everyone'` (`onboardingJoin.js:215-218`) | `JOIN_DEFAULT_SESSIONS_AUDIENCE` = 'followers' |
+| Existing members | stored settings | unchanged: reader default `DEFAULT_SESSIONS_AUDIENCE = 'everyone'` (`trainingProfile.js:491`) is left alone; a new separate constant is used only at create |
+| Under 18 or age unknown | followers-only, share off until chosen, audience forced to followers; 'everyone' refused by server | unchanged (code paths for `isMinor` untouched) |
+| Build that omits the audience | server stores 'everyone' (adult) | unchanged (migration not proposed, per the owner) |
+
+Wording: `ProOnboardingScreen.js:3094`
+- Before: "Every session you finish is shared with everyone in Community: exercises, sets, the total lifted and any PRs. Turn it off any time from your Training profile."
+- After: "Every session you finish is shared with the people who follow you in Community: exercises, sets, the total lifted and any PRs. Turn it off any time from your Training profile."
+The Join screen needs no new words; the existing chips Followers / My groups / Everyone now show Followers selected, and `sessionsSharingSentence('followers')` already reads "Your sessions are shared with people who follow you."
+
+Renders: ![31-before-hub.png](img/31-before-hub.png) (member, Following default); ![31-after-hub-newmember-gym.png](img/31-after-hub-newmember-gym.png) (0/1 follows, gym set: "My gym" feed with "Nobody at your gym has posted yet."); ![31-after-hub-newmember-nogym.png](img/31-after-hub-newmember-nogym.png) (Everyone); ![31-after-hub-5follows.png](img/31-after-hub-5follows.png) (5 follows: Following); ![31-after-join.png](img/31-after-join.png) (Join screen with Followers preselected; the harness mounts it without a handle typed).
+
+Follow-count source (stage 1 open point): `me.profile.following_count` is the same field `HomeScreen.js:894` already reads. OBSERVED: the self card JSON carries `following_count` and `gym_id` in the card builder (`migrate_163:1585`). NOT TRACED: that `community_get_me`'s `v_card` (migrate_191:1363 `'profile', v_card`) is built by that same function. If it were not, the rule falls to "unknown = Following", today's behaviour, so nothing breaks. Please confirm on a real account with the device check below. Note the harness seed puts `following_count` at the top level of `me`, not in `profile`; I wrote the render variants into `profile`.
+
+Not changing: server (`migrate_184/186/187`), minors' clamps, the ED/calm withhold on automatic posts, visibility chips, "Four rules", existing members' stored audience.
+Files: `src/lib/community/trainingProfile.js` (new `JOIN_DEFAULT_SESSIONS_AUDIENCE`, `FEED_FOLLOWING_THRESHOLD`, `defaultFeedScope`), `src/lib/community/onboardingJoin.js`, `src/screens/CommunityJoinScreen.js`, `src/screens/CommunityHubScreen.js`, `src/screens/ProOnboardingScreen.js`. The two screens import from `trainingProfile` directly, not the barrel, because many existing hub tests mock the barrel.
+Safety and privacy: the Followers default narrows sharing (privacy-positive). Posting still goes through `sessionShareGateState` and the server withhold under ED flag; minors untouched; no new telemetry.
+Data, sync, migrations: none. Native: no. Server migration: no.
+Effort S to M. Risk Med: a Followers-only default means a new member's sessions reach nobody until follows exist; the feed (gym/Everyone) shows others' public posts, so the feed is not empty but their own posts are less visible. Stated for the owner, not a recommendation either way.
+Questions for the owner: (1) Where an existing member has no gym and under 5 follows they will now open on Everyone instead of Following; owner said existing members are unchanged for sharing defaults only. Confirm the feed rule should apply to existing members too (as built), or only to new ones. (2) "My gym" feed with nobody posting shows the quiet line "Nobody at your gym has posted yet." and no Everyone fallback; confirm that is wanted rather than falling to Everyone when the gym feed is empty.
+
+---
+
+## Batch J2: Tests (exact)
+Failing, all pinned to old behaviour the owner's answers change; to update in the build, not in this prototype:
+- Settings landing and units: `settingsDiscoverability.item9ab.guard.test.js` (row "Notifications and reminders"), `SettingsWorkoutScreen.navigation.test.js` (CP-6 row, "Workout & units" title, body-weight control in Workout), `p15UnitDisplayCopy.guard.test.js` (body-weight label on Workout), `campaign3.discoverability.test.js`, `BodyMetricsScreen.weightUnitsAndDate.guard.test.js`, `BodyMetricsScreen.d214.test.js` (the weight-units door now opens SettingsUnits), `HowYouTrainScreen.capabilityFlows.guard.test.js` (T2-27 copy "Workout and units").
+- Haptics: `src/lib/__tests__/haptics.richCurves.test.js` ("reduce-motion setting suppresses both paths", two tests) pins the old rule documented as open in `haptics.js`; owner has now answered it.
+- Community: `onboardingJoin.test.js` (four tests: "sharing on (to everyone)" and the join order), `ProOnboardingScreen.communityStep.guard.test.js` ("shared with everyone" sentence).
+Passing and relevant: `CommunityHub.states/joinReceipt/challenge` suites (existing member default stays Following when `following_count` is absent from the payload), `howYouTrainEntries.guard.test.js`.
+New: `j2.settingsHapticsCommunity.test.js`, 7 passed (headings and row order, haptics default and Reduce-motion independence, feed rule, Followers default, offer position).
+Full `npm run lint && npm test` was not run end to end; lint on touched files is clean except unused-variable warnings in `SettingsWorkoutScreen.js`.
+
+---
+
+## Batch J2: Device checklist (physical Android, EAS build; for the build, not run here)
+1. Fresh account, finish setup, dismiss Welcome: Today shows the plan card first, then the injuries offer. Tap "No thanks": it disappears and stays gone after closing the app.
+2. Account mid-plan with nothing set up: offer sits under the Start workout card.
+3. Settings: six headings in order; Notifications and Coaching reminders subtitles list everything; Units shows Stone/Kg/Lbs and kcal/kJ and changing each updates Body metrics and the diary; Body metrics "Weight units" opens Units.
+4. Display: turn Reduce motion on, log a set: still vibrates. Turn Haptics off: no vibration on set, rest end, PR. Turn the phone's own remove-animations on with Haptics on: still vibrates.
+5. Community, new member with a gym and no follows: opens on My gym. No gym: Everyone. Follow 5 people, reopen: Following. Tap another chip: it stays.
+6. Join: "Share what I did" switch on with Followers selected; after joining Training profile shows followers. Onboarding step reads the new sentence.
+7. Under-18 account (if available): unchanged, followers only, sharing off until chosen.
+8. Maximum accessibility text size on Settings, Units and the Join screen: no clipped subtitles.
+ED-safety: none of these changes is weight, food or notification gating, so there is no ED-specific case; confirm that an open ED flag still withholds automatic Community posts (unchanged).
+
+---
+
+## 32. Challenge board
+Status: Built. Owner: "Count rows shown; 'Top N' when fewer than 10; keep zero-row text; confirm padding with narrow-layout render."
+| Scenario | Today | Proposed (`boardTitle(topRows.length)`, ChallengeScreen.js) |
+|---|---|---|
+| 10 rows | Top 10 | Top 10 |
+| 8 rows (render) | Top 10 over 8 names | Top 8 |
+| 1 to 9 rows | Top 10 | Top N |
+| 0 rows | "Top 10" + "Nobody is on the board yet." | title stays "Top 10", zero-row line kept (I avoided "Top 0"; say if you want a different title) |
+Count source: rows shown (`topRows`), not server `counts.entrants`; the "You" off-board row is not counted.
+Padding: counts footer was `styles.counts` paddingHorizontal spacing.lg (24); now `{ paddingHorizontal: t.screenPadding }` (24 normal, 16 under 390 dp). Renders ![32-before-normal.png](img/32-before-normal.png), ![32-before-narrow.png](img/32-before-narrow.png), ![32-after-normal.png](img/32-after-normal.png), ![32-after-narrow.png](img/32-after-narrow.png): at 360 dp the "before" footer sat 8 dp inside the rows' edge; after, aligned (visual check on the after image: footer text left edge matches the rows).
+Not changing: server board, winners, safety withholding (usePhotoSuppression), copy elsewhere. Files: ChallengeScreen.js, ChallengeScreen.test.js (3 new tests; the 'Top 10' pins hold with 10 rows). Safety: board still withheld under safety state as before. Data/native/migration: none. Effort S, Risk Low.
+Questions: zero-row title wording.
+
+---
+
+## Batch E2b: Tests
+See tail of this file for exact lint + full test output.
+
+### Test result (worktree, this branch)
+`npm run lint`: clean (eslint . --max-warnings 0, no output after the header).
+`npm test` full run: 3 suites failed on first run. Two were my pinned-word tests (VolumeHeatmapScreen.test.js legend, volumeBandLabels.test.js tone words), updated and now pass (107/107). The third, screen-mount.test.js (5 timeouts of 15 s at 278 s under full-suite load: ActiveWorkoutScreen tap chains x4, CoachingRemindersScreen, DebugLogScreen), passes when run alone for ActiveWorkout (7 passed); the other two were rerun alone, see lead note. First run totals: 1779 suites passed, 8 tests failed of 32110. The two paper-render runs: 0 FAIL, all variant PNGs produced. Commit is local on `proposal/14-volume-instructions` only.
+
+---
+
+## 34. "Free" strings: free-for-life and the rest (strings only)
+
+Status: Partly confirmed (Stage 1 34). Owner answers: start-choice line says nothing about price and keeps "You can change your mind later."; keep "Completely free · No ads" on Welcome; free-for-life is earned by completing a challenge, rule [pending owner Q1]; Everything in scope including the homepage (F8); nothing is built until Q1 is answered.
+
+Count read (owner, production 2026-10-20): 0 grants and 0 challenges. No one holds the free-for-life promise today, so the new wording breaks no promise made to anyone.
+
+Rows marked "pending owner Q1" keep the bracketed text until the rule is answered. The rule text is never guessed here.
+
+### Live app and web strings
+
+| # | file:line | Before (exact) | After (exact) | Pinned by (edit needed) |
+|---|---|---|---|---|
+| 1 | src/screens/StartChoiceScreen.js:137 | `Coaching is free, like everything else in Volyume. You can change your mind later.` | `You can change your mind later.` | src/screens/__tests__/StartChoiceScreen.test.js:207 (edit literal) |
+| 2 | src/screens/WelcomeScreen.js:146 | `Completely free · No ads` | unchanged (owner) | none |
+| 3 | src/lib/challenges/copy.js:37 (FREE_FOR_LIFE_JOIN_LINE) | `Joining also keeps Volyume free for you for life, even if we ever introduce paid plans.` | `Completing a challenge [rule pending owner Q1] earns Volyume free for you for life, even if we ever introduce paid plans.` | src/screens/__tests__/ChallengeJoinScreen.test.js:159-160 (edit literal) |
+| 4 | src/lib/challenges/copy.js:38 (FREE_FOR_LIFE_LANDING_LINE) | `Volyume is free. Join through the challenge and it stays free for you for life, even if we ever introduce paid plans.` | `Volyume is free. Completing a challenge [rule pending owner Q1] earns it free for you for life, even if we ever introduce paid plans.` | ChallengeJoinScreen.test.js:182-183 (the test reads public/c/index.html and compares; edit with row 7) |
+| 5 | src/screens/ChallengeJoinScreen.js:398 | renders row 3 | no edit | none |
+| 6 | src/screens/PrivacyPolicyScreen.js:235 | `Joining a challenge also keeps Volyume free for you for life. Deleting your account deletes all of it, ...` | `Completing a challenge [rule pending owner Q1] also earns Volyume free for you for life. Deleting your account deletes all of it, ...` (rest of the sentence unchanged) | none pinned (privacyTruth checks default-on sharing only) |
+| 7 | public/c/index.html:106 | `<p class="lead" id="free">Volyume is free. Join through the challenge and it stays free for you for life, even if we ever introduce paid plans.</p>` | `<p class="lead" id="free">Volyume is free. Completing a challenge [rule pending owner Q1] earns it free for you for life, even if we ever introduce paid plans.</p>` | src/lib/challenges/__tests__/landingPage.test.js:85 (literal) |
+| 8 | public/challenge-terms/index.html:180 (heading) | `Free for life` | unchanged (heading only; the body carries the rule) | src/__tests__/challengeTermsPage.guard.test.js:67 |
+| 9 | public/challenge-terms/index.html:181 | `Joining a challenge keeps Volyume free for you for life, even if we ever introduce paid plans.` | `Completing a challenge [rule pending owner Q1] earns Volyume free for you for life, even if we ever introduce paid plans.` | src/__tests__/challengeTermsPage.guard.test.js:90 (literal) |
+| 10 | public/challenge-terms/index.html:111 | `Entry is free, and you can leave at any time.` | unchanged (describes entry, no promise) | none found |
+| 11 | public/challenge-terms/index.html:128 | `Entry is free and no purchase is needed. ... Volyume is free.` | unchanged (describes today) | src/__tests__/challengeTermsPage.guard.test.js:77 |
+| 12 | public/privacy.html:185, public/privacy/index.html:185, docs/web/privacy.html:185 | `... Your explicit consent, which you give when you join. Joining a challenge also keeps Volyume free for you for life.` | `... Your explicit consent, which you give when you join. Completing a challenge [rule pending owner Q1] also earns Volyume free for you for life.` (same as F8 P2) | identity guard memberEmailWebsite.guard.test.js:287 (keep the three copies identical) |
+| 13 | public/privacy-policy.md:104 | `... Joining a challenge also keeps Volyume free for you for life.` | same change as row 6 | none |
+| 14 | public/get/index.html:133 | `<p class="offer"><b>Free. No card, no time limit.</b> ...` | `<p class="offer"><b>Free. No card needed.</b> ...` (removes "no time limit", which promises the app stays free) | src/__tests__/marketingClaimsGuard.test.js:60 (re-run) |
+| 15 | public/get/index.html:186 | "No ads, and your data is never sold." | unchanged | none |
+| 16 | docs/rules/billing.md:93-101 | "FREE FOR LIFE PROMISE ... Everyone who joins a gym challenge is promised..." | record only: needs the Q1 decision; not edited in this batch | none |
+
+### Dormant strings (not reachable: payments barrel refuses while FULL_ACCESS_FOR_ALL is on; screens unregistered, RootNavigator.js:199-202, 745)
+
+These are listed for completeness. Proposed: no edit in this batch. Rewrite on re-arm under the then-current decision. Where a string promises permanence, the proposed text removes the promise.
+
+| file:line | Before (exact) | Proposed after (on re-arm) |
+|---|---|---|
+| src/screens/SubscriptionPolicyScreen.js:44 | title `What stays free` | `What is free` |
+| src/screens/SubscriptionPolicyScreen.js:59 | `The core logbook is free on every account.` | unchanged (describes today) |
+| src/screens/SubscriptionPolicyScreen.js:134 | title `Your free trial` | delete section (no trial, decision 2026-09-03) |
+| src/screens/SubscriptionPolicyScreen.js:137 | `New accounts get Pro free for 14 days. ...` | delete with the trial section |
+| src/screens/SubscriptionPolicyScreen.js:142 | `The Free tier has no time limit: the plan library, your own training, and your progress charts stay free.` | `Training, plans and progress are free.` (drops the promise) |
+| src/screens/SubscriptionPolicyScreen.js:161 | `We won't quietly raise prices, change what's free, or hold your data behind a paywall.` | delete (a promise about future behaviour) |
+| src/screens/ProUpgradeScreen.js:57 | `... None of it is ever taken away.` | delete `None of it is ever taken away.` |
+| src/screens/ProUpgradeScreen.js:61 | `No payment card needed. New accounts get full Pro free for 14 days (one trial per account), ...` | delete with the trial |
+| src/components/PostLapseSheet.js:31 | `Training, plans and progress stay free.` | `Training, plans and progress are free.` |
+| src/lib/notifications/scheduler.js:837 | `Your free Pro trial ends in two days` | delete (trial re-lay removed, scheduler.js:1976) |
+| src/lib/notifications/scheduler.js:841 | `You're back on the free plan` | delete (no free tier) |
+
+Files (live rows): src/screens/StartChoiceScreen.js:137; src/lib/challenges/copy.js:37-38; src/screens/PrivacyPolicyScreen.js:235; public/c/index.html:106; public/challenge-terms/index.html:181; public/privacy.html, public/privacy/index.html, docs/web/privacy.html (:185); public/privacy-policy.md:104; public/get/index.html:133. Tests to edit: StartChoiceScreen.test.js:207; ChallengeJoinScreen.test.js:159-160 and :182; landingPage.test.js:85; challengeTermsPage.guard.test.js:90; marketingClaimsGuard (re-run only).
+
+Safety and privacy: none of the five safety rules is touched. The free-for-life rule touches an entitlement write (server, not in this batch) and legal promises; billing rules (docs/rules/billing.md) say changes need a founder decision. Flag, do not change.
+
+Data, sync, migrations: none in this batch. The grant rule itself would need a migration after Q1 (the join writes the grant at migrate_201:569-571; the grant is removed only by account deletion). Not proposed here.
+
+Native: no. Server migration: no (for this batch).
+
+Effort: S now (strings). L once Q1 and the grant rule land (rule, migration, tests, legal copy).
+Risk: High. A promise about free access is legal-adjacent and affects what was promised to people who join.
+
+Questions for the owner:
+- Q1 (pending): What counts as "completed" for the free-for-life promise? (a) final score at or above 50 at close (the lean noted in your answer), (b) final score at or above 70, (c) training activity in the challenge, (d) still a member at close, (e) other. Written at close by the founder, per your answer. Until answered, every bracketed row above stays as written.
+- Q34-2: Start-choice line: confirmed as "You can change your mind later." alone. Any other one-line replacement must avoid price (your answer). Is this the wording you want?
+
+---
+
+## 36. Calm mode: Settings text (Calmer coaching)
+
+Status: Partly confirmed (Stage 1 36). Owner answer: "Keep D228 posts choice. Keep calm out of the notification handler. Settings text lists Community, notification and photo effects. Weight figures stay visible under calm."
+
+Evidence (each effect, from Stage 1 36, file:line):
+- Community: calm withholds the consistency counters, presence, group boards and profile card: `supabase/migrate_180_community_consistency_server_gate.sql:337-346`, `migrate_191` gates. Gym challenge board, entries and draws: `migrate_201:269, 425, 566, 672, 706`. New automatic posts not made on the device: `src/lib/community/ambient.js:166-169`. Existing automatic posts stay: `supabase/migrate_192_community_posts_withheld_under_flag.sql:1-14` (D228 addendum).
+- Notifications: win-back cancelled `src/lib/notifications/scheduler.js:1069-1080`; return nudge cancelled `:1451-1463`; monthly recap neutral `:2109`. Foreground banners are NOT changed by calm (`src/lib/notifications/handler.js` never reads calm); the text must not claim they are quieted.
+- Photos: photo prompts, compare views and share cards suppressed: `src/lib/usePhotoSuppression.js` (via `safetyState.js`), `src/screens/ProgressPhotosScreen.js:291`.
+- Weight figures: visible under calm, withheld only by an open ED flag (`src/lib/safetyState.js:86-91`). Unchanged.
+
+Before (exact, `src/screens/SettingsCoachingScreen.js:146-147`):
+- label: `Calmer coaching`
+- sub: `Quieter progress prompts, and coaching never pushes for more while it is on. Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change. The safety limits on calories and training load are always on, in both modes.`
+
+After (exact, replaces the sub at :147; the label is unchanged):
+> Quieter progress prompts, and coaching never pushes for more while it is on. Celebrations, streaks and progress comparisons go quiet. Your plan, your calorie and training limits and your weight figures stay as they are. Calmer coaching also changes three things. Community: your Community counts, presence, group boards and challenge board are hidden from other members, and new automatic posts from your workouts are not made. Posts already on the feed stay. Notifications: reminders to come back are not sent, and the monthly recap uses neutral wording. Your other reminders are unchanged. Progress photos: photo prompts, comparisons and share cards are switched off. The safety limits on calories and training load are always on, in both modes.
+
+Behaviour table (what the text promises, checked against code):
+
+| Text claim | Code | Holds? |
+|---|---|---|
+| Counts, presence, boards hidden from others | migrate_180:337-346, migrate_191, migrate_201 | Yes (server) |
+| No new automatic posts | ambient.js:166-169 | Yes (device) |
+| Existing posts stay | migrate_192:1-14 | Yes (calm only; an open ED flag withholds them, which is separate) |
+| Come-back reminders not sent | scheduler.js:1069-1080, :1451-1463 | Yes |
+| Monthly recap neutral | scheduler.js:2109 | Yes |
+| Other reminders unchanged | handler.js (no calm read); scheduler gates on ED flag only | Yes |
+| Photo prompts, compare, share cards off | usePhotoSuppression.js; ProgressPhotosScreen.js:291 | Yes |
+| Weight figures stay | safetyState.js:86-91 | Yes |
+
+Not changing: the handler (calm stays out of it), the D228 posts choice, the switch and its persistence, the calorie and training limit sentence.
+
+Files: `src/screens/SettingsCoachingScreen.js:147`.
+
+Safety and privacy:
+- Calm and ED: the text describes calm only, names no weight figure, no ED flag and no safety state.
+- Notifications: the text does not imply foreground banners are silenced (they are not).
+- Usage data: none. Error reports: none.
+
+Data, sync, migrations: none. Native code: no. Server migration: no.
+
+Tests: no test pins "Calmer coaching" or this sub (grep, none). New test recommended: a copy guard that the sub names Community, notifications and progress photos.
+
+Effort: S. Risk: Low. Main risk: the text makes claims about calm behaviour. It must be re-checked whenever calm behaviour changes (item 36 table in Stage 1).
+
+Layout note: SettingRow takes one `sub` string (SettingsCoachingScreen.js:144-147). The proposal uses plain sentences, not bullets, so no component change is needed. The text is longer than today; check the row at maximum text size.
+
+Questions for the owner:
+- Q36-1: Two calm effects are not in your list: the PR haptic becomes a plain tap (`src/components/RecordLine.js:131`), and Home comparison prompts go quiet (`src/screens/HomeScreen.js:796, 891`). Add them to the text, or leave them out?
+- Q36-2: Keep the plain-sentence form (no bullets, no change to SettingRow), or add a list layout to SettingRow?
+
+---
+
+## 41 + F9. Over-the-air updates and update-check reporting
+
+Status: Partly confirmed. IMPORTANT finding: `app.json` has no `updates.url`, and Android release builds are made on a GitHub runner with `expo prebuild` + gradle (`build-android.yml:301,529`), not by `eas build`. So an `eas.json` `channel` is NOT injected into Android builds; the channel must be in `app.json`. iOS goes through `eas build` (`build-ios.yml:232`), where `eas.json` channels apply.
+
+### Owner answers implemented
+"runtimeVersion policy fingerprint. Download in background, apply next cold start; remove 'Restart now' alert. Channels production and preview. F9 part of this."
+
+### Config diff
+`app.json`:
+```diff
+-    "runtimeVersion": {
+-      "policy": "appVersion"
+-    },
++    "runtimeVersion": {
++      "policy": "fingerprint"
++    },
++    "updates": {
++      "url": "https://u.expo.dev/2f60a6ed-8b37-4cd6-8057-60ee04e39ea8",
++      "checkAutomatically": "ON_LOAD",
++      "fallbackToCacheTimeout": 0
++    },
+```
+- `url` uses the existing `extra.eas.projectId` (`app.json:7`). Without it the installed expo-updates has nothing to ask (INFERRED; the no-URL runtime behaviour is NOT confirmed, `node_modules` was not inspected).
+- `fallbackToCacheTimeout: 0` = launch the cached bundle at once, download in the background, apply next cold start. That matches the answer and means a slow network never delays launch.
+- `checkAutomatically: ON_LOAD` plus the manual check in `App.js` duplicates the fetch. Decision for owner: keep the manual check (needed for F9 reporting) and set `checkAutomatically` to `"NEVER"` so there is one path. I have shown `ON_LOAD` above as the library default; the proposal is `NEVER` with the explicit check in `App.js`. Confirm in question 1.
+- Android (local prebuild) channel header, in `app.json` `updates`: `"requestHeaders": { "expo-channel-name": "production" }`. Iphone builds via EAS get it from `eas.json`. Because the same `app.json` feeds the preview APK, preview builds need their own value; the simplest route is `app.config.js` choosing it from `APP_VARIANT` (the variable already exists in `eas.json` env). `app.json` is static JSON today, so this is a decision (question 2).
+
+`eas.json`:
+```diff
+     "preview": {
+       "developmentClient": false,
+       "distribution": "internal",
++      "channel": "preview",
+       "env": {
+     "production": {
+       "node": "20.19.4",
+       "autoIncrement": true,
++      "channel": "production",
+       "env": {
+```
+
+`App.js` (prototype, committed in the worktree, `git diff HEAD~1 -- App.js`): the `Alert.alert('Update available', ... 'Restart now' ...)` block is removed. The check now fetches in the background and leaves it staged. F9: the `catch (_)` that swallowed errors becomes `logError('App.otaUpdate', e, { stage })` where `stage` is `'check'` or `'fetch'`. Context carries only the stage name, no user or device data; `logError` runs the existing scrub (`sentryScrub.js` locked patterns) and feeds Sentry. I did not touch `sentryScrub`. It stays non-fatal (wrapped in a try so reporting can never throw). The error-boundary reload at `App.js:373` is unchanged. The `Alert` import stays used elsewhere (not verified: lint not run).
+
+### F9. Update-check error reporting (part of item 41)
+
+### Strings
+| Where | Before | After |
+|---|---|---|
+| `App.js:642-651` | Alert "Update available" / "A new version of Volyume has been downloaded. Restart to apply it." / "Later" / "Restart now" | removed, no user-facing text |
+| `App.js:653-655` | `catch (_) { /* Silently ignore */ }` | `logError('App.otaUpdate', e, { stage })` |
+
+### Behaviour table
+| Scenario | Today | Proposed |
+|---|---|---|
+| Production launch, update available | Downloads, interrupts with the alert; "Restart now" reloads mid-use | Downloads silently; applies on the next cold start. Nothing interrupts a workout |
+| Check fails (offline, server error) | Swallowed | Reported to Sentry with `stage`; INFERRED volume may include normal offline failures. `captureException` may have an offline-noise filter like `captureWarning`'s `_isExpectedOfflineNoise`; not verified for the exception path. If noisy, switch to `logWarn` (breadcrumb when offline) |
+| Dev build | Skipped (`__DEV__`) | Same |
+| Binary whose runtime differs from the update | Update never offered (runtime match is the safety) | With fingerprint, runtime changes automatically whenever native inputs change, so a mismatched JS bundle is not served |
+
+### Risks to state plainly
+- The first binary that carries `updates.url` and the fingerprint runtime is a new store build. Already-installed 3.2.0 binaries keep policy `appVersion`; they cannot receive fingerprint-runtime updates. Expect no OTA until users update to that build.
+- Fingerprint is computed from native inputs. `android/` is gitignored and generated at build; the fingerprint is computed on `eas update` from the project plus config. A mismatch between the fingerprint at the Android gradle build and at publish is the main failure mode (an update that no binary matches, so it silently reaches nobody). Check with `npx expo-updates fingerprint:generate` (or `eas update` output) against the build's recorded runtime before relying on it. NOT verified here (no network, node_modules not exercised for this).
+- `eas.json` production has `EAS_SKIP_AUTO_FINGERPRINT: "1"` (`eas.json` env). I did not determine what it skips; confirm it does not affect the runtime fingerprint for iOS builds.
+- Do not publish anything without the owner's go; I have run no `eas` command.
+
+### Release runbook (proposed)
+1. Decide OTA vs store build with the table below.
+2. OTA: from a clean main, `npm run lint && npm test`; then `eas update --channel production --message "<what changed>"` (owner runs; I never publish). Test on `preview` first: `eas update --channel preview`, install a preview APK, cold start twice (first downloads, second applies).
+3. Verify: app version unchanged; second cold start shows the change; Sentry shows no `App.otaUpdate` errors for the release.
+4. Rollback: republish the previous known-good bundle to the same channel (`eas update:republish` for the earlier group, or `eas update:rollback`; EAS CLI name varies by version, check `eas update --help`). Users get it at their next cold start, so a rollback takes effect after one more launch. A bad update that crashes at launch: expo-updates falls back to the embedded bundle after repeated launch failures (INFERRED from library behaviour, not tested here).
+5. Store builds: owner's explicit go per build (CLAUDE.md "Builds cost money"). Version bump rule applies to builds, not OTA.
+
+| Can ship OTA (JS and assets only, same runtime) | Needs a store build |
+|---|---|
+| Screens, copy, logic, Zustand, sync client code, prompts, images bundled via JS | `app.json` native config or plugin changes (the `iosUrlScheme` above), new or upgraded native modules or Expo SDK, permissions, `infoPlist`, Live Activity / widget modules, anything that changes the fingerprint |
+| Cloud-side changes (migrations, edge functions) are not OTA at all; they are separate and founder-gated | Android and iOS binaries must carry `updates.url` first (this proposal) |
+
+Also: an OTA bundle must stay compatible with the deployed cloud schema; a JS update that expects a migration not yet applied is the main hazard.
+
+### Not changing
+`FULL_ACCESS_FOR_ALL`, consent gate, ED rules, error boundary reload, Sentry scrub patterns, dependencies (`expo-updates ~29.0.20` already present), `package.json`.
+
+### Files
+`app.json`, `eas.json`, `App.js`; possibly `app.config.js` (new, see question 2); `scripts` for the fingerprint check if wanted.
+
+### Safety and privacy
+Nothing safety-adjacent. Reported error holds only the library's message and `stage`; routed through the existing scrub. No new telemetry event (Sentry, not the usage-data schema). EU residency: OTA bundles are served by Expo's CDN (not Dublin); the bundle holds code only, no user data; the privacy policy should be checked for how it describes this (not checked by me).
+
+### Data, sync, migrations: none.
+### Native code: YES (app.json `runtimeVersion`/`updates` are native-config changes; need a new store build for both platforms). Server migration: no.
+
+### Tests
+Prototype passes the suites above (`screen-mount.test.js` includes App-level mounts). No existing test pins the "Restart now" alert (grep: no hit in tests). New tests: a source guard that `App.js` has no `Alert.alert('Update available'` and no `reloadAsync` in the check; the catch calls `logError('App.otaUpdate'`; `app.json` has `runtimeVersion.policy === 'fingerprint'`, `updates.url` containing the project ID; `eas.json` production/preview channels.
+
+### Effort, Risk
+Effort M. Risk Med: a wrong fingerprint/channel pairing means updates reach nobody (fails quietly) or reach the wrong build.
+
+### Questions for the owner
+1. `checkAutomatically`: `NEVER` (one explicit check in `App.js`, my proposal) or leave `ON_LOAD`?
+2. Android builds come from `app.json`, not `eas.json`, so the channel needs to be in app config. OK to introduce `app.config.js` that reads `APP_VARIANT` to set channel `production` or `preview`, or keep static `app.json` with `production` only and give preview builds their channel at publish time?
+3. If check failures are noisy (offline phones), report as a warning (breadcrumb when offline) rather than an error?
+
+---
+
+## 20. Rest timer when the phone is locked: phone checklist (verification only, Stage 2 "no")
+
+Status: Stages 1 and 2 already exist in the repo (Stage 1 20). This is a checklist to verify them on your phone. Nothing is built. The iPhone Live Activity (Stage 3) is not part of it.
+
+Behaviour sources: `src/lib/notifications/restEnd.js` (end alert "Rest done", body "Your next set is ready when you are.", :52-53, id `volyume_rest_end`, re-scheduled on +/- at :2080, cancelled on stop and when the switch is off); `src/lib/notifications/restForeground.js:37` (`REST_FOREGROUND_MAX_MS = 170_000`, Android foreground service with "+15s" and "Skip rest" buttons); `src/components/RestTimer.js:158-210` (service start, app active only), `:228-262` (plain chronometer beyond 170 s); `src/lib/notifications/restTimerActions.js`; `RestCueReceiver.kt` (3-2-1 cues via AlarmManager when the app leaves the foreground); Settings `src/screens/SettingsWorkoutScreen.js:225-226` ("Rest finished alert"), `:245-248` ("Rest timer sounds"), `:261-267` ("Make rest alerts exact", Android only).
+
+Before you start: Settings > Workout & units: "Rest finished alert" on, "Rest timer sounds" on. Android: if "Make rest alerts exact" shows, tap it and grant exact alarms. iPhone: iOS Settings > Notifications > Volyume: Allow Notifications on, Sounds on, Alerts on. Record the phone model and OS version at the top of your results.
+
+Android (numbered, expected result under each step):
+1. Log one set, then start a rest of 90 seconds. Expected: the in-app rest row counts down; 3-2-1 pips and the end tone play (if "Rest timer sounds" is on).
+2. Leave the app with the home button during the rest. Expected: a persistent notification shows a live countdown with two buttons, "+15s" and "Skip rest".
+3. Tap "+15s". Expected: the countdown on the notification and the in-app row both go up by 15 seconds.
+4. Lock the phone during a new rest. Expected: the countdown is visible on the lock screen; you hear or feel the 3-2-1 cues at the right moments. (Not confirmed on every Android 12 to 15 vendor skin.)
+5. Let a rest finish with the phone locked. Expected: a "Rest done" notification with sound and vibration, body "Your next set is ready when you are." The countdown notification goes away.
+6. Start a rest, lock the phone, then tap "+15s" once and let it finish. Expected: "Rest done" arrives about 15 seconds after the original end time (re-scheduled on adjust).
+7. Start a rest, leave the app, tap "Skip rest" on the notification. Expected: the rest ends and no "Rest done" notification arrives afterwards.
+8. If your rest length setting allows more than 170 seconds (not confirmed; skip if it does not): start one and leave the app. Expected: a plain chronometer notification with no "+15s" or "Skip rest" buttons.
+9. Turn "Rest finished alert" off, start a rest, lock the phone. Expected: no "Rest done" notification at the end.
+10. Turn the alert back on. Revoke exact alarms in Android settings (Alarms and reminders). Expected: "Make rest alerts exact" appears under the switch. Rest end may then arrive a little late. Grant the permission again afterwards.
+11. Turn Calmer coaching on (Settings > Coaching). Start a rest and lock the phone. Expected: "Rest done" still arrives. The alert is intentionally not gated by calm mode (Stage 1 20).
+12. Check the "Rest done" text contains no weight or food words. Expected: it does not. (The ED-safety suppression does not apply to this notification because it carries no such content.)
+
+iPhone (numbered, expected result under each step):
+1. Start a rest of 90 seconds, then leave the app. Expected: no countdown on the lock screen or Dynamic Island (no Live Activity ships). This is the expected state, not a fault.
+2. Lock the phone and wait out the rest. Expected: a "Rest done" notification with the default sound, body "Your next set is ready when you are."
+3. Start a rest, leave the app, then come back before it ends. Expected: the in-app row shows the correct remaining time (wall-clock catch-up).
+4. Turn the Silent switch on, then run a short rest and lock the phone. Expected: record what happens (sound muted, banner shown?). Not confirmed; Stage 1 inferred the sound may be muted.
+5. Turn a Focus mode on, then run a short rest. Expected: record whether "Rest done" is shown or held. Not confirmed; the notification is not time-sensitive (restEnd.js:50-55).
+6. In the app, tap the rest +/- buttons. Expected: the end time moves, and "Rest done" follows the new end time.
+7. Start a rest and tap Skip in the app. Expected: no "Rest done" notification afterwards.
+8. Turn "Rest finished alert" off, run a rest, lock the phone. Expected: no notification at the end.
+9. Turn Calmer coaching on, then run a rest and lock the phone. Expected: "Rest done" still arrives.
+
+Record each step as Pass, Fail, or Not tested, with a short note. Send the results back with the phone model and OS.
+
+---
+
+## Batch W: Verification done for this batch
+
+- Worktree created and clean. No commits, no pushes, no edits to /home/user/ADPhysique.
+- Baseline (unchanged tree): 11 suites, 328 tests, all PASS (command: `npx jest` on the 11 suites named at the top).
+- Not run: the ActiveWorkoutScreen.usability.guard.test.js suite (F5 pin), SettingsCoachingScreen and WelcomeScreen suites. Run them after any edit.
+
+## Stage 2: noticed, not proposed
+
+- [W] public/index.html and public/support/index.html are not the only copies: docs/web/index.html:202-208, 331-368 and marketing/hq/site-staging/index.html:199, 292 still describe Free and Pro (Stage 1 34). Not edited.
+- [W] docs/web/privacy.html must stay identical to public/privacy.html (test-enforced). Edits above apply to it too.
+- [W] CSS dead after H4 and H5 is listed; the homepage CSS file list was not audited beyond that block.
+- [W] The homepage screenshots (`public/screenshots/*.jpg`) may show Pro labels. Not checked (images).
+- [W] The privacy copy's "14-day free trial" sentence (P3) is the only trial-abuse wording found in a public page besides the dormant screens; Q-F8-3 covers it.
+- [I2] Also noticed, not changed: hasWeightChoice doc (foodRoles.js ~300) still says it drives the choice; it is now hasCookToggle.
