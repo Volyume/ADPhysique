@@ -160,6 +160,10 @@ const capitalise = (s) => (typeof s === 'string' && s.length ? s.charAt(0).toUpp
  *   open ED flag, a failed safety read or the unknown state (never calm alone).
  *   The weight row then prints the Body metrics line in the chip's place, with
  *   no direction glyph and no gloss, and the coaching-rate row is left out.
+ * @param {boolean} [input.suppressed] the safety verdict (`safetyState.js`
+ *   `suppressed`: calm OR an open flag OR a failed read, and the unknown
+ *   state). True leaves out the food rows (Food logged, Calories) and every
+ *   good/attention mark, matching Today, which shows no rows at all then.
  * @param {object|null} [input.context] the coach context the run decided from
  * @param {object|null} [input.checkin] this week's check-in answers
  * @returns {Array<{key: string, icon: string, label: string, value: string,
@@ -168,10 +172,11 @@ const capitalise = (s) => (typeof s === 'string' && s.length ? s.charAt(0).toUpp
 export function buildWeekRows({
   sessionsCompleted = null, sessionsPlanned = null, prsThisWeek = null,
   weight = null, rate = null, context = null, checkin = null, withholdWeight = false,
+  suppressed = false,
 } = {}) {
   const rows = [];
   const push = (key, icon, label, value, mark = null, tooltip = null, wrap = false) => {
-    rows.push({ key, icon, label, value, mark, tooltip, ...(wrap ? { wrap: true } : {}) });
+    rows.push({ key, icon, label, value, mark: suppressed ? null : mark, tooltip, ...(wrap ? { wrap: true } : {}) });
   };
 
   // Training.
@@ -201,12 +206,14 @@ export function buildWeekRows({
     if (rate?.value) push('rate', 'analytics-outline', rate.label ?? 'Coaching trend', capitalise(rate.value), null, rate.tooltip ?? null);
   }
 
-  // Food: never marked.
-  const coverage = context?.nutrition?.coverage ?? null;
-  const days = finite(coverage?.value);
-  if (days != null) push('food', 'restaurant-outline', 'Food logged', `${days} of 7 days`);
-  const cals = checkin?.calsAdherence ?? null;
-  if (cals && CALORIE_VALUES[cals]) push('calories', 'flame-outline', 'Calories', CALORIE_VALUES[cals]);
+  // Food: never marked, and left out entirely under the safety verdict.
+  if (!suppressed) {
+    const coverage = context?.nutrition?.coverage ?? null;
+    const days = finite(coverage?.value);
+    if (days != null) push('food', 'restaurant-outline', 'Food logged', `${days} of 7 days`);
+    const cals = checkin?.calsAdherence ?? null;
+    if (cals && CALORIE_VALUES[cals]) push('calories', 'flame-outline', 'Calories', CALORIE_VALUES[cals]);
+  }
 
   // Recovery: an answer worth a look is marked; a fine one is simply stated.
   const energy = finite(checkin?.energyScore);

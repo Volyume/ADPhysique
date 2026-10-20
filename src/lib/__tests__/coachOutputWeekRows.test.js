@@ -221,3 +221,60 @@ describe('buildWeekRows: the weight figures under the safety state (D228 item 2,
     expect(src).not.toMatch(/Your weigh-ins are kept here/);
   });
 });
+
+// Owner order 2026-10-20 (Stage 2, item 12 safety part): under the safety
+// verdict the Coaching decision screen showed "Calories: Under target" and
+// "Food logged 1 of 7 days" with an open ED flag, because the builder took no
+// safety input. Under `suppressed` (calm, an open flag, a failed read, the
+// unknown state) the food rows go and no row carries a good/attention mark.
+describe('buildWeekRows: food rows and marks under the safety verdict', () => {
+  const STATES = {
+    'calm alone': deriveSafetyState({ mode: 'calm', edFlag: null }),
+    'an open flag': deriveSafetyState({ mode: 'normal', edFlag: { id: 'f' } }),
+    'a failed flag read': deriveSafetyState({ mode: 'normal', edFlag: 'read_failed' }),
+    'a failed wellbeing read': deriveSafetyState({ mode: 'read_failed', edFlag: null }),
+    'the unknown state': SAFETY_STATE_UNKNOWN,
+  };
+  // A week with every mark the builder can give and both food rows present.
+  const MARKED_WEEK = {
+    ...FOUNDER_WEEK,
+    context: {
+      nutrition: { coverage: { signal: 'poor', value: 1 } },
+      training: { progress: { signal: 'poor' } },
+      recovery: { systemic: { signal: 'poor' } },
+    },
+    checkin: { calsAdherence: 'under', energyScore: 1, sorenessScore: 5, sleepHours: 5, jointPain: true },
+  };
+  const rowsFor = (state) => buildWeekRows({
+    ...MARKED_WEEK, withholdWeight: withholdsWeightFigures(state), suppressed: state.suppressed,
+  });
+
+  test('the fixture really carries both food rows and marks when nothing is suppressed', () => {
+    const rows = buildWeekRows(MARKED_WEEK);
+    expect(rows.map((r) => r.key)).toEqual(expect.arrayContaining(['food', 'calories']));
+    expect(rows.some((r) => r.mark)).toBe(true);
+  });
+
+  test.each(Object.keys(STATES))('%s: no Food logged row, no Calories row, no mark on any row', (name) => {
+    expect(STATES[name].suppressed).toBe(true);
+    const rows = rowsFor(STATES[name]);
+    const keys = rows.map((r) => r.key);
+    expect(keys).not.toContain('food');
+    expect(keys).not.toContain('calories');
+    expect(rows.every((r) => r.mark === null)).toBe(true);
+    expect(JSON.stringify(rows)).not.toMatch(/Under target|Off target|Hit your target|Over target|of 7 days/);
+  });
+
+  test('the other facts are still stated, only unmarked', () => {
+    const k = byKey(rowsFor(STATES['calm alone']));
+    expect(k.sessions.value).toBe('2 of 4');
+    expect(k.energy.value).toBe('Low');
+    expect(k.joints.value).toBe('Flagged');
+  });
+
+  test('the screen passes the safetyState.js verdict, not its own reading of calm or the flag', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'CoachOutputScreen.js'), 'utf8');
+    expect(src).toMatch(/buildWeekRows\(\{[\s\S]{0,400}suppressed: safety\.suppressed \|\| edPatternOpen,/);
+    expect(src).toMatch(/const safety = useSafetyState\(user\?\.id\);/);
+  });
+});

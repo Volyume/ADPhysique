@@ -3114,6 +3114,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   const weightFiguresWithheld = withholdsWeightFigures(safety) || edPatternOpen;
   const weekRows = buildWeekRows({
     withholdWeight: weightFiguresWithheld,
+    // Same two sources as the line above: the hook's verdict (calm, an open
+    // flag, a failed read or the unknown state) and this week's held
+    // decision, which can lead the stored flag.
+    suppressed: safety.suppressed || edPatternOpen,
     sessionsCompleted,
     sessionsPlanned,
     prsThisWeek,
