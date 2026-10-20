@@ -1,3 +1,5 @@
+> ⚠ SUPERSEDED (2026-10-20): the current app map is `CURRENT-APP-MAP.md` at the repository root, built from the code with screenshots in `screenshots/current/`. This file is kept for history; do not build from it.
+
 # Volyume — Product UX Map
 
 _Last updated: 2026-05-16. Covers the build as it existed in May 2026 on the now-retired `claude/build-volyume-app-srY9C` branch._

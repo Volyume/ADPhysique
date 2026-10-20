@@ -110,7 +110,8 @@ session/auth, tier, userProfile, units, consent flags, sync status. Screens
 select with `useShallow`. Persistent prefs go to AsyncStorage or SQLite, not
 the store alone.
 
-**Data flow.** UI (src/screens, 82 screens; src/components) → domain logic in
+**Data flow.** UI (src/screens: 105 registered screens, six tabs; the full
+code-derived map is `CURRENT-APP-MAP.md`; src/components) → domain logic in
 `src/lib/*` → `database.js`/`food/db.js` (SQLite, device truth) → sync layer →
 Supabase. Store holds session/derived state, never bypasses the DB. Navigation:
 `src/navigation/RootNavigator.js` — single navigator that routes by auth state,
@@ -391,7 +392,7 @@ main and says what a build would carry. An iOS build started without
 permission during the 2026-09-04 fresh-install incident (D143) is the
 failure this rule records.
 
-**Version bump before every build (founder order 2026-10-12, standing).** Before any build is handed to the founder, bump the minor version in package.json, package-lock.json and app.json, add the version's What's new entry (WhatsNewSheet.js, the privacy line inside the Community line) and extend privacyTruth.guard.test.js, as every previous "Version x.y.0" commit did.
+**Version bump before every build (founder order 2026-10-12, standing).** Before any build is handed to the founder, bump the minor version in package.json, package-lock.json and app.json, add the version's What's new entry (WhatsNewSheet.js) and extend privacyTruth.guard.test.js, as every previous "Version x.y.0" commit did. What's new names only new user-facing features, in plain British English with no technical terms and no privacy-policy wording, and changes only when the founder bumps the main version with new features (founder 2026-10-20).
 
 **Testing on device (no simulator).** The founder works from a phone and
 cannot run a local simulator. EVERY shipped change includes a short manual

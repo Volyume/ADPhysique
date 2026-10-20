@@ -1,3 +1,5 @@
+> ⚠ SUPERSEDED (2026-10-20): the current app map is `CURRENT-APP-MAP.md` at the repository root, built from the code with screenshots in `screenshots/current/`. This file is kept for history; do not build from it.
+
 # Volyume: features and screens map
 
 Snapshot date: 17 October 2026. App version 3.0.0 (Android via Google Play, iOS via TestFlight).

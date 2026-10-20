@@ -1,3 +1,5 @@
+> ⚠ SUPERSEDED (2026-10-20): the current app map is `CURRENT-APP-MAP.md` at the repository root, built from the code with screenshots in `screenshots/current/`. This file is kept for history; do not build from it.
+
 # VOLYUME — FULL PRODUCT + SYSTEM MAP
 
 > **CAMPAIGN 5 ADDENDUM (2026-08-11).** The body below is NOT
