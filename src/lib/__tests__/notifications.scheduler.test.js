@@ -773,27 +773,40 @@ describe('scheduleMissedCheckinFollowups', () => {
   });
 
   test('lays the evening nudge (20:00 on the check-in day) and the +48h follow-up', async () => {
-    await setProPrefs();
-    mockGetLatestCheckin.mockResolvedValue(null);
-    await scheduler.scheduleMissedCheckinFollowups('user-1');
+    // The follow-up is exactly 48 hours after the occurrence, so across a UK
+    // clock change its wall-clock hour moves by one (2026-10-20: the run before
+    // the 25 October change failed with 17 instead of 18). Only Date is pinned,
+    // to a June day with no change within the next fortnight; timers stay real.
+    jest.useFakeTimers({
+      now: new Date('2026-06-10T09:00:00Z'),
+      doNotFake: ['nextTick', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout',
+        'setInterval', 'clearInterval', 'queueMicrotask', 'hrtime', 'performance'],
+    });
+    try {
+      await setProPrefs();
+      mockGetLatestCheckin.mockResolvedValue(null);
+      await scheduler.scheduleMissedCheckinFollowups('user-1');
 
-    expect(mockScheduleAsync).toHaveBeenCalledTimes(2);
-    const byId = {};
-    for (const call of mockScheduleAsync.mock.calls) byId[call[0].identifier] = call[0];
+      expect(mockScheduleAsync).toHaveBeenCalledTimes(2);
+      const byId = {};
+      for (const call of mockScheduleAsync.mock.calls) byId[call[0].identifier] = call[0];
 
-    const evening = byId[ID_EVENING];
-    expect(evening.content.data).toEqual({ type: 'checkin_missed', slot: 'evening' });
-    expect(evening.trigger.type).toBe(SCHEDULE_INPUT_TYPES.DATE);
-    expect(evening.trigger.channelId).toBe('coaching-reminders');
-    expect(evening.trigger.date.getHours()).toBe(20);
-    expect(evening.trigger.date.getTime()).toBeGreaterThan(Date.now());
+      const evening = byId[ID_EVENING];
+      expect(evening.content.data).toEqual({ type: 'checkin_missed', slot: 'evening' });
+      expect(evening.trigger.type).toBe(SCHEDULE_INPUT_TYPES.DATE);
+      expect(evening.trigger.channelId).toBe('coaching-reminders');
+      expect(evening.trigger.date.getHours()).toBe(20);
+      expect(evening.trigger.date.getTime()).toBeGreaterThan(Date.now());
 
-    const followup = byId[ID_48H];
-    expect(followup.content.data).toEqual({ type: 'checkin_missed', slot: 'followup' });
-    expect(followup.trigger.date.getHours()).toBe(18); // occurrence hour + 48h
-    // Exactly 48h after the occurrence = evening day at 18:00 plus 2 days.
-    expect(followup.trigger.date.getTime() - evening.trigger.date.getTime())
-      .toBe(2 * 86400000 - 2 * 60 * 60 * 1000);
+      const followup = byId[ID_48H];
+      expect(followup.content.data).toEqual({ type: 'checkin_missed', slot: 'followup' });
+      expect(followup.trigger.date.getHours()).toBe(18); // occurrence hour + 48h
+      // Exactly 48h after the occurrence = evening day at 18:00 plus 2 days.
+      expect(followup.trigger.date.getTime() - evening.trigger.date.getTime())
+        .toBe(2 * 86400000 - 2 * 60 * 60 * 1000);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test('never shame copy: neither push says "missed"', async () => {

@@ -26,6 +26,14 @@ DO $$ BEGIN
   EXCEPTION WHEN not_null_violation THEN NULL; END;
 END $$;
 SELECT (SELECT code FROM gym_challenges) ~ '^volt-oct-[0-9a-f]{8}$' AS code_has_random_part;
+-- No terms link given: the challenge links its own terms page.
+DO $$ DECLARE r jsonb; BEGIN
+  r := gym_challenge_create('99999999-0000-0000-0000-000000000001','volt-dec','Volt December Challenge', current_date + 40, current_date + 60);
+  IF (SELECT terms_url FROM gym_challenges WHERE id = (r ->> 'id')::uuid) <> 'https://volyume.app/challenge-terms/?c=' || (r ->> 'code') THEN
+    RAISE EXCEPTION 'default terms link wrong';
+  END IF;
+  DELETE FROM gym_challenges WHERE id = (r ->> 'id')::uuid;
+END $$;
 SELECT (gym_challenge_public((SELECT code FROM gym_challenges)) ? 'entrants') AS public_has_count;
 SELECT count(*) AS cron_jobs FROM cron.job WHERE jobname = 'gym-challenge-gate-readings';
 

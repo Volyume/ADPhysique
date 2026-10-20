@@ -851,10 +851,13 @@ Run in the Supabase SQL editor (service role). Every call is recorded.
    SELECT public.gym_challenge_create(
      '<gym_venues.id>', 'volt-nov', 'Volt Gym November Challenge',
      DATE '2026-11-01', DATE '2026-11-30',
-     'https://volyume.app/challenge-terms/?c=volt-nov',
+     NULL,  -- terms link: NULL uses the challenge's own terms page
      'Main prize text', 'Second prize text');
    ```
 
+   The terms page (`public/challenge-terms/`) fills in the challenge from its
+   code. Promoter: Volyume; no postal address is published (founder
+   2026-10-20).
    Find the gym's id with `SELECT id, display_name FROM public.gym_venues WHERE display_name ILIKE '%volt%';`.
 2. **Close** 3 or more days after the end date (late syncs land first):
    `SELECT public.gym_challenge_close('<challenge id>');`
