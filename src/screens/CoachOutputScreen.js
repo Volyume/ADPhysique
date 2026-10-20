@@ -2649,6 +2649,12 @@ export default function CoachOutputScreen({ navigation, route }) {
     const attemptWeek = output?.weekStart ?? weekStart;
     const autoAttempted = (key) => autoApplyAttemptedRef.current.has(`${key}:${attemptWeek}`);
     const markAutoAttempted = (key) => { autoApplyAttemptedRef.current.add(`${key}:${attemptWeek}`); };
+    // What actually happens (item 6, 2026-10): weeklyCoach.js counts
+    // deloadSuggested in autoApplyHoldActive, so a freshly built output with
+    // a deload returns at the hold check above and the recovery week waits
+    // for the person's tap in Coached mode too. This branch only runs for an
+    // output that carries deloadSuggested without the hold flag (for example
+    // one stored before the flag existed); it is left as it is.
     if (output.deloadSuggested) {
       if (!isApplied(output, 'deload') && nextTrainingWeekId && !autoAttempted('deload')) {
         markAutoAttempted('deload');
