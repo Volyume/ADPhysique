@@ -558,7 +558,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="notifications-outline"
             label="Coaching reminders"
-            sub="Reminders for your weekly check-in, weigh-ins and logging."
+            sub="Reminders for your weigh-ins, weekly check-in, missed check-ins and planned meals."
             onPress={() => navigation.navigate('CoachingReminders')}
           />
           </NavGroup>

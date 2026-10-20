@@ -2427,6 +2427,7 @@ const useAppStore = create((set, get) => ({
     // animations" setting, hydrated + kept live from App.js via AccessibilityInfo.
     reduceMotion: false,          // skips PRCelebration particles, RestTimer pulse, big spring anims
     reduceMotionUserPref: false, // the user's own in-app toggle; Settings reads/writes THIS
+    hapticsEnabled: true,  // item 11: own switch, default on; Reduce motion no longer silences haptics
     theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
     energyUnit: 'kcal',    // food-UI energy DISPLAY unit: 'kcal' | 'kj'. Display-only (read reactively,
                            // no reload); stored values, targets + the coaching engine stay in kcal.

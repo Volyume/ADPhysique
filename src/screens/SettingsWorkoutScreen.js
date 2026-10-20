@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Switch, StyleSheet, Platform } from 'react-native';
-import Text from '../components/Text';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { canScheduleExactAlarms, requestExactAlarmAccess } from '../lib/notifications/restForeground';
 import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
@@ -12,14 +10,6 @@ import Chip from '../components/Chip';
 import { colors, withAlpha, alpha, spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
-
-// Body weight unit options. Gym weights stay kg-only by design (UK); this
-// only controls how a user's own body weight is shown/entered.
-const BODY_WEIGHT_UNIT_OPTIONS = [
-  { value: 'st', label: 'Stone' },
-  { value: 'kg', label: 'Kg' },
-  { value: 'lbs', label: 'Lbs' },
-];
 
 function formatRestSeconds(seconds) {
   const s = Number(seconds) || 90;
@@ -40,7 +30,6 @@ function formatRestSeconds(seconds) {
 // no longer stuck.
 export default function SettingsWorkoutScreen() {
   const { user, userProfile, saveLocalProfile,
-    bodyWeightUnits, setBodyWeightUnits,
     defaultRestSeconds, setDefaultRestSeconds,
     autoStartRestTimer, setAutoStartRestTimer,
     openRestViewAfterLog, setOpenRestViewAfterLog,
@@ -51,8 +40,6 @@ export default function SettingsWorkoutScreen() {
     user: s.user,
     userProfile: s.userProfile,
     saveLocalProfile: s.saveLocalProfile,
-    bodyWeightUnits: s.bodyWeightUnits,
-    setBodyWeightUnits: s.setBodyWeightUnits,
     defaultRestSeconds: s.defaultRestSeconds,
     setDefaultRestSeconds: s.setDefaultRestSeconds,
     autoStartRestTimer: s.autoStartRestTimer,
@@ -91,46 +78,13 @@ export default function SettingsWorkoutScreen() {
 
   const restSeconds = Number(defaultRestSeconds) || 90;
   // CP-10 stage 3: live theme (src/hooks/useTheme.js). `live` is the shared
-  // settingsStyles override (SettingsPrimitives.js); `liveLocal` covers this
-  // screen's own colour/type-bearing style keys the same way.
+  // settingsStyles override (SettingsPrimitives.js); 
   const t = useTheme();
   const live = useSettingsStyles();
-  const liveLocal = {
-    segment: { backgroundColor: t.colors.surface2 },
-  };
 
   return (
-    <SettingsPage title="Workout & units">
+    <SettingsPage title="Workout">
       <View style={[styles.section, live.section]}>
-        <View style={[styles.settingRow, live.settingRow]}>
-          <View style={[styles.settingIcon, live.settingIcon]}>
-            <Ionicons name="body-outline" size={18} color={t.colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.settingLabel, live.settingLabel]}>Body weight unit</Text>
-            <Text style={[styles.settingSub, live.settingSub]}>
-              How your own body weight is shown. Gym weights stay in kg.
-            </Text>
-            <View style={[local.segment, liveLocal.segment]} accessibilityRole="radiogroup">
-              {BODY_WEIGHT_UNIT_OPTIONS.map((opt) => {
-                const active = (bodyWeightUnits ?? 'st') === opt.value;
-                return (
-                  <Chip
-                    key={opt.value}
-                    label={opt.label}
-                    selected={active}
-                    onPress={() => { if (!active) { haptics.selection(); setBodyWeightUnits(opt.value); } }}
-                    accessibilityRole="radio"
-                    accessibilityLabel={opt.label}
-                    style={local.segChip}
-                    labelStyle={local.segLabel}
-                  />
-                );
-              })}
-            </View>
-          </View>
-        </View>
-
         <SettingRow
           icon="hourglass-outline"
           label="Session length"
