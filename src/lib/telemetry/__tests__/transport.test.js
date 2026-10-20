@@ -402,7 +402,7 @@ describe('migrate_202 names wait for the server (TELEMETRY_202_EVENTS)', () => {
   });
 
   test('202 also records the new fields on challenge_viewed and coaching_setup_card_shown', () => {
-    for (const field of ['"score_band"', '"parts_full"', '"mode"']) expect(sql).toContain(field);
+    for (const field of ['"points_band_90"', '"parts_full"', '"mode"']) expect(sql).toContain(field);
   });
 
   test('off: the 202 names are dropped, not persisted', async () => {

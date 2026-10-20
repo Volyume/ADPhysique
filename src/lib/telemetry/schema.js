@@ -72,7 +72,7 @@ const CODE = Object.freeze({ type: 'code' });
 const SETUP_SURFACES = ['nutrition', 'meal_plan', 'targets', 'checkin', 'coach_output', 'coach_home', 'home', 'goal_setup', 'challenge', 'unknown'];
 const CHALLENGE_SOURCES = ['link', 'gym_invite', 'code'];
 const CHALLENGE_STATUSES = ['upcoming', 'active', 'ended', 'closed'];
-const CHALLENGE_SCORE_BANDS = ['0-24', '25-49', '50-69', '70-84', '85-100'];
+const CHALLENGE_POINTS_BANDS = ['0-19', '20-39', '40-59', '60-74', '75-90'];
 const ARCHETYPES = ['balanced', 'v_taper', 'x_frame', 'upper_density', 'powerbuilder', 'minimalist'];
 const SHARE_SURFACES = ['workout', 'week', 'pr', 'clip', 'progress', 'other'];
 const AUDIENCES = ['followers', 'public', 'gym', 'external', 'none'];
@@ -108,7 +108,7 @@ export const EVENT_SCHEMAS = Object.freeze([
     { step: int(1, 8), field: enumOf('sex', 'age', 'height', 'weight', 'phase', 'archetype', 'experience', 'session_length', 'days', 'equipment', 'plan_choice', 'other'), mode: enumOf('full', 'coaching_setup') }),
   ev('onboarding_completed', 'onboarding', 'progression', 'Setup finished.',
     { path: enumOf('coaching', 'quick_start'), mode: enumOf('full', 'coaching_setup'), duration: bucketOf('minutes') }),
-  ev('coaching_setup_card_shown', 'onboarding', 'retention', 'A "Set up coaching" card was shown to a quick-start person (once a day per surface).',
+  ev('coaching_setup_card_shown', 'onboarding', 'retention', 'A "Set up coaching" card was shown to a quick-start person, full or as the short row (once a day per surface and form).',
     { surface: enumOf(...SETUP_SURFACES), mode: enumOf('full', 'compact') }),
   ev('coaching_setup_card_snoozed', 'onboarding', 'retention', 'A quick-start person tapped "Not now" on the "Set up coaching" card (it shows as a short row for 7 days).',
     { surface: enumOf(...SETUP_SURFACES) }),
@@ -150,12 +150,15 @@ export const EVENT_SCHEMAS = Object.freeze([
     { source: enumOf(...CHALLENGE_SOURCES), status: enumOf(...CHALLENGE_STATUSES) }),
   ev('challenge_joined', 'challenge', 'progression', 'A person joined a gym challenge.',
     { source: enumOf(...CHALLENGE_SOURCES), coaching: BOOL }),
-  ev('challenge_viewed', 'challenge', 'retention', 'An entrant opened their gym challenge.',
-    { status: enumOf(...CHALLENGE_STATUSES), tier: enumOf('main', 'second', 'none'), score_band: enumOf(...CHALLENGE_SCORE_BANDS), parts_full: int(0, 5) }),
+  // No tier and no total: a withheld entrant is credited food and weigh-in in
+  // full (migrate_201), so both lean upward for them. Only the five non-food
+  // parts, the same two fields for everyone.
+  ev('challenge_viewed', 'challenge', 'retention', 'An entrant opened their gym challenge: the band of their train, week, stronger, community and check-in points (out of 90) and how many of those five parts are full.',
+    { status: enumOf(...CHALLENGE_STATUSES), points_band_90: enumOf(...CHALLENGE_POINTS_BANDS), parts_full: int(0, 5) }),
   ev('challenge_withdrawn', 'challenge', 'retention', 'An entrant left a gym challenge.'),
 
   // ── Food ─────────────────────────────────────────────────────────────
-  ev('weight_basis_switched', 'food', 'progression', 'The person switched a weight between raw or dry and cooked: the whole day, one meal item or one food, or the shopping list basis. Grams only; no food or amount.',
+  ev('weight_basis_switched', 'food', 'progression', 'The person switched a weight between raw or dry and cooked: the whole day, one meal item or one food, or the shopping list basis. No food or amount.',
     { where: enumOf('day', 'meal_item', 'food', 'shopping'), basis: enumOf('raw', 'cooked') }),
 
   // ── Check-in and coach ───────────────────────────────────────────────

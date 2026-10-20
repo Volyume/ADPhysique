@@ -939,7 +939,8 @@ export default function MealPlanScreen({ navigation, route }) {
     if (!user?.id || !record || !day) return;
     const slot = day.slots.find((s) => s.slot === slotKey);
     if (!slot?.items?.[itemIndex]) return;
-    if (slot.items[itemIndex].weightState === value) return;
+    const itemKey = (slot.items[itemIndex].foodRef || '').startsWith('curated:') ? slot.items[itemIndex].foodRef.slice(8) : null;
+    if (planItemWeight(slot.items[itemIndex], itemKey)?.state === value) return;
     const newItems = slot.items.map((it, i) => (i === itemIndex ? { ...it, weightState: value } : it));
     const newSlot = { ...slot, items: newItems };
     const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));

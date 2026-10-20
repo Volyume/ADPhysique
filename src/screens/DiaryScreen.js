@@ -1863,13 +1863,6 @@ export default function DiaryScreen({ navigation, route }) {
     [bottomInset, t],
   );
 
-  // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
-  // start): the card replaces the diary. No food logging, rings, targets or
-  // calorie number is rendered. Placed after every hook above.
-  if (!coachingSetUp) {
-    return <CoachingSetupGate navigation={navigation} screenPadding={t.screenPadding} liveSafe={live.safe} />;
-  }
-
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       {/* C5: GestureDetector wraps the day content so a horizontal swipe
@@ -1903,6 +1896,15 @@ export default function DiaryScreen({ navigation, route }) {
             />
           )}
         />
+
+        {/* Founder decision 2026-10-20 ("Open the diary"): a person who has not
+            set coaching up logs food and sees the day's totals; one quiet row
+            is the way in to setup. Meal plans and Targets stay behind setup. */}
+        {!coachingSetUp ? (
+          <View style={styles.setupRowWrap}>
+            <CoachingSetupCard surface="nutrition" variant="nutrition" mode="compact" onPress={() => openCoachingSetup(navigation)} />
+          </View>
+        ) : null}
 
         {/* Day pager + compact options. Sits under the standard
             ScreenHeader so the Nutrition tab now matches Today, Train,
@@ -1964,7 +1966,7 @@ export default function DiaryScreen({ navigation, route }) {
           {/* Audit item 6: quiet coach receipt chip. Shown only when the coach
               itself recently changed the calorie target; links to that exact
               week's decision in CoachOutputScreen, the real "why". */}
-          {targetsChangedRecently ? (
+          {coachingSetUp && targetsChangedRecently ? (
             <TouchableOpacity
               style={styles.targetsChangedRow}
               onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart }); }}
@@ -1984,9 +1986,10 @@ export default function DiaryScreen({ navigation, route }) {
               targets they could not see). Never re-propose hiding it. */}
           <MacroRings
             rollup={rollup}
-            targets={effectiveTargets}
+            targets={coachingSetUp ? effectiveTargets : null}
+            totalsOnly={!coachingSetUp}
             planned={plannedTotals}
-            dayTypeLabel={dayTypeChip}
+            dayTypeLabel={coachingSetUp ? dayTypeChip : null}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
           {/* D138 item 4: a user with no nutrition targets sees rings with
@@ -1996,7 +1999,7 @@ export default function DiaryScreen({ navigation, route }) {
               (FoodSearchScreen.js renderSuggested), so the one way out reads
               identically wherever it is met. MacroRings' own target-less
               render is untouched: the rings still show the day's intake. */}
-          {loaded && !effectiveTargets ? (
+          {loaded && coachingSetUp && !effectiveTargets ? (
             <View style={styles.noTargetsWrap}>
               <EmptyState
                 compact
@@ -2537,19 +2540,6 @@ const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';
 // once (see the mutually-exclusive gating where showMarkEatenHint is read).
 const DIARY_PLANADDED_HINT_KEY = '@volyume_seen_diary_planadded_hint';
 
-// Founder brief 2026-10-19: the Nutrition tab's setup-only view (its own
-// component so the diary's ScrollView markup stays untouched).
-function CoachingSetupGate({ navigation, screenPadding, liveSafe }) {
-  return (
-    <SafeAreaView style={[styles.safe, liveSafe]} edges={['top']}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: screenPadding }]}>
-        <ScreenHeader title="Nutrition" />
-        <CoachingSetupCard surface="nutrition" variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
 const styles = StyleSheet.create({
   // D148: the one floating action is a raised charcoal disc with an amber
   // glyph, not an amber disc. It is found by form, place and glyph.
@@ -2659,6 +2649,7 @@ const styles = StyleSheet.create({
   macroRingsWrap: { marginBottom: spacing.lg },
   // D138 item 4: the no-targets way out, tucked under the rings.
   noTargetsWrap: { marginTop: spacing.md },
+  setupRowWrap: { marginBottom: spacing.md },
   // RE-ANCHORED 2026-09-22/23 (founder order): the day's remaining doors as
   // ONE bordered/rounded surface holding a short list of flush FeatureRow
   // children (shared FeatureRow primitive owns the row chrome and every

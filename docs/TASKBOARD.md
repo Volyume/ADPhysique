@@ -171,6 +171,13 @@ the decision rounds and every landed section were retired to
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+### OPEN (2026-10-20) - migrate_202 (usage data catalogue) waits for your phrase
+`supabase/migrate_202_telemetry_catalogue_3_3.sql` teaches the server two new
+event names (raw or cooked switched; coaching card "Not now") and the new
+fields on challenge_viewed and coaching_setup_card_shown. Until "run against
+production 202", the app drops the two new events (TELEMETRY_202_EVENTS off);
+after the apply, turn the flag on in the same session.
+
 ### DECIDED (2026-10-20) - iPhone gym challenge link text: leave until launch
 iOS universal links are off, so on iPhone a challenge QR or `volyume.app/c/`
 link opens the web page, whose "Already have the app? Scan the code again"

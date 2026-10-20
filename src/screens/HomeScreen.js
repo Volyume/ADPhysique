@@ -138,9 +138,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { deriveSafetyState, withholdsWeightFigures } from '../lib/safetyState';
 import CoachingSetupCard from '../components/CoachingSetupCard';
-import {
-  coachingCardMode, fullCardShownThisSession, markFullCardShown, isCoachingCardSnoozed, snoozeCoachingCard,
-} from '../lib/coachingSetup';
+import { resolveCoachingCardMode, snoozeCoachingCard } from '../lib/coachingSetup';
 import useCoachingSetUp, { openCoachingSetup } from '../hooks/useCoachingSetUp';
 import useScreenReady from '../lib/telemetry/useScreenReady';
 // Campaign 22 Phase 2 Stage 1 copy contract item 5: the check-in nudge's
@@ -205,21 +203,19 @@ export default function HomeScreen({ navigation, route }) {
   // person has given no baseline, so Home never asks for a daily weigh-in
   // or counts down to a check-in they cannot do; the setup card stands in.
   const coachingSetUp = useCoachingSetUp();
-  // The setup card is full once per session, then one quiet row; "Not now"
-  // quietens it for a week. null until the first snooze read resolves (a few
-  // ms) so a snoozed person never sees the full card flash and collapse.
+  // The setup card is full at most once a day, then one quiet row; "Not now"
+  // quietens it (src/lib/coachingSetup.js). null until the read resolves (a
+  // few ms) so nobody sees the full card flash and collapse.
   const [coachingCardModeState, setCoachingCardModeState] = useState(null);
   useFocusEffect(
     useCallback(() => {
       if (!user?.id || coachingSetUp) return undefined;
       let cancelled = false;
-      isCoachingCardSnoozed(user.id).then((snoozed) => {
-        if (cancelled) return;
-        const next = coachingCardMode({
-          snoozed, shownThisSession: fullCardShownThisSession('home'), sessionScoped: true,
-        });
-        if (next === 'full') markFullCardShown('home');
-        setCoachingCardModeState(next);
+      // The full card shows at most once a day, so on a return visit while
+      // it is still up it becomes the row at once (no full-then-row jump).
+      setCoachingCardModeState((prev) => (prev === 'full' ? 'compact' : prev));
+      resolveCoachingCardMode(user.id, 'home').then((next) => {
+        if (!cancelled) setCoachingCardModeState(next);
       });
       return () => { cancelled = true; };
     }, [user?.id, coachingSetUp]),

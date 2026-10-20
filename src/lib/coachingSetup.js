@@ -63,44 +63,82 @@ export const COACHING_SETUP_COPY = Object.freeze({
   notNow: 'Not now',
 });
 
-// ── Repeat control: the full card shows once per surface per session, and
-// "Not now" quietens it for a week. Display only; coachingDeferred is cleared
-// solely by ProOnboardingScreen on finishing setup.
+// ── Repeat control (founder 2026-10-20). Display only; coachingDeferred is
+// cleared solely by ProOnboardingScreen on finishing setup.
+//  - Today shows the full card at most once a calendar day (UK-local day key),
+//    then the quiet one-line row for the rest of that day.
+//  - The Coach tab is the permanent way in: full unless "Not now" applies.
+//  - The first "Not now" shows the row everywhere for seven days. When the
+//    seven days end the full card comes back ONCE (on whichever surface shows
+//    it first); after that showing, and after any second "Not now", the card
+//    is the quiet row for good.
+// One small JSON record per person in AsyncStorage. A failed read shows the
+// full card (the useful state); a failed write is logged, never thrown.
 const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
-const snoozeKey = (userId) => `@volyume_coaching_card_snoozed_until_${userId}`;
+const stateKey = (userId) => `@volyume_coaching_card_${userId}`;
 
-// Module-level, so it resets on every app launch.
-const shownFull = new Set();
-export function markFullCardShown(surface) { shownFull.add(surface); }
-export function fullCardShownThisSession(surface) { return shownFull.has(surface); }
-/** Test-only. */
-export function __resetCoachingCardSession() { shownFull.clear(); }
-
-/** 'Not now': hide the full card for seven days. Best effort. */
-export async function snoozeCoachingCard(userId, now = Date.now()) {
-  try {
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    await AsyncStorage.setItem(snoozeKey(userId), String(now + SNOOZE_MS));
-  } catch (e) {
-    try { require('./errorLog').logError('coachingSetup.snooze', e); } catch (_) { /* logging only */ }
+/**
+ * Pure. The card's mode for a surface from the stored record.
+ * @param {{fullDay?:string, snoozedUntil?:number, returnShown?:boolean, permanent?:boolean}|null} state
+ * @param {{surface:string, today:string, now:number}} ctx
+ * @returns {'full'|'compact'}
+ */
+export function coachingCardModeFor(state, { surface, today, now }) {
+  const st = state || {};
+  if (st.permanent) return 'compact';
+  if (Number.isFinite(st.snoozedUntil)) {
+    if (now < st.snoozedUntil) return 'compact';
+    if (st.returnShown) return 'compact';
   }
-}
-
-/** True while a 'Not now' is in force. A read failure returns false (full card). */
-export async function isCoachingCardSnoozed(userId, now = Date.now()) {
-  try {
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    const raw = await AsyncStorage.getItem(snoozeKey(userId));
-    const until = Number(raw);
-    return raw != null && Number.isFinite(until) && until > now;
-  } catch (_) {
-    return false;
-  }
-}
-
-/** 'full' or 'compact'. Snoozed is always compact; a session-scoped surface after its first full showing too. */
-export function coachingCardMode({ snoozed, shownThisSession, sessionScoped }) {
-  if (snoozed) return 'compact';
-  if (sessionScoped && shownThisSession) return 'compact';
+  if (surface === 'home' && st.fullDay === today) return 'compact';
   return 'full';
+}
+
+async function readCardState(userId) {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const raw = await AsyncStorage.getItem(stateKey(userId));
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_) {
+    return null;
+  }
+}
+
+async function writeCardState(userId, state) {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem(stateKey(userId), JSON.stringify(state));
+  } catch (e) {
+    try { require('./errorLog').logError('coachingSetup.cardState', e); } catch (_) { /* logging only */ }
+  }
+}
+
+/**
+ * The mode to show now, recording a full showing: Today's day key, and the
+ * one return after a "Not now" week. A failed read gives 'full' and records
+ * nothing.
+ */
+export async function resolveCoachingCardMode(userId, surface, now = Date.now()) {
+  const { localDayKey } = require('./dayKey');
+  const state = await readCardState(userId);
+  const today = localDayKey(now);
+  if (state === null) return 'full';
+  const mode = coachingCardModeFor(state, { surface, today, now });
+  if (mode === 'full') {
+    const next = { ...state };
+    if (surface === 'home') next.fullDay = today;
+    if (Number.isFinite(state.snoozedUntil) && now >= state.snoozedUntil) next.returnShown = true;
+    await writeCardState(userId, next);
+  }
+  return mode;
+}
+
+/** "Not now": the first one quietens the card for seven days; a later one for good. */
+export async function snoozeCoachingCard(userId, now = Date.now()) {
+  const state = (await readCardState(userId)) || {};
+  const next = Number.isFinite(state.snoozedUntil)
+    ? { ...state, permanent: true }
+    : { ...state, snoozedUntil: now + SNOOZE_MS };
+  await writeCardState(userId, next);
 }

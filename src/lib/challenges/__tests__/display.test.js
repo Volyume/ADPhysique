@@ -118,34 +118,32 @@ test('the terms link is the server URL as given, or null when there is nothing s
   expect(termsLink({ terms_url: 'javascript:alert(1)' })).toBeNull();
 });
 
-// Usage data for challenge_viewed: bands and a count of full non-food parts
-// only. Food and weigh-in never count, so the data cannot show who is withheld.
+// Usage data for challenge_viewed: the band of the five non-food parts (out of
+// 90) and a count of those that are full, the same two fields for everyone.
+// The total, tier, food and weigh-in lean upward for a withheld entrant
+// (credited in full without logging), so none of them is read.
 describe('challengeTelemetryFields', () => {
-  const { challengeTelemetryFields, scoreBand } = require('../display');
+  const { challengeTelemetryFields, corePointsBand } = require('../display');
   const max = { train: 40, week: 15, stronger: 15, community: 10, checkin: 10, food: 6, weighin: 4 };
+  const parts = (sum) => ({ train: sum, week: 0, stronger: 0, community: 0, checkin: 0 });
 
-  test('bands the total', () => {
-    expect([0, 24, 25, 49, 50, 69, 70, 84, 85, 100].map(scoreBand))
-      .toEqual(['0-24', '0-24', '25-49', '25-49', '50-69', '50-69', '70-84', '70-84', '85-100', '85-100']);
-    expect(scoreBand(null)).toBeNull();
-    expect(scoreBand('x')).toBeNull();
+  test('bands the five non-food parts out of 90', () => {
+    expect([0, 19, 20, 39, 40, 59, 60, 74, 75, 90].map((v) => corePointsBand(parts(v))))
+      .toEqual(['0-19', '0-19', '20-39', '20-39', '40-59', '40-59', '60-74', '60-74', '75-90', '75-90']);
+    expect(corePointsBand(null)).toBeNull();
   });
 
   test('counts full parts among the five non-food parts', () => {
-    const parts = { train: 40, week: 15, stronger: 9, community: 10, checkin: 5, food: 6, weighin: 4 };
-    expect(challengeTelemetryFields({ total: 89, parts, max })).toEqual({ score_band: '85-100', parts_full: 3 });
+    const p = { train: 40, week: 15, stronger: 9, community: 10, checkin: 5, food: 6, weighin: 4 };
+    expect(challengeTelemetryFields({ total: 89, parts: p, max })).toEqual({ points_band_90: '75-90', parts_full: 3 });
   });
 
-  test('food and weigh-in never change the fields', () => {
+  test('food, weigh-in, the total and the withheld flag never change the fields', () => {
     const base = { train: 30, week: 11, stronger: 9, community: 6, checkin: 5 };
-    const a = challengeTelemetryFields({ total: 64, parts: { ...base, food: 0, weighin: 0 }, max });
-    const b = challengeTelemetryFields({ total: 64, parts: { ...base, food: 6, weighin: 4 }, max });
+    const a = challengeTelemetryFields({ total: 61, withheld: false, tier: 'second', parts: { ...base, food: 0, weighin: 0 }, max });
+    const b = challengeTelemetryFields({ total: 71, withheld: true, tier: 'main', parts: { ...base, food: 6, weighin: 4 }, max });
     expect(a).toEqual(b);
-  });
-
-  test('never carries the withheld flag, raw totals or part points', () => {
-    const out = challengeTelemetryFields({ total: 64, withheld: true, parts: { train: 40 }, max });
-    expect(Object.keys(out).sort()).toEqual(['parts_full', 'score_band']);
+    expect(Object.keys(a).sort()).toEqual(['parts_full', 'points_band_90']);
   });
 
   test('no score: nothing', () => {

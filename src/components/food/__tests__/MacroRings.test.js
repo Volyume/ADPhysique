@@ -271,3 +271,35 @@ describe('MacroRings chrome (D230 R2, R3, R15)', () => {
     expect(left.root.findByProps({ accessible: true }).props.accessibilityLiveRegion).toBe('polite');
   });
 });
+
+// Founder decision 2026-10-20 ("Open the diary"): before coaching is set up
+// the diary shows the day's totals only. Pins: no ring canvas, no bar track,
+// no "of N", no left/over, no per-kg line; calories, protein, carbs, fat read
+// as plain numbers.
+describe('totalsOnly (diary before coaching is set up)', () => {
+  const rollup = { kcal_total: 1840, protein_g: 120, carbs_g: 180, fat_g: 60 };
+
+  test('shows eaten totals as plain numbers with no ring, no target or remaining figure', () => {
+    const tree = create(<MacroRings rollup={rollup} targets={null} totalsOnly />);
+    expect(tree.root.findAll((n) => n.type === 'Canvas')).toHaveLength(0);
+    const numerals = tree.root.findAll((n) => n.props?.defaultValue != null).map((n) => n.props.defaultValue);
+    expect(numerals).toContain('1,840');
+    const texts = tree.root.findAll((n) => n.type === 'Text')
+      .map((n) => [].concat(n.props.children ?? []).map((k) => (typeof k === 'string' || typeof k === 'number' ? String(k) : '')).join(''))
+      .join(' | ');
+    expect(texts).toContain('120');
+    expect(texts).toContain('180');
+    expect(texts).toContain('60');
+    expect(texts).not.toMatch(/\bof [\d,]+/);
+    expect(texts).not.toMatch(/\b(left|over|to go)\b/);
+    expect(texts).not.toContain('g/kg');
+    const label = tree.root.findByProps({ accessible: true }).props.accessibilityLabel;
+    expect(label).toContain('1,840 calories');
+    expect(label).not.toMatch(/ of [\d,]+/);
+  });
+
+  test('default (not totalsOnly) still draws the ring', () => {
+    const tree = create(<MacroRings rollup={rollup} targets={null} />);
+    expect(tree.root.findAll((n) => n.type === 'Canvas').length).toBeGreaterThan(0);
+  });
+});

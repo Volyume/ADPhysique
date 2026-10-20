@@ -15,8 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import {
   isCoachingSetUp, canFinishCoachingSetup, missingCoachingFields, COACHING_SETUP_COPY,
-  coachingCardMode, snoozeCoachingCard, isCoachingCardSnoozed,
-  markFullCardShown, fullCardShownThisSession, __resetCoachingCardSession,
+  coachingCardModeFor, resolveCoachingCardMode, snoozeCoachingCard,
 } from '../coachingSetup';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
@@ -119,14 +118,15 @@ describe('nothing coaching reaches a quick-start person (adversarial review, rou
 });
 
 
-describe('the setup card repeat control', () => {
+describe('the setup card repeat control (founder 2026-10-20)', () => {
   const AsyncStorage = require('@react-native-async-storage/async-storage').default;
   const DAY = 24 * 60 * 60 * 1000;
+  // Midday UK time, so adding whole days never crosses a day boundary oddly.
+  const T0 = Date.UTC(2026, 9, 21, 12, 0, 0);
   beforeEach(() => {
     AsyncStorage.__store.clear();
     AsyncStorage.__failRead = false;
     AsyncStorage.__failWrite = false;
-    __resetCoachingCardSession();
   });
 
   test('existing copy keys keep their values, and the new ones are calm', () => {
@@ -137,40 +137,54 @@ describe('the setup card repeat control', () => {
     expect(COACHING_SETUP_COPY.notNow).toBe('Not now');
   });
 
-  test('mode truth table', () => {
-    const m = (snoozed, shownThisSession, sessionScoped) => coachingCardMode({ snoozed, shownThisSession, sessionScoped });
-    expect(m(true, false, false)).toBe('compact');
-    expect(m(true, true, true)).toBe('compact');
-    expect(m(false, true, true)).toBe('compact');
-    expect(m(false, true, false)).toBe('full');
-    expect(m(false, false, true)).toBe('full');
-    expect(m(false, false, false)).toBe('full');
+  test('Today: full at most once a calendar day, the row after that', async () => {
+    expect(await resolveCoachingCardMode('u1', 'home', T0)).toBe('full');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + 60 * 1000)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + 5 * 60 * 60 * 1000)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + DAY)).toBe('full');
+    expect(await resolveCoachingCardMode('u2', 'home', T0)).toBe('full');
   });
 
-  test('snooze lasts seven days then expires', async () => {
-    const now = 1_000_000;
-    expect(await isCoachingCardSnoozed('u1', now)).toBe(false);
-    await snoozeCoachingCard('u1', now);
-    expect(AsyncStorage.__store.get('@volyume_coaching_card_snoozed_until_u1')).toBe(String(now + 7 * DAY));
-    expect(await isCoachingCardSnoozed('u1', now + 7 * DAY - 1)).toBe(true);
-    expect(await isCoachingCardSnoozed('u1', now + 7 * DAY)).toBe(false);
-    expect(await isCoachingCardSnoozed('u2', now)).toBe(false);
+  test('the Coach tab is the permanent way in: full on every visit without Not now', async () => {
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0)).toBe('full');
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 1000)).toBe('full');
+  });
+
+  test('Not now: the row for seven days, the full card back ONCE, then the row for good', async () => {
+    await snoozeCoachingCard('u1', T0);
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + DAY)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 7 * DAY - 1)).toBe('compact');
+    // The week is over: one full showing, on whichever surface comes first.
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 7 * DAY)).toBe('full');
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 7 * DAY + 1000)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + 9 * DAY)).toBe('compact');
+    expect(await resolveCoachingCardMode('u1', 'home', T0 + 60 * DAY)).toBe('compact');
+  });
+
+  test('a second Not now (on the return) makes it the row for good', async () => {
+    await snoozeCoachingCard('u1', T0);
+    await snoozeCoachingCard('u1', T0 + 8 * DAY);
+    expect(await resolveCoachingCardMode('u1', 'coach_home', T0 + 30 * DAY)).toBe('compact');
+  });
+
+  test('pure mode table', () => {
+    const f = (state, surface = 'home') => coachingCardModeFor(state, { surface, today: '2026-10-21', now: T0 });
+    expect(f(null)).toBe('full');
+    expect(f({ fullDay: '2026-10-21' })).toBe('compact');
+    expect(f({ fullDay: '2026-10-21' }, 'coach_home')).toBe('full');
+    expect(f({ fullDay: '2026-10-20' })).toBe('full');
+    expect(f({ snoozedUntil: T0 + 1 })).toBe('compact');
+    expect(f({ snoozedUntil: T0 - 1 })).toBe('full');
+    expect(f({ snoozedUntil: T0 - 1, returnShown: true })).toBe('compact');
+    expect(f({ permanent: true }, 'coach_home')).toBe('compact');
   });
 
   test('a read failure shows the full card; a write failure is logged, not thrown', async () => {
     AsyncStorage.__failRead = true;
-    expect(await isCoachingCardSnoozed('u1')).toBe(false);
+    expect(await resolveCoachingCardMode('u1', 'home', T0)).toBe('full');
+    AsyncStorage.__failRead = false;
     AsyncStorage.__failWrite = true;
-    await expect(snoozeCoachingCard('u1')).resolves.toBeUndefined();
+    await expect(snoozeCoachingCard('u1', T0)).resolves.toBeUndefined();
     expect(require('../errorLog').logError).toHaveBeenCalled();
-  });
-
-  test('session memory is per surface and resets', () => {
-    expect(fullCardShownThisSession('home')).toBe(false);
-    markFullCardShown('home');
-    expect(fullCardShownThisSession('home')).toBe(true);
-    expect(fullCardShownThisSession('coach_home')).toBe(false);
-    __resetCoachingCardSession();
-    expect(fullCardShownThisSession('home')).toBe(false);
   });
 });

@@ -21,7 +21,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import CoachingSetupCard from '../components/CoachingSetupCard';
 import useCoachingSetUp from '../hooks/useCoachingSetUp';
-import { isCoachingCardSnoozed, snoozeCoachingCard } from '../lib/coachingSetup';
+import { resolveCoachingCardMode, snoozeCoachingCard } from '../lib/coachingSetup';
 import { NavRow, NavGroup } from '../components/NavRow';
 import { Skeleton } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
@@ -173,15 +173,16 @@ export default function YouScreen({ navigation }) {
   // D134: the live Injuries & limitations line, tier-blind, refreshed on focus. Its
   // own small loader so the tab's main load stays exactly as it was.
   const [hytSummary, setHytSummary] = useState(() => howYouTrainSummary(null));
-  // The permanent way into coaching setup: full unless "Not now" is in force
-  // (seven days). null until the read resolves, so no full-card flash.
+  // The permanent way into coaching setup: full unless "Not now" applies
+  // (src/lib/coachingSetup.js). null until the read resolves, so no flash.
   const [coachingCardMode, setCoachingCardMode] = useState(null);
   useFocusEffect(useCallback(() => {
     if (!user?.id) return undefined;
     let alive = true;
-    isCoachingCardSnoozed(user.id).then((snoozed) => { if (alive) setCoachingCardMode(snoozed ? 'compact' : 'full'); });
+    if (coachingSetUp) return undefined;
+    resolveCoachingCardMode(user.id, 'coach_home').then((next) => { if (alive) setCoachingCardMode(next); });
     return () => { alive = false; };
-  }, [user?.id]));
+  }, [user?.id, coachingSetUp]));
   useFocusEffect(useCallback(() => {
     let alive = true;
     (async () => {
