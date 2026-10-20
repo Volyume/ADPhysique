@@ -2350,6 +2350,8 @@ const useAppStore = create((set, get) => ({
     // never push and could be silently reverted by the next pull.
     const allowed = ['mealPlanMealsPerDay', 'mealPlanVariety', 'mealPlanFatConvention',
       'mealPlanPeriWorkout', 'mealPlanPinnedMeals',
+      // Item 25: oily fish meals a week (0 to 7 or 'nolimit'), phone only.
+      'mealPlanOilyFish',
       // Campaign 17B job 4: the meal-count observation the user DECLINED. A
       // declined question is an answer, so it is remembered and not asked
       // again for that same count. It changes no target and no plan.

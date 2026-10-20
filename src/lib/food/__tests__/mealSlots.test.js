@@ -3,6 +3,7 @@ import {
   DEFAULT_MEALS_PER_DAY, inferMealSlotForHour,
   EATING_WINDOW_START_HOUR, EATING_WINDOW_END_HOUR,
   defaultMealSlotLabel, setMealLabelOverrides, getMealLabelOverrides,
+  foldedMealSlot, foldedRowLabel,
 } from '../mealSlots';
 
 const ent = (slot) => ({ meal_slot: slot });
@@ -204,5 +205,39 @@ describe('inferMealSlotForHour (barcode-FAB likely slot, dossier C8)', () => {
     const legacy = ['breakfast', 'lunch', 'dinner'];
     expect(inferMealSlotForHour(7, legacy)).toBe('breakfast');
     expect(inferMealSlotForHour(21, legacy)).toBe('dinner');
+  });
+});
+
+// Item 22 (view only, 2026-10-20): old-named meals are drawn inside Meal 1 to
+// 3. Nothing is rewritten: these helpers only choose where a row is DRAWN.
+describe('foldedMealSlot / foldedRowLabel (item 22)', () => {
+  afterEach(() => setMealLabelOverrides({}));
+
+  test('Breakfast, Lunch, Dinner fold into Meal 1, 2, 3 and never past the last meal', () => {
+    expect(foldedMealSlot('breakfast', 4)).toBe('meal_1');
+    expect(foldedMealSlot('lunch', 4)).toBe('meal_2');
+    expect(foldedMealSlot('dinner', 4)).toBe('meal_3');
+    expect(foldedMealSlot('dinner', 2)).toBe('meal_2');
+    expect(foldedMealSlot('dinner', 1)).toBe('meal_1');
+  });
+
+  test('a snack, a numbered meal and the pre/post meals are not folded', () => {
+    ['snack', 'meal_2', 'preworkout', 'postworkout'].forEach((k) => expect(foldedMealSlot(k, 4)).toBe(k));
+  });
+
+  test('the ladder built from folded rows has no old-named card but keeps a snack that holds food', () => {
+    const rows = [ent('breakfast'), ent('lunch'), ent('dinner'), ent('snack')].map((e) => ({ meal_slot: foldedMealSlot(e.meal_slot, 4) }));
+    expect(buildMealSlots(rows, 4).map((s) => s.key)).toEqual(['meal_1', 'meal_2', 'meal_3', 'meal_4', 'snack']);
+    expect(buildMealSlots([ent('breakfast')].map((e) => ({ meal_slot: foldedMealSlot(e.meal_slot, 4) })), 4).map((s) => s.key))
+      .toEqual(['meal_1', 'meal_2', 'meal_3', 'meal_4']); // no snack card with no snack food
+    // pre/post stay hidden unless opted in, as before
+    expect(buildMealSlots(rows, 4).some((s) => s.key === 'preworkout')).toBe(false);
+  });
+
+  test('the old name is kept as a label, unless it matches the card or the row is in its own card', () => {
+    expect(foldedRowLabel('breakfast', 'meal_1', 'Meal 1')).toBe('Breakfast');
+    expect(foldedRowLabel('meal_1', 'meal_1', 'Meal 1')).toBeNull();
+    expect(foldedRowLabel('snack', 'snack', 'Snacks')).toBeNull();
+    expect(foldedRowLabel('breakfast', 'meal_1', 'Breakfast')).toBeNull(); // Meal 1 renamed Breakfast
   });
 });
