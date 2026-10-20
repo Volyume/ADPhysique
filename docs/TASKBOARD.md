@@ -171,6 +171,14 @@ the decision rounds and every landed section were retired to
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+### DECIDED (2026-10-20) - iPhone gym challenge link text: leave until launch
+iOS universal links are off, so on iPhone a challenge QR or `volyume.app/c/`
+link opens the web page, whose "Already have the app? Scan the code again"
+line does not help there ("Open in Volyume" does work). Founder chose C:
+leave it until the challenge is closer to launch. Raise it again when a
+challenge is about to be created (options were A: turn universal links back
+on; B: point iPhone users to the "Open in Volyume" button).
+
 - ~~**When you choose: apply migrate_200 (growth telemetry).**~~ DONE 2026-10-20 03:55:09 UTC under "run against production 200 201"; GROWTH_TELEMETRY on from 3.2.0. Phrase: "run against production 200". Then the next build turns GROWTH_TELEMETRY on (`src/lib/sync/featureFlags.js`); until then the new events are dropped on the phone, never queued. Record: `supabase/README.md` (200 row); rulings: decisions register, "Growth telemetry".
 - ~~**When you choose: apply migrate_201 (gym challenge).**~~ DONE 2026-10-20 03:55:14 UTC under "run against production 200 201"; no challenge created. Phrase: "run against production 201". Nothing challenge-related shows to anyone until it is applied and you create a challenge (`supabase/README.md`, "Gym challenge operations"). Promoter: Volyume, support@volyume.app, no postal address (your decision 2026-10-20). Spec: `docs/gym-challenge-2026-10-19/SPEC.md`.
 - **Build 3.2.0** (version bumped 2026-10-20; What's new shows the logger, set videos and Community lines, the video line without any privacy clause, on the founder's instruction) carries (all on main): coaching-first onboarding and the wizard-style start screen with the free line, the clip camera legibility rebuild, the exercise picker filter-row fix, the growth telemetry client (now on), and the gym challenge client (inert until a challenge is created).
