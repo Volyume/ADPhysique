@@ -21,6 +21,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import CoachingSetupCard from '../components/CoachingSetupCard';
 import useCoachingSetUp from '../hooks/useCoachingSetUp';
+import { isCoachingCardSnoozed, snoozeCoachingCard } from '../lib/coachingSetup';
 import { NavRow, NavGroup } from '../components/NavRow';
 import { Skeleton } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
@@ -172,6 +173,15 @@ export default function YouScreen({ navigation }) {
   // D134: the live Injuries & limitations line, tier-blind, refreshed on focus. Its
   // own small loader so the tab's main load stays exactly as it was.
   const [hytSummary, setHytSummary] = useState(() => howYouTrainSummary(null));
+  // The permanent way into coaching setup: full unless "Not now" is in force
+  // (seven days). null until the read resolves, so no full-card flash.
+  const [coachingCardMode, setCoachingCardMode] = useState(null);
+  useFocusEffect(useCallback(() => {
+    if (!user?.id) return undefined;
+    let alive = true;
+    isCoachingCardSnoozed(user.id).then((snoozed) => { if (alive) setCoachingCardMode(snoozed ? 'compact' : 'full'); });
+    return () => { alive = false; };
+  }, [user?.id]));
   useFocusEffect(useCallback(() => {
     let alive = true;
     (async () => {
@@ -335,8 +345,13 @@ export default function YouScreen({ navigation }) {
           )}
         />
 
-        {!coachingSetUp ? (
-          <CoachingSetupCard surface="coach_home" variant="coach" onPress={() => navigation.navigate('CoachingSetup')} />
+        {!coachingSetUp && coachingCardMode ? (
+          <CoachingSetupCard surface="coach_home"
+            variant="coach"
+            mode={coachingCardMode}
+            onPress={() => navigation.navigate('CoachingSetup')}
+            onNotNow={() => { if (user?.id) snoozeCoachingCard(user.id); setCoachingCardMode('compact'); }}
+          />
         ) : null}
 
         {/* DD113 (design-consistency-audit-2026-08-06): documented exception,

@@ -48,4 +48,35 @@ describe('CoachingSetupCard', () => {
     act(() => { btn.props.onPress(); });
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('compact renders one labelled row that fires onPress', () => {
+    const onPress = jest.fn();
+    let tree;
+    act(() => { tree = create(<CoachingSetupCard mode="compact" onPress={onPress} />); });
+    const all = texts(tree);
+    expect(all).toContain(COACHING_SETUP_COPY.compact);
+    expect(all).toContain(COACHING_SETUP_COPY.compactAction);
+    expect(all).not.toContain(COACHING_SETUP_COPY.body);
+    const row = tree.root.find((n) => n.props.testID === 'coaching-setup-row' && typeof n.props.onPress === 'function');
+    expect(row.props.accessibilityRole).toBe('button');
+    expect(row.props.accessibilityLabel).toBe("Coaching isn't set up yet. Set up coaching");
+    act(() => { row.props.onPress(); });
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('full with onNotNow shows a Not now action that fires it', () => {
+    const onNotNow = jest.fn();
+    let tree;
+    act(() => { tree = create(<CoachingSetupCard onPress={() => {}} onNotNow={onNotNow} />); });
+    expect(texts(tree)).toContain(COACHING_SETUP_COPY.notNow);
+    const btn = tree.root.find((n) => n.props.accessibilityLabel === 'Not now' && typeof n.props.onPress === 'function');
+    act(() => { btn.props.onPress(); });
+    expect(onNotNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('full without onNotNow has no Not now', () => {
+    let tree;
+    act(() => { tree = create(<CoachingSetupCard onPress={() => {}} />); });
+    expect(texts(tree)).not.toContain(COACHING_SETUP_COPY.notNow);
+  });
 });

@@ -15,7 +15,22 @@ import fs from 'fs';
 import path from 'path';
 import {
   isCoachingSetUp, canFinishCoachingSetup, missingCoachingFields, COACHING_SETUP_COPY,
+  coachingCardMode, snoozeCoachingCard, isCoachingCardSnoozed,
+  markFullCardShown, fullCardShownThisSession, __resetCoachingCardSession,
 } from '../coachingSetup';
+
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const store = new Map();
+  const api = {
+    __store: store,
+    __failRead: false,
+    __failWrite: false,
+    getItem: jest.fn(async (k) => { if (api.__failRead) throw new Error('read'); return store.has(k) ? store.get(k) : null; }),
+    setItem: jest.fn(async (k, v) => { if (api.__failWrite) throw new Error('write'); store.set(k, v); }),
+  };
+  return { __esModule: true, default: api };
+});
+jest.mock('../errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
 
 const full = { sex: 'female', age: 31, heightCm: 165, weightKg: 62, trainingGoal: 'general' };
 
@@ -103,3 +118,59 @@ describe('nothing coaching reaches a quick-start person (adversarial review, rou
   });
 });
 
+
+describe('the setup card repeat control', () => {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const DAY = 24 * 60 * 60 * 1000;
+  beforeEach(() => {
+    AsyncStorage.__store.clear();
+    AsyncStorage.__failRead = false;
+    AsyncStorage.__failWrite = false;
+    __resetCoachingCardSession();
+  });
+
+  test('existing copy keys keep their values, and the new ones are calm', () => {
+    expect(COACHING_SETUP_COPY.title).toBe('Set up coaching');
+    expect(COACHING_SETUP_COPY.action).toBe('Set up coaching');
+    expect(COACHING_SETUP_COPY.compact).toBe("Coaching isn't set up yet.");
+    expect(COACHING_SETUP_COPY.compactAction).toBe('Set up');
+    expect(COACHING_SETUP_COPY.notNow).toBe('Not now');
+  });
+
+  test('mode truth table', () => {
+    const m = (snoozed, shownThisSession, sessionScoped) => coachingCardMode({ snoozed, shownThisSession, sessionScoped });
+    expect(m(true, false, false)).toBe('compact');
+    expect(m(true, true, true)).toBe('compact');
+    expect(m(false, true, true)).toBe('compact');
+    expect(m(false, true, false)).toBe('full');
+    expect(m(false, false, true)).toBe('full');
+    expect(m(false, false, false)).toBe('full');
+  });
+
+  test('snooze lasts seven days then expires', async () => {
+    const now = 1_000_000;
+    expect(await isCoachingCardSnoozed('u1', now)).toBe(false);
+    await snoozeCoachingCard('u1', now);
+    expect(AsyncStorage.__store.get('@volyume_coaching_card_snoozed_until_u1')).toBe(String(now + 7 * DAY));
+    expect(await isCoachingCardSnoozed('u1', now + 7 * DAY - 1)).toBe(true);
+    expect(await isCoachingCardSnoozed('u1', now + 7 * DAY)).toBe(false);
+    expect(await isCoachingCardSnoozed('u2', now)).toBe(false);
+  });
+
+  test('a read failure shows the full card; a write failure is logged, not thrown', async () => {
+    AsyncStorage.__failRead = true;
+    expect(await isCoachingCardSnoozed('u1')).toBe(false);
+    AsyncStorage.__failWrite = true;
+    await expect(snoozeCoachingCard('u1')).resolves.toBeUndefined();
+    expect(require('../errorLog').logError).toHaveBeenCalled();
+  });
+
+  test('session memory is per surface and resets', () => {
+    expect(fullCardShownThisSession('home')).toBe(false);
+    markFullCardShown('home');
+    expect(fullCardShownThisSession('home')).toBe(true);
+    expect(fullCardShownThisSession('coach_home')).toBe(false);
+    __resetCoachingCardSession();
+    expect(fullCardShownThisSession('home')).toBe(false);
+  });
+});

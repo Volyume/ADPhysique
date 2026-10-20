@@ -58,4 +58,49 @@ export const COACHING_SETUP_COPY = Object.freeze({
   body: 'Set up coaching to get weekly adjustments and nutrition targets. Your current plan stays in place unless you choose otherwise.',
   nutritionBody: 'Set up coaching to get food logging, your nutrition targets and meal plans, built around you. Your current plan stays in place unless you choose otherwise.',
   action: 'Set up coaching',
+  compact: "Coaching isn't set up yet.",
+  compactAction: 'Set up',
+  notNow: 'Not now',
 });
+
+// ── Repeat control: the full card shows once per surface per session, and
+// "Not now" quietens it for a week. Display only; coachingDeferred is cleared
+// solely by ProOnboardingScreen on finishing setup.
+const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+const snoozeKey = (userId) => `@volyume_coaching_card_snoozed_until_${userId}`;
+
+// Module-level, so it resets on every app launch.
+const shownFull = new Set();
+export function markFullCardShown(surface) { shownFull.add(surface); }
+export function fullCardShownThisSession(surface) { return shownFull.has(surface); }
+/** Test-only. */
+export function __resetCoachingCardSession() { shownFull.clear(); }
+
+/** 'Not now': hide the full card for seven days. Best effort. */
+export async function snoozeCoachingCard(userId, now = Date.now()) {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem(snoozeKey(userId), String(now + SNOOZE_MS));
+  } catch (e) {
+    try { require('./errorLog').logError('coachingSetup.snooze', e); } catch (_) { /* logging only */ }
+  }
+}
+
+/** True while a 'Not now' is in force. A read failure returns false (full card). */
+export async function isCoachingCardSnoozed(userId, now = Date.now()) {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const raw = await AsyncStorage.getItem(snoozeKey(userId));
+    const until = Number(raw);
+    return raw != null && Number.isFinite(until) && until > now;
+  } catch (_) {
+    return false;
+  }
+}
+
+/** 'full' or 'compact'. Snoozed is always compact; a session-scoped surface after its first full showing too. */
+export function coachingCardMode({ snoozed, shownThisSession, sessionScoped }) {
+  if (snoozed) return 'compact';
+  if (sessionScoped && shownThisSession) return 'compact';
+  return 'full';
+}
