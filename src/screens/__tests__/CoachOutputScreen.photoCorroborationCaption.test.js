@@ -102,11 +102,13 @@ describe('CoachOutputScreen wiring: run-time corroboration (D99 source guard)', 
   });
 
   test('the caption renders displayConfidence and the weigh-in-thinness disclosure keys off the observable count, never the caption', () => {
-    expect(SCREEN).toMatch(/CONFIDENCE_CAPTIONS\[displayConfidence\]/);
+    expect(SCREEN).toMatch(/buildConfidenceLine\(displayConfidence, weighInsThisWeek\)/);
     // D99 port of the D18 honesty rule ("a raised caption must never hide
     // genuine data thinness"): the disclosure is keyed to the weigh-in
     // count fact alone, so a corroboration-raised week still discloses.
-    expect(SCREEN).toMatch(/\{weighInsThisWeek != null && weighInsThisWeek < 4\n/);
+    // Item 12: the count is part of every confidence line's basis, so thinness is always stated.
+    const { buildConfidenceLine } = require('../../lib/coachOutput/viewCopy');
+    expect(buildConfidenceLine('high', 2)).toContain('Based on 2 morning weigh-ins and your check-in');
     expect(SCREEN).not.toMatch(/confidence !== 'high' && weighInsThisWeek/);
   });
 

@@ -162,7 +162,7 @@ import {
 } from '../lib/whyThisTemplates';
 import {
   DAY_NAMES_FULL,
-  CONFIDENCE_CAPTIONS,
+  buildConfidenceLine,
   buildWeekRows,
   formatCoachingRate,
   splitLead,
@@ -2967,11 +2967,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // this week's read was. Campaign 23 R2 (D99): the weigh-in clause is keyed
   // off the OBSERVABLE weigh-in count alone, never the caption, so a
   // photo-corroborated caption can never hide genuine data thinness.
-  const confidenceLine = CONFIDENCE_CAPTIONS[displayConfidence]
-    ? `${CONFIDENCE_CAPTIONS[displayConfidence]}${weighInsThisWeek != null && weighInsThisWeek < 4
-      ? ` Only ${weighInsThisWeek} morning weigh-in${weighInsThisWeek === 1 ? ' was' : 's were'} logged this week.`
-      : ''}`
-    : null;
+  // Item 12: the line names its basis (weigh-ins and the check-in); the old
+  // "Only N weigh-ins" clause is part of the same sentence now.
+  const confidenceLine = buildConfidenceLine(displayConfidence, weighInsThisWeek);
   const decisionFooter = (
     <View style={styles.decisionFooter}>
       {/* D93 / D-2: Manual mode strips the Apply pills; one line says who

@@ -106,15 +106,30 @@ export function buildFocus(output, checkin) {
   return 'Keep doing what you did this week.';
 }
 
-export const CONFIDENCE_CAPTIONS = {
-  high: 'Confidence: high. A full week of data sits behind this decision.',
-  // Lead review 2026-09-26: at low and medium confidence the engine needs
-  // three off-target weeks instead of two before it changes calories
-  // (weeklyCoach.js offTargetWeeksRequired). It never makes a change
-  // smaller, so the old "changes are sized cautiously" was not true.
-  medium: 'Confidence: medium. There was less information than usual this week, so your coach waits an extra week before changing your calorie target.',
-  low: 'Confidence: low. Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target.',
-};
+/**
+ * Item 12: the confidence line names its basis. `assessDataConfidence`
+ * (weeklyCoach.js) reads morning-weigh-in days and the check-in answers,
+ * never food or sessions, so that is all this line claims. The count is the
+ * screen's observable weigh-in count; null falls back to the plain basis.
+ * Safe under calm and an open flag: it quotes a count of weigh-ins, never a
+ * weight (owner 2026-10-20). At low and medium confidence the engine needs
+ * three off-target weeks instead of two before it changes calories
+ * (weeklyCoach.js offTargetWeeksRequired); it never makes a change smaller.
+ */
+export function buildConfidenceLine(level, weighIns = null) {
+  const n = Number.isFinite(weighIns) ? weighIns : null;
+  const basis = n == null
+    ? 'Based on your morning weigh-ins and your check-in.'
+    : `Based on ${n} morning weigh-in${n === 1 ? '' : 's'} and your check-in.`;
+  if (level === 'high') return `Confidence: high. ${basis}`;
+  if (level === 'medium') {
+    return `Confidence: medium. ${basis} That is less to go on than usual, so your coach waits an extra week before changing your calorie target.`;
+  }
+  if (level === 'low') {
+    return `Confidence: low. ${basis} Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target.`;
+  }
+  return null;
+}
 
 // ─── The "Your week" rows (D206, founder order 2026-09-26) ─────────────────
 //
