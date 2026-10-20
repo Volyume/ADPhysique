@@ -159,7 +159,7 @@ export default function FoodRow({
       onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={`${food.name}${a11yBrand}, ${portion.spoken}, ${spokenEnergy(kcal, energyUnit)}, ${spokenMacros}.${a11yPref}`}
-      accessibilityHint={onLongPress ? (longPressHint ?? 'Long-press to cycle favourite, exclude, neutral') : undefined}
+      accessibilityHint={onLongPress ? (longPressHint ?? 'Long-press to cycle favourite, Don\'t suggest again, neutral') : undefined}
     >
       <View style={styles.rowMain}>
         <View style={styles.nameRow}>
