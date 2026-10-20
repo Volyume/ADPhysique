@@ -156,8 +156,8 @@ test('shows the challenge, prizes, scoring with coaching marked, and the verbati
   expect(CHALLENGE_CONSENT_VERSION).toBe('challenge_consent_v2');
   expect(CHALLENGE_CONSENT_TEXT).toContain('It never reads what you ate or what you weigh.');
   expect(mockLookup).toHaveBeenCalledWith(CODE);
-  expect(text).toContain("Joining also keeps Volyume free for you for life, even if we ever introduce paid plans.");
-  expect(FREE_FOR_LIFE_JOIN_LINE).toBe("Joining also keeps Volyume free for you for life, even if we ever introduce paid plans.");
+  expect(text).toContain('Completing a challenge with a final score of 50 or more earns free for life.');
+  expect(FREE_FOR_LIFE_JOIN_LINE).toBe('Completing a challenge with a final score of 50 or more earns free for life.');
 });
 
 test('the device gate alone (server silent) leaves out the food and weigh-in rows and the invitation to log', async () => {
@@ -179,7 +179,7 @@ test('landing page carries the free-for-life line verbatim', () => {
   const fs = require('fs');
   const path = require('path');
   const html = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'public', 'c', 'index.html'), 'utf8');
-  const line = 'Volyume is free. Join through the challenge and it stays free for you for life, even if we ever introduce paid plans.';
+  const line = 'Volyume is free. Completing a challenge with a final score of 50 or more earns free for life.';
   expect(FREE_FOR_LIFE_LANDING_LINE).toBe(line);
   expect(html).toContain(line);
 });
@@ -370,7 +370,7 @@ test.each(['ended', 'closed', 'cancelled'])('the %s challenge shows a calm sente
   expect(text).not.toContain('How you score');
   expect(text).not.toContain('Coaching adds up to');
   expect(text).not.toContain('Prizes');
-  expect(text).not.toContain('free for you for life');
+  expect(text).not.toContain('earns free for life');
   expect(text).not.toContain(CHALLENGE_CONSENT_TEXT);
   expect(button(r, 'Read the full terms')).toBeUndefined();
   // The one button is a way out, and it clears the pending code.
@@ -437,7 +437,7 @@ test('source guards: no em dash, no billing words, no hard-coded colours', () =>
   const path = require('path');
   const src = fs.readFileSync(path.join(__dirname, '..', 'ChallengeJoinScreen.js'), 'utf8');
   expect(src).not.toMatch(/—/);
-  expect(src.replace(/free for you for life[^']*/, '')).not.toMatch(/\b(pro|premium|subscribe|trial|paywall|pricing)\b/i);
+  expect(src).not.toMatch(/\b(pro|premium|subscribe|trial|paywall|pricing)\b/i);
   expect(src).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
   // The device's own wellbeing gate is read through the shared hook, never re-implemented.
   expect(src).toMatch(/import usePhotoSuppression from '\.\.\/hooks\/usePhotoSuppression';/);

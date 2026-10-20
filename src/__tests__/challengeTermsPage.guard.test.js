@@ -87,7 +87,7 @@ describe('the ten sections', () => {
       "Winners are told by email within 7 days of the draw. If a winner does not reply within 14 days, or cannot show they are 18 or over, the prize is drawn again. There is no cash alternative. The winner's name and county are published unless they object when told.",
       'Volyume can leave out an entry that does not reflect real training, and decides any question about scoring.',
       'You can leave the challenge at any time in the app. You are then taken off the board and are not scored again.',
-      'Joining a challenge keeps Volyume free for you for life, even if we ever introduce paid plans.',
+      'Completing a challenge with a final score of 50 or more earns free for life. If you leave a challenge before it ends, you can no longer earn it.',
     ].forEach((sentence) => expect(bodyText).toContain(sentence));
   });
 
