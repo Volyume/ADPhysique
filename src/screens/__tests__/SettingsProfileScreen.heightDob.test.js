@@ -134,6 +134,11 @@ describe('CP-8: height and date-of-birth reuse the exact same shared field compo
     expect(SETTINGS_PROFILE).toMatch(/<AgeYearsField/);
   });
 
+  test('F7: the age field is labelled Age, not Date of birth (it holds an age, there is no date picker)', () => {
+    expect(SETTINGS_PROFILE).toMatch(/settingLabel, live\.settingLabel\]\}>Age<\/Text>/);
+    expect(SETTINGS_PROFILE).not.toMatch(/>Date of birth<\/Text>/);
+  });
+
   test('NutritionTargetsScreen was refactored onto the same shared components, no leftover duplicated inline height/age markup', () => {
     expect(NUTRITION_TARGETS).toMatch(/import HeightFeetInchesField from '\.\.\/components\/HeightFeetInchesField';/);
     expect(NUTRITION_TARGETS).toMatch(/import AgeYearsField from '\.\.\/components\/AgeYearsField';/);
