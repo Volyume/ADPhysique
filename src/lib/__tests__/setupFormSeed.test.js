@@ -39,3 +39,12 @@ describe('setup screens source guards', () => {
     expect(src).toMatch(/seededSigRef\.current = setupFormSignature\(updatedProfile\)/);
   });
 });
+
+describe('F2: the Coach form does not write the enrolment weight back', () => {
+  const goal = read('ProGoalSetupScreen.js');
+  test('the profile saved by the form carries the latest weigh-in', () => {
+    const at = goal.indexOf('updatedProfile.weightKg = latestWeightKg');
+    expect(at).toBeGreaterThan(-1);
+    expect(at).toBeLessThan(goal.indexOf('await saveLocalProfile(user.id, updatedProfile)'));
+  });
+});

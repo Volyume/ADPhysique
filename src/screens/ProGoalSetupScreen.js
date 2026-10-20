@@ -667,6 +667,12 @@ export default function ProGoalSetupScreen({ navigation }) {
       updatedProfile.bodyFatSource = bodyFatSource;
     }
 
+    // F2: the latest weigh-in was written back above; the profile saved here
+    // is built from the render-time copy, so it must carry that weigh-in too or
+    // this write puts the enrolment weight back.
+    if (latestWeightKg && latestWeightKg !== updatedProfile.weightKg) {
+      updatedProfile.weightKg = latestWeightKg;
+    }
     await saveLocalProfile(user.id, updatedProfile);
     // Our own save is not "another screen": keep the reload check quiet.
     seededSigRef.current = setupFormSignature(updatedProfile);
