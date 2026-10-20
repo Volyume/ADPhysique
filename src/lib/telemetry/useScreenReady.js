@@ -10,10 +10,15 @@
  */
 import { useEffect, useRef } from 'react';
 import { toBucket } from './schema';
+import { publicRoute } from './session';
 
-/** The screen_ready payload for a screen mounted at `startedAt`. */
+/**
+ * The screen_ready payload for a screen mounted at `startedAt`. A private
+ * route (session.js PRIVATE_ROUTES) is reported as 'Private', like every
+ * other event that carries a screen.
+ */
 export function screenReadyPayload(screen, startedAt, now = Date.now()) {
-  return { screen, ms: toBucket('ms', now - startedAt) };
+  return { screen: publicRoute(screen), ms: toBucket('ms', now - startedAt) };
 }
 
 export default function useScreenReady(screen, ready) {

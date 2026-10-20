@@ -91,10 +91,16 @@ describe('feature_seen', () => {
     ['warmup_chip', 'src/screens/ActiveWorkoutScreen.js'],
     ['shopping_list_days', 'src/screens/MealPlanScreen.js'],
     ['raw_cooked_toggle', 'src/screens/MealPlanScreen.js'],
-    ['declined_today_card', 'src/screens/WorkoutSummaryScreen.js'],
   ])('%s is in the schema and shown from %s', (feature, file) => {
     expect(allowed).toContain(feature);
     expect(read(file)).toMatch(new RegExp(`<FeatureSeen feature="${feature}" />`));
+  });
+  // Q4 ruling: the "Cannot do this?" card is shown only because a movement
+  // was declined, so seeing it is capability-derived. Nothing may report it.
+  test('declined_today_card is not a feature value and is not reported', () => {
+    expect(allowed).not.toContain('declined_today_card');
+    expect(read('src/screens/WorkoutSummaryScreen.js')).not.toContain('declined_today_card');
+    expect(read('src/screens/WorkoutSummaryScreen.js')).not.toMatch(/FeatureSeen/);
   });
   test('FeatureSeen goes through trackFeatureSeen', () => {
     expect(read('src/components/FeatureSeen.js')).toMatch(/trackFeatureSeen\(feature\)/);

@@ -63,6 +63,19 @@ describe('lane onboarding emitters', () => {
     }
   });
 
+  // Adversarial review (minor): "See my plan" tapped twice must send
+  // onboarding_completed once.
+  test('seePlan has a double-tap guard ahead of its onboarding_completed emit', () => {
+    const src = read('src/screens/ProOnboardingScreen.js');
+    const i = src.indexOf('async function seePlan()');
+    expect(i).toBeGreaterThan(-1);
+    const body = src.slice(i, i + 700);
+    expect(body).toContain('if (seePlanTappedRef.current) return;');
+    expect(body.indexOf('seePlanTappedRef.current = true;')).toBeGreaterThan(-1);
+    expect(body.indexOf('seePlanTappedRef.current = true;')).toBeLessThan(body.indexOf("emitOnboardingCompleted('coaching')"));
+    expect(src).toContain('const seePlanTappedRef = useRef(false);');
+  });
+
   test('every wizard gap field maps into the schema enum', () => {
     const values = SCHEMA_BY_NAME.onboarding_validation_blocked.fields.field.values;
     const m = read('src/screens/ProOnboardingScreen.js').match(/const GAP_FIELD = \{([\s\S]*?)\};/);

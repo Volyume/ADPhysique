@@ -33,13 +33,61 @@ function currentUserId() {
 const SIGNED_OUT_KEY = '@volyume_telemetry_signed_out';
 const SIGNED_OUT_CAP = 20;
 
-async function holdSignedOut(event, payload) {
+// When the hold is full, these two kinds are worth more than the rest: a
+// stall or a failure replaces the OLDEST screen_viewed or screen_ready.
+const HOLD_PRIORITY = new Set(['setup_stage_stalled', 'error_shown']);
+const HOLD_REPLACEABLE = new Set(['screen_viewed', 'screen_ready']);
+
+// Adversarial review M5. Every write to and read of the hold goes through ONE
+// in-memory promise chain, so two events in the same tick are never lost to a
+// read-modify-write race on AsyncStorage.
+let _holdChain = Promise.resolve();
+function serialiseHold(task) {
+  const run = _holdChain.then(task);
+  _holdChain = run.catch(() => {});
+  return run;
+}
+
+// "Something may be held." True at start-up until the first check, true again
+// the moment anything is held, false once a check finds the hold empty, so a
+// signed-in trackNow skips the AsyncStorage read when nothing is waiting.
+// _pendingHolds counts hold writes queued but not yet finished, so a check
+// that finds the hold empty cannot clear the flag over a write still to come.
+let _mayHold = true;
+let _pendingHolds = 0;
+
+// LB-9: a person who has turned usage data off has nothing held on the phone.
+// Fails closed: if the opt-out state cannot be read, nothing is held.
+function usageDataOn() {
   try {
-    const held = JSON.parse((await AsyncStorage.getItem(SIGNED_OUT_KEY)) || '[]');
-    if (held.length >= SIGNED_OUT_CAP) return;
-    held.push({ event, payload });
-    await AsyncStorage.setItem(SIGNED_OUT_KEY, JSON.stringify(held));
-  } catch (_) { /* best effort */ }
+    // eslint-disable-next-line global-require
+    return require('./transport').isTelemetryEnabled() !== false;
+  } catch (_) {
+    return false;
+  }
+}
+
+function holdSignedOut(event, payload) {
+  if (!usageDataOn()) return Promise.resolve();
+  _mayHold = true;
+  _pendingHolds += 1;
+  return serialiseHold(async () => {
+    try {
+      const held = JSON.parse((await AsyncStorage.getItem(SIGNED_OUT_KEY)) || '[]');
+      if (held.length >= SIGNED_OUT_CAP) {
+        // Full: a stall or a failure replaces the oldest screen view or
+        // screen-ready; anything else is dropped.
+        if (!HOLD_PRIORITY.has(event)) return;
+        const at = held.findIndex((h) => HOLD_REPLACEABLE.has(h.event));
+        if (at === -1) return;
+        held.splice(at, 1);
+      }
+      held.push({ event, payload });
+      await AsyncStorage.setItem(SIGNED_OUT_KEY, JSON.stringify(held));
+    } catch (_) { /* best effort */ } finally {
+      _pendingHolds -= 1;
+    }
+  }).catch(() => {});
 }
 
 // One shared send of the held events, so every event that arrives while it
@@ -47,16 +95,22 @@ async function holdSignedOut(event, payload) {
 let _heldSend = null;
 function sendHeld(uid) {
   if (_heldSend) return _heldSend;
-  _heldSend = (async () => {
+  if (!_mayHold) return Promise.resolve();
+  _heldSend = serialiseHold(async () => {
     try {
       const raw = await AsyncStorage.getItem(SIGNED_OUT_KEY);
-      if (!raw) return;
-      await AsyncStorage.removeItem(SIGNED_OUT_KEY);
-      JSON.parse(raw).forEach(({ event, payload }) => {
-        Promise.resolve(track(uid, event, payload)).catch(() => {});
-      });
-    } catch (_) { /* best effort */ }
-  })().finally(() => { _heldSend = null; });
+      if (raw) {
+        await AsyncStorage.removeItem(SIGNED_OUT_KEY);
+        JSON.parse(raw).forEach(({ event, payload }) => {
+          Promise.resolve(track(uid, event, payload)).catch(() => {});
+        });
+      }
+      // The hold is now empty, unless a hold write is still queued behind us.
+      _mayHold = _pendingHolds > 0;
+    } catch (_) {
+      _mayHold = true; // could not look: something may still be held
+    }
+  }).catch(() => {}).finally(() => { _heldSend = null; });
   return _heldSend;
 }
 
@@ -139,4 +193,9 @@ export function helpOpened(topic) {
   trackNow('help_opened', { topic, screen: currentScreen() });
 }
 
-export const __test = { hash, dayKey, SIGNED_OUT_KEY, SIGNED_OUT_CAP };
+export const __test = {
+  hash, dayKey, SIGNED_OUT_KEY, SIGNED_OUT_CAP,
+  mayHold: () => _mayHold,
+  idle: () => _holdChain,
+  reset: () => { _mayHold = true; _pendingHolds = 0; _holdChain = Promise.resolve(); _heldSend = null; },
+};

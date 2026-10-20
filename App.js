@@ -859,6 +859,19 @@ export default function App() {
           if (uidNow) require('./src/lib/energyChoiceEnforce').enforceEnergyChoice(uidNow).catch(() => {});
         } catch (_) { /* never block the foreground */ }
       }
+      // Telemetry brief 2026-10-19: a visit runs from foreground to
+      // background; its summary (length, screens, errors, what it achieved)
+      // is taken the moment it ends, before any await. Adversarial review M1:
+      // the session sees EVERY state change, so only 'background' ends a visit
+      // and only a return from 'background' (or no visit open) starts one; an
+      // inactive to active blip (iOS Control Centre, a permission alert, the
+      // Apple sign-in sheet) neither ends nor restarts it. The decision lives
+      // in telemetry/session.js noteAppState.
+      let visit = null;
+      try {
+        // eslint-disable-next-line global-require
+        visit = require('./src/lib/telemetry/session').noteAppState(state);
+      } catch (_) { visit = null; }
       // Lifecycle telemetry: app_foregrounded fires only AFTER the
       // cold-start event has fired (otherwise the first 'active'
       // transition on mount would double-count with app_cold_start).
@@ -866,16 +879,6 @@ export default function App() {
       // (the iOS "phone call" / control-center pull-down state),
       // which would otherwise overstate sessions.
       if (coldStartFired && (state === 'active' || state === 'background')) {
-        // Telemetry brief 2026-10-19: a visit runs from foreground to
-        // background; its summary (length, screens, errors, what it
-        // achieved) is taken the moment it ends, before any await.
-        let visit = null;
-        try {
-          // eslint-disable-next-line global-require
-          const telemetrySession = require('./src/lib/telemetry/session');
-          if (state === 'active') telemetrySession.startSession();
-          else visit = telemetrySession.endSession();
-        } catch (_) { visit = null; }
         try {
           const sb = getSupabaseClient();
           sb?.auth.getSession().then(({ data: { session: s } = {} } = {}) => {

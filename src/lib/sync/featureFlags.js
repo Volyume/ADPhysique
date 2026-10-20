@@ -160,3 +160,26 @@ export const FOOD_ENTRY_NOTE_PUSH = true;
 // read-only (the column is numeric, food_sync_push writes it only when the
 // record carries the key), so the push sends it and the pull reads it.
 export const RECIPE_COOKED_WEIGHT_PUSH = true;
+
+/**
+ * GROWTH_TELEMETRY (adversarial review M2; the STRUCTURE_REFUSED_TELEMETRY
+ * pattern above): the growth and performance events declared in
+ * src/lib/telemetry/schema.js (founder brief 2026-10-19). OFF until
+ * supabase/migrate_200_growth_telemetry.sql is APPLIED under the founder's
+ * exact phrase "run against production 200": until then the server's
+ * record_engine_telemetry allow-list refuses every one of these names, so a
+ * build that queued them would carry rows that can never clear. While this is
+ * off, the transport (src/lib/telemetry/transport.js postEvent) DROPS any
+ * event that is in the schema catalogue; it does not queue it. Every one of
+ * those names is new with migrate_200 (none appears in migrate_001 to
+ * migrate_199; pinned by src/lib/telemetry/__tests__/transport.test.js), so
+ * the legacy events (sign_in, workout_completed, structure_refused and the
+ * rest) are unaffected and keep flowing.
+ *
+ * Turn on after migrate_200 is applied: flip to true in the landing after the
+ * apply, once the supabase/README status block says APPLIED, the migration
+ * header is edited to match, and the guard in
+ * src/lib/telemetry/__tests__/transport.test.js is re-pinned in the same
+ * landing.
+ */
+export const GROWTH_TELEMETRY = false;

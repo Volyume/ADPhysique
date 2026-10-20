@@ -35,9 +35,6 @@ const SITES = [
   ['src/screens/WeeklyCheckInScreen.js', "first: hasPriorReview === false"],
   ['src/screens/WeeklyCheckInScreen.js', "duration: toBucket('minutes',"],
   ['src/screens/WeeklyCheckInScreen.js', "trackNow('checkin_abandoned', { step_reached: Math.min(12, maxStepRef.current) })"],
-  ['src/screens/CoachOutputScreen.js', "trackNow('coach_recommendation_dismissed', { kind: 'calories' })"],
-  ['src/screens/HowYouTrainScreen.js', "trackNow('coach_recommendation_dismissed', { kind: 'training' })"],
-  ['src/screens/HowYouTrainScreen.js', "trackNow('coach_recommendation_held', { kind: 'training' })"],
   ['src/screens/ShareCardScreen.js', "trackNow(event, { surface: shareSurface, audience: 'external' })"],
   ['src/screens/ShareCardScreen.js', "trackShare('share_attempted')"],
   ['src/screens/ShareCardScreen.js', "trackShare('share_completed')"],
@@ -50,6 +47,26 @@ const SITES = [
 describe('lane C emitters exist at their sites', () => {
   test.each(SITES)('%s has %s', (file, snippet) => {
     expect(read(file)).toContain(snippet);
+  });
+});
+
+// Q4 ruling (src/lib/telemetry/events.js): no capability-derived event leaves
+// the device. The injury-episode "Keep my plan as it is" and "Not now" were
+// the only call sites of coach_recommendation_held and _dismissed; the
+// calorie card's "Keep as is" already records coach_recommendation_declined,
+// so it sends no growth event of its own either.
+describe('coach recommendation events have no emitter (Q4, M4)', () => {
+  test.each([
+    'src/screens/HowYouTrainScreen.js',
+    'src/screens/CoachOutputScreen.js',
+  ])('%s sends neither coach_recommendation_held nor _dismissed', (file) => {
+    const src = read(file);
+    expect(src).not.toContain('coach_recommendation_held');
+    expect(src).not.toContain('coach_recommendation_dismissed');
+    expect(src).not.toMatch(/telemetry\/growth/);
+  });
+  test('the calorie card still records the existing declined event', () => {
+    expect(read('src/screens/CoachOutputScreen.js')).toContain("trackEngineEvent(user.id, 'coach_recommendation_declined', { kind: 'calories' })");
   });
 });
 
@@ -72,6 +89,19 @@ describe('payload values are schema-valid and carry no free text', () => {
     ['nutritionEngine', 'edPatternDetector', 'wellbeing', 'weeklyCoach', 'coachApply'].forEach((f) => {
       expect(read(`src/lib/${f}.js`)).not.toMatch(/telemetry\/growth/);
     });
+  });
+  // Adversarial review (minor): an empty result with no network says nothing
+  // about the food database, so the event waits for the offline check and is
+  // sent only when the device was online and the query is still current.
+  test('food_search_empty is sent only after the offline check, and only when online', () => {
+    const src = read('src/screens/FoodSearchScreen.js');
+    const probe = src.indexOf('const state = await NetInfo.fetch();');
+    const emit = src.indexOf("trackNow('food_search_empty'");
+    expect(probe).toBeGreaterThan(-1);
+    expect(emit).toBeGreaterThan(probe);
+    const around = src.slice(src.lastIndexOf('if (searchRequestRef.current === requestId) {', emit), emit + 200);
+    expect(around).toMatch(/setSearchOffline\(offline\);[\s\S]*if \(!offline\) \{[\s\S]*trackNow\('food_search_empty'/);
+    expect(src.match(/trackNow\('food_search_empty'/g)).toHaveLength(1);
   });
   test('the search-empty payload sends a bucket, never the query', () => {
     const src = read('src/screens/FoodSearchScreen.js');

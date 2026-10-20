@@ -122,7 +122,7 @@ export const EVENT_SCHEMAS = Object.freeze([
   ev('workout_abandoned', 'workout', 'friction', 'A workout was left open and found unfinished at a later launch.',
     { age: bucketOf('age'), sets: bucketOf('count') }),
   ev('exercise_swapped', 'workout', 'friction', 'An exercise was swapped during a workout.',
-    { scope: enumOf('session', 'programme'), cause: enumOf('constraint', 'style', 'choice') }),
+    { scope: enumOf('session', 'programme'), cause: enumOf('style', 'choice') }),
   ev('workout_session_summary', 'workout', 'progression', 'A finished workout, as counts of what happened in it.',
     { edits: bucketOf('count'), swaps: bucketOf('count'), rest_timer_uses: bucketOf('count'), warmups_added: bucketOf('count'), discarded_sets: bucketOf('count') }),
 
@@ -171,7 +171,7 @@ export const EVENT_SCHEMAS = Object.freeze([
   ev('help_opened', 'app', 'confusion', 'An explanation (info tooltip or help) was opened.',
     { topic: CODE, screen: ROUTE }),
   ev('feature_seen', 'app', 'exposure', 'A new feature was seen for the first time.',
-    { feature: enumOf('start_choice', 'archetype_cards', 'warmup_chip', 'shopping_list_days', 'raw_cooked_toggle', 'coaching_setup_card', 'declined_today_card') }),
+    { feature: enumOf('start_choice', 'archetype_cards', 'warmup_chip', 'shopping_list_days', 'raw_cooked_toggle', 'coaching_setup_card') }),
   ev('experiment_exposed', 'app', 'exposure', 'The person was placed in one arm of an A/B test (once per test).',
     { experiment: CODE, variant: enumOf('a', 'b', 'c', 'd') }),
   ev('exit_reason_given', 'app', 'retention', 'An optional one-tap reason at a moment of leaving.',

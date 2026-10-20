@@ -461,9 +461,6 @@ export default function FoodSearchScreen({ navigation, route }) {
         // Only the no-hit case is ambiguous. A saved-food (local) hit means
         // we answered without needing the network, so never flag offline then.
         if (rows.length === 0) {
-          // Growth telemetry: one event per settled query (this runs after the
-          // 250ms debounce and the stale-request guard), length only, never text.
-          try { trackNow('food_search_empty', { query_length: toBucket('count', q.length) }); } catch (_) { /* telemetry never blocks search */ }
           let offline = false;
           try {
             const state = await NetInfo.fetch();
@@ -472,7 +469,16 @@ export default function FoodSearchScreen({ navigation, route }) {
             // Connectivity probe itself failed: leave the generic miss copy.
             logError('FoodSearchScreen.connectivityProbe', e);
           }
-          if (searchRequestRef.current === requestId) setSearchOffline(offline);
+          if (searchRequestRef.current === requestId) {
+            setSearchOffline(offline);
+            // Growth telemetry (adversarial review, minor): one event per
+            // settled query, and only when the device was online. An empty
+            // result with no network says nothing about the food database.
+            // Length only, never text.
+            if (!offline) {
+              try { trackNow('food_search_empty', { query_length: toBucket('count', q.length) }); } catch (_) { /* telemetry never blocks search */ }
+            }
+          }
         } else if (searchRequestRef.current === requestId) {
           setSearchOffline(false);
         }

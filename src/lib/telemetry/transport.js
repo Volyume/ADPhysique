@@ -25,8 +25,9 @@ import {
 import { logWarn, logInfo } from '../errorLog';
 import { isDeletedAccountFkError } from '../sync/telemetry';
 import { ALLOWED_EVENTS } from './events';
-import { sanitisePayload, allowedBeforeConsent, isDebugLoggedSignal } from './schema';
-import { noteSessionEvent } from './session';
+import { sanitisePayload, allowedBeforeConsent, isDebugLoggedSignal, SCHEMA_BY_NAME } from './schema';
+import { noteSessionEvent, publicRoute } from './session';
+import { GROWTH_TELEMETRY } from '../sync/featureFlags';
 
 // Founder decision 2026-10-19 (telemetry brief, answer 4): nothing that
 // touches health leaves the device before Article 9 consent; failure and
@@ -57,6 +58,27 @@ function appStamp() {
   } catch (_) { platform = null; }
   return { ...(_appVersion ? { app_version: String(_appVersion) } : {}), ...(platform ? { platform } : {}) };
 }
+
+// Adversarial review B1, B2: a route-typed field (screen, from_screen) never
+// carries a private route name (session.js PRIVATE_ROUTES), whichever caller
+// built the payload. The sender already maps; this is the second lock.
+function maskPrivateRoutes(event, clean) {
+  const fields = SCHEMA_BY_NAME[event]?.fields;
+  if (!fields || !clean || typeof clean !== 'object') return clean;
+  const out = { ...clean };
+  for (const [k, spec] of Object.entries(fields)) {
+    if (spec.type === 'route' && typeof out[k] === 'string') out[k] = publicRoute(out[k]);
+  }
+  return out;
+}
+
+// Adversarial review M2 (rows the server will never take): a row the server
+// refuses for what it IS (an event name it does not know, or a payload over
+// its size cap) can never succeed on a retry, so it is marked handled and
+// never blocks the queue. A transient failure (network, timeout, auth) is
+// NOT a refusal and stays queued. Messages are the RAISE texts in
+// supabase/migrate_193 and migrate_200 record_engine_telemetry.
+const isRowRefusal = (error) => /unknown engine telemetry event|payload too large/i.test(String(error?.message || ''));
 
 const FLUSH_DEBOUNCE_MS = 5000;
 // True once this session learns the batch function is not deployed yet.
@@ -102,6 +124,13 @@ export async function postEvent(userId, event, payload = null) {
   if (!userId || !event) return null;
   // LB-9: user opted out of product analytics. Drop before persisting.
   if (!_enabled) return null;
+  // Adversarial review M2: every event in the schema catalogue is new with
+  // migrate_200 (none appears in migrate_001 to migrate_199), and the server
+  // refuses a name it does not know. While the migration is not applied
+  // (GROWTH_TELEMETRY off, src/lib/sync/featureFlags.js) these events are
+  // DROPPED here, not queued, so no row is ever persisted that the server
+  // would refuse. Legacy events are unaffected.
+  if (!GROWTH_TELEMETRY && SCHEMA_BY_NAME[event]) return null;
   if (!ALLOWED_EVENTS.has(event)) {
     // Surface a typo rather than letting it sit dark. logWarn already routes to
     // the console in dev (errorLog), so a separate console.warn is redundant
@@ -111,7 +140,8 @@ export async function postEvent(userId, event, payload = null) {
   }
   if (!allowedBeforeConsent(event) && !consentGiven()) return null;
   // A declared event keeps only its declared, valid fields (schema.js).
-  const { payload: clean, dropped } = sanitisePayload(event, payload);
+  const { payload: sanitised, dropped } = sanitisePayload(event, payload);
+  const clean = maskPrivateRoutes(event, sanitised);
   if (dropped.length) logWarn('telemetry.transport.droppedFields', `"${event}" dropped ${dropped.join(', ')}`, { event });
   const stamped = clean && typeof clean === 'object' && !Array.isArray(clean)
     ? { ...clean, ...appStamp() }
@@ -156,6 +186,7 @@ export async function flushPending() {
   if (!rows.length) return { pushed: 0 };
 
   const pushedIds = [];
+  const refusedIds = [];
   // Founder decision 2026-10-19 (answer 2a): one request carries the batch
   // (migrate_200). Until that migration is applied the batch function does
   // not exist, so the rows go one at a time exactly as before.
@@ -169,12 +200,16 @@ export async function flushPending() {
     });
     const { data, error } = await sb.rpc('record_engine_telemetry_batch', { _events: batch });
     if (!error) {
-      // The server returns the indexes it rejected (an unknown name); those
-      // stay queued for a build that knows them, everything else is done.
+      // The server returns the indexes it rejected (an unknown name, an
+      // oversized payload, a malformed row). A refused row can never succeed
+      // on a retry, so it is marked handled with the rest and never blocks
+      // the queue (adversarial review M2); only a failed call, below, keeps
+      // rows queued.
       const rejected = new Set(Array.isArray(data?.rejected) ? data.rejected : []);
-      const ids = rows.filter((_, i) => !rejected.has(i)).map((r) => r.id);
-      if (ids.length) await markEngineTelemetryPushed(ids);
-      return { pushed: ids.length, total: rows.length, batched: true };
+      const refused = rows.filter((_, i) => rejected.has(i)).length;
+      await markEngineTelemetryPushed(rows.map((r) => r.id));
+      if (refused) logInfo('telemetry.transport.batch.refused', 'the server refused rows; marked handled', { refused, total: rows.length });
+      return { pushed: rows.length - refused, ...(refused ? { rejected: refused } : {}), total: rows.length, batched: true };
     }
     if (isMissingFunction(error)) {
       _batchMissing = true;
@@ -197,6 +232,12 @@ export async function flushPending() {
       _payload: payload,
       _occurred_at: new Date(row.occurred_at).toISOString(),
     });
+    if (error && isRowRefusal(error)) {
+      // The server will never take this row: handled, not retried (M2).
+      logInfo('telemetry.transport.rpc.refused', 'the server refused a row; marked handled', { event: row.event });
+      refusedIds.push(row.id);
+      continue;
+    }
     if (error) {
       // Same benign classification sync/telemetry.js's logSyncError already
       // applies: a deleted account whose device still holds a live JWT fails
@@ -213,6 +254,6 @@ export async function flushPending() {
     }
     pushedIds.push(row.id);
   }
-  if (pushedIds.length) await markEngineTelemetryPushed(pushedIds);
-  return { pushed: pushedIds.length, total: rows.length };
+  if (pushedIds.length || refusedIds.length) await markEngineTelemetryPushed([...pushedIds, ...refusedIds]);
+  return { pushed: pushedIds.length, ...(refusedIds.length ? { rejected: refusedIds.length } : {}), total: rows.length };
 }

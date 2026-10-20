@@ -7,7 +7,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { SCHEMA_BY_NAME, toBucket } = require('../schema');
+const { SCHEMA_BY_NAME, toBucket, sanitisePayload } = require('../schema');
 
 const read = (rel) => fs.readFileSync(path.join(__dirname, '../../../..', rel), 'utf8');
 const WORKOUT = 'src/screens/ActiveWorkoutScreen.js';
@@ -40,10 +40,21 @@ describe('lane workout emitters', () => {
   test('swap scope and cause literals are schema values', () => {
     const f = SCHEMA_BY_NAME.exercise_swapped.fields;
     const body = bodyOf(read(WORKOUT), "trackNow('exercise_swapped'", 600);
-    for (const v of ['programme', 'session', 'constraint', 'style', 'choice']) {
+    for (const v of ['programme', 'session', 'style', 'choice']) {
       expect(body).toContain(`'${v}'`);
       expect(JSON.stringify(f)).toContain(`"${v}"`);
     }
+  });
+
+  // Q4 ruling (src/lib/telemetry/events.js): no capability-derived event
+  // leaves the device. A Work-around-sheet swap is capability derived, so the
+  // telemetry never says 'constraint'; it reports 'choice'.
+  test("a swap never reports cause 'constraint' (Q4); a Work-around swap reports choice", () => {
+    expect(SCHEMA_BY_NAME.exercise_swapped.fields.cause.values).toEqual(['style', 'choice']);
+    expect(sanitisePayload('exercise_swapped', { scope: 'session', cause: 'constraint' }).payload).toEqual({ scope: 'session' });
+    const body = bodyOf(read(WORKOUT), "trackNow('exercise_swapped'", 600);
+    expect(body).not.toContain("'constraint'");
+    expect(body).toContain("(!workAroundSwapRef.current && swapStylePoolKey && !swapStyleShowAll) ? 'style' : 'choice'");
   });
 
   test('bucket kinds used match the schema field kinds', () => {
@@ -76,6 +87,20 @@ describe('lane workout emitters', () => {
     expect(WORKOUT_DISCARD_REASONS.map((r) => r.reason)).toEqual(['no_time', 'felt_off', 'app_problem', 'just_browsing', 'other']);
     for (const r of WORKOUT_DISCARD_REASONS) expect(values).toContain(r.reason);
     expect(SCHEMA_BY_NAME.exit_reason_given.fields.moment.values).toContain('workout_discard');
+  });
+
+  // Adversarial review (minor): the one-tap discard of a session with no sets
+  // logged and nothing typed is not a discarded workout; nothing is sent.
+  test('the silent empty-session discard does not send workout_discarded', () => {
+    const src = read(WORKOUT);
+    const body = bodyOf(src, 'function handleCancelWorkout()', 1600);
+    expect(body).toMatch(/totalSets === 0 && !hasInProgressSetEntry\(\)/);
+    const silent = body.slice(0, body.indexOf('confirmDiscard('));
+    expect(silent).not.toContain('trackWorkoutDiscarded');
+    expect(silent).not.toContain('workout_discarded');
+    expect(silent).toContain('takeSessionCounts(activeWorkout?.id)');
+    // The confirmed discard still reports it.
+    expect(bodyOf(src, 'async function discardWorkout', 2600)).toContain('trackWorkoutDiscarded()');
   });
 
   test('the exit-reason row is offered only after a confirmed discard with work lost', () => {

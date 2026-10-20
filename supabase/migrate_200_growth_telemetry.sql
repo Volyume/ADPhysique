@@ -32,9 +32,11 @@
 --
 -- Applied locally:   no (cloud-only objects)
 -- Applied remotely:  NO. Founder runs it: "run against production 200".
---                    Until then the client sends one event at a time as
---                    before and the old function refuses the new names,
---                    which stay queued on the device and go once this lands.
+--                    Until then the app keeps the growth events off
+--                    (sync/featureFlags.js GROWTH_TELEMETRY = false): they
+--                    are dropped on the device, never queued, and the older
+--                    events flow as before. Turn the flag on in the build
+--                    after this lands.
 -- Safe to re-run:    yes (IF NOT EXISTS, CREATE OR REPLACE, ON CONFLICT DO
 --                    UPDATE for catalogue rows, cron unscheduled by name
 --                    before scheduling).
@@ -243,7 +245,8 @@ GRANT EXECUTE ON FUNCTION public.record_engine_telemetry(text, jsonb, timestampt
 -- _events: [{ "event": text, "payload": jsonb|null, "occurred_at": iso }].
 -- Returns { "inserted": n, "rejected": [index, ...] }. A row the catalogue
 -- does not know (a newer build's name), an oversized payload or a malformed
--- row is rejected by index; the device keeps it queued.
+-- row is rejected by index; the device marks it handled, so a refused row
+-- never blocks the queue behind it.
 CREATE OR REPLACE FUNCTION public.record_engine_telemetry_batch(_events jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql

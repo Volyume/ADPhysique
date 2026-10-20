@@ -2223,15 +2223,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // the plan's facts; it is an edit of the plan, as on the routine screen.
     if (user?.id && exercise?.id && newExercise?.id) {
       // Growth telemetry (exercise_swapped). The scope is the one the person
-      // chose (swapToPlan). The cause mirrors the swap's own recorded reason
-      // (causeOverride below): a Work-around-sheet swap (injury or equipment
-      // the person declared) => constraint; a swap made inside the plan's
-      // style pool => style; any other pick => choice.
+      // chose (swapToPlan). Q4 ruling (2026-08-21, no-outside-party law;
+      // src/lib/planAutoGen.js): "no capability-derived event leaving the
+      // device at all". A Work-around-sheet swap (an injury or limitation the
+      // person declared) is capability derived, so the telemetry NEVER sends
+      // cause 'constraint' and a Work-around swap reports 'choice', the same
+      // as any other pick. A swap made inside the plan's style pool => style;
+      // every other pick => choice.
+      // (causeOverride below is the local swap record, not telemetry, and is
+      // unchanged.)
       try {
         bumpSessionCount('swaps', activeWorkout?.id);
         trackNow('exercise_swapped', {
           scope: swapToPlan ? 'programme' : 'session',
-          cause: workAroundSwapRef.current ? 'constraint' : (swapStylePoolKey && !swapStyleShowAll) ? 'style' : 'choice',
+          cause: (!workAroundSwapRef.current && swapStylePoolKey && !swapStyleShowAll) ? 'style' : 'choice',
         });
       } catch (_) { /* telemetry never blocks the swap */ }
       applyExerciseSwap({
@@ -2462,7 +2467,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // discard-confirm the app already uses once any set is logged.
     if (totalSets === 0 && !hasInProgressSetEntry()) {
       clearWorkoutDrafts(activeWorkout?.id);
-      trackWorkoutDiscarded();
+      // Growth telemetry (adversarial review, minor): an empty session thrown
+      // away in one tap is not a discarded workout, so nothing is sent; only
+      // the in-memory counters are forgotten.
+      try { takeSessionCounts(activeWorkout?.id); } catch (_) { /* counters are in memory only */ }
       store.endWorkout();
       // eslint-disable-next-line global-require
       try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}

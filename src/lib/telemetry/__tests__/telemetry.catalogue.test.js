@@ -91,6 +91,20 @@ describe('Telemetry catalogue shape', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
+  // Q4 ruling: no capability-derived event leaves the device. The two coach
+  // recommendation events lost their only (capability-derived or duplicate)
+  // call sites, so they are catalogued as deferred and the transport's
+  // allow-list refuses them.
+  test('coach_recommendation_held and _dismissed are deferred, refused, and emitted nowhere', () => {
+    const { ALLOWED_EVENTS } = require('../events');
+    ['coach_recommendation_held', 'coach_recommendation_dismissed'].forEach((n) => {
+      expect(isDeferred(n)).toBe(true);
+      expect(ALLOWED_EVENTS.has(n)).toBe(false);
+      const emitters = (corpus().match(new RegExp(`trackNow\\(\\s*['"\`]${n}['"\`]`, 'g')) || []);
+      expect(emitters).toEqual([]);
+    });
+  });
+
   test('isDeferred matches the catalogue', () => {
     for (const e of TELEMETRY_EVENTS) {
       expect(isDeferred(e.name)).toBe(e.deferred);

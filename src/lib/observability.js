@@ -303,8 +303,14 @@ export const track = {
    * navigator).
    */
   screen(name, params = {}) {
-    setCurrentScreen(name);
-    this.breadcrumb(`screen.${name}`, 'navigation', { name, params });
+    // A private screen (injuries and limitations, the wellbeing check; Q4 and
+    // answer 1a, telemetry/session.js PRIVATE_ROUTES) reaches Sentry and the
+    // logs only as 'Private', with no params (review 2026-10-20).
+    // eslint-disable-next-line global-require
+    const { publicRoute, PRIVATE_SCREEN } = require('./telemetry/session');
+    const shown = publicRoute(name);
+    setCurrentScreen(shown);
+    this.breadcrumb(`screen.${shown}`, 'navigation', shown === PRIVATE_SCREEN ? { name: shown } : { name, params });
   },
 
   /**

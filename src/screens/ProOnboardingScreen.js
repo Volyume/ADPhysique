@@ -1588,7 +1588,12 @@ export default function ProOnboardingScreen({ navigation, route }) {
     setPayoffShown(true);
   }
 
+  // Adversarial review (minor): a double tap on "See my plan" must send
+  // onboarding_completed once.
+  const seePlanTappedRef = useRef(false);
   async function seePlan() {
+    if (seePlanTappedRef.current) return;
+    seePlanTappedRef.current = true;
     // Land on the plan itself (the Train tab), not Today: the user's one
     // thought at this moment is "show me what you made".
     emitOnboardingCompleted('coaching');
