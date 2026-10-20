@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gym challenge terms · Volyume</title>
+<meta name="description" content="The terms of a Volyume gym challenge: who can enter, how you score, the prize draws and how winners are told.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="robots" content="noindex, nofollow">
+<!--
+  Gym challenge terms (docs/gym-challenge-2026-10-19/SPEC.md section 5 and
+  M10). Served at https://volyume.app/challenge-terms/?c=<code>, outside /c/
+  on purpose: the verified app link captures every /c/ path, so a terms page
+  under it would open the app instead of the page.
+
+  The page layout, header, footer and numbered sections follow
+  public/privacy/index.html, and the scoring table follows the one on the
+  challenge landing page (public/c/index.html), so the numbers agree.
+
+  It reads the code from ?c=<code>, then asks the same anon RPC the landing
+  page asks, gym_challenge_public, for the public fields only (title, gym,
+  dates, status, prizes, thresholds): no names, no scores, no counts, no
+  personal data. The anon key is the same public key the landing page ships;
+  it grants only what the RPC's own grants allow. No tracking scripts.
+
+  The general terms are in the HTML itself, so they read in full without
+  scripts and before the lookup returns. The script only fills in the facts
+  of the challenge it finds. When it finds none it adds one calm line and
+  leaves the facts general ("the dates shown in the app").
+-->
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+    --border:#6E6E6E; --borderSubtle:#2E2E2C;
+    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
+    --silver:#C0C0C0;
+    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --nav-h:78px;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
+    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
+  a{color:inherit; text-decoration:none;}
+  [hidden]{display:none !important;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
+    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--borderSubtle);}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
+
+  .policy{padding:calc(var(--nav-h) + 56px) 0 24px;}
+  .policy .head{max-width:760px;}
+  .policy h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(34px,6vw,48px); line-height:1.08; margin:0;}
+  .policy .updated{color:var(--textMuted); font-size:14px; margin:14px 0 0;}
+  .policy .intro{color:var(--textSecondary); font-size:18px; line-height:1.6; margin:24px 0 0; max-width:68ch;}
+
+  .policy section{max-width:760px; padding:38px 0; border-top:1px solid var(--borderSubtle);}
+  .policy section:first-of-type{border-top:none;}
+  .policy h2{display:flex; gap:14px; align-items:baseline; font-weight:700; letter-spacing:-0.25px;
+    font-size:24px; line-height:1.2; margin:0 0 16px;}
+  .policy h2 .n{color:var(--amber); font-weight:900; font-size:18px; min-width:1.6em;}
+  .policy p{color:var(--textSecondary); font-size:16px; line-height:1.65; margin:0 0 14px; max-width:68ch;}
+  .policy p:last-child{margin-bottom:0;}
+  .policy strong{color:var(--text); font-weight:600;}
+  .policy a.inline{color:var(--amber);}
+
+  .policy .card{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:16px;
+    padding:20px; margin:0 0 14px; max-width:68ch;}
+  .policy table{width:100%; border-collapse:collapse; font-size:15px;}
+  .policy td{padding:6px 0; border-bottom:1px solid var(--borderSubtle);}
+  .policy td.pts{text-align:right; color:var(--textSecondary); white-space:nowrap; padding-left:12px;}
+  .policy tr:last-child td{border-bottom:none;}
+  .policy .tag{color:var(--amber); font-size:13px;}
+
+  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
+  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
+  footer a{color:var(--textMuted); font-size:14px;}
+  footer a:hover{color:var(--amber);}
+  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
+
+  @media(max-width:600px){
+    :root{--nav-h:60px;}
+    .wrap{padding:0 16px;}
+    .policy h1{font-size:32px;}
+    footer .wrap{gap:14px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+  </div>
+</nav>
+
+<main class="policy">
+  <div class="wrap">
+    <div class="head">
+      <h1>Gym challenge terms</h1>
+      <p class="updated">Last updated: 20 October 2026</p>
+      <p class="intro">These are the terms of a Volyume gym challenge. Entry is free, and you can leave at any time.</p>
+      <p class="intro" id="notfound" hidden>We could not find this challenge, so these are the general terms. The dates and prizes of your challenge are shown in the app.</p>
+    </div>
+
+    <section>
+      <h2><span class="n">1</span> Who runs it</h2>
+      <p><span id="t-title">Each gym challenge on Volyume</span> is run by <span id="promoterName">Volyume</span> (the promoter).</p>
+      <p>Contact: <a class="inline" id="promoterEmail" href="mailto:support@volyume.app">support@volyume.app</a><span id="promoterAddressLine" hidden><br>Address: <span id="promoterAddress"></span></span></p>
+    </section>
+
+    <section>
+      <h2><span class="n">2</span> Who can enter</h2>
+      <p>Anyone aged 18 or over who trains at <span id="t-gym">the gym running the challenge</span> can enter. You confirm you are 18 or over when you join, and a winner must show proof of age before a prize is given.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">3</span> How to enter</h2>
+      <p>Entry is free and no purchase is needed. Join in the Volyume app, from the challenge link or code, between <span id="t-dates">the dates shown in the app</span> (UK time). Volyume is free.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">4</span> How you score</h2>
+      <p>The four core parts add up to 80 points. The three parts marked with coaching add up to 20 more.</p>
+      <div class="card">
+        <table aria-label="Points for each part of the score">
+          <tbody>
+            <tr><td>Train to your plan</td><td class="pts">40</td></tr>
+            <tr><td>Hit your week</td><td class="pts">15</td></tr>
+            <tr><td>Get stronger</td><td class="pts">15</td></tr>
+            <tr><td>Be part of it</td><td class="pts">10</td></tr>
+            <tr><td>Weekly check-in <span class="tag">with coaching</span></td><td class="pts">10</td></tr>
+            <tr><td>Food logging <span class="tag">with coaching</span></td><td class="pts">6</td></tr>
+            <tr><td>Weekly weigh-in <span class="tag">with coaching</span></td><td class="pts">4</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A training day counts when a workout lasts at least 20 minutes, has at least 6 working sets and is saved within 7 days. One training day counts per day.</p>
+      <p>Your weekly target is your plan's sessions a week, between 2 and 6. It follows your plan during your first week in the challenge, and after that it can only go up.</p>
+      <p>Food logging counts up to 3 days a week, and a weigh-in once a week. Logging more often earns nothing more.</p>
+      <p>Getting stronger compares your best on each exercise with your first session of it in the challenge.</p>
+      <p>Everyone is scored over the whole challenge, whenever they join.</p>
+      <p>The challenge never reads what you ate or what you weigh. While calm mode is on, or while Volyume's safety check has paused your calorie changes, food logging and weigh-ins count as done for those days.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">5</span> The draws</h2>
+      <p id="t-drawMain">Everyone who reaches the main prize score shown in the app by the end goes into the main prize draw.</p>
+      <p id="t-drawSecond">Everyone who reaches the second prize score shown in the app goes into the second prize draw, except the main draw's winners.</p>
+      <p id="prizeMainLine" hidden><strong>Main prize.</strong> <span id="prizeMain"></span></p>
+      <p id="prizeSecondLine" hidden><strong>Second prize.</strong> <span id="prizeSecond"></span></p>
+      <p>Winners are picked by a recorded computer draw within 14 days after the challenge ends. Each draw's list of entries is kept so the draw can be checked.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">6</span> Winners</h2>
+      <p>Winners are told by email within 7 days of the draw. If a winner does not reply within 14 days, or cannot show they are 18 or over, the prize is drawn again. There is no cash alternative. The winner's name and county are published unless they object when told.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">7</span> Fair play</h2>
+      <p>Volyume can leave out an entry that does not reflect real training, and decides any question about scoring.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">8</span> Leaving</h2>
+      <p>You can leave the challenge at any time in the app. You are then taken off the board and are not scored again.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">9</span> Free for life</h2>
+      <p>Joining a challenge keeps Volyume free for you for life, even if we ever introduce paid plans.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">10</span> Your data</h2>
+      <p>How a challenge uses your data is explained in section 9, Gym challenges, of the <a class="inline" href="https://volyume.app/privacy/">Volyume privacy policy</a>.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="links">
+      <a href="/privacy/">Privacy Policy</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+    </div>
+    <p class="copy">© 2026 Volyume</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    // Founder 2026-10-20: Volyume is the promoter; no postal address is published. The line shows only if one is ever added.
+    var PROMOTER_NAME = 'Volyume';
+    var PROMOTER_EMAIL = 'support@volyume.app';
+    var PROMOTER_ADDRESS = '';
+
+    var SUPABASE_URL = 'https://sujrylzzxcqxxfygptns.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1anJ5bHp6eGNxeHhmeWdwdG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODIxODksImV4cCI6MjA5NDc1ODE4OX0.NjRsRu8pL1UEJe3z9TTfSrvpruKqQYQ-HrN4zXvsVVY';
+    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    function $(id) { return document.getElementById(id); }
+
+    function setText(id, value) {
+      var el = $(id);
+      if (el) el.textContent = value;
+    }
+
+    function show(id) {
+      var el = $(id);
+      if (el) el.hidden = false;
+    }
+
+    function clean(value) {
+      return typeof value === 'string' ? value.trim() : '';
+    }
+
+    // The code: ?c=<code>, the same shape the landing page accepts.
+    function readCode() {
+      var raw = new URLSearchParams(location.search).get('c') || '';
+      raw = String(raw).trim().toLowerCase();
+      return /^[a-z0-9-]{3,32}$/.test(raw) ? raw : '';
+    }
+
+    // A date key (2026-11-01) as "1 November 2026"; empty when it is not one.
+    function longDay(key) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ''));
+      if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return '';
+      return Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1];
+    }
+
+    function points(value) {
+      return (typeof value === 'number' && isFinite(value)) ? String(value) : '';
+    }
+
+    // The promoter: name and email always, the postal address only when set.
+    setText('promoterName', PROMOTER_NAME);
+    setText('promoterEmail', PROMOTER_EMAIL);
+    $('promoterEmail').setAttribute('href', 'mailto:' + PROMOTER_EMAIL);
+    if (PROMOTER_ADDRESS) {
+      setText('promoterAddress', PROMOTER_ADDRESS);
+      show('promoterAddressLine');
+    }
+
+    // No challenge found: the general terms stay as written, with one calm line.
+    function showNotFound() {
+      show('notfound');
+    }
+
+    function fill(c) {
+      var title = clean(c.title);
+      var gym = clean(c.gym_name);
+      var start = longDay(c.starts_on);
+      var end = longDay(c.ends_on);
+      var main = points(c.main_threshold);
+      var second = points(c.second_threshold);
+      var prizeMain = clean(c.prize_main);
+      var prizeSecond = clean(c.prize_second);
+
+      document.title = title + ' terms · Volyume';
+      setText('t-title', title);
+      if (gym) setText('t-gym', gym);
+      if (start && end) setText('t-dates', start + ' and ' + end);
+      if (main) {
+        setText('t-drawMain', 'Everyone who scores ' + main + ' or more by the end goes into the main prize draw.');
+      }
+      if (second) {
+        setText('t-drawSecond', 'Everyone who scores ' + second
+          + ' or more goes into the second prize draw, except the main draw\'s winners.');
+      }
+      if (prizeMain) {
+        setText('prizeMain', prizeMain);
+        show('prizeMainLine');
+      }
+      if (prizeSecond) {
+        setText('prizeSecond', prizeSecond);
+        show('prizeSecondLine');
+      }
+    }
+
+    var code = readCode();
+    if (!code) { showNotFound(); return; }
+
+    fetch(SUPABASE_URL + '/rest/v1/rpc/gym_challenge_public', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ _code: code })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('status ' + res.status);
+      return res.json();
+    }).then(function (c) {
+      if (!c || typeof c !== 'object' || !clean(c.title)) { showNotFound(); return; }
+      fill(c);
+    }).catch(function () {
+      showNotFound();
+    });
+  })();
+</script>
+</body>
+</html>
