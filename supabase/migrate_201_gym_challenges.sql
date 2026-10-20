@@ -905,10 +905,11 @@ REVOKE ALL ON FUNCTION public.gym_challenge_draw(uuid, text, int) FROM PUBLIC, a
 GRANT EXECUTE ON FUNCTION public.gym_challenge_draw(uuid, text, int) TO service_role;
 
 -- Create a challenge (founder, service role). The code is the slug plus an
--- 8-character random part (review round 1, M9). Returns the code and id.
+-- 8-character random part (review round 1, M9). Without a terms link the
+-- challenge links its own terms page. Returns the code and id.
 CREATE OR REPLACE FUNCTION public.gym_challenge_create(
   _gym_id uuid, _slug text, _title text, _starts_on date, _ends_on date,
-  _terms_url text, _prize_main text DEFAULT NULL, _prize_second text DEFAULT NULL,
+  _terms_url text DEFAULT NULL, _prize_main text DEFAULT NULL, _prize_second text DEFAULT NULL,
   _main_threshold int DEFAULT 70, _second_threshold int DEFAULT 50)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -926,7 +927,9 @@ BEGIN
   v_code := v_slug || '-' || substr(md5(gen_random_uuid()::text), 1, 8);
   INSERT INTO public.gym_challenges (code, gym_id, title, starts_on, ends_on, terms_url,
                                      prize_main, prize_second, main_threshold, second_threshold)
-  VALUES (v_code, _gym_id, _title, _starts_on, _ends_on, _terms_url,
+  -- No terms link given: the challenge's own terms page, by its code.
+  VALUES (v_code, _gym_id, _title, _starts_on, _ends_on,
+          coalesce(nullif(btrim(_terms_url), ''), 'https://volyume.app/challenge-terms/?c=' || v_code),
           _prize_main, _prize_second, _main_threshold, _second_threshold)
   RETURNING id INTO v_id;
   RETURN jsonb_build_object('id', v_id, 'code', v_code);
