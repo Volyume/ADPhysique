@@ -1,6 +1,7 @@
 /**
  * D7 (founder decision, 2026-07-03): GoalChangeSummaryScreen performs the
- * same ED-flag check ProSetupCompleteScreen does. Under an open flag (or an
+ * same ED-flag check ProSetupCompleteScreen does, since item 10 through
+ * src/lib/safetyState.js (`suppressed`: flag, calm mode or a failed read). Under an open flag (or an
  * unknown flag state — fail closed) the deficit-phase framing and the
  * eight-week diet-break notice give way to the neutral register while the
  * goal-change receipt stays honest. These pin both registers and the
@@ -13,13 +14,22 @@ import { create, act } from 'react-test-renderer';
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'GoalChangeSummaryScreen.js'), 'utf8');
 
 const mockGetOpenEdPatternFlag = jest.fn();
+const mockStorage = {};
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn((k) => Promise.resolve(Object.prototype.hasOwnProperty.call(mockStorage, k) ? mockStorage[k] : null)),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+  },
+}));
 jest.mock('../../lib/database', () => ({
   getOpenEdPatternFlag: (...args) => mockGetOpenEdPatternFlag(...args),
 }));
 jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
   default: Object.assign(
-    (selector) => selector({ accessibility: { reduceMotion: true } }),
+    (selector) => selector({ accessibility: { reduceMotion: true }, user: { id: 'u1' }, userProfile: {} }),
     { getState: () => ({ user: { id: 'u1' } }) },
   ),
 }));
@@ -58,7 +68,10 @@ async function render(params) {
   return tree;
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  for (const k of Object.keys(mockStorage)) delete mockStorage[k];
+});
 
 describe('GoalChangeSummary under an open ED flag (D7)', () => {
   test('deficit framing and the diet-break notice are suppressed; the receipt stays', async () => {
@@ -75,6 +88,22 @@ describe('GoalChangeSummary under an open ED flag (D7)', () => {
     const t = textsOf(await render(CUT_PARAMS));
     expect(t).not.toMatch(/deficit/i);
     expect(t).not.toMatch(/diet break/i);
+  });
+});
+
+describe('GoalChangeSummary in calm mode (safetyState suppressed, item 10)', () => {
+  test('calm mode with no flag gives the neutral register too', async () => {
+    mockGetOpenEdPatternFlag.mockResolvedValue(null);
+    mockStorage['@volyume_wellbeing_mode'] = 'calm';
+    const t = textsOf(await render(CUT_PARAMS));
+    expect(t).not.toMatch(/deficit/i);
+    expect(t).not.toMatch(/diet break/i);
+    expect(t).toMatch(/adjust to match/i);
+  });
+
+  test('the screen reads safetyState, not the open-flag query', () => {
+    expect(SOURCE).toMatch(/useSafetyState\(\)\.suppressed/);
+    expect(SOURCE).not.toMatch(/getOpenEdPatternFlag/);
   });
 });
 

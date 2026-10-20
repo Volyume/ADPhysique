@@ -107,10 +107,11 @@ describe('Q5-A: the profile still gets its recovery key, with the default every 
     expect(read('..', 'lib', 'blockLedgerGather.js')).toMatch(/userProfile\.recoveryRating \?\? 'average'/);
   });
 
-  test('the two edit screens still let the person set it, from the same profile field', () => {
-    for (const screen of ['PlanUpdateScreen.js', 'ProGoalSetupScreen.js']) {
-      expect(read(screen)).toMatch(/useState\(userProfile\?\.recoveryRating \?\? 'average'\)/);
-    }
+  test('the edit screen still lets the person set it, from the same profile field', () => {
+    // Item 10 (Option B): Adjust training plan owns recovery; the Coach form
+    // no longer edits it.
+    expect(read('PlanUpdateScreen.js')).toMatch(/useState\(userProfile\?\.recoveryRating \?\? 'average'\)/);
+    expect(read('ProGoalSetupScreen.js')).not.toMatch(/recoveryRating/);
   });
 });
 

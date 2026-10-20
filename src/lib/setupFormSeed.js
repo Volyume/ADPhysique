@@ -14,15 +14,19 @@
  *
  * Pure. No I/O. Reads no safety state and no tier.
  */
-export const SETUP_FORM_FIELDS = Object.freeze([
+// Option B ownership (proposal 10): "Adjust training plan" owns the training
+// fields, "Update goal and phase" owns phase and protein. Each form watches only
+// its own, so a save on the other screen never overwrites an unsaved edit here.
+export const TRAIN_FORM_FIELDS = Object.freeze([
   'trainingGoal', 'trainingArchetype', 'planWeakPoints', 'experience',
   'daysPerWeek', 'sessionLengthMinutes', 'equipment', 'recoveryRating',
-  'trainingPhase', 'proteinApproach',
 ]);
+export const COACH_FORM_FIELDS = Object.freeze(['trainingPhase', 'proteinApproach']);
+export const SETUP_FORM_FIELDS = Object.freeze([...TRAIN_FORM_FIELDS, ...COACH_FORM_FIELDS]);
 
 export const SETUP_CHANGED_NOTICE = 'Your setup was changed on another screen. This shows the latest.';
 
-export function setupFormSignature(profile) {
+export function setupFormSignature(profile, fields = SETUP_FORM_FIELDS) {
   const p = profile || {};
-  return JSON.stringify(SETUP_FORM_FIELDS.map((k) => p[k] ?? null));
+  return JSON.stringify(fields.map((k) => p[k] ?? null));
 }

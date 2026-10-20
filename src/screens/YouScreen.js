@@ -546,7 +546,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="flag-outline"
             label="Update goal and phase"
-            sub="Change goal, phase, schedule, equipment or experience."
+            sub="Change your goal, phase, protein target or show date."
             onPress={() => navigation.navigate('ProGoalSetup')}
           />
           <NavRow

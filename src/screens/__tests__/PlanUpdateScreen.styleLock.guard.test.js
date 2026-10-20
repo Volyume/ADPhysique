@@ -47,14 +47,13 @@ describe('F-16 REVISED point 3: a library style plan is never regenerated', () =
     expect(source).toMatch(/getActivePlan\(user\.id\)/);
   });
 
-  test('the lock rule lives in ONE shared module, imported by both rebuild screens', () => {
-    const goalSource = fs.readFileSync(path.join(__dirname, '..', 'ProGoalSetupScreen.js'), 'utf8');
-    for (const src of [source, goalSource]) {
-      expect(src).toMatch(/from '\.\.\/lib\/exercise\/styleLock'/);
-      // Neither screen re-derives the rule for itself.
-      expect(src).not.toMatch(/function styleLockFromTags/);
-      expect(src).not.toMatch(/startsWith\('kettlebell'\)/);
-    }
+  test('the lock rule lives in ONE shared module, imported by the rebuild screen', () => {
+    // Item 10 (Option B): Adjust training plan is the only rebuild screen; the
+    // Coach form has no plan path (ProGoalSetupScreen.styleLock.guard.test.js).
+    expect(source).toMatch(/from '\.\.\/lib\/exercise\/styleLock'/);
+    // The screen does not re-derive the rule for itself.
+    expect(source).not.toMatch(/function styleLockFromTags/);
+    expect(source).not.toMatch(/startsWith\('kettlebell'\)/);
   });
 
   test('all three style families lock: kettlebell, circuit and band', () => {
