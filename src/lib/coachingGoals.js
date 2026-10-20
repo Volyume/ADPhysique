@@ -619,7 +619,7 @@ export const PHASE_OVERLAYS = {
 
 export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload) {
   if (matrixDeload) {
-    return 'Multiple signs are pointing to fatigue, so your coach is easing your training volume back.';
+    return 'Several signs point to fatigue building up, so your coach is easing your training volume back.';
   }
 
   // A single-week pull-back: recovery has dipped but it is not yet a full
@@ -628,60 +628,60 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
   // push while the prescription said reduce.
   if (trainingSignal === 'reduce') {
     const reduceNotes = {
-      general:          'Recovery dipped this week, so your coach is easing your volume back a little.',
-      mens_physique:    'Recovery dipped, so your coach is easing your volume back, shoulder and back work included.',
-      classic_physique: 'Recovery dipped, so your coach is pulling volume back across the groups to give it time to come back.',
-      bodybuilding:     'Recovery dipped, so your coach is trimming a set or two across the board to give your recovery time to come back.',
-      bikini:           'Recovery dipped, so your coach is easing your volume back, glute and hamstring work included.',
-      wellness:         'Recovery dipped, so your coach is pulling your volume back a little, lower body included, before adding again.',
-      figure:           'Recovery dipped, so your coach is easing your volume back, shoulder and back work included.',
-      womens_physique:  'Recovery dipped, so your coach is trimming volume across the groups to give your recovery time to come back.',
-      womens_bodybuilding: 'Recovery dipped, so your coach is trimming a set or two across every group to give your recovery time to come back.',
+      general:             'Your recovery dipped this week, so your coach is taking some sets out of each muscle group to give it time to come back.',
+      mens_physique:       'Your recovery dipped this week, so your coach is taking some sets out of each muscle group, shoulders and back included, to give it time to come back.',
+      classic_physique:    'Your recovery dipped this week, so your coach is taking some sets out of every muscle group, calves, shoulders and back included, to give it time to come back.',
+      bodybuilding:        'Your recovery dipped this week, so your coach is taking some sets out of every muscle group to give it time to come back.',
+      bikini:              'Your recovery dipped this week, so your coach is taking some sets out of each muscle group, glutes and hamstrings included, to give it time to come back.',
+      wellness:            'Your recovery dipped this week, so your coach is taking some sets out of each muscle group, lower body included, to give it time to come back.',
+      figure:              'Your recovery dipped this week, so your coach is taking some sets out of each muscle group, shoulders, back and glutes included, to give it time to come back.',
+      womens_physique:     'Your recovery dipped this week, so your coach is taking some sets out of every muscle group, back and shoulders included, to give it time to come back.',
+      womens_bodybuilding: 'Your recovery dipped this week, so your coach is taking some sets out of every muscle group to give it time to come back.',
     };
     return reduceNotes[trainingGoal] ?? reduceNotes.general;
   }
 
   if (trainingSignal === 'hold') {
     const holdNotes = {
-      general:          'Performance and recovery need to stabilise, so your coach is keeping your plan as it is before adding anything more.',
-      mens_physique:    'Your shoulder and back sessions stay steady. Performance is stable, and consistent sessions build the look.',
-      classic_physique: 'Everything stays steady. Consistent sessions across all groups build proportion over time.',
-      bodybuilding:     'Your volume stays the same across all muscle groups. Keeping it the same is a deliberate decision, not a default.',
-      bikini:           'Your sessions stay as they are. Glute and hamstring work is tracking well.',
-      wellness:         'Your lower-body volume stays steady. Recovery needs more time before anything is added.',
-      figure:           'Your plan stays as it is, with your shoulder and back sessions unchanged.',
-      womens_physique:  'Your volume stays where it is. Performance is stable across all groups.',
-      womens_bodybuilding: 'Your volume stays the same across every muscle group. Keeping it the same is a deliberate decision, not a default.',
+      general:             'Your performance and recovery are still settling, so your volume stays as it is. Your coach adds nothing until both are steady.',
+      mens_physique:       'Your performance and recovery are still settling, so your volume stays as it is, shoulder and back sessions included. Your coach adds nothing until both are steady.',
+      classic_physique:    'Your performance and recovery are still settling, so your volume stays as it is, every muscle group included. Your coach adds nothing until both are steady.',
+      bodybuilding:        'Your performance and recovery are still settling, so your volume stays the same across every muscle group. Holding it is a deliberate choice, and your coach adds nothing until both are steady.',
+      bikini:              'Your performance and recovery are still settling, so your volume stays as it is, glute and hamstring sessions included. Your coach adds nothing until both are steady.',
+      wellness:            'Your performance and recovery are still settling, so your volume stays as it is, lower-body sessions included. Your coach adds nothing until both are steady.',
+      figure:              'Your performance and recovery are still settling, so your volume stays as it is, shoulder, back and glute sessions included. Your coach adds nothing until both are steady.',
+      womens_physique:     'Your performance and recovery are still settling, so your volume stays as it is, every muscle group included. Your coach adds nothing until both are steady.',
+      womens_bodybuilding: 'Your performance and recovery are still settling, so your volume stays the same across every muscle group. Holding it is a deliberate choice, and your coach adds nothing until both are steady.',
     };
     return holdNotes[trainingGoal] ?? holdNotes.general;
   }
 
   if (volumeSignal >= 2) {
     const pushHighNotes = {
-      general:          'Recovery is excellent and performance is climbing, so your coach sees room for more work.',
-      mens_physique:    'Recovery is on your side, so your coach sees room for more work, shoulder and back sessions included.',
-      classic_physique: 'Recovery looks good, so your coach sees room for extra sets, calves, shoulders and back included.',
-      bodybuilding:     'Everything\'s looking good, so your coach sees room for a bit more across the board while recovery is this strong.',
-      bikini:           'Recovery is strong, so your coach sees room for more work, glute and hamstring sessions included.',
-      wellness:         'Energy and recovery are good, so your coach sees room for more work, lower body included.',
-      figure:           'Recovery was strong this week, so your coach sees room for more work, shoulders, back and glutes included.',
-      womens_physique:  'Recovery is solid, so your coach sees room for more work everywhere, back and shoulders included.',
-      womens_bodybuilding: 'Everything\'s looking good, so your coach sees room for a bit more across every group while recovery holds.',
+      general:             'Your recovery is excellent and your lifts are going up, so there is room for a bigger step up in volume.',
+      mens_physique:       'Your recovery is strong, so there is room for a bigger step up in volume across each muscle group, shoulders and back included.',
+      classic_physique:    'Your recovery is strong, so there is room for a bigger step up in volume across every muscle group, calves, shoulders and back included.',
+      bodybuilding:        'Your recovery is strong, so there is room for a bigger step up in volume across every muscle group.',
+      bikini:              'Your recovery is strong, so there is room for a bigger step up in volume across each muscle group, glutes and hamstrings included.',
+      wellness:            'Your recovery is strong, so there is room for a bigger step up in volume across each muscle group, lower body included.',
+      figure:              'Your recovery is strong, so there is room for a bigger step up in volume across each muscle group, shoulders, back and glutes included.',
+      womens_physique:     'Your recovery is strong, so there is room for a bigger step up in volume across every muscle group, back and shoulders included.',
+      womens_bodybuilding: 'Your recovery is strong, so there is room for a bigger step up in volume across every muscle group.',
     };
     return pushHighNotes[trainingGoal] ?? pushHighNotes.general;
   }
 
   // volumeSignal === 1, push lightly
   const pushNotes = {
-    general:          'Recovery is solid, so your training carries on as planned, with room for small progress.',
-    mens_physique:    'Recovery is solid, and your shoulder and back sessions carry on as planned.',
-    classic_physique: 'Recovery is solid, and training carries on as planned across all groups.',
-    bodybuilding:     'Recovery is solid, and training carries on as planned across all groups this week.',
-    bikini:           'Recovery is solid, and your glute and hamstring sessions carry on as planned.',
-    wellness:         'Recovery is solid, and your lower-body sessions carry on as planned.',
-    figure:           'Recovery is solid, and your shoulder, back and glute sessions carry on as planned.',
-    womens_physique:  'Recovery is solid, and training carries on as planned across all muscle groups.',
-    womens_bodybuilding: 'Recovery is solid, and training carries on as planned across every group this week.',
+    general:             'Your recovery is solid, so there is room for a small step up in volume.',
+    mens_physique:       'Your recovery is solid, so there is room for a small step up in volume across each muscle group, shoulders and back included.',
+    classic_physique:    'Your recovery is solid, so there is room for a small step up in volume across every muscle group, calves, shoulders and back included.',
+    bodybuilding:        'Your recovery is solid, so there is room for a small step up in volume across every muscle group.',
+    bikini:              'Your recovery is solid, so there is room for a small step up in volume across each muscle group, glutes and hamstrings included.',
+    wellness:            'Your recovery is solid, so there is room for a small step up in volume across each muscle group, lower body included.',
+    figure:              'Your recovery is solid, so there is room for a small step up in volume across each muscle group, shoulders, back and glutes included.',
+    womens_physique:     'Your recovery is solid, so there is room for a small step up in volume across every muscle group, back and shoulders included.',
+    womens_bodybuilding: 'Your recovery is solid, so there is room for a small step up in volume across every muscle group.',
   };
   return pushNotes[trainingGoal] ?? pushNotes.general;
 }

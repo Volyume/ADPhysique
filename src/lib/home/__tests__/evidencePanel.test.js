@@ -122,7 +122,8 @@ describe('title truth: "Since your check-in" only after a real check-in, and NEV
     });
     expect(panel.title).toBe('Since your check-in');
     const sessions = panel.rows.find((r) => r.key === 'sessions');
-    expect(sessions.done).toBe(true);
+    expect(sessions.marker).toBe('neutral'); // item 12: logged, not a verdict
+    expect(sessions.done).toBe(false);
     expect(sessions.label).toBe('4 training sessions logged');
   });
 
@@ -144,10 +145,15 @@ describe('title truth: "Since your check-in" only after a real check-in, and NEV
 
 describe('the food-adherence row (founder order 2026-08-17)', () => {
   test('food logged on N of the last 7 days renders as a quiet done-row', () => {
+    // item 12: five logged days is the bar; below it a neutral marker.
     const panel = resolveEvidencePanel({ ...BASE, foodDays7: 4 });
     const row = panel.rows.find((r) => r.key === 'food');
-    expect(row.done).toBe(true);
-    expect(row.label).toBe('Food logged on 4 of the last 7 days');
+    expect(row.done).toBe(false);
+    expect(row.marker).toBe('neutral');
+    expect(row.label).toBe('Not enough food logged to judge (4 of the last 7 days)');
+    const enough = resolveEvidencePanel({ ...BASE, foodDays7: 5 }).rows.find((r) => r.key === 'food');
+    expect(enough.done).toBe(true);
+    expect(enough.label).toBe('Food logged on 5 of the last 7 days');
   });
 
   test('no food logged: the row is omitted entirely (IF logged, per the order)', () => {
@@ -169,7 +175,7 @@ describe('the folded-in morning weight (founder device order 2026-08-18)', () =>
   test('logged day: one quiet done-row with the formatted weight, right after weigh-ins', () => {
     const panel = resolveEvidencePanel({ ...BASE, todayWeightLabel: '213 lbs' });
     const row = panel.rows.find((r) => r.key === 'weight');
-    expect(row.done).toBe(true);
+    expect(row.marker).toBe('neutral');
     expect(row.label).toBe('Morning weight 213 lbs');
     expect(panel.rows.find((r) => r.key === 'weighIns').label).not.toContain('213');
   });

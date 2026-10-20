@@ -54,12 +54,12 @@ describe('NU-8: weekly data confidence is rendered, not just computed', () => {
   // stale direct-index pin here would silently pass even if the transform
   // were reverted.
   test('the caption renders the render-time corroborated level, never the raw persisted confidence directly', () => {
-    expect(COACH).toMatch(/CONFIDENCE_CAPTIONS\[displayConfidence\]/);
-    expect(COACH).not.toMatch(/CONFIDENCE_CAPTIONS\[confidence\]/);
+    expect(COACH).toMatch(/buildConfidenceLine\(displayConfidence, weighInsThisWeek\)/);
+    expect(COACH).not.toMatch(/buildConfidenceLine\(confidence,/);
   });
   test('captions exist for every level that reaches the main card', () => {
     for (const level of ['high', 'medium', 'low']) {
-      expect(COACH_COPY).toMatch(new RegExp(`${level}: 'Confidence: ${level}`));
+      expect(COACH_COPY).toMatch(new RegExp(`Confidence: ${level}\\.`));
     }
   });
 });

@@ -58,12 +58,14 @@ function EvidencePanel({ panel, onPress, testID }) {
       )}
       {panel.rows.map((row) => (
         <View key={row.key} style={styles.row}>
+          {/* Item 12: a tick only for a good outcome; "logged" is a quiet dot. */}
           <Ionicons
-            name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
-            size={14}
+            name={row.marker === 'neutral' ? 'ellipse' : row.done ? 'checkmark-circle' : 'ellipse-outline'}
+            size={row.marker === 'neutral' ? 8 : 14}
             color={row.done ? t.colors.success : t.colors.textMuted}
+            style={row.marker === 'neutral' ? styles.neutralDot : undefined}
           />
-          <Text style={[styles.rowText, live.rowText, row.done && [styles.rowTextDone, live.rowTextDone]]}>
+          <Text style={[styles.rowText, live.rowText, (row.done || row.marker === 'neutral') && [styles.rowTextDone, live.rowTextDone]]}>
             {row.label}
           </Text>
         </View>
@@ -92,6 +94,7 @@ const styles = StyleSheet.create({
   title: { ...type.caption, color: colors.textMuted },
   countdown: { ...type.bodySm, color: colors.textSecondary },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  neutralDot: { width: 14, textAlign: 'center' },
   rowText: { ...type.bodySm, color: colors.textSecondary, flex: 1, minWidth: 0 },
   rowTextDone: { color: colors.textPrimary },
 });

@@ -1355,11 +1355,11 @@ export const SCENARIOS = [
       { kind: 'equals', path: 'adjustments.training.signal', equals: 'reduce' },
       { kind: 'equals', path: 'volumeSignal', equals: -2 },
       { kind: 'equals', path: 'recoveryFlag', equals: 'concerned' },
-      { kind: 'contains', path: 'adjustments.training.note', contains: 'Recovery dipped this week' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Your recovery dipped this week' },
     ],
     mustNot: [
       { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
-      { kind: 'contains', path: 'adjustments.training.note', contains: 'Multiple signs are pointing to fatigue' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Several signs point to fatigue building up' },
     ],
   },
   {
@@ -1376,7 +1376,7 @@ export const SCENARIOS = [
       { kind: 'equals', path: 'adjustments.training.signal', equals: 'reduce' },
       { kind: 'equals', path: 'volumeSignal', equals: -2 },
       { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
-      { kind: 'contains', path: 'adjustments.training.note', contains: 'Multiple signs are pointing to fatigue' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Several signs point to fatigue building up' },
     ],
     mustNot: [
       { kind: 'equals', path: 'recoveryFlag', equals: 'concerned' },

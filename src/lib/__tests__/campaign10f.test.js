@@ -135,7 +135,7 @@ describe('the rate shown as evidence is the rate the decision used', () => {
     // the decision rate is its own labelled row, signed from the engine's
     // coachingRatePct and falling back to the stored label.
     expect(screen).toMatch(/label: 'Coaching trend'/);
-    expect(screen).toMatch(/value: formatCoachingRate\(trend\.coachingRatePct\) \?\? trend\.coachingRateLabel/);
+    expect(screen).toMatch(/value: formatCoachingRateWeight\(trend\.coachingRatePct, trend\.ewma7, bodyWeightUnits \|\| .st.\)/);
     // The scale chip keeps its own identity and says which is which.
     expect(screen).toMatch(/'7-day trend'/);
     expect(screen).toMatch(/This is the scale reading\./);
