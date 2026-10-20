@@ -165,8 +165,9 @@ Cards render top to bottom when their condition holds:
 2. **Friends trained today row:** for Community members only. It is hidden
    under calm mode, an open ED flag or a failed read.
 3. **Weigh-in box** (`TodayStrip`): shown when coaching is set up and no
-   weight has been logged today. Under calm mode or an ED flag it names no
-   figure and opens empty.
+   weight has been logged today. Under an open ED flag or a failed read it
+   names no figure and opens empty; under calm mode alone it may still show
+   the last weight (`safetyState.js:100-103`, `withholdsWeightFigures`).
 4. **One "today line":** a single row chosen by rank: block complete,
    coaching decision, weekly check-in, recovery, re-entry, then nutrition
    phase. It is hidden during a workout.
@@ -198,8 +199,9 @@ What's new.
 
 **What changes the screen.** The rule is `src/lib/safetyState.js`:
 `suppressed = calm mode OR open ED flag OR failed safety read`. When it
-holds, weight figures and valence (good or bad framing) are withheld across
-Today. Coaching not set up adds the setup card.
+holds, valence (good or bad framing) and counts are withheld across Today.
+Weight figures follow a narrower rule, `withholdsWeightFigures`: an open ED
+flag, a failed read or an unknown state, but not calm mode alone. Coaching not set up adds the setup card.
 
 ---
 
@@ -514,7 +516,8 @@ Screenshot `07-weekly-check-in.png`: the quick check-in, before ratings.
   energy and soreness are needed.
 - **When it can run:**
   - Not on the wrong day.
-  - Not within 5 days of the last one.
+  - Not before 5 days of data since the first weight log (first check-in
+    only).
   - At least 3 weigh-ins in the last 7 days.
   - Late and already-done states are handled.
 - **Calm mode or ED flag:** the calorie judgement and the trend weight are
@@ -623,7 +626,9 @@ Screenshot `09-community-home.png`: a joined member's feed (empty
 - **Moderation:**
   - Reports cover profiles, posts, comments, messages, groups and group
     messages, with six reasons including "harmful body or eating content".
-  - Content auto-hides at 3 open reports.
+  - A post, comment or plan auto-hides once 3 different people have open
+    reports on it. Profiles, messages and groups never auto-hide
+    (`supabase/migrate_160_community.sql:1154-1172`).
   - Moderators can dismiss, hide, delete, restrict and suspend.
   - Members can block and mute.
   - A keyword filter runs on the phone and on the server.
@@ -739,7 +744,8 @@ render.
   - Weekly: weight progress and best lift of the week.
   - Any kind: the date, the plan name, and a quote or the person's own
     caption.
-  - Never exercise name lists.
+  - Exercise names appear only beside the chosen top lifts, the best lift
+    and the PR; there is no full list of the session's exercises.
 - **Destinations:** the phone's share sheet, Save to gallery, set as lock
   screen (Android, full screen), or Post to Community (session, PR and
   milestone only).
@@ -747,8 +753,7 @@ render.
   label, the best-lift hero and photo and video backgrounds are removed or
   blocked.
   - The weekly card shows real weight progress only for a verified-safe week.
-  - The before-and-after card may show bodyweight on the full image, never
-    on its sticker.
+  - The before-and-after card may show bodyweight beside each photo.
 
 ### 10.3 Widgets
 - **Android:** wired. There are two home-screen widgets, Next session and
@@ -854,8 +859,9 @@ Defined in `src/lib/nutritionEngine.js`; calorie floors re-enforced in
 `src/lib/wellbeing.js`. Calm mode is a user choice in Settings > Coaching
 ("Calmer coaching").
 
-- **Effects:** the same withholding as an open ED flag on most screens
-  (`safetyState.js`).
+- **Effects:** most of the same withholding as an open ED flag
+  (`safetyState.js`), with one difference: calm mode alone does not withhold
+  weight figures on Today.
   - Today, body measurements, progress photos, the weekly story and the
     check-in calorie judgement are affected.
   - Share images are affected.
@@ -870,15 +876,16 @@ Defined in `src/lib/nutritionEngine.js`; calorie floors re-enforced in
   screen that shows them was [not verified].
 
 ### 11.4 Share and privacy rules
-- **Share images:** they never carry exercise name lists. Weight progress
+- **Share images:** exercise names appear only beside the chosen top lifts,
+  the best lift and the PR, never as a full session list. Weight progress
   appears only on a verified-safe weekly card. Bodyweight appears only on the
-  before-and-after image (never its sticker). All of this is withheld under
-  calm mode or an ED flag (10.2).
+  before-and-after image. All of this is withheld under calm mode or an ED
+  flag (10.2).
 - **Kept on the phone:** set videos and progress photos never leave the
   phone unless the person shares an image or video themselves.
 - **Usage data** (`src/lib/telemetry/*`):
-  - 39 growth events (app, onboarding, food, workout, coach, challenge,
-    plan, performance, community), alongside older legacy events.
+  - 39 declared events in `src/lib/telemetry/schema.js` (app, onboarding,
+    food, workout, coach, challenge, plan, performance, community).
   - Each event declares its fields. Undeclared fields and invalid values are
     dropped.
   - Before health consent, only a handful of events are sent (screen views,
