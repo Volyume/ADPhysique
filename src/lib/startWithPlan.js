@@ -160,7 +160,7 @@ export async function prepareStartWithPlan(userId, userProfile, {
 }
 
 export async function commitStartWithPlan(userId, userProfile) {
-  return generateAndSavePlan(userId, userProfile);
+  return generateAndSavePlan(userId, userProfile, { telemetryTrigger: 'start_with_plan' });
 }
 
 /**

@@ -88,6 +88,7 @@ import {
 import { readJoinReceiptSeen, markJoinReceiptSeen } from '../lib/community/joinReceipt';
 import { todayLocalKey } from '../lib/dayKey';
 import { composeAudienceLine, composeDefaultVisibility } from './CommunityComposeScreen';
+import useScreenReady from '../lib/telemetry/useScreenReady';
 import { myChallenges, challengeForMyGym } from '../lib/challenges/api';
 import { daysLeftLine, scoreLine } from '../lib/challenges/display';
 
@@ -228,6 +229,7 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [sortUnavailable, setSortUnavailable] = useState(false);
   const [hub, setHub] = useState(null);
   const [loading, setLoading] = useState(true);
+  useScreenReady('Community', !loading);
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
   const [legacyCardShown, setLegacyCardShown] = useState(!!legacyPartnerCode);
@@ -1004,7 +1006,7 @@ export default function CommunityHubScreen({ navigation, route }) {
             icon="trophy-outline"
             title="Challenge at your gym"
             subtitle={gymInvite.title}
-            onPress={() => navigation.navigate('ChallengeJoin', { code: gymInvite.code })}
+            onPress={() => navigation.navigate('ChallengeJoin', { code: gymInvite.code, source: 'gym_invite' })}
           />
         ) : null}
       </Band>

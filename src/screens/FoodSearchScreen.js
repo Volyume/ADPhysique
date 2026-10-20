@@ -61,6 +61,8 @@ import { resolveFoodRefs } from '../lib/food/sources/localCache';
 // Campaign 17A job 6: the ONE exclusion predicate, at the food-ref level.
 import { foodRefExcluded } from '../lib/food/foodRoles';
 import { audit } from '../lib/observability';
+import { trackNow } from '../lib/telemetry/growth';
+import { toBucket } from '../lib/telemetry/schema';
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -81,6 +83,7 @@ import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { scaleMacrosAsWeighed } from '../lib/food/cookYield';
 import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
 import { parseFoodLine, isFoodLine, portionFor, matchFoodLineParts } from '../lib/food/foodLine';
+import useScreenReady from '../lib/telemetry/useScreenReady';
 
 const EMPTY_COPY = {
   recents: 'Your recent foods will appear here after you log them.',
@@ -140,6 +143,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // repeat path showing its list untouched. Starts false so a first render
   // never steals focus before loadBrowse has actually reported back.
   const [recentsLoaded, setRecentsLoaded] = useState(false);
+  useScreenReady('FoodSearch', recentsLoaded);
   // food_ref -> last portion used in THIS slot (Campaign 17B job 2).
   const [slotPortions, setSlotPortions] = useState(() => new Map());
   // D230 R7: the foods eaten around this clock time on other days, resolved,
@@ -465,7 +469,16 @@ export default function FoodSearchScreen({ navigation, route }) {
             // Connectivity probe itself failed: leave the generic miss copy.
             logError('FoodSearchScreen.connectivityProbe', e);
           }
-          if (searchRequestRef.current === requestId) setSearchOffline(offline);
+          if (searchRequestRef.current === requestId) {
+            setSearchOffline(offline);
+            // Growth telemetry (adversarial review, minor): one event per
+            // settled query, and only when the device was online. An empty
+            // result with no network says nothing about the food database.
+            // Length only, never text.
+            if (!offline) {
+              try { trackNow('food_search_empty', { query_length: toBucket('count', q.length) }); } catch (_) { /* telemetry never blocks search */ }
+            }
+          }
         } else if (searchRequestRef.current === requestId) {
           setSearchOffline(false);
         }
@@ -519,7 +532,12 @@ export default function FoodSearchScreen({ navigation, route }) {
   // they were, which is why the old "2 of 3 foods were added" sentence is gone:
   // that half-state can no longer happen.
   async function logPlate() {
-    await writeItems(plate, () => { setPlate([]); setShowPlate(false); });
+    const plateSize = plate.length;
+    const written = await writeItems(plate, () => { setPlate([]); setShowPlate(false); });
+    // Growth telemetry: several foods logged in one go (the plate flow).
+    if (written && plateSize >= 2) {
+      try { trackNow('food_plate_logged', { items: toBucket('count', plateSize) }); } catch (_) { /* telemetry never blocks logging */ }
+    }
   }
 
   // The one write behind the plate AND the typed-line review (D230 R13): the

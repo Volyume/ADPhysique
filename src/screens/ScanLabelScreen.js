@@ -52,6 +52,7 @@ import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr
 import { parseNutritionLabel } from '../lib/food/ocrParser';
 import { pickProductName } from '../lib/food/labelName';
 import { logError } from '../lib/errorLog';
+import { trackNow } from '../lib/telemetry/growth';
 
 // C8 (Wave A): remembers a "skip the name step" choice across scans, so a
 // user who never bothers with front-of-pack photos isn't asked every time.
@@ -117,6 +118,20 @@ export default function ScanLabelScreen({ navigation, route }) {
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [focused, setFocused] = useState(true);
   const cameraRef = useRef(null);
+  const scanEndedRef = useRef(false);
+
+  // Growth telemetry: one food_scan_result per label scan. Never blocks the scan.
+  const emitScan = (outcome) => {
+    try {
+      scanEndedRef.current = true;
+      trackNow('food_scan_result', { method: 'label', outcome });
+    } catch (_) { /* telemetry never blocks the scan */ }
+  };
+  // Closing the scanner before any result is a cancelled scan.
+  const closeScan = () => {
+    if (!scanEndedRef.current) emitScan('cancelled');
+    navigation.goBack();
+  };
   const device = useCameraDevice('back');
   const ocrAvailable = isOcrConfigured();
 
@@ -215,6 +230,7 @@ export default function ScanLabelScreen({ navigation, route }) {
       // with the name (if read) and macros prefilled.
       const nameParam = productName || undefined;
       if (!uri) {
+        emitScan('not_found');
         navigation.replace('AddCustomFood', {
           mealSlot, entryDate, prefillBarcode, prefillName: nameParam,
         });
@@ -224,6 +240,7 @@ export default function ScanLabelScreen({ navigation, route }) {
       const parsed = text ? parseNutritionLabel(text) : null;
       const macros = parsed?.fields || {};
       const confidence = parsed?.confidence || null;
+      emitScan(Object.keys(macros).length > 0 ? 'found' : 'not_found');
 
       // OFF contribution is NOT queued here any more (COMP-022): queuing at
       // capture sent unconfirmed OCR, which contradicts the consent copy
@@ -241,6 +258,7 @@ export default function ScanLabelScreen({ navigation, route }) {
       // into), so the failure is never a dead end, but it is no longer
       // silent: the cause and the step are logged.
       logError('ScanLabel.capture', e, { step, hadBarcode: !!prefillBarcode });
+      if (step !== 'front') emitScan('error');
       if (step === 'front') {
         setSkipRemembered(false);
         setStep('nutrition');
@@ -290,7 +308,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   if (permission !== 'granted') {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-        <ModalHeader title="Scan the label" closePosition="left" onClose={() => navigation.goBack()} />
+        <ModalHeader title="Scan the label" closePosition="left" onClose={closeScan} />
         <View style={styles.fallbackWrap}>
           <Ionicons name="camera-outline" size={48} color={t.colors.textMuted} />
           <Text style={[styles.fallbackTitle, live.fallbackTitle]}>Camera access needed</Text>
@@ -311,7 +329,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   if (!device) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-        <ModalHeader title="Scan the label" closePosition="left" onClose={() => navigation.goBack()} />
+        <ModalHeader title="Scan the label" closePosition="left" onClose={closeScan} />
         <View style={styles.fallbackWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={t.colors.textMuted} />
           <Text style={[styles.fallbackTitle, live.fallbackTitle]}>No camera available</Text>
@@ -332,7 +350,7 @@ export default function ScanLabelScreen({ navigation, route }) {
       <ModalHeader
         title="Scan the label"
         closePosition="left"
-        onClose={() => navigation.goBack()}
+        onClose={closeScan}
         rightAccessory={(
         <TouchableOpacity
           onPress={() => { hapticSelection(); setTorch(v => !v); }}

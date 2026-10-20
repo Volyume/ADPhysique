@@ -48,6 +48,7 @@ import {
   tierLabel, pointsText,
 } from '../lib/challenges/display';
 import { datesLine } from './ChallengeJoinScreen';
+import { trackNow } from '../lib/telemetry/growth';
 
 const COACHING_CARD_BODY = 'Coaching adds up to 20 more points to your score. Without it you can still reach 80.';
 
@@ -78,6 +79,7 @@ export default function ChallengeScreen({ navigation, route }) {
       setChallenge(c);
       setScore(s);
       setPhase('ready');
+      try { trackNow('challenge_viewed', { status: c.status, tier: s?.tier || 'none' }); } catch (_) { /* telemetry only */ }
       // The board is its own best-effort read: a failure never costs the page.
       // A withheld caller's board is null, and nothing says why.
       challengeBoard(challengeId).then(setBoard).catch((e) => {
@@ -114,6 +116,7 @@ export default function ChallengeScreen({ navigation, route }) {
     setLeaving(true);
     try {
       await withdrawFromChallenge(challengeId);
+      try { trackNow('challenge_withdrawn'); } catch (_) { /* telemetry only */ }
       toast.show('You left the challenge.');
       navigation.goBack();
     } catch (e) {
@@ -250,7 +253,7 @@ export default function ChallengeScreen({ navigation, route }) {
           <>
             <BandGap />
             <View style={{ marginHorizontal: t.screenPadding }}>
-              <CoachingSetupCard body={COACHING_CARD_BODY} onPress={() => openCoachingSetup(navigation)} />
+              <CoachingSetupCard body={COACHING_CARD_BODY} surface="challenge" onPress={() => openCoachingSetup(navigation)} />
             </View>
           </>
         ) : null}

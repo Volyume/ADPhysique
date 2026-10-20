@@ -79,6 +79,7 @@ import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO } from '..
 import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
 import { logError } from '../lib/errorLog';
 import { touchTarget } from '../styles/layout';
+import FeatureSeen from '../components/FeatureSeen';
 
 // The week is scheduled onto real dates when added to the diary (day i ->
 // today + i, see applyPlanWeekToDiary), so the picker labels each day with its
@@ -1180,7 +1181,7 @@ export default function MealPlanScreen({ navigation, route }) {
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Meal builder" onBack={() => navigation.goBack()} />
         <View style={{ paddingHorizontal: t.screenPadding }}>
-          <CoachingSetupCard variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
+          <CoachingSetupCard surface="meal_plan" variant="nutrition" onPress={() => openCoachingSetup(navigation)} />
         </View>
       </SafeAreaView>
     );
@@ -1320,6 +1321,7 @@ export default function MealPlanScreen({ navigation, route }) {
           {honestyLine ? <Text style={[styles.honesty, live.honesty]}>{honestyLine}</Text> : null}
           {dayWeightStates.length ? (
             <View style={styles.weightChoiceRow}>
+              <FeatureSeen feature="raw_cooked_toggle" />
               <Text style={[styles.weightChoiceLabel, live.weightChoiceLabel]}>Show weights</Text>
               <Chip
                 label="Raw or dry"
@@ -1892,6 +1894,7 @@ export default function MealPlanScreen({ navigation, route }) {
                 </View>
                 {grocerySheet.dayCount === 1 ? (
                   <View style={styles.weightChoiceRow}>
+                    <FeatureSeen feature="shopping_list_days" />
                     {GROCERY_REPEAT_DAYS.map((n) => (
                       <Chip
                         key={`repeat-${n}`}

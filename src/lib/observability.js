@@ -303,8 +303,14 @@ export const track = {
    * navigator).
    */
   screen(name, params = {}) {
-    setCurrentScreen(name);
-    this.breadcrumb(`screen.${name}`, 'navigation', { name, params });
+    // A private screen (injuries and limitations, the wellbeing check; Q4 and
+    // answer 1a, telemetry/session.js PRIVATE_ROUTES) reaches Sentry and the
+    // logs only as 'Private', with no params (review 2026-10-20).
+    // eslint-disable-next-line global-require
+    const { publicRoute, PRIVATE_SCREEN } = require('./telemetry/session');
+    const shown = publicRoute(name);
+    setCurrentScreen(shown);
+    this.breadcrumb(`screen.${shown}`, 'navigation', shown === PRIVATE_SCREEN ? { name: shown } : { name, params });
   },
 
   /**
@@ -449,8 +455,23 @@ export function instrumentNavigation(navigationRef) {
       const route = getActiveRoute(state);
       if (!route) return;
       if (route.key === lastRouteKey) return;
+      const firstScreen = lastRouteKey == null;
       lastRouteKey = route.key;
       track.screen(route.name, route.params ?? {});
+      // Telemetry brief 2026-10-19: the path through the app (route names
+      // and time on the previous screen only), and on the first screen of
+      // a process, how long the app took to show it.
+      // eslint-disable-next-line global-require
+      const { noteScreen } = require('./telemetry/session');
+      // eslint-disable-next-line global-require
+      const { trackNow } = require('./telemetry/growth');
+      // eslint-disable-next-line global-require
+      const { toBucket } = require('./telemetry/schema');
+      trackNow('screen_viewed', noteScreen(route.name));
+      const bootAt = typeof global !== 'undefined' ? global.__VOLYUME_BOOT_AT : null;
+      if (firstScreen && Number.isFinite(bootAt)) {
+        trackNow('screen_ready', { screen: 'AppStart', ms: toBucket('ms', Date.now() - bootAt) });
+      }
     } catch (_) { /* tolerate */ }
   }
   // 'state' event fires on every nav. Initial state arrives once the

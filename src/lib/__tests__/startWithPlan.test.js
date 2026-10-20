@@ -142,7 +142,7 @@ describe('commitStartWithPlan', () => {
     const result = { ok: true, programmeId: 'prog1', capabilityBlockedCount: 2 };
     generateAndSavePlan.mockResolvedValue(result);
     await expect(commitStartWithPlan('u1', { daysPerWeek: 5 })).resolves.toBe(result);
-    expect(generateAndSavePlan).toHaveBeenCalledWith('u1', { daysPerWeek: 5 });
+    expect(generateAndSavePlan).toHaveBeenCalledWith('u1', { daysPerWeek: 5 }, { telemetryTrigger: 'start_with_plan' });
   });
 });
 

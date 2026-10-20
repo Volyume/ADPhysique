@@ -67,7 +67,7 @@ describe('T1-13: the graded total-block state', () => {
     expect(block).toMatch(/await capabilityPreflight\(user\.id\)/);
     expect(block).toMatch(/offerCapabilityPreflightChoice\(/);
     expect(block).toMatch(/if \(!retryGoAhead\) return;/);
-    expect(block).toMatch(/await generateAndSavePlan\(user\.id, planProfile\)/);
+    expect(block).toMatch(/await generateAndSavePlan\(user\.id, planProfile[,)]/);
   });
 
   test('a non-capability plan_blocked_by_exclusions (or any other failure) still gets the ORIGINAL generic copy, unchanged', () => {

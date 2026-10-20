@@ -38,6 +38,7 @@ import useAppStore from '../store/useAppStore';
 import { spacing } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
+import { trackNow } from '../lib/telemetry/growth';
 import { appAlert } from '../components/AppAlert';
 import {
   loadMe, hasProfile, createPost, setPostNote, listMyGroups,
@@ -273,6 +274,12 @@ export default function CommunityComposeScreen({ navigation, route }) {
         navigation.replace('CommunityPost', { id: updated?.id ?? params.postId });
         return;
       }
+      // Growth telemetry: a Community post is a share. Surface from the story
+      // kind (pr, session = workout; anything else = other); audience from the
+      // chosen visibility (followers, public; groups = gym).
+      const shareSurface = kind === 'pr' ? 'pr' : kind === 'session' ? 'workout' : 'other';
+      const shareAudience = visibility === 'public' ? 'public' : visibility === 'groups' ? 'gym' : 'followers';
+      try { trackNow('share_attempted', { surface: shareSurface, audience: shareAudience }); } catch (_) { /* telemetry never blocks posting */ }
       const created = await createPost({
         kind,
         payload,
@@ -281,6 +288,7 @@ export default function CommunityComposeScreen({ navigation, route }) {
         groupIds: visibility === 'groups' ? groupIds : null,
       });
       if (!created?.id) throw new Error('Post failed.');
+      try { trackNow('share_completed', { surface: shareSurface, audience: shareAudience }); } catch (_) { /* telemetry never blocks posting */ }
       toast.show('Posted to Community', { variant: 'success' });
       navigation.replace('CommunityPost', { id: created.id });
     } catch (e) {

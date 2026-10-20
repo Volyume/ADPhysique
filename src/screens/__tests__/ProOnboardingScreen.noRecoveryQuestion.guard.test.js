@@ -55,7 +55,7 @@ describe('Q5-A: no step of the wizard asks for a recovery level', () => {
     // Coaching-first onboarding (founder brief 2026-10-19): the one gate
     // allowed before it is the streamlined setup's keep-or-rebuild answer,
     // which exists only in coaching mode. Nothing about recovery.
-    const before = fn.slice(0, fitCheck).replace(/\s*if \(coachingMode && !planChoice\) \{ setPlanChoiceAttempted\(true\); haptics\.error\(\); return; \}/, '');
+    const before = fn.slice(0, fitCheck).replace(/\s*if \(coachingMode && !planChoice\) \{ trackNow\([^)]*\); setPlanChoiceAttempted\(true\); haptics\.error\(\); return; \}/, '');
     expect(before).not.toMatch(/validateStep|surfaceGaps|setAttempted|return;/);
   });
 

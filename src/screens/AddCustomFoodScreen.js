@@ -63,6 +63,7 @@ import { audit } from '../lib/observability';
 import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { trackNow } from '../lib/telemetry/growth';
 import { findLocalByBarcode, resolveFoodRef } from '../lib/food/sources/localCache';
 import { scaleMacros } from '../lib/food/macros';
 import Stepper from '../components/Stepper';
@@ -603,6 +604,16 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           return;
         }
       }
+
+      // Growth telemetry: a label scan ended in a saved custom food. Only the
+      // label chain (scan_chain, or the manual route from the label scanner
+      // with a barcode carried) counts; a barcode miss always goes through it.
+      try {
+        const fromScan = route?.params?.from;
+        if (fromScan === 'scan_chain' || (fromScan === 'scan_manual' && prefillBarcode)) {
+          trackNow('food_scan_result', { method: 'label', outcome: 'saved_custom' });
+        }
+      } catch (_) { /* telemetry never blocks the save */ }
 
       // OFF contribution (COMP-022): relocated here from ScanLabel capture so
       // it carries the values the user actually confirmed, plus name/brand.

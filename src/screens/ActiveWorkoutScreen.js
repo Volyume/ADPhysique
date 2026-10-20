@@ -55,6 +55,10 @@ import RecordLine, { recordText, celebrateRecord } from '../components/workout/s
 import { buildExerciseHistory } from '../lib/exerciseHistory';
 import { warmupRamp, DEFAULT_BAR_KG } from '../lib/warmupRamp';
 import Chip from '../components/Chip';
+import { trackNow } from '../lib/telemetry/growth';
+import { toBucket } from '../lib/telemetry/schema';
+import { bump as bumpSessionCount, take as takeSessionCounts } from '../lib/telemetry/workoutSession';
+import { offerWorkoutDiscardReason } from '../lib/telemetry/exitReason';
 import { stepValue, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } from '../lib/keypadEntry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -144,6 +148,8 @@ import HintCaption from '../components/HintCaption';
 // be delivered. Both helpers are non-prompting reads plus the single ask;
 // nothing here touches quiet hours, categories or suppression.
 import { getNotificationPermissionStatus, requestNotificationPermissions } from '../lib/notifications/permissions';
+import useScreenReady from '../lib/telemetry/useScreenReady';
+import FeatureSeen from '../components/FeatureSeen';
 
 // FQ-3 (D96): rir defaults to NULL. The per-set RIR picker is permanently
 // removed (D14/D19), so no set carries a genuine per-set effort rating, and
@@ -341,11 +347,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
     updateSetInCurrentExercise, removeSetFromCurrentExercise, session,
-    startRestTimer, defaultRestSeconds, autoStartRestTimer, openRestViewAfterLog, workoutPrefsLoaded, loadWorkoutPrefs,
+    startRestTimer: startRestTimerStore, defaultRestSeconds, autoStartRestTimer, openRestViewAfterLog, workoutPrefsLoaded, loadWorkoutPrefs,
     endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, dismissReadinessTweak,
     barWeight,
   } = store;
+  // Growth telemetry: every rest timer start is counted for the session summary.
+  const startRestTimer = (seconds) => {
+    bumpSessionCount('rest_timer_uses', activeWorkout?.id);
+    return startRestTimerStore(seconds);
+  };
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   // D229: the Film action and the PR offer. usePhotoSuppression starts
   // suppressed and is true under calm mode, an open ED flag or any failed
@@ -1378,6 +1389,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     if (!workoutPrefsLoaded) loadWorkoutPrefs();
   }, [workoutPrefsLoaded, loadWorkoutPrefs]);
+  // Ready: the live workout is in the store and the device prefs are read.
+  useScreenReady('ActiveWorkout', !!activeWorkout && workoutPrefsLoaded);
 
   useEffect(() => {
     if (!sessionAdjustment?.show || !exercise?.id) return;
@@ -2209,6 +2222,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // (applyExerciseSwap), which carries the slot's sets and reps and updates
     // the plan's facts; it is an edit of the plan, as on the routine screen.
     if (user?.id && exercise?.id && newExercise?.id) {
+      // Growth telemetry (exercise_swapped). The scope is the one the person
+      // chose (swapToPlan). Q4 ruling (2026-08-21, no-outside-party law;
+      // src/lib/planAutoGen.js): "no capability-derived event leaving the
+      // device at all". A Work-around-sheet swap (an injury or limitation the
+      // person declared) is capability derived, so the telemetry NEVER sends
+      // cause 'constraint' and a Work-around swap reports 'choice', the same
+      // as any other pick. A swap made inside the plan's style pool => style;
+      // every other pick => choice.
+      // (causeOverride below is the local swap record, not telemetry, and is
+      // unchanged.)
+      try {
+        bumpSessionCount('swaps', activeWorkout?.id);
+        trackNow('exercise_swapped', {
+          scope: swapToPlan ? 'programme' : 'session',
+          cause: (!workAroundSwapRef.current && swapStylePoolKey && !swapStyleShowAll) ? 'style' : 'choice',
+        });
+      } catch (_) { /* telemetry never blocks the swap */ }
       applyExerciseSwap({
         userId: user.id,
         scope: swapToPlan ? SWAP_SCOPE.PROGRAMME : SWAP_SCOPE.SESSION,
@@ -2372,6 +2402,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       })
       .catch(() => { /* best-effort: a stale draft is harmless and never blocks the finish or discard */ });
   }
+  // Growth telemetry (workout_discarded): sets logged and minutes in, read
+  // before the store is cleared. Never blocks the discard.
+  function trackWorkoutDiscarded() {
+    try {
+      const st = useAppStore.getState();
+      const sets = (st.workoutExercises || []).reduce((sum, e) => sum + (e.sets?.length ?? 0), 0);
+      const mins = st.workoutStartTime ? (Date.now() - st.workoutStartTime) / 60000 : 0;
+      trackNow('workout_discarded', { sets: toBucket('count', sets), duration: toBucket('minutes', mins) });
+      takeSessionCounts(activeWorkout?.id);
+      return sets;
+    } catch (_) { return 0; }
+  }
   async function discardWorkout(errorSource) {
     const discardId = activeWorkout?.id;
     if (!discardId) {
@@ -2397,11 +2439,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         useAppStore.getState().stopRestTimer();
       }
       clearWorkoutDrafts(discardId);
+      const discardedSets = trackWorkoutDiscarded();
       endWorkout();
       // D221 3a: a discard clears presence. Best effort.
       // eslint-disable-next-line global-require
       if (user?.id) require('../lib/community').announceTraining(user.id, false).catch(() => {});
       navigation.goBack();
+      // Optional one-tap reason, once a day, only when some work was thrown
+      // away. Offered after the screen has closed; never blocks (Skip closes it).
+      if (discardedSets > 0) setTimeout(() => { offerWorkoutDiscardReason(user?.id); }, 500);
     } catch (e) {
       logError(errorSource, e, { workoutId: discardId });
       toast.show('Could not discard this workout. Please try again.', { variant: 'error' });
@@ -2421,6 +2467,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // discard-confirm the app already uses once any set is logged.
     if (totalSets === 0 && !hasInProgressSetEntry()) {
       clearWorkoutDrafts(activeWorkout?.id);
+      // Growth telemetry (adversarial review, minor): an empty session thrown
+      // away in one tap is not a discarded workout, so nothing is sent; only
+      // the in-memory counters are forgotten.
+      try { takeSessionCounts(activeWorkout?.id); } catch (_) { /* counters are in memory only */ }
       store.endWorkout();
       // eslint-disable-next-line global-require
       try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
@@ -3968,6 +4018,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     savingEditRef.current = true;
     try {
       await updateWorkoutSet(editingSet.id, { weight, actualReps });
+      bumpSessionCount('edits', activeWorkout?.id);
       updateSetInCurrentExercise(editingSet.id, { weight, actualReps });
       setLoggedSets(prev => prev.map(s => (s.id === editingSet.id ? { ...s, weight, actualReps } : s)));
 
@@ -4195,6 +4246,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       sessionEntry: sessionSetsRef.current.find((x) => x.id === target.id) ?? null,
     });
     removeSetFromCurrentExercise(target.id);
+    bumpSessionCount('discarded_sets', activeWorkout?.id);
     setLoggedSets((prev) => prev.filter((x) => x.id !== target.id));
     // L07-F2: drop this set from the session PR-detection ref so a later set
     // in the same exercise never compares against a deleted set, and clear any
@@ -4233,6 +4285,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const newEvidenceClass = newType === 'warmup' ? null : currentEvidenceClass;
     try {
       await updateWorkoutSet(target.id, { setType: newType, evidenceClass: newEvidenceClass });
+      bumpSessionCount('edits', activeWorkout?.id);
       const fields = { setType: newType, evidenceClass: newEvidenceClass };
       updateSetInCurrentExercise(target.id, fields);
       setLoggedSets((prev) => prev.map((x) => (x.id === target.id ? { ...x, ...fields } : x)));
@@ -4884,6 +4937,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         useAppStore.getState().stopRestTimer();
       }
       clearWorkoutDrafts(activeWorkout.id);
+      // Growth telemetry (workout_session_summary): counts only, as buckets.
+      try {
+        const c = takeSessionCounts(activeWorkout.id);
+        trackNow('workout_session_summary', {
+          edits: toBucket('count', c.edits),
+          swaps: toBucket('count', c.swaps),
+          rest_timer_uses: toBucket('count', c.rest_timer_uses),
+          warmups_added: toBucket('count', c.warmups_added),
+          discarded_sets: toBucket('count', c.discarded_sets),
+        });
+      } catch (_) { /* telemetry never blocks the finish */ }
       endWorkout();
       // D2: the whole-workout completion beat (the vocabulary event
       // existed but was never called anywhere).
@@ -5870,6 +5934,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       toast.show(`This is light enough to start at ${warmupEntryWeight} ${units}. You can begin with your working set today.`, { variant: 'info' });
       return;
     }
+    bumpSessionCount('warmups_added', activeWorkout?.id, rows.length);
     const [first, ...rest] = rows;
     rampAnchorRef.current = warmupEntryWeight;
     setWarmupQueue({
@@ -6610,6 +6675,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               compound exercises only: the "Add warm-up sets" chip below lines
               up the ramp, and still logs nothing until the user ticks. */}
           {canAddWarmups ? (
+            <>
+            <FeatureSeen feature="warmup_chip" />
             <Chip
               label="Add warm-up sets"
               icon="flame-outline"
@@ -6617,6 +6684,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               style={styles.warmupChip}
               accessibilityLabel={`Add warm-up sets before ${exercise?.name ?? 'this exercise'}`}
             />
+            </>
           ) : null}
           <View onLayout={(e) => { tableYRef.current = e?.nativeEvent?.layout?.y ?? 0; }}>
           <SetTable

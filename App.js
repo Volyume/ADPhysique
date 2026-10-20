@@ -318,6 +318,11 @@ class ErrorBoundary extends React.Component {
       incidentId: this.state?.incidentId,
       componentStack: errorInfo?.componentStack?.slice(0, 1200),
     });
+    // Growth telemetry (2026-10-19): the crash screen is about to show.
+    try {
+      // eslint-disable-next-line global-require
+      require('./src/lib/telemetry/growth').errorShown('error_view');
+    } catch (_) { /* telemetry never blocks the recovery screen */ }
     AsyncStorage.setItem(CRASH_LOG_KEY, JSON.stringify({
       incidentId: this.state?.incidentId ?? null,
       message: error?.message || String(error),
@@ -854,6 +859,19 @@ export default function App() {
           if (uidNow) require('./src/lib/energyChoiceEnforce').enforceEnergyChoice(uidNow).catch(() => {});
         } catch (_) { /* never block the foreground */ }
       }
+      // Telemetry brief 2026-10-19: a visit runs from foreground to
+      // background; its summary (length, screens, errors, what it achieved)
+      // is taken the moment it ends, before any await. Adversarial review M1:
+      // the session sees EVERY state change, so only 'background' ends a visit
+      // and only a return from 'background' (or no visit open) starts one; an
+      // inactive to active blip (iOS Control Centre, a permission alert, the
+      // Apple sign-in sheet) neither ends nor restarts it. The decision lives
+      // in telemetry/session.js noteAppState.
+      let visit = null;
+      try {
+        // eslint-disable-next-line global-require
+        visit = require('./src/lib/telemetry/session').noteAppState(state);
+      } catch (_) { visit = null; }
       // Lifecycle telemetry: app_foregrounded fires only AFTER the
       // cold-start event has fired (otherwise the first 'active'
       // transition on mount would double-count with app_cold_start).
@@ -870,6 +888,7 @@ export default function App() {
             const { track } = require('./src/lib/engineTelemetry');
             const event = state === 'active' ? 'app_foregrounded' : 'app_backgrounded';
             track(uid, event, { platform: Platform.OS }).catch(() => {});
+            if (visit) track(uid, 'session_ended', visit).catch(() => {});
           }).catch(() => {});
         } catch (_) {}
       }

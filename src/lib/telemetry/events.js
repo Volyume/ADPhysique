@@ -20,6 +20,23 @@
  * to `deferred: false` once a track() call site lands.
  */
 
+import { EVENT_SCHEMAS } from './schema';
+
+// Schema events that have no emitter and must not get one. Q4 ruling
+// (2026-08-21, no-outside-party law; see the note above and
+// src/lib/planAutoGen.js): no capability-derived event leaves the device at
+// all. The only places that raised coach_recommendation_held and
+// coach_recommendation_dismissed were the injury-episode screen
+// (HowYouTrainScreen: "Keep my plan as it is" and "Not now"), which are
+// capability-derived, and the calorie card's "Keep as is" (CoachOutputScreen),
+// which already records coach_recommendation_declined. Deferred here, so
+// ALLOWED_EVENTS excludes them and a future call site is refused by the
+// transport rather than leaking.
+const NO_EMITTER_SCHEMA_EVENTS = Object.freeze({
+  coach_recommendation_held: 'Q4: the only call site was capability-derived (injury episode hold); no capability-derived event leaves the device',
+  coach_recommendation_dismissed: 'Q4: the injury-episode call site is capability-derived and the calorie card already records coach_recommendation_declined',
+});
+
 export const TELEMETRY_EVENTS = Object.freeze([
   // Panel 2: engine health
   { name: 'ed_pattern_flag_fired',           deferred: false, panel: 2 },
@@ -327,6 +344,14 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'manual_plan_started',             deferred: false, panel: 1 },
   { name: 'manual_plan_saved',               deferred: false, panel: 1 },
   { name: 'plan_replaced',                   deferred: false, panel: 1 },
+
+  // Growth and performance catalogue (founder brief 2026-10-19): every
+  // event in schema.js, with its fields, description and consent rule.
+  // The ones in NO_EMITTER_SCHEMA_EVENTS are catalogued but deferred: nothing
+  // may emit them, so the transport's allow-list refuses them too.
+  ...EVENT_SCHEMAS.map((e) => (NO_EMITTER_SCHEMA_EVENTS[e.name]
+    ? { name: e.name, deferred: true, panel: 7, deferralReason: NO_EMITTER_SCHEMA_EVENTS[e.name] }
+    : { name: e.name, deferred: false, panel: 7 })),
 
   // No signup_started event: it would fire before an account exists, and
   // this pipeline attributes rows to auth.uid() only (no anonymous install

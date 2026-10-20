@@ -8,8 +8,9 @@ import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { touchTarget } from '../styles/layout';
+import { reportHelpOpened } from '../lib/telemetry/helpTopic';
 
-export default function InfoTooltip({ text, size = 14 }) {
+export default function InfoTooltip({ text, size = 14, topic }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -53,7 +54,7 @@ export default function InfoTooltip({ text, size = 14 }) {
     <>
       <TouchableOpacity
         ref={triggerRef}
-        onPress={() => setVisible(true)}
+        onPress={() => { setVisible(true); reportHelpOpened(text, topic); }}
         // U-F-2/U-F-5 (M1): reach the ≥44px WCAG/iOS target via hitSlop so the
         // touch region grows invisibly (no layout reflow) around the small glyph.
         hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}

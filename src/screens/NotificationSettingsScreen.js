@@ -35,6 +35,7 @@ import useAppStore from '../store/useAppStore';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
+import { trackNow } from '../lib/telemetry/growth';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -84,6 +85,15 @@ const DEFAULT_COMMUNITY_QUIET_HOURS = Object.freeze({
 // training_reminder mirror. Deleted under D95 (AUDIT-DEFERRED-TELEMETRY P3-1);
 // the dead path also wrote the prefs blob WHOLESALE, so re-wiring it would
 // have silently dropped every key it did not know about.
+
+// Growth telemetry: a reminder category switched OFF. Mapping to the schema's
+// categories: training reminder -> training; meal reminders -> meals; the three
+// Community toggles -> community; the return and getting-started nudges -> other.
+// This screen has no weigh-in, check-in or master switch, so those values are
+// emitted nowhere here. Never blocks the toggle.
+function trackReminderOff(category) {
+  try { trackNow('reminders_turned_off', { category }); } catch (_) { /* telemetry never blocks */ }
+}
 
 export default function NotificationSettingsScreen({ navigation }) {
   // Volyume is fully free (founder ruling): morning weight, weekly check-in
@@ -394,6 +404,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   }
 
   async function handleTrainingToggle(value) {
+    if (!value) trackReminderOff('training');
     if (value && permissionStatus !== 'granted') {
       appAlert(
         'Notifications disabled',
@@ -418,6 +429,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   // D142: same shape as the activation-nudge toggle below.
   async function handleReturnNudgeToggle(value) {
+    if (!value) trackReminderOff('other');
     setReturnNudgeEnabled(value);
     try {
       const userId = useAppStore.getState().user?.id;
@@ -435,6 +447,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   }
 
   async function handleActivationNudgeToggle(value) {
+    if (!value) trackReminderOff('other');
     setActivationNudgeEnabled(value);
     try {
       // C14 job 3: setCategoryEnabled merges over the existing blob, so
@@ -458,6 +471,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   // the one authority write plus an immediate projection push so an
   // opt-out takes effect before the next ordinary sync.
   async function handleCommunityFollowToggle(value) {
+    if (!value) trackReminderOff('community');
     setCommunityFollowEnabled(value);
     try {
       const userId = useAppStore.getState().user?.id;
@@ -470,6 +484,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   }
 
   async function handleCommunityActivityToggle(value) {
+    if (!value) trackReminderOff('community');
     setCommunityActivityEnabled(value);
     try {
       const userId = useAppStore.getState().user?.id;
@@ -485,6 +500,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   // sent by community-notify off a live event, and the projection is what it
   // reads before delivering.
   async function handleCommunityMessageToggle(value) {
+    if (!value) trackReminderOff('community');
     setCommunityMessageEnabled(value);
     try {
       const userId = useAppStore.getState().user?.id;
@@ -650,6 +666,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   }
 
   function toggleMealReminder(id, value) {
+    if (!value) trackReminderOff('meals');
     const next = mealReminders.map((r) => (r.id === id ? { ...r, enabled: value } : r));
     if (value && permissionStatus !== 'granted') {
       requestNotificationPermissions().then((status) => {

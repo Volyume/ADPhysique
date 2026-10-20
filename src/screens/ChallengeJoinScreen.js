@@ -23,6 +23,8 @@ import {
 import { readPlannedPerWeek } from '../lib/challenges/plannedPerWeek';
 import { loadMe, hasProfile } from '../lib/community/profile';
 import { setGyms } from '../lib/gyms';
+import { trackNow } from '../lib/telemetry/growth';
+import { isCoachingSetUp } from '../lib/coachingSetup';
 
 // Gym challenge SPEC sections 2 (step 6) and 5. Opens from a challenge link or
 // a pending code, strictly AFTER the Article 9 consent gate. Nothing here
@@ -57,6 +59,9 @@ export default function ChallengeJoinScreen({ navigation, route }) {
 
   const paramCode = normaliseChallengeCode(route?.params?.code);
   const [code, setCode] = useState(paramCode);
+  // Telemetry: how the person got here (the gym invite says so; a typed
+  // code sets 'code'; a poster link or the install referrer is 'link').
+  const sourceRef = useRef(route?.params?.source === 'gym_invite' ? 'gym_invite' : 'link');
   // loading | ready | notfound | error
   const [phase, setPhase] = useState('loading');
   const [challenge, setChallenge] = useState(null);
@@ -92,6 +97,7 @@ export default function ChallengeJoinScreen({ navigation, route }) {
       if (!row) { setChallenge(null); setPhase('notfound'); return; }
       setChallenge(row);
       setPhase('ready');
+      try { trackNow('challenge_join_viewed', { source: sourceRef.current, status: row.status }); } catch (_) { /* telemetry only */ }
     } catch (e) {
       if (e?.code === 'not_found') { setChallenge(null); setPhase('notfound'); return; }
       logError('ChallengeJoinScreen.load', e);
@@ -147,6 +153,11 @@ export default function ChallengeJoinScreen({ navigation, route }) {
         adult: true,
       });
       joined = true;
+      try {
+        // eslint-disable-next-line global-require
+        const profile = require('../store/useAppStore').default.getState()?.userProfile;
+        trackNow('challenge_joined', { source: sourceRef.current, coaching: isCoachingSetUp(profile) });
+      } catch (_) { /* telemetry only */ }
       await setChallengeActiveFlag(userId);
       await clearPendingChallenge();
       // A person with a Community profile and no gym yet gets this gym. Best
@@ -252,7 +263,7 @@ export default function ChallengeJoinScreen({ navigation, route }) {
           />
           <Button
             title="Find challenge"
-            onPress={() => { const c = normaliseChallengeCode(typed); if (c) setCode(c); }}
+            onPress={() => { const c = normaliseChallengeCode(typed); if (c) { sourceRef.current = 'code'; setCode(c); } }}
             disabled={!normaliseChallengeCode(typed)}
             style={styles.gap}
           />

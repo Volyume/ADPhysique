@@ -70,6 +70,8 @@ const CLIENT_RPCS = [
   'food_sync_push',
   'record_capability_consent',
   'record_engine_telemetry',
+  // migrate_200: the batched form, the same auth.uid() stamp per row.
+  'record_engine_telemetry_batch',
   'record_health_consent',
   'record_partner_consent',
   'record_rpc_fallback_deletion',

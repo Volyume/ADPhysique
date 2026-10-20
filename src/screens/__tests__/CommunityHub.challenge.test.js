@@ -171,7 +171,7 @@ test('a same-gym non-entrant sees the gym invite, opening the join screen with t
   const view = await render();
   expect(view.text).toContain('Challenge at your gym');
   await act(async () => { findRow(view, 'Challenge at your gym').props.onPress(); });
-  expect(view.navigation.navigate).toHaveBeenCalledWith('ChallengeJoin', { code: 'volt-nov' });
+  expect(view.navigation.navigate).toHaveBeenCalledWith('ChallengeJoin', { code: 'volt-nov', source: 'gym_invite' });
 });
 
 test('anyone else sees no Challenge band at all', async () => {

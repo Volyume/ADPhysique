@@ -1,3 +1,5 @@
+// Telemetry brief 2026-10-19: first, so start-up time is measured from here.
+import './src/lib/telemetry/bootClock';
 import { registerRootComponent } from 'expo';
 import { Platform } from 'react-native';
 import App from './App';

@@ -2540,6 +2540,12 @@ export default function RootNavigator() {
   useEffect(() => {
     if (!bootWaits) return undefined;
     const timer = setTimeout(() => {
+      // Growth telemetry (2026-10-19): one stall per wait still open, name only.
+      try {
+        // eslint-disable-next-line global-require
+        const { emitSetupStageStalled } = require('../lib/telemetry/setupStalled');
+        bootWaits.split(',').forEach(emitSetupStageStalled);
+      } catch (_) { /* telemetry never blocks boot */ }
       _bootLog('warn', 'RootNavigator.bootStalled', `still waiting on ${bootWaits}`);
     }, BOOT_STALL_REPORT_MS);
     return () => clearTimeout(timer);

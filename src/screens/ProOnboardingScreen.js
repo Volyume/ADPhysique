@@ -52,6 +52,8 @@ import {
 } from '../lib/startWithPlan';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { logError } from '../lib/errorLog';
+import { trackNow, trackFeatureSeen } from '../lib/telemetry/growth';
+import { toBucket } from '../lib/telemetry/schema';
 // The equipment answers themselves live in ONE shared list, so this screen
 // and Adjust training (PlanUpdateScreen) can never offer different answers or
 // different wording for the same answer.
@@ -263,6 +265,9 @@ function watchSetupStage(stage, reportAfterMs = 30000) {
   };
   log('logInfo', 'ProOnboarding.stage', `start ${stage}`);
   const timer = setTimeout(() => {
+    // Growth telemetry (2026-10-19): the stall is also counted, stage name only.
+    // eslint-disable-next-line global-require
+    try { require('../lib/telemetry/setupStalled').emitSetupStageStalled(stage); } catch (_) { /* best-effort */ }
     log('logWarn', 'ProOnboarding.stageStalled', `stage=${stage} at=${current}`, {
       stage, at: current, waitedMs: Date.now() - startedAt,
     });
@@ -467,6 +472,14 @@ function capabilityBlockedNote(n) {
     : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
+// Wizard error keys to the telemetry schema's field names; anything else is
+// 'other'. Telemetry only: no answers, just which required field was missing.
+const GAP_FIELD = {
+  sex: 'sex', age: 'age', height: 'height', weight: 'weight', phase: 'phase',
+  archetype: 'archetype', experience: 'experience', sessionLength: 'session_length',
+  days: 'days', equipment: 'equipment',
+};
+
 export default function ProOnboardingScreen({ navigation, route }) {
   const toast = useToast();
   // Coaching-first onboarding (founder brief 2026-10-19): the same wizard,
@@ -598,6 +611,9 @@ export default function ProOnboardingScreen({ navigation, route }) {
     haptics.error();
     const first = order.find((k) => errs[k]);
     if (!first) return;
+    trackNow('onboarding_validation_blocked', {
+      step, field: GAP_FIELD[first] || 'other', mode: coachingMode ? 'coaching_setup' : 'full',
+    });
     scrollToField(groupKey, first);
     const ref = focusRefs?.[first];
     if (ref?.current?.focus) setTimeout(() => ref.current?.focus?.(), 260);
@@ -1284,6 +1300,26 @@ export default function ProOnboardingScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joinHeldForCheck, communityHandleState, step]);
 
+  // Telemetry: the wizard's start (for the completion time) and each step
+  // viewed once per mount.
+  const mountedAtRef = useRef(Date.now());
+  const viewedStepsRef = useRef(new Set());
+  useEffect(() => {
+    if (viewedStepsRef.current.has(step)) return;
+    viewedStepsRef.current.add(step);
+    trackNow('onboarding_step_viewed', { step, mode: coachingMode ? 'coaching_setup' : 'full' });
+  }, [step, coachingMode]);
+  useEffect(() => {
+    if (step === 7 && archetypeApplies(trainingGoal)) trackFeatureSeen('archetype_cards');
+  }, [step, trainingGoal]);
+  function emitOnboardingCompleted(path) {
+    trackNow('onboarding_completed', {
+      path,
+      mode: coachingMode ? 'coaching_setup' : 'full',
+      duration: toBucket('minutes', (Date.now() - mountedAtRef.current) / 60000),
+    });
+  }
+
   function emitStepDone(n) {
     if (!user?.id) return;
     if (emittedStepsRef.current.has(n)) return;
@@ -1291,7 +1327,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
     try {
       // eslint-disable-next-line global-require
       const { track } = require('../lib/engineTelemetry');
-      track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION }).catch(() => {});
+      track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION, mode: coachingMode ? 'coaching_setup' : 'full' }).catch(() => {});
     } catch (_) { /* tolerate */ }
   }
 
@@ -1552,9 +1588,15 @@ export default function ProOnboardingScreen({ navigation, route }) {
     setPayoffShown(true);
   }
 
+  // Adversarial review (minor): a double tap on "See my plan" must send
+  // onboarding_completed once.
+  const seePlanTappedRef = useRef(false);
   async function seePlan() {
+    if (seePlanTappedRef.current) return;
+    seePlanTappedRef.current = true;
     // Land on the plan itself (the Train tab), not Today: the user's one
     // thought at this moment is "show me what you made".
+    emitOnboardingCompleted('coaching');
     setPostSetupLanding('PlansTab');
     await completeFirstRun();
   }
@@ -1811,7 +1853,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
   async function advanceFrom8() {
     Keyboard.dismiss();
     // Coaching mode: keeping or rebuilding the plan is an explicit answer.
-    if (coachingMode && !planChoice) { setPlanChoiceAttempted(true); haptics.error(); return; }
+    if (coachingMode && !planChoice) { trackNow('onboarding_validation_blocked', { step: 8, field: 'plan_choice', mode: 'coaching_setup' }); setPlanChoiceAttempted(true); haptics.error(); return; }
     // D228 Q5-A: step 8 has no required answer any more (the reminders carry
     // their own defaults), so there is no gate to surface here.
     // Schedule fit, checked ONCE, with every answer in hand. A schedule that
@@ -2179,7 +2221,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
           });
           if (goAhead) {
             buildWatch.at('plan_generate');
-            try { planResult = await generateAndSavePlan(user.id, planProfile); }
+            try { planResult = await generateAndSavePlan(user.id, planProfile, { telemetryTrigger: 'onboarding' }); }
             catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
           } else {
             planResult = { ok: false, error: 'capability_preflight_hold' };
@@ -2237,7 +2279,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
                         });
                       });
                       if (!retryGoAhead) return;
-                      const retryResult = await generateAndSavePlan(user.id, planProfile);
+                      const retryResult = await generateAndSavePlan(user.id, planProfile, { telemetryTrigger: 'onboarding' });
                       if (retryResult.ok) {
                         if (retryResult.programmeId) {
                           await markBuildProgress(user.id, { planId: retryResult.programmeId, planSignature });
@@ -2363,6 +2405,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
       cancelSequenceTimers();
       setBusy(false);
       submittingRef.current = false;
+      emitOnboardingCompleted('coaching');
       navigation.replace('ProSetupComplete');
       return;
     }
@@ -2401,7 +2444,9 @@ export default function ProOnboardingScreen({ navigation, route }) {
     let message = 'Coaching is set up. Your plan stays as it is.';
     let variant = 'success';
     const profile = coachingProfileRef.current;
+    let rebuildOutcome = 'none';
     if (planChoice === 'rebuild' && profile && user?.id) {
+      rebuildOutcome = 'failed';
       try {
         const prep = await prepareStartWithPlan(user.id, profile, {
           mode: 'goal',
@@ -2411,6 +2456,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
           message = 'Coaching is set up. The new plan could not be prepared, so your current plan stays. You can rebuild it from Update your plan.';
           variant = 'info';
         } else {
+          rebuildOutcome = 'declined';
           setBusy(false);
           const confirmed = await new Promise((resolve) => {
             planPreviewResolveRef.current = resolve;
@@ -2428,6 +2474,7 @@ export default function ProOnboardingScreen({ navigation, route }) {
               ? 'Coaching is set up and your new plan is ready.'
               : 'Coaching is set up. The new plan did not build, so your current plan stays. You can rebuild it from Update your plan.';
             if (!result?.ok) variant = 'info';
+            rebuildOutcome = result?.ok ? 'built' : 'failed';
           }
           setPlanPreview(null);
         }
@@ -2439,6 +2486,8 @@ export default function ProOnboardingScreen({ navigation, route }) {
     }
     setBusy(false);
     submittingRef.current = false;
+    trackNow('coaching_setup_finished', { plan_choice: planChoice === 'rebuild' ? 'rebuild' : 'keep', rebuild_outcome: rebuildOutcome });
+    emitOnboardingCompleted('quick_start');
     toast.show(message, { variant });
     navigation.goBack();
   }
@@ -3244,7 +3293,7 @@ onBack={coachingMode ? () => navigation.goBack() : undefined}
                   </Text>
                   <ArchetypePicker
                     value={trainingArchetype}
-                    onChange={(v) => { haptics.selection(); setTrainingArchetype(v); }}
+                    onChange={(v) => { haptics.selection(); trackNow('archetype_chosen', { archetype: v, surface: 'onboarding' }); setTrainingArchetype(v); }}
                     error={errors7.archetype}
                   />
                 </View>

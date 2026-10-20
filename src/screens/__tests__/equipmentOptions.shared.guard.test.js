@@ -168,7 +168,7 @@ describe('Adjust training treats a kit answer exactly as first run does', () => 
   test('the generating path is untouched: preview, confirm and keep-block wiring stand', () => {
     expect(planUpdate).toMatch(/const dry = await generatePlanDryRun\(user\.id, updatedProfile\);/);
     expect(planUpdate).toMatch(/confirmPlanSwitchMidBlock\(user\.id, \{ mode: 'rebuild', keepBlock \}\)/);
-    expect(planUpdate).toMatch(/generateAndSavePlan\(user\.id, updatedProfile, \{ keepBlock \}\)/);
+    expect(planUpdate).toMatch(/generateAndSavePlan\(user\.id, updatedProfile, \{ keepBlock(?:, telemetryTrigger: 'rebuild')? \}\)/);
   });
 });
 

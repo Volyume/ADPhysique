@@ -49,6 +49,7 @@ import SharePhotoFramer from '../components/SharePhotoFramer';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
+import { trackNow } from '../lib/telemetry/growth';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import {
   drawShareCard, cardHeight, drawSticker, stickerHeight, sessionLiftsThatFit,
@@ -2142,6 +2143,15 @@ export default function ShareCardScreen({ navigation, route }) {
     // and shares by itself (audit item 1).
     if (video && !toneReady) { setWaitingFor('share'); return; }
     setSharingToStories(true);
+    // Growth telemetry: surface = what is being shared (a video is a clip),
+    // audience = 'external' (the OS share sheet). Never blocks the share.
+    const shareSurface = video ? 'clip'
+      : cardType === 'session' ? 'workout'
+        : cardType === 'weekly' ? 'week'
+          : cardType === 'pr' ? 'pr' : 'other';
+    const trackShare = (event) => {
+      try { trackNow(event, { surface: shareSurface, audience: 'external' }); } catch (_) { /* telemetry never blocks sharing */ }
+    };
     try {
       if (video) {
         const canShareVideo = await Sharing.isAvailableAsync();
@@ -2154,9 +2164,13 @@ export default function ShareCardScreen({ navigation, route }) {
         // The target app may still be reading the file when the sheet
         // returns, so the video is deleted when the screen goes, not here.
         inUseUriRef.current = videoUri;
+        trackShare('share_attempted');
         await Sharing.shareAsync(videoUri, {
           mimeType: 'video/mp4', UTI: 'public.mpeg-4', dialogTitle: 'Share video',
         });
+        // expo-sharing resolves once the sheet closes and reports no action,
+        // so a resolved call is the best "went out" signal it gives.
+        trackShare('share_completed');
         return;
       }
       const uri = await renderCardToFile();
@@ -2167,15 +2181,19 @@ export default function ShareCardScreen({ navigation, route }) {
       exportFilesRef.current.add(uri);
       inUseUriRef.current = uri;
       if (isIos) {
-        await Share.share({ url: uri, message: 'volyume.app' });
+        trackShare('share_attempted');
+        const shared = await Share.share({ url: uri, message: 'volyume.app' });
+        if (shared?.action === Share.sharedAction) trackShare('share_completed');
         return;
       }
       const canShare = await Sharing.isAvailableAsync();
       if (!mountedRef.current) return;
       if (!canShare) { toast.show('Sharing is not available on this device.', { variant: 'warning', duration: 5000 }); return; }
+      trackShare('share_attempted');
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share to Stories',
       });
+      trackShare('share_completed'); // expo-sharing reports no action; resolved = best signal
     } catch (e) {
       logError('ShareCardScreen.share', e, { video });
       if (mountedRef.current) toast.show('The share sheet could not be opened. Try again.', { variant: 'error' });

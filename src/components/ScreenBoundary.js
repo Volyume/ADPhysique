@@ -74,6 +74,11 @@ export class ScreenBoundaryClass extends React.Component {
         componentStack: errorInfo?.componentStack?.slice(0, 1200),
       });
     } catch (_) { /* logging must never re-crash the fallback */ }
+    // Growth telemetry (2026-10-19): the per-screen fallback is about to show.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/telemetry/growth').errorShown('error_view');
+    } catch (_) { /* telemetry must never re-crash the fallback */ }
   }
 
   handleRetry = () => {

@@ -9,6 +9,7 @@
  * or 'nutrition'.
  */
 
+import { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Text from './Text';
 import Card from './Card';
@@ -16,11 +17,18 @@ import Button from './Button';
 import { COACHING_SETUP_COPY } from '../lib/coachingSetup';
 import { spacing, fontSize, fontWeight } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { trackNow, trackOncePerDay, trackFeatureSeen } from '../lib/telemetry/growth';
 
 // `body` replaces the variant's sentence for a surface that has its own reason
 // to set coaching up (the gym challenge screen); the title and action stay.
-export default function CoachingSetupCard({ variant = 'coach', onPress, body: bodyOverride }) {
+export default function CoachingSetupCard({ variant = 'coach', onPress, surface = 'unknown', body: bodyOverride }) {
   const { colors } = useTheme();
+  useEffect(() => {
+    try {
+      trackOncePerDay('coaching_setup_card_shown', { surface }, surface);
+      trackFeatureSeen('coaching_setup_card');
+    } catch (_) { /* telemetry never blocks the card */ }
+  }, [surface]);
   const body = bodyOverride ?? (variant === 'nutrition' ? COACHING_SETUP_COPY.nutritionBody : COACHING_SETUP_COPY.body);
   return (
     <Card testID="coaching-setup-card" style={styles.card}>
@@ -32,7 +40,10 @@ export default function CoachingSetupCard({ variant = 'coach', onPress, body: bo
       </View>
       <Button
         title={COACHING_SETUP_COPY.action}
-        onPress={onPress}
+        onPress={() => {
+          try { trackNow('coaching_setup_started', { entry: surface }); } catch (_) { /* telemetry only */ }
+          if (onPress) onPress();
+        }}
         accessibilityLabel="Set up coaching"
         testID="coaching-setup-card-action"
       />

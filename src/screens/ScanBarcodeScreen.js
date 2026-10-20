@@ -48,6 +48,7 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { trackNow } from '../lib/telemetry/growth';
 import {
   View, StyleSheet, TouchableOpacity, ActivityIndicator,
   Linking, AppState,
@@ -116,11 +117,27 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [focused, setFocused] = useState(true);
   const scanLock = useRef(false);
+  const scanEndedRef = useRef(false);
   const askedRef = useRef(false);
   const device = useCameraDevice('back');
 
+  // Growth telemetry: one food_scan_result per scan attempt. Never blocks the scan.
+  const emitScan = useCallback((outcome) => {
+    try {
+      scanEndedRef.current = true;
+      trackNow('food_scan_result', { method: 'barcode', outcome });
+    } catch (_) { /* telemetry never blocks the scan */ }
+  }, []);
+
+  // Closing the scanner before any result is a cancelled scan.
+  const closeScan = useCallback(() => {
+    if (!scanEndedRef.current) emitScan('cancelled');
+    navigation.goBack();
+  }, [navigation, emitScan]);
+
   useFocusEffect(useCallback(() => {
     setFocused(true);
+    scanEndedRef.current = false;
     scanLock.current = false;
     setResolving(false);
     return () => setFocused(false);
@@ -191,17 +208,20 @@ export default function ScanBarcodeScreen({ navigation, route }) {
       if (food) {
         audit('food.barcode.resolved', { source: food.source ?? 'unknown' });
         logInfo('ScanBarcode.hit', `data=${value} food_ref=${food.food_ref}`);
+        emitScan('found');
         navigation.replace('FoodSearch', {
           mealSlot, entryDate, scannedFood: food,
         });
       } else {
         logInfo('ScanBarcode.miss', `data=${value}`);
+        emitScan('not_found');
         navigation.replace('ScanLabel', {
           mealSlot, entryDate, prefillBarcode: value,
         });
       }
     } catch (e) {
       logError('ScanBarcode.resolveThrew', e, { data: value, message: e?.message });
+      emitScan('error');
       // ST-2: a thrown lookup means the waterfall couldn't answer at all
       // (a genuine "not found" already resolves to `food === null` above
       // and routes to ScanLabel with the barcode prefilled, no exception
@@ -226,7 +246,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
       scanLock.current = false;
       setResolving(false);
     }
-  }, [navigation, userId, mealSlot, entryDate, toast]);
+  }, [navigation, userId, mealSlot, entryDate, toast, emitScan]);
 
   const onCodeScanned = useCallback((codes) => {
     if (scanLock.current) return;
@@ -286,7 +306,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   if (permission !== 'granted') {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-        <ModalHeader title="Scan barcode" closePosition="left" onClose={() => navigation.goBack()} />
+        <ModalHeader title="Scan barcode" closePosition="left" onClose={closeScan} />
         <View style={styles.permissionWrap}>
           <Ionicons name="camera-outline" size={48} color={t.colors.textMuted} />
           <Text style={[styles.permissionTitle, live.permissionTitle]}>Camera access needed</Text>
@@ -320,7 +340,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   if (!device) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-        <ModalHeader title="Scan barcode" closePosition="left" onClose={() => navigation.goBack()} />
+        <ModalHeader title="Scan barcode" closePosition="left" onClose={closeScan} />
         <View style={styles.permissionWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={t.colors.textMuted} />
           <Text style={[styles.permissionTitle, live.permissionTitle]}>No camera available</Text>
@@ -342,7 +362,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
       <ModalHeader
         title="Scan barcode"
         closePosition="left"
-        onClose={() => navigation.goBack()}
+        onClose={closeScan}
         rightAccessory={(
         <TouchableOpacity
           onPress={() => { hapticSelection(); setTorch(v => !v); }}

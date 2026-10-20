@@ -2699,7 +2699,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Coaching decision" onBack={handleClose} />
         <View style={{ paddingHorizontal: t.screenPadding }}>
-          <CoachingSetupCard onPress={() => navigation.navigate('CoachingSetup')} />
+          <CoachingSetupCard surface="coach_output" onPress={() => navigation.navigate('CoachingSetup')} />
         </View>
       </SafeAreaView>
     );
