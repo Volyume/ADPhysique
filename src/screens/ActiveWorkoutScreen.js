@@ -3023,7 +3023,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       } catch (_e) { stampedHistory = rawHistory; }
 
       // Layoff: days since this exercise was last trained (design section
-      // 10.5) - the resolver applies the >7-day 0.9 reduction itself.
+      // 10.5) - the resolver applies the more-than-14-day 0.9 reduction itself, to every lifter (no age gate).
       const lastTs = (rawHistory[0]?.sets || []).reduce((m, s) => Math.max(m, s.createdAt ?? s.created_at ?? 0), 0);
       const layoffDays = lastTs > 0 ? Math.floor((Date.now() - lastTs) / (24 * 60 * 60 * 1000)) : null;
 

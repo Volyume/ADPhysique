@@ -339,7 +339,7 @@ describe('§18 scenario matrix', () => {
     expect(lay.repsTarget).toBe(8);
   });
 
-  test('32c3. G2 / item 17: behaviour table, once-a-week lift, standard and older lifter, 7 to 15 days (reps strictly never above the unflagged baseline)', () => {
+  test('32c3. G2 / item 17: behaviour table, once-a-week lift, 7 to 15 days: no layoff signal (baseline) vs the layoff signal the app sends for EVERY lifter (reps never above baseline)', () => {
     const table = [];
     for (const d of [7, 8, 9, 13, 14, 15]) {
       const hist = [1, 2].map((n) => hSession(NOW - (d + (n - 1) * 7) * DAY, [{ weight: 72.5, reps: 10 }, { weight: 72.5, reps: 9 }]));
@@ -353,6 +353,19 @@ describe('§18 scenario matrix', () => {
       [7, 72.5, 11, 72.5, 11], [8, 72.5, 11, 72.5, 11], [9, 72.5, 11, 72.5, 11],
       [13, 72.5, 11, 72.5, 11], [14, 72.5, 11, 72.5, 11], [15, 72.5, 11, 65.25, 10],
     ]);
+  });
+
+  test('32c4. G2 / item 17: the layoff applies to EVERY lifter at 15 days, standard or older (no age gate; the screen sends layoffDays unconditionally)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'ActiveWorkoutScreen.js'), 'utf8');
+    expect(src).toMatch(/const layoffDays = lastTs > 0 \? Math\.floor\(/);
+    const hist = [1, 2].map((n) => hSession(NOW - (15 + (n - 1) * 7) * DAY, [{ weight: 72.5, reps: 10 }, { weight: 72.5, reps: 9 }]));
+    // The packet has no age field at all: whoever the lifter is, the same input gives the same cut.
+    const rx = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: 15 } }), 1);
+    expect([rx.weight, rx.repsTarget]).toEqual([65.25, 10]);
+    const at14 = resolveSetPrescription(packet({ rawHistory: hist, senior: { layoffDays: 14 } }), 1);
+    expect([at14.weight, at14.repsTarget]).toEqual([72.5, 11]);
   });
 
   test('32d. G2 / item 17: a finished block still resets reps to the band floor (only the layoff reset was dropped)', () => {
