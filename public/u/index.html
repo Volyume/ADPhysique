@@ -17,14 +17,14 @@
 <meta property="og:site_name" content="Volyume">
 <meta property="og:locale" content="en_GB">
 <meta property="og:title" content="A lifter on Volyume">
-<meta property="og:description" content="See how they train, follow them, and give respect. Training facts only, never body data.">
+<meta property="og:description" content="A profile shared on Volyume Community. See how they train and follow them in the app.">
 <meta property="og:image" content="https://volyume.app/assets/share.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="A lifter on Volyume">
-<meta name="twitter:description" content="See how they train, follow them, and give respect. Training facts only, never body data.">
+<meta name="twitter:description" content="A profile shared on Volyume Community. See how they train and follow them in the app.">
 <meta name="twitter:image" content="https://volyume.app/assets/share.png">
 <!--
   Profile page. When the app is installed, the phone opens the app through the
@@ -177,7 +177,7 @@
 
     function shortStoryLabel(post) {
       var payload = post.payload || {};
-      if (post.kind === 'pr') return 'PR: ' + (payload.exerciseName || '');
+      if (post.kind === 'pr') return 'New best: ' + (payload.exerciseName || '');
       if (post.kind === 'session') return payload.sessionName || 'Training session';
       if (post.kind === 'block') return payload.planName || 'Block complete';
       if (post.kind === 'milestone') return payload.title || 'Milestone';

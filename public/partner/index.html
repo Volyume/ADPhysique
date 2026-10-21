@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Training partner invite · Volyume</title>
-<meta name="description" content="Someone invited you to be their training partner on Volyume. It shows whether they trained, and nothing else.">
+<title>Partner invites have moved into Community · Volyume</title>
+<meta name="description" content="Partner invites have moved into Community. Open the link in Volyume to follow each other.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
@@ -16,22 +16,23 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Volyume">
 <meta property="og:locale" content="en_GB">
-<meta property="og:title" content="Training partner invite · Volyume">
-<meta property="og:description" content="Someone invited you to be their training partner on Volyume. It shows whether they trained, and nothing else.">
+<meta property="og:title" content="Partner invites have moved into Community · Volyume">
+<meta property="og:description" content="Partner invites have moved into Community. Open the link in Volyume to follow each other.">
 <meta property="og:image" content="https://volyume.app/assets/share.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Training partner invite · Volyume">
-<meta name="twitter:description" content="Someone invited you to be their training partner on Volyume. It shows whether they trained, and nothing else.">
+<meta name="twitter:title" content="Partner invites have moved into Community · Volyume">
+<meta name="twitter:description" content="Partner invites have moved into Community. Open the link in Volyume to follow each other.">
 <meta name="twitter:image" content="https://volyume.app/assets/share.png">
 <!--
   Training-partner invite landing, kept for invite codes already out in share
   messages. When the app is installed, the phone opens the app through the
-  verified app link for /partner and this page never shows. It is for a partner
-  who does not have the app yet: it says what partners see and links to the
-  store, carrying the code through so it can be used after install.
+  verified app link for /partner and this page never shows. It is for someone
+  who does not have the app yet: it says invites have moved into Community and
+  links to the store, carrying the code through to the Open button. The hidden
+  #code element is the script's target for the code; nothing shows it.
   
   A static host cannot route /partner/CODE to this file, so the 404 page
   forwards it here as ?c=CODE. The page also reads the code from the path or
@@ -80,28 +81,7 @@
     <div class="stack-lg">
       <div class="stack">
         <h1 class="display">Partner invites have moved into Community</h1>
-        <p class="lead">Training partners are now part of Volyume Community. Get the app and follow each other.</p>
-      </div>
-
-      <div class="card">
-        <h2 class="title">What you'll each see</h2>
-        <ul class="rows">
-          <li>Whether each of you trained this week, shown as a simple count like three of four. Never the numbers behind it.</li>
-          <li>A shared streak that you build together, counted in weeks rather than days.</li>
-          <li>A rest week or a quiet week, which simply shows as "Resting". It never counts against either of you and it never breaks the streak.</li>
-          <li>A cheer you can send each other once a day, so a good week never goes unnoticed.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h2 class="title">What neither of you will ever see</h2>
-        <ul class="rows">
-          <li>The weights you lifted, your sets and reps, or anything else from a session.</li>
-          <li>Your body weight, your measurements, or any photos.</li>
-          <li>Your food, your calories, or anything you logged in the diary.</li>
-          <li>Your check-ins, or anything you told the coach.</li>
-          <li>Where you are. Your location is never shared.</li>
-        </ul>
+        <p class="lead">Open the link in Volyume to follow each other.</p>
       </div>
 
       <div class="actions">
@@ -109,8 +89,7 @@
         <a class="button button--secondary" id="store" href="https://play.google.com/store/apps/details?id=app.volyume">Get Volyume</a>
       </div>
 
-      <p class="muted">Your invite code:<br><span class="code-line" id="code">No code in this link</span></p>
-      <p class="muted">Either of you can end the partnership whenever you want. The moment you do, sharing stops and everything that was shared between you is deleted. See our <a href="/privacy/">privacy policy</a>.</p>
+      <span id="code" hidden></span>
     </div>
   </div>
 </main>
