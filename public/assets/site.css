@@ -179,6 +179,7 @@ a:hover {
 /* Words beside a screen. One column on phones, two from tablet width. */
 .split {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-xxl);
   align-items: center;
 }
@@ -586,6 +587,7 @@ a:hover {
 .contents a {
   display: flex;
   align-items: center;
+  min-width: 44px;
   min-height: 44px;
   font-weight: var(--font-weight-medium);
 }
@@ -1249,6 +1251,7 @@ textarea::placeholder {
 /* A choice from a short list, as a full-width row (the survey's options). */
 .chips {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
   gap: var(--space-sm);
 }
 
