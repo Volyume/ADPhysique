@@ -41,3 +41,21 @@ F30 features:369 "a colour-blind safe palette" -> "a palette for colour blindnes
 - F9: privacy policy stays word for word apart from section 6 (no change).
 - F14: TRIM to approved. Keep only "Entry is free, and you can leave at any time." and the free-for-life sentence. Delete "Entry is free and no purchase is needed." Heading "9 Free for life" -> "9 Completing a challenge". "while Volyume's safety check has paused your calorie changes" -> "while your calorie changes are paused". Update the guard allow-list and challengeTermsPage.guard pins to match.
 - F22: KEEP the calories article's weight-trend thesis. Still apply F21 (references), F23, F24 and its 9.3 pivot rewrites; do not rework the thesis.
+
+# Compliance review 2 (2026-10-21): remaining findings and lead rulings
+
+Reviewer: compliance-reviewer on site/rebuild-2026-10 @ 53470ed18. Apply all:
+N1 survey:7,20,27 -> "A short, two-minute survey about how Volyume is working for you."
+N2 public/screenshots/*.jpg (unlinked, still served; 02 shows "Morning weight 198 lbs" and weigh-ins): keep the four URLs working but REPLACE each file's contents with a current compliant crop from public/assets/screens/ (02 -> today, 03 -> train, 05 -> set logged, 06 -> nutrition), same filenames, JPEG.
+N3 assets/share.png: redraw left-aligned and asymmetric (wordmark top-left, tagline left-aligned below), using the N9 tagline; under 150 KB.
+N4 articles/training-volume :84, :90, :92, :110: rewrite the "not X" pivots as plain positives ("More sets help up to a limit."; "signs of tiredness across your whole body.").
+N5 articles/why-explainable :88 and :100: delete "A coaching decision is not the same as an explanation." and "Rules are not cleverer than a large model."; start :100 "For a decision about your own training and food, ..."; drop ", every time" at :97.
+N6 same article :88, :94, :100: "act on your body"/"acts on your health" -> "the one you act on" / "a decision about your training and food".
+N7 articles/when-to-change-your-calories :110 drop the "does more than ... It also" construction (say plainly what weekly reviewing does); :84 -> "A consensus statement on energy balance explains that as your weight changes, the calories your body uses in a day change too [1]."
+N8 index:251, features:352 -> two sentences: "We keep a one-way hash of your email address, to recognise an account that was deleted." and "The record of any prize draw is kept, and no longer links to you."
+N9 "a coach that explains every change" (index H1, every footer partial, og:image:alt, share.png text, how-the-coach-works:21,29 "gives the reason for every change") -> "a coach that shows its reasons" (adapt grammar).
+N10 progress-720.jpg (index:210): crop above "YOUR PROGRESS" so no "Strength up"/PR result shows; trim the alt; workout-summary image: crop off "Strongest workout in 4 weeks" if it is used anywhere.
+N11 screen captions "from a demo account" -> "Screens rendered from the app with demo data."
+N12 volume:84 -> "In young trained men, more than 20 hard sets a muscle a week made no clear difference to the front of the thigh or the biceps compared with 12 to 20, though the triceps gained more." (keep data-explains valid).
+N13 partner -> "Open the link in Volyume, then find the person who sent it and follow each other." (all places).
+N14 challenge-terms "Last updated" -> 21 October 2026 (and its test pin); public/.well-known/README.md: reword as a short plain note with no em dashes and no REPLACE_WITH text (keep the file, it is a served URL); assetlinks.json and AASA untouched.
