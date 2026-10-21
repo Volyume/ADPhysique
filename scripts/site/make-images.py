@@ -8,6 +8,8 @@ Run by hand when an image changes (the outputs are committed):
 
 SCREENS_DIR holds the app screen captures as 1080 x 1920 PNGs named as in
 SCREENS below (the paper-render harness writes them as store/play/*.png).
+A few are cut short (see CROPS), so their height is less than 1280 at 720 wide:
+the page's width and height attributes follow the file.
 
 Writes, under public/assets/:
   screens/NAME-360.webp, NAME-720.webp, NAME-720.jpg
@@ -46,6 +48,23 @@ SCREENS = {
 }
 WIDTHS = (360, 720)
 
+# name on the site -> (top, bottom) rows of the 1080 x 1920 capture to keep.
+# The capture is only ever cut, never edited. Each cut leaves out what the
+# site's wording rules (docs/site-rebuild-2026-10/REVIEW-1.md, F3 and F4)
+# do not allow on a page, so a page never shows it:
+#   today              stops above the card that lists morning weigh-ins and
+#                      the morning weight
+#   train              stops above the plan tools, which name a population
+#   progress           stops above the body card (trend in kg a week)
+#   coaching-decision  stops above the line naming the weigh-ins it is based on
+# Every row count is a multiple of 3, so 360 and 720 wide come out exact.
+CROPS = {
+    'today': (0, 1038),
+    'train': (0, 1005),
+    'progress': (0, 1380),
+    'coaching-decision': (0, 1251),
+}
+
 
 def token(name):
     css = open(os.path.join(ASSETS, 'tokens.css'), encoding='utf-8').read()
@@ -64,9 +83,11 @@ def screens(src_dir):
         im = Image.open(os.path.join(src_dir, capture)).convert('RGB')
         if im.size != (1080, 1920):
             raise SystemExit(capture + ' is ' + str(im.size) + ', expected (1080, 1920)')
+        top, bottom = CROPS.get(name, (0, im.height))
+        im_cut = im.crop((0, top, im.width, bottom))
         for width in WIDTHS:
-            height = round(im.height * width / im.width)
-            small = im.resize((width, height), Image.LANCZOS)
+            height = round(im_cut.height * width / im_cut.width)
+            small = im_cut.resize((width, height), Image.LANCZOS)
             small.save(os.path.join(out, name + '-' + str(width) + '.webp'), 'WEBP', quality=80, method=6)
             if width == max(WIDTHS):
                 small.save(os.path.join(out, name + '-' + str(width) + '.jpg'), 'JPEG',
