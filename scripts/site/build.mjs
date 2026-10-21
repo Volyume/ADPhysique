@@ -20,7 +20,10 @@
  *                            radii, text sizes, line heights, weights and the
  *                            @font-face rules for the faces in fontFamily.js.
  *   assets/fonts/            the app's Inter TTFs and their licence, copied
- *                            from assets/fonts/.
+ *                            from assets/fonts/. The .woff beside each TTF is
+ *                            written by scripts/site/ttf-to-woff.py and kept
+ *                            in step by this build: it stops if one is missing
+ *                            or no longer holds the same font tables.
  *   assets/icons/ionicons.svg  an SVG sprite of exactly the Ionicons the
  *                            pages reference (href="/assets/icons/
  *                            ionicons.svg#NAME"), traced from the Ionicons
@@ -38,6 +41,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -93,7 +97,7 @@ function fontFaces() {
       const weightKey = theme.fontWeight[key] ? key : key.replace(/^display/, '').toLowerCase();
       const weight = theme.fontWeight[weightKey];
       if (!weight) throw new Error(`No font weight for fontFamily.${key}`);
-      return { key, face, family, weight, file: `${face}.ttf` };
+      return { key, face, family, weight, file: `${face}.ttf`, woff: `${face}.woff` };
     });
 }
 
@@ -123,7 +127,8 @@ function buildTokens() {
     lines.push('  font-style: normal;');
     lines.push(`  font-weight: ${f.weight};`);
     lines.push('  font-display: swap;');
-    lines.push(`  src: url("/assets/fonts/${f.file}") format("truetype");`);
+    // WOFF first (about half the bytes), the TrueType file as the fallback.
+    lines.push(`  src: url("/assets/fonts/${f.woff}") format("woff"), url("/assets/fonts/${f.file}") format("truetype");`);
     lines.push('}');
   }
   lines.push('');
@@ -203,6 +208,42 @@ for (const f of fontFaces()) {
   put(`public/assets/fonts/${f.file}`, fs.readFileSync(src));
 }
 put('public/assets/fonts/INTER_LICENSE.txt', fs.readFileSync(path.join(ROOT, 'assets', 'fonts', 'INTER_LICENSE.txt')));
+
+/** The tables of a TrueType file as { tag: Buffer }. */
+function ttfTables(buf) {
+  const out = {};
+  for (let i = 0; i < buf.readUInt16BE(4); i++) {
+    const o = 12 + i * 16;
+    out[buf.toString('latin1', o, o + 4)] = buf.subarray(buf.readUInt32BE(o + 8), buf.readUInt32BE(o + 8) + buf.readUInt32BE(o + 12));
+  }
+  return out;
+}
+
+/** The tables of a WOFF 1.0 file as { tag: Buffer }, each one inflated. */
+function woffTables(buf) {
+  if (buf.toString('latin1', 0, 4) !== 'wOFF') throw new Error('not a WOFF file');
+  if (buf.readUInt32BE(8) !== buf.length) throw new Error('its length field does not match the file');
+  const out = {};
+  for (let i = 0; i < buf.readUInt16BE(12); i++) {
+    const o = 44 + i * 20;
+    const raw = buf.subarray(buf.readUInt32BE(o + 4), buf.readUInt32BE(o + 4) + buf.readUInt32BE(o + 8));
+    out[buf.toString('latin1', o, o + 4)] = buf.readUInt32BE(o + 8) < buf.readUInt32BE(o + 12) ? zlib.inflateSync(raw) : raw;
+  }
+  return out;
+}
+
+// Each TTF has a .woff beside it (scripts/site/ttf-to-woff.py). The WOFF is
+// committed like every other output, so check it still holds the TTF's tables.
+for (const f of fontFaces()) {
+  const woffPath = path.join(PUBLIC, 'assets', 'fonts', f.woff);
+  const hint = `Run: python3 scripts/site/ttf-to-woff.py public/assets/fonts/${f.file}`;
+  if (!fs.existsSync(woffPath)) { problems.push(`public/assets/fonts/${f.woff} is missing. ${hint}`); continue; }
+  const want = ttfTables(fs.readFileSync(path.join(ROOT, 'assets', 'fonts', f.file)));
+  let got;
+  try { got = woffTables(fs.readFileSync(woffPath)); } catch (e) { problems.push(`public/assets/fonts/${f.woff}: ${e.message}. ${hint}`); continue; }
+  const same = Object.keys(want).length === Object.keys(got).length && Object.keys(want).every((tag) => got[tag] && got[tag].equals(want[tag]));
+  if (!same) problems.push(`public/assets/fonts/${f.woff} no longer holds the tables of assets/fonts/${f.file}. ${hint}`);
+}
 
 // ─── 3. Facts ──────────────────────────────────────────────────────────────
 //
