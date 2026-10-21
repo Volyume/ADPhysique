@@ -19,14 +19,19 @@ Writes, under public/assets/:
       the header wordmark at 28, 56 and 84 px tall, cut from
       public/volyume-wordmark.png (which stays as it is: emails use it).
   share.png
-      the 1200 x 630 share image: the wordmark and the site's opening line
-      on the app's dark background, read from public/assets/tokens.css.
+      the 1200 x 630 share image: the wordmark at the top left and the
+      site's opening line below it, left-aligned, on the app's dark
+      background, read from public/assets/tokens.css.
+  ../screenshots/*.jpg
+      the four old store-style URLs, each holding the current crop of one
+      app screen (see LEGACY_SCREENSHOTS).
 
 Nothing here edits public/volyume-wordmark.png, public/volyume-v.png or
 public/favicon.png.
 """
 import os
 import re
+import shutil
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
@@ -55,14 +60,28 @@ WIDTHS = (360, 720)
 #   today              stops above the card that lists morning weigh-ins and
 #                      the morning weight
 #   train              stops above the plan tools, which name a population
-#   progress           stops above the body card (trend in kg a week)
+#   progress           stops above the body card (trend in kg a week) and
+#                      above the Your progress list, so no result shows
 #   coaching-decision  stops above the line naming the weigh-ins it is based on
+#   workout-summary    starts below the card that names the strongest
+#                      workout in recent weeks
 # Every row count is a multiple of 3, so 360 and 720 wide come out exact.
 CROPS = {
     'today': (0, 1038),
     'train': (0, 1005),
-    'progress': (0, 1380),
+    'progress': (0, 966),
     'coaching-decision': (0, 1251),
+    'workout-summary': (849, 1920),
+}
+
+# Four old store-style URLs stay served, though no page links them. Each
+# now holds the current crop of one app screen (REVIEW-1, N2), so none shows
+# what the site's wording rules do not allow. File name -> screen name.
+LEGACY_SCREENSHOTS = {
+    '02_know_what_to_do_today.jpg': 'today',
+    '03_plan_that_moves_with_you.jpg': 'train',
+    '05_log_every_set.jpg': 'set-logged',
+    '06_meals_planned_to_your_targets.jpg': 'nutrition',
 }
 
 
@@ -92,6 +111,11 @@ def screens(src_dir):
             if width == max(WIDTHS):
                 small.save(os.path.join(out, name + '-' + str(width) + '.jpg'), 'JPEG',
                            quality=80, optimize=True, progressive=True)
+    legacy = os.path.join(PUBLIC, 'screenshots')
+    os.makedirs(legacy, exist_ok=True)
+    for file_name, name in LEGACY_SCREENSHOTS.items():
+        shutil.copyfile(os.path.join(out, name + '-' + str(max(WIDTHS)) + '.jpg'),
+                        os.path.join(legacy, file_name))
 
 
 def wordmark_source():
@@ -111,26 +135,25 @@ def wordmark():
 
 
 def share_image():
+    """Left-aligned and asymmetric: the wordmark at the top left, the line
+    below it, also left-aligned, with the right side left empty."""
     width, height = 1200, 630
+    margin = 88
     canvas = Image.new('RGB', (width, height), token('background'))
     mark = wordmark_source()
-    mark_w = 640
+    mark_w = 420
     mark_h = round(mark.height * mark_w / mark.width)
     mark = mark.resize((mark_w, mark_h), Image.LANCZOS)
+    canvas.paste(mark, (margin, margin), mark)
 
-    font = ImageFont.truetype(os.path.join(PUBLIC, 'assets', 'fonts', 'Inter-Medium.ttf'), 40)
-    lines = ['Training, food and a weekly check-in,', 'with a coach that explains every change.']
+    font = ImageFont.truetype(os.path.join(PUBLIC, 'assets', 'fonts', 'Inter-Medium.ttf'), 52)
+    lines = ['Training, food and a weekly check-in,', 'with a coach that shows its reasons.']
     draw = ImageDraw.Draw(canvas)
-    line_h = 54
-    gap = 56
-    block = mark_h + gap + line_h * len(lines)
-    top = (height - block) // 2
-    canvas.paste(mark, ((width - mark_w) // 2, top), mark)
-    y = top + mark_h + gap
+    line_h = 70
+    y = height - margin - line_h * len(lines) + 10
     ink = token('text-primary')
     for line in lines:
-        w = draw.textlength(line, font=font)
-        draw.text(((width - w) / 2, y), line, font=font, fill=ink)
+        draw.text((margin, y), line, font=font, fill=ink)
         y += line_h
     canvas = canvas.quantize(colors=256, method=Image.MEDIANCUT, dither=Image.FLOYDSTEINBERG)
     canvas.save(os.path.join(ASSETS, 'share.png'), 'PNG', optimize=True)
