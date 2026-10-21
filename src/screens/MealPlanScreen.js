@@ -62,6 +62,7 @@ import {
   applyPlanDayMerging,
   applyPlanWeekToDiary,
   planDayMergePlan,
+  readDiaryMealsPerDay,
   describeDayMerge,
   describeWeekMerge,
   repeatPlanDayOnActivePlan,
@@ -592,7 +593,8 @@ export default function MealPlanScreen({ navigation, route }) {
     // diary meal is empty are added; meals that already hold food are skipped
     // and named. Planned rows, if any, are replaced as a group.
     if (eatenCount > 0) {
-      const { entries: wouldAdd, skippedSlots } = planDayMergePlan(day, existing, planStartDate);
+      const diaryMeals = await readDiaryMealsPerDay();
+      const { entries: wouldAdd, skippedSlots } = planDayMergePlan(day, existing, planStartDate, diaryMeals);
       const skippedNames = skippedSlots.map(mealSlotLabel).join(', ');
       if (wouldAdd.length === 0 && skippedSlots.length > 0) {
         appAlert(

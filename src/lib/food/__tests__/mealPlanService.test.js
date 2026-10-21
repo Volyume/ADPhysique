@@ -262,6 +262,17 @@ describe('applyPlanWeekToDiary (Feature B — schedule the week, non-destructive
     expect(r.addedSlots).toEqual(['meal_2']);
   });
 
+  test('the fold uses the diary\'s own meal count: on a two-meal diary a logged Dinner blocks Meal 2', () => {
+    // Lead review 2026-10-21: the diary draws Dinner inside Meal 2 when the
+    // person has two meals a day, so the plan must treat Meal 2 as filled.
+    const day = { slots: [{ slot: 'meal_1', items: [{ foodRef: 'curated:x', quantityG: 100 }] }, { slot: 'meal_2', items: [{ foodRef: 'curated:y', quantityG: 100 }] }] };
+    const two = planDayMergePlan(day, [{ meal_slot: 'dinner' }], '2026-06-15', 2);
+    expect(two.skippedSlots).toEqual(['meal_2']);
+    expect(two.addedSlots).toEqual(['meal_1']);
+    // Without the diary's count the plan's own (at least three) stands in.
+    expect(planDayMergePlan(day, [{ meal_slot: 'dinner' }], '2026-06-15').skippedSlots).toEqual([]);
+  });
+
   test('a snack row does not block a numbered meal', () => {
     const r = planDayMergePlan(
       { slots: [{ slot: 'meal_4', items: [{ foodRef: 'curated:x', quantityG: 100 }] }] },

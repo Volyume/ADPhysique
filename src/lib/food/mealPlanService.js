@@ -46,7 +46,8 @@ import { normalisePreferences, mealAllowed, savedMealAllowed } from './planPrefe
 import { foodExcluded } from './foodRoles';
 import { CURATED_MEALS, dietAllows } from './curatedMeals';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
-import { foldedMealSlot, DEFAULT_MEALS_PER_DAY } from './mealSlots';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { foldedMealSlot, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from './mealSlots';
 import { track } from '../engineTelemetry';
 import { oilyFishCapFromProfile } from './oilyFish';
 
@@ -945,11 +946,18 @@ function plannedEntriesForDay(day, entryDate) {
  * by the caller (clearPlannedDay), so they do not count as "has food".
  * An old-named row (Breakfast, Lunch, Dinner) counts toward the numbered meal
  * it is drawn in (foldedMealSlot), so a logged Breakfast blocks Meal 1.
+ * `diaryMealsPerDay` is the diary's own meals-per-day setting: the fold uses
+ * the same count the diary draws with (and never fewer than the highest
+ * numbered meal already logged), so "this meal already has food" means the
+ * card the person sees. Without it, the plan's own count stands in.
  * Returns { entries, addedSlots, skippedSlots } (slot keys, plan order).
  */
-export function planDayMergePlan(day, existingRows, entryDate) {
+export function planDayMergePlan(day, existingRows, entryDate, diaryMealsPerDay = null) {
   const planSlots = (day?.slots || []).length;
-  const n = Math.max(planSlots, DEFAULT_MEALS_PER_DAY);
+  const pref = Math.trunc(Number(diaryMealsPerDay));
+  const n = Number.isFinite(pref) && pref >= 1
+    ? Math.max(pref, highestLoggedMeal(existingRows || []))
+    : Math.max(planSlots, DEFAULT_MEALS_PER_DAY);
   const eaten = new Set();
   for (const row of existingRows || []) {
     if (row?.is_planned) continue;
@@ -978,10 +986,21 @@ export function planDayMergePlan(day, existingRows, entryDate) {
  * only when there is something to add, so a refusal never strips the day.
  * Eaten rows are never touched. Returns { logged, addedSlots, skippedSlots }.
  */
-export async function applyPlanDayMerging(userId, day, { entryDate, replacePlanned = false, existing = null } = {}) {
+/** The diary's meals-per-day setting, or null when it was never set. */
+export async function readDiaryMealsPerDay() {
+  try {
+    const n = parseInt(await AsyncStorage.getItem('@volyume_meals_per_day'), 10);
+    return Number.isFinite(n) && n >= 1 ? n : null;
+  } catch (_) {
+    return null; // unreadable: the plan's own count stands in
+  }
+}
+
+export async function applyPlanDayMerging(userId, day, { entryDate, replacePlanned = false, existing = null, diaryMealsPerDay } = {}) {
   if (!userId || !day || !entryDate) return { logged: 0, addedSlots: [], skippedSlots: [] };
   const rows = existing || await getFoodEntriesForDay(userId, entryDate);
-  const { entries, addedSlots, skippedSlots } = planDayMergePlan(day, rows, entryDate);
+  const meals = diaryMealsPerDay === undefined ? await readDiaryMealsPerDay() : diaryMealsPerDay;
+  const { entries, addedSlots, skippedSlots } = planDayMergePlan(day, rows, entryDate, meals);
   if (entries.length === 0) return { logged: 0, addedSlots: [], skippedSlots };
   if (replacePlanned) await clearPlannedDay(userId, entryDate);
   const ids = await logFoodEntries(userId, entries);
