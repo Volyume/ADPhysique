@@ -229,6 +229,16 @@ describe('privacy, consent, export and store-copy truth', () => {
     // privacy-policy wording.
     expect(entry32).not.toMatch(/never uploaded|privacy policy|Privacy and legal/i);
     expect({ bad: /\bclips?\b|email|plan again/i.test(entry32) }).toEqual({ bad: false });
+    // 3.3.0 (2026-10-21): new user-facing features only, plain words, no
+    // technical terms and no privacy-policy wording (founder 2026-10-20).
+    const start33 = sheet.indexOf("'3.3.0': [");
+    expect(start33).toBeGreaterThan(-1);
+    const entry33 = sheet.slice(start33, sheet.indexOf('],', start33));
+    expect(entry33).toContain('More ways to sign in');
+    expect(entry33).toContain('oily fish meals a week');
+    expect(entry33).toContain('Settings are grouped more clearly');
+    expect(entry33).not.toMatch(/privacy policy|Privacy and legal|OAuth|identity|OTA|over the air|\u2014/i);
+    expect({ bad: /\bclips?\b|email address|plan again/i.test(entry33) }).toEqual({ bad: false });
     // 3.1.0: the Android setup fix, with the same three founder lines.
     const start31 = sheet.indexOf("'3.1.0': [");
     expect(start31).toBeGreaterThan(-1);

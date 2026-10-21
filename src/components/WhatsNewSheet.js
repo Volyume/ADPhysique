@@ -166,6 +166,16 @@ export const WHATS_NEW = {
   // and what it adds, not our names for it. What's
   // new changes only when the founder bumps the main version with new
   // user-facing features.
+  // 3.3.0 (2026-10-21): the October customer-facing release. New features
+  // only, plain words: sign-in on every phone, meal plans that fill only
+  // empty meals plus the oily fish choice, clearer weekly coaching, and the
+  // regrouped Settings with the vibration switch.
+  '3.3.0': [
+    { icon: 'log-in-outline', text: 'More ways to sign in: Apple now works on Android, and you can add or remove sign-in methods in your account. You can also set a new password from a reset email.' },
+    { icon: 'restaurant-outline', text: 'Meal plans are easier to read, and adding a plan to your diary now fills only the meals you have not logged yet. You can also choose how many oily fish meals a week your plan includes.' },
+    { icon: 'chatbubbles-outline', text: 'Your weekly coaching now says what it saw, what changes and when your coach looks again.' },
+    { icon: 'settings-outline', text: 'Settings are grouped more clearly, with one place for your units and a new switch for vibration.' },
+  ],
   '3.2.0': [
     { icon: 'barbell-outline', text: 'The workout logger has been completely revamped. Logging, fixing a set and finishing a workout are all quicker and smoother.' },
     { icon: 'videocam-outline', text: 'Record videos of your sets and share them on social media with your workout stats on top: your best lifts, PRs, total weight lifted and more. Add a filter, a quote or your own words, and trim it to the best part. Your videos stay private on your device unless you choose to share them.' },
