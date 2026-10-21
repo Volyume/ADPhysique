@@ -78,7 +78,11 @@ describe('wiring guards', () => {
     const nav = read('src/navigation/RootNavigator.js');
     expect(nav).toMatch(/name="SetNewPassword"/);
     expect(nav).toMatch(/name="SettingsSignInMethods"/);
-    expect(nav).toMatch(/recoveryReady = !!user && !user\.isLocal && firstRunComplete && healthConsent === true/);
+    // The consent conditions moved into canOpenPasswordRecovery (review fix,
+    // which also waits for a workout to end); pin both the call and the gate.
+    expect(nav).toMatch(/recoveryReady = canOpenPasswordRecovery\(\{ user, firstRunComplete, healthConsent, workoutActive \}\)/);
+    expect(read('src/lib/passwordRecoveryState.js'))
+      .toMatch(/return !!user && !user\.isLocal && !!firstRunComplete && healthConsent === true && !workoutActive;/);
   });
   test('app.json carries the Google iOS URL scheme plugin option', () => {
     expect(read('app.json')).toMatch(/"iosUrlScheme":\s*"com\.googleusercontent\.apps\./);
