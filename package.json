@@ -15,6 +15,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "check:imports": "node scripts/check-imports.cjs",
+    "site:build": "node scripts/site/build.mjs",
     "progress-scan:calibration": "jest --runTestsByPath src/lib/__tests__/progressScanCalibrationCorpus.test.js --runInBand",
     "progress-scan:calibration-report": "node scripts/run-progress-scan-calibration-report.cjs",
     "progress-scan:replay": "node scripts/run-progress-scan-replay.cjs",
