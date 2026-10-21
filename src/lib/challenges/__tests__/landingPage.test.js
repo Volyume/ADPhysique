@@ -125,8 +125,8 @@ test('the share description claims no draw for everyone who scores', () => {
   const og = html.match(/<meta property="og:description" content="([^"]*)">/)[1];
   const tw = html.match(/<meta name="twitter:description" content="([^"]*)">/)[1];
   expect(og).toBe(tw);
-  expect(og).toContain('70 and above for the main prize draw');
-  expect(og).toContain('50 and above for the second');
+  expect(og).toContain("Reach each prize draw's score to enter it.");
+  expect(og).not.toMatch(/\d+ and above/);
   expect(og).not.toMatch(/everyone who scores/i);
   expect(og).not.toContain('—');
 });
