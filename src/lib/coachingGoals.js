@@ -671,6 +671,25 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
     return pushHighNotes[trainingGoal] ?? pushHighNotes.general;
   }
 
+  // A push week whose volume step was held back (the volume-memory hold or
+  // the coordination gate zero volumeSignal but leave trainingSignal 'push').
+  // The decision card says volume is not rising, so the note must not offer a
+  // step up. Lead review 2026-10-21.
+  if (!(volumeSignal >= 1)) {
+    const steadyNotes = {
+      general:             'Your recovery is solid, and your training carries on as planned this week.',
+      mens_physique:       'Your recovery is solid, and your training carries on as planned this week, shoulders and back included.',
+      classic_physique:    'Your recovery is solid, and your training carries on as planned this week across every muscle group.',
+      bodybuilding:        'Your recovery is solid, and your training carries on as planned this week across every muscle group.',
+      bikini:              'Your recovery is solid, and your training carries on as planned this week, glutes and hamstrings included.',
+      wellness:            'Your recovery is solid, and your training carries on as planned this week, lower body included.',
+      figure:              'Your recovery is solid, and your training carries on as planned this week, shoulders, back and glutes included.',
+      womens_physique:     'Your recovery is solid, and your training carries on as planned this week across every muscle group.',
+      womens_bodybuilding: 'Your recovery is solid, and your training carries on as planned this week across every muscle group.',
+    };
+    return steadyNotes[trainingGoal] ?? steadyNotes.general;
+  }
+
   // volumeSignal === 1, push lightly
   const pushNotes = {
     general:             'Your recovery is solid, so there is room for a small step up in volume.',

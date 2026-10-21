@@ -39,4 +39,10 @@ describe('quick check-in, thin diary', () => {
     expect(SCREEN).toMatch(/good: !quiet && !calsLowCoverage && calsAdherence === 'yes',/);
     expect(SCREEN).toMatch(/row\.good\s+\? <Ionicons name="checkmark-circle"/);
   });
+
+  test('re-opening a check-in with a legacy or empty answer never derives one from a thin diary', () => {
+    // Lead review 2026-10-21.
+    expect(SCREEN).toMatch(/: \(\(calsAdh && loggedRollups\.length >= MIN_INTAKE_DAYS\) \? calsAdh : null\)\);/);
+    expect(SCREEN).not.toMatch(/existingCheckin\.calsAdherence : \(calsAdh \?\? null\)/);
+  });
 });

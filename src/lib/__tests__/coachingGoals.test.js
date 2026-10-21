@@ -259,3 +259,19 @@ describe('day-calorie-cycling gate (single source for coach + meal plan)', () =>
     expect(mod.dayCalorieCyclingAllowed).toBeUndefined();
   });
 });
+
+// Lead review 2026-10-21: a push week whose volume step was held (volume
+// memory or the coordination gate set volumeSignal to 0) must not offer a
+// step up in volume while the decision card says volume is not rising.
+describe('getTrainingNote: a held volume step on a push week', () => {
+  const GOALS = ['general', 'mens_physique', 'classic_physique', 'bodybuilding', 'bikini',
+    'wellness', 'figure', 'womens_physique', 'womens_bodybuilding'];
+  test.each(GOALS)('%s: volumeSignal 0 with push says training carries on, never a step up', (goal) => {
+    const note = getTrainingNote(goal, 0, 'push', false);
+    expect(note).toMatch(/carries on as planned/);
+    expect(note).not.toMatch(/step up/);
+  });
+  test('volumeSignal 1 with push still offers the small step up', () => {
+    expect(getTrainingNote('general', 1, 'push', false)).toMatch(/small step up/);
+  });
+});

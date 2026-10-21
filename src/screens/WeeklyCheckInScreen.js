@@ -665,8 +665,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
               : (existingCheckin.cycleOverride ? 'yes' : 'no'));
             const VALID_CALS = ['yes', 'no', 'untracked'];
             const VALID_PERF = ['exceeded', 'hit', 'struggled', 'dropped'];
+            // Item 12: a legacy or empty stored answer falls back to the diary
+            // only when it can judge the week (MIN_INTAKE_DAYS), as on a first
+            // check-in; otherwise the person answers it themselves.
             setCalsAdherence(VALID_CALS.includes(existingCheckin.calsAdherence)
-              ? existingCheckin.calsAdherence : (calsAdh ?? null));
+              ? existingCheckin.calsAdherence
+              : ((calsAdh && loggedRollups.length >= MIN_INTAKE_DAYS) ? calsAdh : null));
             // Legacy rows (pre-fix) could hold a session-difficulty string in
             // training_performance, which matches no card. Fall back to the
             // derived verdict so the user never sees a stuck non-selection or
