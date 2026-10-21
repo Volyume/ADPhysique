@@ -555,6 +555,13 @@ const GOOGLE_WEB_CLIENT_ID = '520741631478-apaethkp3g55o06lott116jag73l0ves.apps
 // inside the native module.
 const GOOGLE_IOS_CLIENT_ID = '';
 
+// True once the iOS client id above is filled. The sign-in screens hide the
+// Google button on iPhone until then, so nobody taps into the "not available"
+// message. Android never needs the iOS id.
+export function isGoogleIosConfigured() {
+  return Boolean(GOOGLE_IOS_CLIENT_ID);
+}
+
 // Native Google Sign-In: shows the OS account-picker sheet (no browser, no
 // supabase.co URL on screen), returns a Google ID token, and exchanges it with
 // Supabase via signInWithIdToken. Same real account + session as the old
