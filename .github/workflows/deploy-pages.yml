@@ -132,6 +132,24 @@ jobs:
           fi
           echo "No placeholders in the served association files -- safe to publish."
 
+      # The site takes its colours, text sizes, fonts, icons and every number it
+      # states from the app (scripts/site/build.mjs). The generated files are
+      # committed, and this step writes them again from the code being deployed,
+      # so a page can never go out with figures the app no longer has. It runs
+      # before the upload and after the placeholder guard, and changes none of
+      # the .well-known files.
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.22.2
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build the site from the app
+        run: npm run site:build
+
       - name: Upload public/ as artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
