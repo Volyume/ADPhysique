@@ -1466,7 +1466,10 @@ export function runWeeklyCoach(inputs) {
     !cycleOverride &&
     !scoffPositive &&
     currentCalTarget != null &&
-    (calsAdherence !== 'untracked' || foodDiaryStandsIn) &&
+    // Founder 2026-10-21: the rapid-loss raise is a safety correction
+    // (upward only, capped), so it no longer waits for a food answer. An
+    // untracked week still holds every other calorie change.
+    (calsAdherence !== 'untracked' || foodDiaryStandsIn || rapidLossOverride) &&
     (
       rapidLossOverride ||
       (

@@ -23,10 +23,25 @@ describe('quick check-in, thin diary', () => {
     expect(SCREEN).toMatch(/\{ value: 'yes', label: 'Yes' \},\s+\{ value: 'no', label: 'No' \},\s+\{ value: 'untracked', label: "Didn't track" \}/);
   });
 
-  test('it is asked only when the diary is thin and the safety read is not quiet', () => {
+  test('it is asked when the diary is thin, under calm too, never under a flag, a failed read or the unknown state', () => {
     expect(SCREEN).toMatch(/const calsLowCoverage = hasNutritionTarget\s+&& \(autoDerived\.calsMeta\?\.daysLogged \?\? 0\) < MIN_INTAKE_DAYS;/);
-    expect(SCREEN).toMatch(/const calsAsk = calsLowCoverage && !quiet;/);
+    // Founder 2026-10-21: the gate is the tier that withholds weight figures
+    // (an open flag, a failed read, the unknown state; never calm alone).
+    expect(SCREEN).toMatch(/const calsAsk = calsLowCoverage && !withholdWeight;/);
+    expect(SCREEN).toMatch(/const withholdWeight = withholdsWeightFigures\(safety\);/);
     expect(SCREEN).toMatch(/\{calsAsk && \(/);
+  });
+
+  test('the gate, read against the real safety state: calm asks, a flag, a failed read or the unknown state do not', () => {
+    const { deriveSafetyState, withholdsWeightFigures, SAFETY_STATE_UNKNOWN } = require('../../lib/safetyState');
+    const asks = (state) => !withholdsWeightFigures(state);
+    expect(asks(deriveSafetyState({ mode: 'normal', edFlag: null }))).toBe(true);
+    expect(asks(deriveSafetyState({ mode: 'calm', edFlag: null }))).toBe(true);
+    expect(asks(deriveSafetyState({ mode: 'calm', edFlag: { id: 'f' } }))).toBe(false);
+    expect(asks(deriveSafetyState({ mode: 'normal', edFlag: { id: 'f' } }))).toBe(false);
+    expect(asks(deriveSafetyState({ mode: 'normal', edFlag: 'read_failed' }))).toBe(false);
+    expect(asks(deriveSafetyState({ mode: 'read_failed', edFlag: null }))).toBe(false);
+    expect(asks(SAFETY_STATE_UNKNOWN)).toBe(false);
   });
 
   test('the quick path stays open and submit waits for the answer', () => {
