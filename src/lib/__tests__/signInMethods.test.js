@@ -84,8 +84,37 @@ describe('wiring guards', () => {
     expect(read('src/lib/passwordRecoveryState.js'))
       .toMatch(/return !!user && !user\.isLocal && !!firstRunComplete && healthConsent === true && !workoutActive;/);
   });
-  test('app.json carries the Google iOS URL scheme plugin option', () => {
-    expect(read('app.json')).toMatch(/"iosUrlScheme":\s*"com\.googleusercontent\.apps\./);
+  // 2026-10-21: a placeholder iosUrlScheme ("...REPLACE_WITH_IOS_CLIENT_ID")
+  // got iOS build 94 (3.3.0) rejected by App Store Connect (ITMS-90158: URL
+  // schemes must start with a letter and hold only letters, digits, '.', '-'
+  // and '+'). The plugin stays option-free, as it was for every build up to
+  // 3.2.0, until the founder has the real reversed iOS client ID; then the
+  // option and GOOGLE_IOS_CLIENT_ID go in together.
+  test('app.json never carries a placeholder, and every URL scheme is one Apple accepts', () => {
+    const raw = read('app.json');
+    expect(raw).not.toMatch(/REPLACE_WITH|YOUR_|PLACEHOLDER/i);
+    const expo = JSON.parse(raw).expo;
+    const schemes = [];
+    if (expo.scheme) schemes.push(...[].concat(expo.scheme));
+    for (const t of expo.ios?.infoPlist?.CFBundleURLTypes || []) schemes.push(...(t.CFBundleURLSchemes || []));
+    for (const p of expo.plugins || []) {
+      if (Array.isArray(p) && p[1] && typeof p[1].iosUrlScheme === 'string') schemes.push(p[1].iosUrlScheme);
+    }
+    expect(schemes.length).toBeGreaterThan(0);
+    for (const sch of schemes) expect(sch).toMatch(/^[A-Za-z][A-Za-z0-9.+-]*$/);
+  });
+  test('the Google sign-in plugin has an iOS URL scheme only together with a real iOS client ID', () => {
+    const expo = JSON.parse(read('app.json')).expo;
+    const entry = (expo.plugins || []).find((p) => (Array.isArray(p) ? p[0] : p) === '@react-native-google-signin/google-signin');
+    expect(entry).toBeTruthy();
+    const scheme = Array.isArray(entry) ? entry[1]?.iosUrlScheme : null;
+    const configured = /GOOGLE_IOS_CLIENT_ID\s*=\s*'[^']+'/.test(read('src/lib/supabase.js'));
+    if (scheme) {
+      expect(scheme).toMatch(/^com\.googleusercontent\.apps\.[0-9]+-[a-z0-9]+$/);
+      expect(configured).toBe(true);
+    } else {
+      expect(configured).toBe(false);
+    }
   });
   test('sign-in screen carries the Apple hint', () => {
     expect(read('src/components/auth/AuthSheet.js')).toMatch(/If you signed up with Apple, use Apple to sign in\./);

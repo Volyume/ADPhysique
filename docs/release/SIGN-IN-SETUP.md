@@ -15,13 +15,21 @@ build; it is not started here.
 2. Bundle ID: `app.volyume`. Create it.
 3. Copy the **iOS client ID** (looks like
    `1234567890-abc.apps.googleusercontent.com`).
-4. In `app.json`, replace `REPLACE_WITH_IOS_CLIENT_ID` in the
-   `iosUrlScheme` plugin option with the reversed form. For the id above the
-   value is `com.googleusercontent.apps.1234567890-abc` (the client ID with
-   `.apps.googleusercontent.com` reversed to the front).
-5. In `src/lib/supabase.js`, set `GOOGLE_IOS_CLIENT_ID` to the full iOS client
-   ID from step 3. Until it is set, Google on iPhone shows a calm "not
-   available on this build yet" message.
+4. Send the iOS client ID to Claude (or do this yourself) so BOTH of these
+   land in one commit, never one without the other:
+   - in `app.json`, change the plugin entry
+     `"@react-native-google-signin/google-signin"` to
+     `["@react-native-google-signin/google-signin", { "iosUrlScheme": "com.googleusercontent.apps.1234567890-abc" }]`,
+     the reversed form of the client ID (`.apps.googleusercontent.com` moved
+     to the front);
+   - in `src/lib/supabase.js`, set `GOOGLE_IOS_CLIENT_ID` to the full iOS
+     client ID from step 3.
+   Never put a placeholder in `iosUrlScheme`: build 94 (3.3.0) was rejected by
+   App Store Connect for exactly that (ITMS-90158). A guard test
+   (`src/lib/__tests__/signInMethods.test.js`) now fails on any placeholder or
+   on a scheme without the matching client ID.
+5. Until both are set, the Google button stays hidden on iPhone; Apple and
+   email sign-in work as before.
 6. Supabase Dashboard > Authentication > Providers > Google > add the iOS
    client ID to **Authorized Client IDs** (comma separated, after the Web
    client ID already there), so `signInWithIdToken` accepts iPhone tokens.
