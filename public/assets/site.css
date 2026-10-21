@@ -1433,6 +1433,23 @@ textarea::placeholder {
   color: var(--color-text-primary);
 }
 
+/* A name, handle, title or exercise a member typed can be one long word with
+   no break. It wraps wherever it must, and min-width: 0 lets a flex item
+   shrink to the row instead of pushing the page sideways. */
+.author .name,
+.profile h1,
+.profile .handle,
+.profile .meta,
+.community-card .hero,
+.community-card .sub,
+.community-card .k,
+.stat-row > *,
+.lift > *,
+.list-row {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* The one round shape on the site: a person's initials. */
 .avatar {
   display: flex;
