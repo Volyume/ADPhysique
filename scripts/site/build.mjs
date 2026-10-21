@@ -30,6 +30,8 @@
  *                            font the app ships, plus its licence.
  *   assets/facts.json        every number the site states, measured from
  *                            the code (see FACTS below for each method).
+ *   docs/web/privacy.html    a byte copy of public/privacy/index.html (the
+ *                            single copy of the policy; see the note below).
  *   **.html                  the text of every element marked
  *                            data-fact="KEY" set to that fact's text, and the
  *                            shared header and footer (scripts/site/partials/)
@@ -412,6 +414,13 @@ for (const file of walk(PUBLIC)) {
   for (const m of html.matchAll(/\/assets\/icons\/ionicons\.svg#([a-z0-9-]+)/g)) iconNames.add(m[1]);
   if (html !== before) put(rel(file), html);
 }
+
+// The privacy policy has one copy: public/privacy/index.html (public/privacy.html
+// is a redirect to it). docs/web/privacy.html mirrors it byte for byte, because
+// the privacy guards compare every copy of the policy. It is written here, from
+// the finished page, so the two cannot drift. Its links point at the site's own
+// files, so it reads in full but is only styled when served from the site.
+put('docs/web/privacy.html', outputs.get('public/privacy/index.html') || fs.readFileSync(path.join(PUBLIC, 'privacy', 'index.html')));
 
 // ─── 5. Icons: an SVG sprite traced from the app's Ionicons font ───────────
 

@@ -82,8 +82,8 @@ describe('privacy, consent, export and store-copy truth', () => {
   });
 
   test('public privacy/support copy has no stale export, food or billing claims', () => {
+    // public/privacy.html is a redirect to /privacy/ now: one copy of the policy.
     const publicFiles = [
-      readRepoFile('public', 'privacy.html'),
       readRepoFile('public', 'privacy', 'index.html'),
       readRepoFile('public', 'privacy-policy.md'),
       readRepoFile('public', 'support', 'index.html'),
@@ -102,14 +102,13 @@ describe('privacy, consent, export and store-copy truth', () => {
 
   // Founder order 2026-09-26 (register D194 addendum 2): workouts are shared
   // to Community by default, for new and existing members, and the privacy
-  // policy must say so. Every copy (in-app, the two hosted pages, the
-  // Markdown source and the docs/web mirror) carries the disclosure, the
+  // policy must say so. Every copy (in-app, the hosted page, the Markdown
+  // source and the docs/web mirror) carries the disclosure, the
   // way to turn it off, the under-18 audience and the public-link reach,
   // and none may claim again that Volyume has no community.
   test('every privacy policy copy discloses default-on Community sharing', () => {
     const copies = {
       inApp: readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js'),
-      html: readRepoFile('public', 'privacy.html'),
       htmlIndex: readRepoFile('public', 'privacy', 'index.html'),
       markdown: readRepoFile('public', 'privacy-policy.md'),
       docsWeb: readRepoFile('docs', 'web', 'privacy.html'),
@@ -123,9 +122,11 @@ describe('privacy, consent, export and store-copy truth', () => {
       expect({ name, ok: /It never includes your body weight, measurements, food diary, photos or check-ins\./.test(flat) }).toEqual({ name, ok: true });
       expect({ name, bad: /no community/i.test(flat) }).toEqual({ name, bad: false });
     }
-    // The three hosted HTML copies are the same file.
-    expect(copies.htmlIndex).toBe(copies.html);
-    expect(copies.docsWeb).toBe(copies.html);
+    // The policy has one hosted copy, /privacy/ (public/privacy.html redirects
+    // to it), and docs/web/privacy.html mirrors it byte for byte (the site
+    // build, scripts/site/build.mjs, writes the mirror).
+    expect(copies.docsWeb).toBe(copies.htmlIndex);
+    expect(readRepoFile('public', 'privacy.html')).toContain('url=/privacy/');
   });
 
   // Both policy copies promise an in-app notice of a material change. The
@@ -150,7 +151,6 @@ describe('privacy, consent, export and store-copy truth', () => {
   test('every privacy policy copy discloses workout videos as device-only, never uploaded, deleted with the workout', () => {
     const copies = {
       inApp: readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js'),
-      html: readRepoFile('public', 'privacy.html'),
       htmlIndex: readRepoFile('public', 'privacy', 'index.html'),
       markdown: readRepoFile('public', 'privacy-policy.md'),
       docsWeb: readRepoFile('docs', 'web', 'privacy.html'),

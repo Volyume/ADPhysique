@@ -1,7 +1,7 @@
 # Volyume Privacy Policy
 
 **Effective date:** 26 September 2026
-**Last updated:** 17 October 2026
+**Last updated:** 21 October 2026
 
 This policy explains what Volyume collects, why, how it is stored, and how to delete it. Volyume is a training and nutrition self-coaching tool. Your health data stays private: it is never shown to other people, used for advertising or sold. Community, where you can follow other lifters and share your workouts, is optional, and section 5 explains what it shares.
 
@@ -102,9 +102,9 @@ If you are in the top 10, the name you choose and your score are shown to the ot
 
 You can leave a challenge at any time. After you leave, your records are not read for it again and you are taken off its board. We use this data with your explicit consent, which you give when you join. Completing a challenge with a final score of 50 or more earns free for life. Deleting your account deletes all of it, except the record of each prize draw, which is kept so the draw can be checked and no longer links to you once your account is gone.
 
-## 9. Health-app access
+## 9. Health apps
 
-If you opt in, Volyume can read body weight and daily steps and write completed workouts through Apple Health or Health Connect. We do not read heart rate, sleep, or HRV. Health-app permissions are controlled by the operating system and can be revoked there at any time.
+Volyume does not connect to Apple Health or Health Connect. It does not read from or write to any health app on your phone.
 
 ## 10. Deletion and retention
 

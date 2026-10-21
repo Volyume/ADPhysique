@@ -18,7 +18,6 @@ const read = (...p) => fs.readFileSync(path.join(root, ...p), 'utf8').replace(/\
 
 describe.each([
   ['app', read('src', 'screens', 'PrivacyPolicyScreen.js')],
-  ['web', read('public', 'privacy.html')],
   ['webIndex', read('public', 'privacy', 'index.html')],
   ['docsWeb', read('docs', 'web', 'privacy.html')],
   ['markdown', read('public', 'privacy-policy.md')],
