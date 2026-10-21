@@ -129,7 +129,9 @@ describe('stylesheets exist and are generated from the app', () => {
 
   test('the radius tokens are the theme radii and there is no "full" radius', () => {
     const css = S.publicExists(TOKENS) ? S.readPublic(TOKENS) : '';
-    const names = [...css.matchAll(/(--[\w-]*(radius|round|pill|corner)[\w-]*)\s*:\s*([^;]+);/gi)].map((m) => [m[1], m[3].trim()]);
+    // The token word must be a whole name segment: --radius-lg, --corner-md,
+    // never the "round" inside --color-background (lead review 2026-10-21).
+    const names = [...css.matchAll(/(--(?:[\w]+-)*(?:radius|round|rounded|pill|corner)(?:-[\w]+)*)\s*:\s*([^;]+);/gi)].map((m) => [m[1], m[2].trim()]);
     expect(names.length).toBeGreaterThan(0);
     const bad = names.filter(([n, v]) => /full|pill|circle|round(ed)?$/i.test(n) || parseFloat(v) >= 999);
     expect(bad).toEqual([]);
@@ -255,7 +257,10 @@ describe('the site follows the app', () => {
     });
     const named = new Set();
     RULES.forEach((r) => r.decls.forEach((d) => {
-      if (d.prop === 'font-family' || (d.prop.startsWith('--') && /font|family/.test(d.prop))) {
+      // A custom property names a typeface only when it is a family token
+      // (--font-family-*, --font-text, ...): --font-size-* and --font-weight-*
+      // hold sizes and weights, not names (lead review 2026-10-21).
+      if (d.prop === 'font-family' || (d.prop.startsWith('--') && /font|family/.test(d.prop) && !/size|weight|leading|line-height|tracking/.test(d.prop))) {
         d.value.split(',').forEach((f) => { const n = f.trim().replace(/['"]/g, '').toLowerCase(); if (n && !n.startsWith('var(')) named.add(n); });
       }
     }));

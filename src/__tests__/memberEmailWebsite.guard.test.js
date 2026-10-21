@@ -64,7 +64,11 @@ describe('member email website pages', () => {
     expect(scriptSrcs(prefsHtml)).toEqual([]);
     for (const { html } of Object.values(PAGES)) {
       expect(html).not.toMatch(/<script[^>]*\bsrc=["'](?:https?:)?\/\//i);
-      expect(html).not.toMatch(/<link[^>]*rel=["']stylesheet["']/i);
+      // Site rebuild 2026-10-21: these pages share the site's own stylesheets
+      // (same origin, /assets/). Any other stylesheet, and any off-site one,
+      // is still refused.
+      const sheets = [...html.matchAll(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi)].map((m) => (m[0].match(/href=["']([^"']+)["']/i) || [])[1]);
+      sheets.forEach((href) => expect(href).toMatch(/^\/assets\/(site|tokens)\.css(\?[\w=.-]*)?$/));
       expect(html).not.toMatch(/cdn|googleapis|jsdelivr|unpkg/i);
     }
     expect(membersJs).not.toMatch(/\bimport\s*\(|\bimportScripts\b|\beval\s*\(|new Function\(/);

@@ -123,6 +123,9 @@ describe('health apps', () => {
       const page = S.readPage(rel);
       const units = [...S.copyUnits(page, { skipCitations: false }), ...S.scriptCopy(page).flatMap((t) => S.sentencesOf(t).map((s) => ({ where: 'script', text: s })))];
       units.forEach((u) => {
+        // The owner-mandated section 6 heading names the subject, not a link;
+        // its body (pinned above) is the negation (lead review 2026-10-21).
+        if (u.text.trim() === SIX_HEADING) return;
         if (NAMES.test(u.text) && !NEGATED.test(u.text)) out.push(`${rel} [${u.where}] ${u.text.slice(0, 150)}`);
       });
     });
@@ -142,7 +145,9 @@ describe('health apps', () => {
   });
 
   test('the Markdown policy does not claim one either', () => {
-    const out = S.readPublic('privacy-policy.md').split('\n').filter((line) => NAMES.test(line) && !NEGATED.test(line));
+    const out = S.readPublic('privacy-policy.md').split('\n')
+      .filter((line) => !/^##\s+(\d+\.\s+)?Health apps\s*$/.test(line))
+      .filter((line) => NAMES.test(line) && !NEGATED.test(line));
     expect(out).toEqual([]);
   });
 
