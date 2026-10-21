@@ -281,6 +281,24 @@ function bodyBlocks(page, { skipExplained = false, skipCitations = true, skipFac
   return blocks.map((b) => norm(b.text)).filter(Boolean);
 }
 
+/**
+ * Like bodyBlocks, but each block keeps the range of segments it came from, so
+ * a caller can say which element a block sits under: [{text, first, last}].
+ */
+function blocksWithRange(page) {
+  const blocks = [];
+  let cur = null;
+  page.segments.forEach((seg, i) => {
+    if (!cur || cur.block !== seg.block) {
+      cur = { block: seg.block, text: '', first: i, last: i };
+      blocks.push(cur);
+    }
+    cur.text += seg.text;
+    cur.last = i;
+  });
+  return blocks.map((b) => ({ text: norm(b.text), first: b.first, last: b.last })).filter((b) => b.text);
+}
+
 const TEXT_ATTRS = ['alt', 'title', 'aria-label', 'placeholder'];
 const META_TEXT_KEYS = ['description', 'og:title', 'og:description', 'og:image:alt', 'twitter:title', 'twitter:description', 'twitter:image:alt'];
 
@@ -493,7 +511,7 @@ const FORWARDED = [/^\/partner\/[A-Za-z0-9]{8,}\/?$/, /^\/c\/[A-Za-z0-9-]{3,32}\
 module.exports = {
   REPO, PUBLIC, ORIGIN, SUPABASE_HOST,
   allPublicFiles, readPublic, publicExists, sha256, isMembers, htmlFiles, urlOf, cssFiles,
-  decodeEntities, parseHtml, inside, readPage, norm, sentencesOf, bodyBlocks, metaCopy, copyUnits,
+  decodeEntities, parseHtml, inside, readPage, norm, sentencesOf, bodyBlocks, blocksWithRange, metaCopy, copyUnits,
   scriptStrings, scriptCopy, explainedRanges, citationRanges, factRanges,
   parseCss, declarations, pageCss, allCss,
   imageSizeOf, imageSize, fileSize,

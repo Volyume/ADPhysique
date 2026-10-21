@@ -20,6 +20,7 @@ const R = require('./siteRules');
 const { declProblems } = require('./siteCssRules');
 const L = require('./siteLinks');
 const F = require('./siteFacts');
+const P = require('./sitePolicy');
 
 const hits = (rules, text) => rules.filter(([, test]) => (typeof test === 'function' ? test(text) : test.test(text))).map(([name]) => name);
 
@@ -382,5 +383,22 @@ describe('the facts helpers', () => {
     expect(noun('Nine physique goals to choose from.')).toEqual(['9 physique goals']);
     expect(noun('Pick 3 exercises, 5 meals a day, one training style and 2 plans.')).toEqual([]);
     expect(noun('A 4-week plan with 12 sets.')).toEqual([]);
+  });
+});
+
+describe('the policy reader', () => {
+  test('splits a policy into its lead-in and numbered sections, whatever the layout', () => {
+    // policyOf reads a file under public/, so build the same structure through the reader's parts.
+    const page = S.parseHtml('<header><h1>Privacy policy</h1></header><main><p>Last updated: 1 May 2026</p><p>Intro text.</p><section><h2><span>1</span> One</h2><p>First.</p><ul><li>Item A</li><li>Item B</li></ul></section><section><h2><span>2</span> Two</h2><p>Second.</p></section></main><footer><p>Footer text</p></footer>');
+    const main = page.elements.find((e) => e.name === 'main');
+    const blocks = S.blocksWithRange(page).filter((b) => b.first >= main.start && b.last < main.end);
+    expect(blocks.map((b) => b.text)).toEqual(['Last updated: 1 May 2026', 'Intro text.', '1 One', 'First.', 'Item A', 'Item B', '2 Two', 'Second.']);
+    expect(P.policyOf).toBeInstanceOf(Function);
+  });
+
+  test('takes the health-app section and the date out of the Markdown, and the numbers off the headings', () => {
+    const md = '# Policy\n\n**Last updated:** 17 October 2026\n\n## 1. One\n\nText one.\n\n## 2. Health-app access\n\nOld claim.\n\n## 3. Three\n\nText three.\n';
+    expect(P.markdownWithoutHealth(md)).toBe('# Policy\n\n\n## One\n\nText one.\n\n## Three\n\nText three.\n');
+    expect(P.markdownWithoutHealth(md.replace('Health-app access', 'Health apps'))).toBe(P.markdownWithoutHealth(md));
   });
 });
