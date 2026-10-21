@@ -3,24 +3,122 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
 <title>Open Volyume</title>
-<meta name="theme-color" content="#0D0D0D">
-<style>
-  html{color-scheme:dark}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-  padding:24px;background:#0d0d0d;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-  main{max-width:440px;text-align:center;background:#191917;border:1px solid #2e2e2c;border-radius:20px;padding:40px 32px}
-  p{color:#aaa;line-height:1.6}.btn{display:inline-block;background:#e08c0b;color:#0d0d0d;font-weight:700;
-  text-decoration:none;border-radius:12px;padding:13px 24px}
-</style>
+<meta name="description" content="Open Volyume to finish signing in. This page hands your secure sign-in link to the app.">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Volyume">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Open Volyume">
+<meta property="og:description" content="Open Volyume to finish signing in. This page hands your secure sign-in link to the app.">
+<meta property="og:image" content="https://volyume.app/assets/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Open Volyume">
+<meta name="twitter:description" content="Open Volyume to finish signing in. This page hands your secure sign-in link to the app.">
+<meta name="twitter:image" content="https://volyume.app/assets/share.png">
 </head>
 <body>
-  <main>
-    <h1>Continue in Volyume</h1>
-    <p>If Volyume is installed, open it to finish this secure sign-in.</p>
-    <a id="open" class="btn" href="volyume://auth-callback">Open Volyume</a>
-    <p>If the app is not installed, install it and request a new email link. Authentication details are not displayed on this page.</p>
-  </main>
+<!-- site:header -->
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume">
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul class="site-nav__list">
+        <li><a class="site-nav__link" href="/features/">Features</a></li>
+        <li><a class="site-nav__link" href="/how-the-coach-works/">How the coach works</a></li>
+        <li><a class="site-nav__link" href="/articles/">Articles</a></li>
+        <li><a class="site-nav__link" href="/support/">Support</a></li>
+      </ul>
+    </nav>
+    <a class="button button--primary site-header__get" href="/get/">Get the app</a>
+    <details class="site-menu">
+      <summary class="site-menu__toggle">
+        <svg class="icon site-menu__open" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#menu-outline"></use></svg>
+        <svg class="icon site-menu__close" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#close-outline"></use></svg>
+        <span class="site-menu__label">Menu</span>
+      </summary>
+      <nav class="site-menu__panel" aria-label="Main">
+        <ul class="site-menu__list">
+          <li><a class="site-menu__link" href="/features/">Features</a></li>
+          <li><a class="site-menu__link" href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a class="site-menu__link" href="/articles/">Articles</a></li>
+          <li><a class="site-menu__link" href="/support/">Support</a></li>
+          <li><a class="site-menu__link" href="/get/">Get the app</a></li>
+        </ul>
+      </nav>
+    </details>
+  </div>
+</header>
+<!-- /site:header -->
+
+<main id="main" class="working">
+  <div class="container container--narrow">
+    <div class="stack-lg">
+      <h1 class="display">Continue in Volyume</h1>
+      <p class="lead">If Volyume is installed, open it to finish this secure sign-in.</p>
+      <div class="actions"><a id="open" class="button button--primary" href="volyume://auth-callback">Open Volyume</a></div>
+      <p class="body">If the app is not installed, install it and request a new email link. Authentication details are not displayed on this page.</p>
+    </div>
+  </div>
+</main>
+
+<!-- site:footer -->
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__about">
+      <a class="brand" href="/">
+        <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume" loading="lazy">
+      </a>
+      <p>Training, food and a weekly check-in, with a coach that explains every change. On iPhone and Android.</p>
+    </div>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Get the app</h2>
+        <ul class="site-footer__list">
+          <li><a href="https://apps.apple.com/gb/app/volyume/id6777083702">App Store, for iPhone</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=app.volyume">Google Play, for Android</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Volyume</h2>
+        <ul class="site-footer__list">
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a href="/articles/">Articles</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Help</h2>
+        <ul class="site-footer__list">
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/challenge-terms/">Challenge terms</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Contact</h2>
+        <ul class="site-footer__list">
+          <li><a class="site-footer__email" href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@<wbr>gmail.com</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="site-footer__legal">&copy; 2026 Volyume</p>
+  </div>
+</footer>
+<!-- /site:footer -->
 <script>
   (function(){
     // Compatibility fallback only. The HTTPS URL is the authoritative route

@@ -3,127 +3,166 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Volyume articles: training and nutrition decisions</title>
-<meta name="description" content="Practical, evidence-led articles on the decisions self-coached lifters actually have to make: when to change calories, when to add sets, and why an explainable coaching decision matters.">
-<link rel="icon" type="image/png" href="/favicon.png">
-<meta name="theme-color" content="#0D0D0D">
-<meta name="robots" content="index, follow">
+<title>Articles: training and calorie decisions in plain English</title>
+<meta name="description" content="Plain-English articles on three decisions: when to change your calories, when to add sets, and why a coach that shows its reasons is easier to trust.">
 <link rel="canonical" href="https://volyume.app/articles/">
+<meta name="robots" content="index, follow">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Volyume articles: training and nutrition decisions">
-<meta property="og:description" content="Practical, evidence-led articles on the decisions self-coached lifters actually have to make.">
+<meta property="og:site_name" content="Volyume">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Volyume articles">
+<meta property="og:description" content="Plain-English articles on when to change your calories, when to add sets, and why a coach should show its reasons.">
 <meta property="og:url" content="https://volyume.app/articles/">
-<style>
-  :root{
-    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
-    --border:#6E6E6E; --borderSubtle:#2E2E2C;
-    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
-    --silver:#C0C0C0;
-    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    --nav-h:78px;
-  }
-  *{box-sizing:border-box;}
-  html{color-scheme:dark;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
-    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
-  a{color:inherit; text-decoration:none;}
-  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
-  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
-    font-weight:700; font-size:14px; border-radius:12px; padding:10px 16px; cursor:pointer; border:1px solid transparent;
-    transition:background-color .2s cubic-bezier(.2,0,0,1);}
-  .btn-primary{background:var(--amberFill); color:var(--bg);}
-  .btn-primary:hover{background:var(--amber);}
-  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
-    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--borderSubtle);}
-  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
-  .brand{display:flex; align-items:center; gap:10px;}
-  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
-  nav .navlinks{display:flex; gap:26px; align-items:center;}
-  nav .navlinks a{color:var(--textSecondary); font-size:15px; font-weight:600;}
-  nav .navlinks a:hover{color:var(--amber);}
-
-  .hub{padding:calc(var(--nav-h) + 56px) 0 24px;}
-  .hub h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(34px,6vw,48px); line-height:1.08; margin:0;}
-  .hub .intro{color:var(--textSecondary); font-size:18px; line-height:1.6; margin:22px 0 0; max-width:70ch;}
-  .list{display:flex; flex-direction:column; gap:20px; margin:40px 0 0;}
-  .card{display:block; background:var(--surface); border:1px solid var(--borderSubtle); border-radius:16px; padding:26px;
-    transition:border-color .2s;}
-  .card:hover{border-color:var(--amber);}
-  .card h2{font-weight:700; font-size:20px; letter-spacing:-0.3px; margin:0 0 8px;}
-  .card p{color:var(--textSecondary); font-size:15px; line-height:1.55; margin:0;}
-  .card .more{color:var(--amber); font-size:14px; font-weight:600; margin:14px 0 0; display:inline-block;}
-
-  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:48px;}
-  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
-  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
-  footer a{color:var(--textMuted); font-size:14px;}
-  footer a:hover{color:var(--amber);}
-  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
-
-  @media(max-width:600px){
-    :root{--nav-h:60px;}
-    .wrap{padding:0 16px;}
-    nav .navlinks{gap:16px;}
-    nav .navlinks a{font-size:14px;}
-    .hub h1{font-size:32px;}
-  }
-</style>
+<meta property="og:image" content="https://volyume.app/assets/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Volyume articles">
+<meta name="twitter:description" content="Plain-English articles on when to change your calories, when to add sets, and why a coach should show its reasons.">
+<meta name="twitter:image" content="https://volyume.app/assets/share.png">
 </head>
-<body>
-
-<nav>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+<body data-section="articles">
+<!-- site:header -->
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume">
     </a>
-    <div class="navlinks">
-      <a href="/articles/">Articles</a>
-      <a href="/privacy/">Privacy</a>
-      <a href="https://play.google.com/store/apps/details?id=app.volyume" class="btn btn-primary">Get it on Google Play</a>
-    </div>
+    <nav class="site-nav" aria-label="Main">
+      <ul class="site-nav__list">
+        <li><a class="site-nav__link" href="/features/">Features</a></li>
+        <li><a class="site-nav__link" href="/how-the-coach-works/">How the coach works</a></li>
+        <li><a class="site-nav__link" href="/articles/">Articles</a></li>
+        <li><a class="site-nav__link" href="/support/">Support</a></li>
+      </ul>
+    </nav>
+    <a class="button button--primary site-header__get" href="/get/">Get the app</a>
+    <details class="site-menu">
+      <summary class="site-menu__toggle">
+        <svg class="icon site-menu__open" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#menu-outline"></use></svg>
+        <svg class="icon site-menu__close" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#close-outline"></use></svg>
+        <span class="site-menu__label">Menu</span>
+      </summary>
+      <nav class="site-menu__panel" aria-label="Main">
+        <ul class="site-menu__list">
+          <li><a class="site-menu__link" href="/features/">Features</a></li>
+          <li><a class="site-menu__link" href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a class="site-menu__link" href="/articles/">Articles</a></li>
+          <li><a class="site-menu__link" href="/support/">Support</a></li>
+          <li><a class="site-menu__link" href="/get/">Get the app</a></li>
+        </ul>
+      </nav>
+    </details>
   </div>
-</nav>
+</header>
+<!-- /site:header -->
 
-<main class="hub">
-  <div class="wrap">
-    <h1>Articles</h1>
-    <p class="intro">Practical, evidence-led writing on the decisions self-coached lifters actually have to make each week. Useful on their own, whether or not you use Volyume.</p>
-    <div class="list">
-      <a class="card" href="/articles/when-to-change-your-calories/">
-        <h2>When should you actually change your calories? A decision framework</h2>
-        <p>Trend versus noise, how many weigh-ins you need, and why the honest default is often to hold rather than change.</p>
-        <span class="more">Read the article</span>
-      </a>
-      <a class="card" href="/articles/training-volume-when-to-add-sets/">
-        <h2>Training volume: how to know when to add sets (and when to hold)</h2>
-        <p>Volume landmarks in plain language, the signals that justify adding sets, when to deload, and why more is not always better.</p>
-        <span class="more">Read the article</span>
-      </a>
-      <a class="card" href="/articles/why-explainable-coaching-beats-black-box/">
-        <h2>Why an explainable coaching decision beats a black-box one</h2>
-        <p>The honest case for deterministic, auditable coaching over a generative black box, fair to both sides.</p>
-        <span class="more">Read the article</span>
-      </a>
+<main id="main">
+
+  <section class="page-intro" aria-labelledby="page-title">
+    <div class="container stack-lg">
+      <h1 class="display" id="page-title">Articles</h1>
+      <p class="lead">Plain writing on decisions every lifter faces. Each one is useful on its own, with or without Volyume.</p>
     </div>
-  </div>
+  </section>
+
+  <section class="section section--plain" aria-label="All articles">
+    <div class="container">
+      <ul class="article-list">
+        <li>
+          <a class="article-card" href="/articles/when-to-change-your-calories/">
+            <h2 class="title">When to change your calories, and when to hold</h2>
+            <p>How to tell a real trend from day-to-day noise, how many weigh-ins you need, and why holding is often the honest choice.</p>
+            <span class="article-card__more">Read the article<svg class="icon" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#arrow-forward"></use></svg></span>
+          </a>
+        </li>
+        <li>
+          <a class="article-card" href="/articles/training-volume-when-to-add-sets/">
+            <h2 class="title">How to know when to add sets, and when to hold</h2>
+            <p>How many hard sets a muscle needs each week, the signs that it is time to add one, and when to hold or take a lighter week.</p>
+            <span class="article-card__more">Read the article<svg class="icon" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#arrow-forward"></use></svg></span>
+          </a>
+        </li>
+        <li>
+          <a class="article-card" href="/articles/why-explainable-coaching-beats-black-box/">
+            <h2 class="title">Why a coach that shows its reasons beats a black box</h2>
+            <p>Why a coaching decision with its reason written down is easier to trust than an answer from a black box.</p>
+            <span class="article-card__more">Read the article<svg class="icon" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#arrow-forward"></use></svg></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="get-title">
+    <div class="container stack-lg">
+      <h2 class="heading" id="get-title">Try it in Volyume</h2>
+      <p class="body">Volyume is on the App Store for iPhone and on Google Play for Android.</p>
+      <div class="store-buttons">
+          <a class="button button--secondary store-button" href="https://apps.apple.com/gb/app/volyume/id6777083702">
+            <span class="store-button__text"><span class="store-button__platform">For iPhone</span><span class="store-button__store">App Store</span></span>
+          </a>
+          <a class="button button--secondary store-button" href="https://play.google.com/store/apps/details?id=app.volyume">
+            <span class="store-button__text"><span class="store-button__platform">For Android</span><span class="store-button__store">Google Play</span></span>
+          </a>
+        </div>
+    </div>
+  </section>
+
 </main>
 
-<footer>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
-    </a>
-    <div class="links">
-      <a href="/privacy/">Privacy</a>
-      <a href="/support/">Support</a>
-      <a href="/articles/">Articles</a>
-      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+<!-- site:footer -->
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__about">
+      <a class="brand" href="/">
+        <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume" loading="lazy">
+      </a>
+      <p>Training, food and a weekly check-in, with a coach that explains every change. On iPhone and Android.</p>
     </div>
-    <p class="copy">© 2026 Volyume</p>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Get the app</h2>
+        <ul class="site-footer__list">
+          <li><a href="https://apps.apple.com/gb/app/volyume/id6777083702">App Store, for iPhone</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=app.volyume">Google Play, for Android</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Volyume</h2>
+        <ul class="site-footer__list">
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a href="/articles/">Articles</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Help</h2>
+        <ul class="site-footer__list">
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/challenge-terms/">Challenge terms</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Contact</h2>
+        <ul class="site-footer__list">
+          <li><a class="site-footer__email" href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@<wbr>gmail.com</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="site-footer__legal">&copy; 2026 Volyume</p>
   </div>
 </footer>
-
+<!-- /site:footer -->
 </body>
 </html>

@@ -53,6 +53,11 @@ const {
 // "Content rules", and the owner's answer on the terms' free-entry sentence).
 const FREE_FOR_LIFE = 'Completing a challenge with a final score of 50 or more earns free for life.';
 const FREE_ENTRY = 'Entry is free, and you can leave at any time.';
+// The terms' other legal free-entry sentence (section 3, How to enter), now
+// without its old second half "Volyume is free.", and the heading of the
+// terms' section 9. Nothing else on the challenge pages may carry a price word.
+const FREE_ENTRY_NO_PURCHASE = 'Entry is free and no purchase is needed.';
+const FREE_FOR_LIFE_HEADING = '9 Free for life';
 // /privacy.html becomes a redirect to /privacy/ (BRIEF.md, stage 1 answers);
 // until it does, it is treated as the same legal text so the real failures
 // stand out. site.privacy.guard.test.js pins that it ends up a redirect.
@@ -60,7 +65,7 @@ const POLICY_PAGES = ['privacy/index.html', 'privacy.html'];
 const LEGAL_PAGES = [...POLICY_PAGES, 'challenge-terms/index.html'];
 const PRICE_ALLOWED = {
   'c/index.html': [FREE_FOR_LIFE],
-  'challenge-terms/index.html': [FREE_FOR_LIFE, FREE_ENTRY],
+  'challenge-terms/index.html': [FREE_FOR_LIFE, FREE_ENTRY, FREE_ENTRY_NO_PURCHASE, FREE_FOR_LIFE_HEADING],
   // Section 9 of the privacy policy: existing legal text, kept word for word.
   // The policy's text is checked separately for being unchanged.
   'privacy/index.html': [FREE_FOR_LIFE],

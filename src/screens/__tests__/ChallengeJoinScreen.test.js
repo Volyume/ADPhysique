@@ -71,7 +71,6 @@ jest.mock('../../components/ConsentCheckboxRow', () => (props) => {
 
 const {
   CHALLENGE_CONSENT_TEXT, CHALLENGE_CONSENT_VERSION, CHALLENGE_FINISHED_LINE, FREE_FOR_LIFE_JOIN_LINE,
-  FREE_FOR_LIFE_LANDING_LINE,
 } = require('../../lib/challenges/copy');
 const ChallengeJoinScreen = require('../ChallengeJoinScreen').default;
 
@@ -179,9 +178,11 @@ test('landing page carries the free-for-life line verbatim', () => {
   const fs = require('fs');
   const path = require('path');
   const html = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'public', 'c', 'index.html'), 'utf8');
-  const line = 'Volyume is free. Completing a challenge with a final score of 50 or more earns free for life.';
-  expect(FREE_FOR_LIFE_LANDING_LINE).toBe(line);
-  expect(html).toContain(line);
+  // The page carries the app's own line and nothing about price beside it.
+  const line = 'Completing a challenge with a final score of 50 or more earns free for life.';
+  expect(FREE_FOR_LIFE_JOIN_LINE).toBe(line);
+  expect(html).toContain(`>${line}</p>`);
+  expect(html).not.toContain('Volyume is free');
 });
 
 test('the adult tick starts unticked and Join does nothing until it is ticked', async () => {

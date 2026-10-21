@@ -4,97 +4,81 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Volyume privacy policy</title>
-<meta name="description" content="What Volyume collects, why, how it is stored, and how to delete it. Private by design.">
-<link rel="icon" type="image/png" href="/favicon.png">
-<meta name="theme-color" content="#0D0D0D">
+<meta name="description" content="What Volyume collects, why, how it is stored, and how to delete it, in full.">
+<link rel="canonical" href="https://volyume.app/privacy/">
 <meta name="robots" content="index, follow">
-<style>
-  :root{
-    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
-    --border:#6E6E6E; --borderSubtle:#2E2E2C;
-    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
-    --silver:#C0C0C0;
-    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    --nav-h:78px;
-  }
-  *{box-sizing:border-box;}
-  html{color-scheme:dark;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
-    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
-  a{color:inherit; text-decoration:none;}
-  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
-
-  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
-    font-weight:700; font-size:14px; border-radius:12px; padding:10px 16px; cursor:pointer; border:1px solid transparent;
-    transition:background-color .2s cubic-bezier(.2,0,0,1);}
-  .btn-primary{background:var(--amberFill); color:var(--bg);}
-  .btn-primary:hover{background:var(--amber);}
-  .play-tri{width:18px;height:18px; display:block;}
-
-  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
-    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--borderSubtle);}
-  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
-  .brand{display:flex; align-items:center; gap:10px;}
-  .brand .word{font-weight:800; font-size:18px; letter-spacing:0.2px;}
-  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
-
-  .policy{padding:calc(var(--nav-h) + 56px) 0 24px;}
-  .policy .head{max-width:760px;}
-  .policy h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(34px,6vw,48px); line-height:1.08; margin:0;}
-  .policy .updated{color:var(--textMuted); font-size:14px; margin:14px 0 0;}
-  .policy .intro{color:var(--textSecondary); font-size:18px; line-height:1.6; margin:24px 0 0; max-width:68ch;}
-
-  .policy section{max-width:760px; padding:38px 0; border-top:1px solid var(--borderSubtle);}
-  .policy section:first-of-type{border-top:none;}
-  .policy h2{display:flex; gap:14px; align-items:baseline; font-weight:700; letter-spacing:-0.25px;
-    font-size:24px; line-height:1.2; margin:0 0 16px;}
-  .policy h2 .n{color:var(--amber); font-weight:900; font-size:18px; min-width:1.6em;}
-  .policy p{color:var(--textSecondary); font-size:16px; line-height:1.65; margin:0 0 14px; max-width:68ch;}
-  .policy p:last-child{margin-bottom:0;}
-  .policy strong{color:var(--text); font-weight:600;}
-  .policy ul{margin:0 0 14px; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px; max-width:68ch;}
-  .policy li{display:flex; gap:11px; align-items:flex-start; color:var(--textSecondary); font-size:16px; line-height:1.55;}
-  .policy li::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%;
-    background:var(--amber); margin-top:9px;}
-  .policy a.inline{color:var(--amber);}
-
-  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
-  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
-  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
-  footer a{color:var(--textMuted); font-size:14px;}
-  footer a:hover{color:var(--amber);}
-  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
-
-  @media(max-width:600px){
-    :root{--nav-h:60px;}
-    .wrap{padding:0 16px;}
-    nav .btn{font-size:13px; padding:8px 12px; gap:7px;}
-    .policy h1{font-size:32px;}
-    footer .wrap{gap:14px;}
-  }
-</style>
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Volyume">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Volyume privacy policy">
+<meta property="og:description" content="What Volyume collects, why, how it is stored and how to delete it.">
+<meta property="og:url" content="https://volyume.app/privacy/">
+<meta property="og:image" content="https://volyume.app/assets/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Volyume privacy policy">
+<meta name="twitter:description" content="What Volyume collects, why, how it is stored and how to delete it.">
+<meta name="twitter:image" content="https://volyume.app/assets/share.png">
 </head>
-<body>
-
-<nav>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+<body data-section="privacy">
+<!-- site:header -->
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume">
     </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul class="site-nav__list">
+        <li><a class="site-nav__link" href="/features/">Features</a></li>
+        <li><a class="site-nav__link" href="/how-the-coach-works/">How the coach works</a></li>
+        <li><a class="site-nav__link" href="/articles/">Articles</a></li>
+        <li><a class="site-nav__link" href="/support/">Support</a></li>
+      </ul>
+    </nav>
+    <a class="button button--primary site-header__get" href="/get/">Get the app</a>
+    <details class="site-menu">
+      <summary class="site-menu__toggle">
+        <svg class="icon site-menu__open" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#menu-outline"></use></svg>
+        <svg class="icon site-menu__close" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#close-outline"></use></svg>
+        <span class="site-menu__label">Menu</span>
+      </summary>
+      <nav class="site-menu__panel" aria-label="Main">
+        <ul class="site-menu__list">
+          <li><a class="site-menu__link" href="/features/">Features</a></li>
+          <li><a class="site-menu__link" href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a class="site-menu__link" href="/articles/">Articles</a></li>
+          <li><a class="site-menu__link" href="/support/">Support</a></li>
+          <li><a class="site-menu__link" href="/get/">Get the app</a></li>
+        </ul>
+      </nav>
+    </details>
   </div>
-</nav>
+</header>
+<!-- /site:header -->
 
-<main class="policy">
-  <div class="wrap">
-    <div class="head">
-      <h1>Privacy policy</h1>
-      <p class="updated">Last updated: 17 October 2026</p>
-      <p class="intro">This policy explains what Volyume collects, why, and how to delete it. Volyume is a training and nutrition self-coaching tool. Your health data stays private: it is never shown to other people, used for advertising or sold. Community, where you can follow other lifters and share your workouts, is optional, and section 5 explains what it shares.</p>
+<main id="main">
+
+  <section class="page-intro" aria-labelledby="page-title">
+    <div class="container prose">
+      <h1 class="display" id="page-title">Privacy policy</h1>
+      <p class="updated">Last updated: 21 October 2026</p>
+      <p class="lead">This policy explains what Volyume collects, why, and how to delete it. Volyume is a training and nutrition self-coaching tool. Your health data stays private: it is never shown to other people, used for advertising or sold. Community, where you can follow other lifters and share your workouts, is optional, and section 5 explains what it shares.</p>
     </div>
+  </section>
 
-    <section>
+  <section class="section section--plain" aria-label="The policy">
+    <div class="container prose">
+    <section class="legal-section">
       <h2><span class="n">1</span> Data we collect</h2>
       <p>When you create an account we collect your name, email address, body measurements, workout logs, and training preferences.</p>
       <p>To coach you, Volyume uses your health and nutrition data:</p>
@@ -111,25 +95,25 @@
       <p>This is special-category health data under UK GDPR Article 9. We use it only with your explicit consent, recorded on the consent screen at onboarding. Without that consent the engine cannot run.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">2</span> How it is used</h2>
       <p>Volyume uses your health and food logs to help guide training, nutrition, and recovery. This data is used solely to run the app and give you personalised training and nutrition guidance.</p>
       <p>We also keep first-party usage data to see which features get used, where people get stuck and where the app is slow. It records which screens open and for how long, when something fails or takes too long, and counts of what happens in the app, such as how many sets a finished workout had or whether you logged food that day. It never includes the content: no weights, foods, amounts, notes, names or messages, and nothing about injuries and limitations or Volyume&rsquo;s wellbeing checks. It is tied to a pseudonymous account id, not your name. Before you agree to the health data terms, the only usage data recorded is whether the app was slow or failed. Usage data is kept for six months and then deleted, and it is used only to improve the app. We do not use third-party analytics or tracking tools, and we do not build advertising profiles. You can switch it off in Settings.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">3</span> Where it is stored</h2>
       <p>On your phone, your data sits in encrypted local storage: EncryptedSharedPreferences on Android and Keychain on iOS for tokens, and SQLite for your training history, food diary, progress metadata and rollups.</p>
       <p>Progress photo, scan image and workout video files are device-local. Cloud-backed account data is stored in Supabase (EU region), with row-level security so only you, and the team supporting your account when needed, can see it. It does not leave the UK or EU.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">4</span> The safety check</h2>
       <p>Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support. This runs automatically on your health data.</p>
       <p>When that happens, you can keep using Volyume normally. Your weight log, food diary, training, and check-ins all continue. Only the calorie target stops shifting. The eating-disorder pattern flags are the most sensitive data we hold, and the support team never sees the raw flag data.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">5</span> Community</h2>
       <p>Community is optional. Nothing you log is shown to other people unless you join it.</p>
       <p><strong>Your profile.</strong> When you join, you choose a handle and can add a display name, a short bio, your training styles and goal, and your area and gym. Your profile is public unless you set it to followers only, and you can hide your area and gym at any time. It also shows how many sessions you usually do a week, the lifts you focus on and your experience level, and you can hide any of these. You can choose to show more: the days and times you usually train, your age band, and your training consistency, such as how many sessions you have done this week.</p>
@@ -144,13 +128,12 @@
       <p><strong>Why we use this data.</strong> To run the Community features you choose to use, which is part of our agreement with you, and to keep Community safe, which is our legitimate interest.</p>
     </section>
 
-    <section>
-      <h2><span class="n">6</span> Health Connect</h2>
-      <p>If you opt in under Settings, Volyume can read your most recent body weight and daily steps, so the morning-weight card and step count can pick up entries from your scale or wearable, and write completed workouts so your health app shows your training. On Android this goes through Health Connect.</p>
-      <p>We do not read heart rate, sleep, or HRV. All health-app access is opt-in and revocable from the OS Settings app at any time.</p>
+    <section class="legal-section">
+      <h2><span class="n">6</span> Health apps</h2>
+      <p>Volyume does not connect to Apple Health or Health Connect. It does not read from or write to any health app on your phone.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">7</span> Third parties</h2>
       <p>We never sell it, never share it with advertisers, and never use it to train a public AI model.</p>
       <p>A small number of sub-processors help run the app, each contractually bound to process your data only for the purpose described:</p>
@@ -164,7 +147,7 @@
       <p>Adding a new sub-processor requires updating this policy with 30 days' notice via in-app push.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">8</span> News emails</h2>
       <p>When you create an account you are told that Volyume will email you about new features, short surveys and a weekly summary. These are the news emails.</p>
       <p><strong>Your choice.</strong> You can turn them off at any time, in the app under Settings with the &ldquo;News by email&rdquo; switch, or with the Unsubscribe link in every email. Turning them off does not change anything else in the app, and you can turn them back on in Settings.</p>
@@ -175,7 +158,7 @@
       <p><strong>Deleting.</strong> Deleting your account deletes all of this.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">9</span> Gym challenges</h2>
       <p>A gym challenge is optional and runs at one gym for up to a month. You only take part if you join it yourself, and only adults can join.</p>
       <p><strong>What it reads.</strong> To score you, the challenge reads your training, your check-ins and Community posts, whether you logged food, whether you weighed in, and whether calm mode is on or the safety check in section 4 has paused your calorie changes, so it never asks you to log food or weigh in at those times. It never reads what you ate or what you weigh.</p>
@@ -185,13 +168,13 @@
       <p><strong>Deleting.</strong> Deleting your account deletes all of it, except the record of each prize draw, which is kept so the draw can be checked and no longer links to you once your account is gone.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">10</span> Deleting your data</h2>
       <p>When you confirm deletion, cloud removal starts immediately and local data is wiped at once on the device that initiated it. If final sign-in removal cannot finish while offline, Volyume tells you and completes it when you reconnect. Backup copies are purged within 30 days. This includes your Community profile and everything you shared there (section 5).</p>
       <p>We keep one thing after deletion: a one-way hash of your email address, held in our deletion record to recognise that an account was deleted before and to count account deletions for our regulatory records. It holds no readable email or other personal data, and is never used to contact you or rebuild your account.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">11</span> Your UK GDPR rights</h2>
       <p>Under UK and EU GDPR you have the right to:</p>
       <ul>
@@ -206,32 +189,65 @@
       <p>We respond to verifiable requests within 30 days.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">12</span> Children</h2>
       <p>Volyume is for users 13 and over, the UK age at which a person can consent to their own data being processed. We do not knowingly create or serve accounts for under-13s.</p>
       <p>In Community, anyone under 18 shares with their followers only and never appears on pages shown outside the app.</p>
       <p>If we discover an account belongs to someone under 13, we delete the account.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">13</span> Contact</h2>
       <p>Questions or requests: <a class="inline" href="mailto:support@volyume.app">support@volyume.app</a></p>
     </section>
-  </div>
+    </div>
+  </section>
+
 </main>
 
-<footer>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
-    </a>
-    <div class="links">
-      <a href="/privacy/">Privacy Policy</a>
-      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+<!-- site:footer -->
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__about">
+      <a class="brand" href="/">
+        <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume" loading="lazy">
+      </a>
+      <p>Training, food and a weekly check-in, with a coach that explains every change. On iPhone and Android.</p>
     </div>
-    <p class="copy">© 2026 Volyume</p>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Get the app</h2>
+        <ul class="site-footer__list">
+          <li><a href="https://apps.apple.com/gb/app/volyume/id6777083702">App Store, for iPhone</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=app.volyume">Google Play, for Android</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Volyume</h2>
+        <ul class="site-footer__list">
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a href="/articles/">Articles</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Help</h2>
+        <ul class="site-footer__list">
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/challenge-terms/">Challenge terms</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Contact</h2>
+        <ul class="site-footer__list">
+          <li><a class="site-footer__email" href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@<wbr>gmail.com</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="site-footer__legal">&copy; 2026 Volyume</p>
   </div>
 </footer>
-
+<!-- /site:footer -->
 </body>
 </html>

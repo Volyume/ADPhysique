@@ -15,53 +15,53 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("/assets/fonts/Inter-Regular.ttf") format("truetype");
+  src: url("/assets/fonts/Inter-Regular.woff") format("woff"), url("/assets/fonts/Inter-Regular.ttf") format("truetype");
 }
 @font-face {
   font-family: "Inter";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url("/assets/fonts/Inter-Medium.ttf") format("truetype");
+  src: url("/assets/fonts/Inter-Medium.woff") format("woff"), url("/assets/fonts/Inter-Medium.ttf") format("truetype");
 }
 @font-face {
   font-family: "Inter";
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url("/assets/fonts/Inter-SemiBold.ttf") format("truetype");
+  src: url("/assets/fonts/Inter-SemiBold.woff") format("woff"), url("/assets/fonts/Inter-SemiBold.ttf") format("truetype");
 }
 @font-face {
   font-family: "Inter";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url("/assets/fonts/Inter-Bold.ttf") format("truetype");
+  src: url("/assets/fonts/Inter-Bold.woff") format("woff"), url("/assets/fonts/Inter-Bold.ttf") format("truetype");
 }
 @font-face {
   font-family: "Inter";
   font-style: normal;
   font-weight: 800;
   font-display: swap;
-  src: url("/assets/fonts/Inter-ExtraBold.ttf") format("truetype");
+  src: url("/assets/fonts/Inter-ExtraBold.woff") format("woff"), url("/assets/fonts/Inter-ExtraBold.ttf") format("truetype");
 }
 @font-face {
   font-family: "Inter Display";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url("/assets/fonts/InterDisplay-Bold.ttf") format("truetype");
+  src: url("/assets/fonts/InterDisplay-Bold.woff") format("woff"), url("/assets/fonts/InterDisplay-Bold.ttf") format("truetype");
 }
 @font-face {
   font-family: "Inter Display";
   font-style: normal;
   font-weight: 800;
   font-display: swap;
-  src: url("/assets/fonts/InterDisplay-ExtraBold.ttf") format("truetype");
+  src: url("/assets/fonts/InterDisplay-ExtraBold.woff") format("woff"), url("/assets/fonts/InterDisplay-ExtraBold.ttf") format("truetype");
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: dark light;
   --color-background: #0D0D0D;
   --color-surface: #191917;
   --color-surface-elevated: #222220;

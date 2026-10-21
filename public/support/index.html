@@ -3,132 +3,206 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Volyume support</title>
-<meta name="description" content="Help with Volyume: getting started, your data, and how to contact us.">
-<link rel="icon" type="image/png" href="/favicon.png">
-<meta name="theme-color" content="#0D0D0D">
+<title>Volyume support: help with your account and data</title>
+<meta name="description" content="Help with Volyume: getting started, signing in and resetting your password, moving to a new phone, exporting or deleting your data, and how to contact us.">
+<link rel="canonical" href="https://volyume.app/support/">
 <meta name="robots" content="index, follow">
-<style>
-  :root{
-    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
-    --border:#6E6E6E; --borderSubtle:#2E2E2C;
-    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
-    --silver:#C0C0C0;
-    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    --nav-h:78px;
-  }
-  *{box-sizing:border-box;}
-  html{color-scheme:dark;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
-    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
-  a{color:inherit; text-decoration:none;}
-  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
-
-  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
-    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--borderSubtle);}
-  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
-  .brand{display:flex; align-items:center; gap:10px;}
-  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
-
-  .policy{padding:calc(var(--nav-h) + 56px) 0 24px;}
-  .policy .head{max-width:760px;}
-  .policy h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(34px,6vw,48px); line-height:1.08; margin:0;}
-  .policy .intro{color:var(--textSecondary); font-size:18px; line-height:1.6; margin:24px 0 0; max-width:68ch;}
-
-  .policy section{max-width:760px; padding:38px 0; border-top:1px solid var(--borderSubtle);}
-  .policy section:first-of-type{border-top:none;}
-  .policy h2{display:flex; gap:14px; align-items:baseline; font-weight:700; letter-spacing:-0.25px;
-    font-size:24px; line-height:1.2; margin:0 0 16px;}
-  .policy h2 .n{color:var(--amber); font-weight:900; font-size:18px; min-width:1.6em;}
-  .policy p{color:var(--textSecondary); font-size:16px; line-height:1.65; margin:0 0 14px; max-width:68ch;}
-  .policy p:last-child{margin-bottom:0;}
-  .policy strong{color:var(--text); font-weight:600;}
-  .policy ul{margin:0 0 14px; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px; max-width:68ch;}
-  .policy li{display:flex; gap:11px; align-items:flex-start; color:var(--textSecondary); font-size:16px; line-height:1.55;}
-  .policy li::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%;
-    background:var(--amber); margin-top:9px;}
-  .policy a.inline{color:var(--amber);}
-
-  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
-  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
-  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
-  footer a{color:var(--textMuted); font-size:14px;}
-  footer a:hover{color:var(--amber);}
-  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
-
-  @media(max-width:600px){
-    :root{--nav-h:60px;}
-    .wrap{padding:0 16px;}
-    .policy h1{font-size:32px;}
-    footer .wrap{gap:14px;}
-  }
-</style>
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Volyume">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Volyume support">
+<meta property="og:description" content="Help with getting started, signing in, moving to a new phone, and exporting or deleting your data.">
+<meta property="og:url" content="https://volyume.app/support/">
+<meta property="og:image" content="https://volyume.app/assets/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Volyume support">
+<meta name="twitter:description" content="Help with getting started, signing in, moving to a new phone, and exporting or deleting your data.">
+<meta name="twitter:image" content="https://volyume.app/assets/share.png">
 </head>
-<body>
-
-<nav>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+<body data-section="support">
+<!-- site:header -->
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume">
     </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul class="site-nav__list">
+        <li><a class="site-nav__link" href="/features/">Features</a></li>
+        <li><a class="site-nav__link" href="/how-the-coach-works/">How the coach works</a></li>
+        <li><a class="site-nav__link" href="/articles/">Articles</a></li>
+        <li><a class="site-nav__link" href="/support/">Support</a></li>
+      </ul>
+    </nav>
+    <a class="button button--primary site-header__get" href="/get/">Get the app</a>
+    <details class="site-menu">
+      <summary class="site-menu__toggle">
+        <svg class="icon site-menu__open" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#menu-outline"></use></svg>
+        <svg class="icon site-menu__close" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#close-outline"></use></svg>
+        <span class="site-menu__label">Menu</span>
+      </summary>
+      <nav class="site-menu__panel" aria-label="Main">
+        <ul class="site-menu__list">
+          <li><a class="site-menu__link" href="/features/">Features</a></li>
+          <li><a class="site-menu__link" href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a class="site-menu__link" href="/articles/">Articles</a></li>
+          <li><a class="site-menu__link" href="/support/">Support</a></li>
+          <li><a class="site-menu__link" href="/get/">Get the app</a></li>
+        </ul>
+      </nav>
+    </details>
   </div>
-</nav>
+</header>
+<!-- /site:header -->
 
-<main class="policy">
-  <div class="wrap">
-    <div class="head">
-      <h1>Support</h1>
-      <p class="intro">Help with Volyume — getting started, your data, and how to reach us. Most questions are answered below; if not, email us and a real person replies.</p>
+<main id="main">
+
+  <section class="page-intro" aria-labelledby="page-title">
+    <div class="container stack-lg">
+      <h1 class="display" id="page-title">Support</h1>
+      <p class="lead">Most questions are answered below. If yours is not, email us and a person will reply.</p>
+      <nav aria-label="On this page">
+        <ul class="contents">
+          <li><a href="#start">Getting started</a></li>
+          <li><a href="#sign-in">Signing in</a></li>
+          <li><a href="#new-phone">A new phone</a></li>
+          <li><a href="#your-data">Your data</a></li>
+          <li><a href="#healthy-training">Healthy training</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
     </div>
+  </section>
 
-    <section>
-      <h2><span class="n">1</span> Getting started</h2>
-      <p>Create an account, answer the onboarding questions about your training and goals, and Volyume builds your plan. Everything in Volyume is free, including the plan library, training builder, workout logging, the exercise library, personal bests and progress stats.</p>
-      <p>It also includes the food diary, barcode scanning, smart meal suggestions, nutrition targets and macros, steps, weekly check-ins, and the Precision Coaching adjustments that adapt your plan as you go.</p>
-    </section>
+  <section class="section" id="start" aria-labelledby="start-title">
+    <div class="container split split--even">
+      <h2 class="heading" id="start-title">Getting started</h2>
+      <div class="stack">
+        <p class="body">Download Volyume from the App Store on iPhone or from Google Play on Android, then sign in. The first time the app opens, it asks for your agreement to hold your health-related data. The app cannot work without it.</p>
+        <p class="body">Next you choose how to begin. Whichever you pick, you can change your mind later.</p>
+        <ul class="rows">
+          <li><strong>Set up coaching</strong>A short guided setup of your details, how you train and your goal. It builds your first plan and your targets.</li>
+          <li><strong>Pick a ready-made plan</strong>Choose from <span data-fact="plans">58</span> plans and start training. You can set up coaching later from the Coach tab.</li>
+          <li><strong>Build your own</strong>Write your own plan by hand, day by day.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
-    <section>
-      <h2><span class="n">2</span> Apple Health / Health Connect</h2>
-      <p>If you opt in under Settings, Volyume reads your most recent body weight and daily steps so your morning-weight card and step count stay in sync with your scale or watch, and writes completed workouts back so your health app stays accurate. This is opt-in and you can revoke it any time in your phone's Settings.</p>
-    </section>
+  <section class="section" id="sign-in" aria-labelledby="sign-in-title">
+    <div class="container split split--even">
+      <h2 class="heading" id="sign-in-title">Signing in</h2>
+      <div class="stack">
+        <p class="body">You sign in with Apple, with Google on Android, or with an email address and a password. There is no guest mode, because your training and food logs are backed up to your account.</p>
+        <p class="body">To add or remove a way to sign in, open <span class="path">Settings &rarr; Account &rarr; Sign-in methods</span>. If you signed up with Apple or Google, you can add an email address and password there as another way in.</p>
+        <h3 class="title">If you forget your password</h3>
+        <p class="body">On the sign-in screen, type your email address, then tap Forgot your password? If that address has an account, we send a link to get back in. Open the link on the phone you use for Volyume, then choose a new password of at least 8 characters. If the email is not in your inbox, look in your spam or junk folder.</p>
+      </div>
+    </div>
+  </section>
 
-    <section>
-      <h2><span class="n">3</span> Your data &amp; privacy</h2>
-      <p>Volyume is private by design: no social feed, no advertising, and we never sell your data. Cloud-backed account data is stored in the EU. Progress photo image files stay on your device unless you choose to share or export them. You can export workout sets or create a JSON app-data backup from <strong>Settings &rarr; Your data</strong>, and the full detail is in our <a class="inline" href="/privacy/">privacy policy</a>.</p>
-    </section>
+  <section class="section" id="new-phone" aria-labelledby="new-phone-title">
+    <div class="container split split--even">
+      <h2 class="heading" id="new-phone-title">Moving to a new phone</h2>
+      <div class="stack">
+        <p class="body">Install Volyume on the new phone and sign in with the same account. Your training and food logs are backed up to your account, so they come back when you sign in.</p>
+        <p class="body">Your progress photos and workout videos stay on the phone they were taken on. They do not move with your account.</p>
+        <p class="body">Before you stop using the old phone, open <span class="path">Settings &rarr; Your data</span>. Cloud sync shows when your data was last saved online, and you can tap it to save again now.</p>
+      </div>
+    </div>
+  </section>
 
-    <section>
-      <h2><span class="n">4</span> Delete your account</h2>
-      <p>Open <strong>Settings &rarr; Account &rarr; Delete account</strong>. Cloud removal starts immediately, local data is wiped on the device, and backup copies are purged within 30 days. If final sign-in removal cannot finish while offline, Volyume tells you and completes it when you reconnect.</p>
-    </section>
+  <section class="section" id="your-data" aria-labelledby="your-data-title">
+    <div class="container split split--even">
+      <h2 class="heading" id="your-data-title">Your data</h2>
+      <div class="stack">
+        <p class="body">You can take a copy of your data from <span class="path">Settings &rarr; Your data</span>.</p>
+        <ul class="rows">
+          <li><strong>Export workout log</strong>Your logged sets, as a spreadsheet file.</li>
+          <li><strong>Coach handover report</strong>Your training, trend, targets and coaching decisions, as a PDF for your coach.</li>
+          <li><strong>Back up app data</strong>A backup file you can restore later. Your progress photo files stay on your phone unless you choose to share or export them, so they are not in it.</li>
+        </ul>
+        <h3 class="title">Deleting your account</h3>
+        <p class="body">Open <span class="path">Settings &rarr; Account &rarr; Delete account</span>. Your account, your data in the cloud, your Community profile and the data on your phone are removed. Cloud removal starts straight away, and backup copies are purged within 30 days. If you are offline when you confirm, Volyume tells you and finishes the job when you reconnect.</p>
+        <p class="body">The full detail is in the <a href="/privacy/">privacy policy</a>.</p>
+      </div>
+    </div>
+  </section>
 
-    <section>
-      <h2><span class="n">5</span> A note on healthy training</h2>
-      <p>Volyume includes safety limits that protect you from under-fuelling: it holds your calorie target steady if it sees a concerning pattern, and never pushes you below safe minimums. If you are struggling with food or your relationship with eating, support is available in the UK from Beat: <a class="inline" href="https://www.beateatingdisorders.org.uk">beateatingdisorders.org.uk</a>.</p>
-    </section>
+  <section class="section" id="healthy-training" aria-labelledby="healthy-training-title">
+    <div class="container split split--even">
+      <h2 class="heading" id="healthy-training-title">A note on healthy training</h2>
+      <div class="stack">
+        <p class="body">Volyume includes safety limits that protect you from under-fuelling: it holds your calorie target steady if it sees a concerning pattern, and never pushes you below safe minimums. If you are struggling with food or your relationship with eating, support is available in the UK from Beat: <a href="https://www.beateatingdisorders.org.uk">beateatingdisorders.org.uk</a>.</p>
+      </div>
+    </div>
+  </section>
 
-    <section>
-      <h2><span class="n">6</span> Contact us</h2>
-      <p>Still stuck, or want to ask anything? Email <a class="inline" href="mailto:support@volyume.app">support@volyume.app</a> and we'll get back to you. Telling us your device and what you were doing helps us help you faster.</p>
-    </section>
-  </div>
+  <section class="section" id="contact" aria-labelledby="contact-title">
+    <div class="container split split--even">
+      <h2 class="heading" id="contact-title">Contact us</h2>
+      <div class="stack">
+        <p class="body">Still stuck, or want to ask something? Email <a href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@gmail.com</a> and a person will reply. Telling us which phone you have and what you were doing helps us help you faster.</p>
+      </div>
+    </div>
+  </section>
+
 </main>
 
-<footer>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
-    </a>
-    <div class="links">
-      <a href="/privacy/">Privacy Policy</a>
-      <a href="mailto:support@volyume.app">support@volyume.app</a>
-      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+<!-- site:footer -->
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__about">
+      <a class="brand" href="/">
+        <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume" loading="lazy">
+      </a>
+      <p>Training, food and a weekly check-in, with a coach that explains every change. On iPhone and Android.</p>
     </div>
-    <p class="copy">© 2026 Volyume</p>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Get the app</h2>
+        <ul class="site-footer__list">
+          <li><a href="https://apps.apple.com/gb/app/volyume/id6777083702">App Store, for iPhone</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=app.volyume">Google Play, for Android</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Volyume</h2>
+        <ul class="site-footer__list">
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a href="/articles/">Articles</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Help</h2>
+        <ul class="site-footer__list">
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/challenge-terms/">Challenge terms</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Contact</h2>
+        <ul class="site-footer__list">
+          <li><a class="site-footer__email" href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@<wbr>gmail.com</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="site-footer__legal">&copy; 2026 Volyume</p>
   </div>
 </footer>
-
+<!-- /site:footer -->
 </body>
 </html>

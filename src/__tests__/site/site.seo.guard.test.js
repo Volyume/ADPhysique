@@ -33,7 +33,8 @@ const S = require('./siteScan');
 
 const ALL = S.htmlFiles({ includeMembers: true });
 const NOINDEX_PREFIXES = ['c/', 'challenge-terms/', 'auth/', 'email/', 'survey/', 'g/', 'u/', 's/', 'p/', 'partner/', 'members/'];
-const NOINDEX_FILES = ['404.html'];
+// privacy.html is the redirect to /privacy/ (the owner asked for it to be noindex).
+const NOINDEX_FILES = ['404.html', 'privacy.html'];
 const ORIGIN = S.ORIGIN;
 
 const robotsOf = (rel) => (S.readPage(rel).metaContent('robots') || '').toLowerCase();

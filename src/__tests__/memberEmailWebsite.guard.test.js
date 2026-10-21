@@ -15,8 +15,8 @@
  *    rules);
  *  - the legacy five-question survey still posts q_overall .. q_more (the
  *    fix in 49b918192 must not regress);
- *  - the privacy pages carry the news-email section and the three hosted
- *    HTML copies stay byte-identical (privacyTruth.guard.test.js relies on it).
+ *  - the privacy page carries the news-email section and its docs/web mirror
+ *    stays byte-identical (privacyTruth.guard.test.js relies on it).
  */
 
 const fs = require('fs');
@@ -282,9 +282,10 @@ describe('member email website pages', () => {
   });
 
   test('the news-email section is in every privacy copy, with the founder-ruled basis', () => {
-    const html = read('public', 'privacy.html');
+    // One hosted copy of the policy (public/privacy.html redirects to it) and
+    // its byte-for-byte mirror in docs/web, which the site build writes.
+    const html = read('public', 'privacy', 'index.html');
     const md = read('public', 'privacy-policy.md');
-    expect(read('public', 'privacy', 'index.html')).toBe(html);
     expect(read('docs', 'web', 'privacy.html')).toBe(html);
     for (const text of [html.replace(/\s+/g, ' '), md.replace(/\s+/g, ' ')]) {
       expect(text).toMatch(/News emails/);
