@@ -1574,19 +1574,27 @@ export function runWeeklyCoach(inputs) {
     } else if (phase.isCut && offTargetDirection > 0) {
       // Losing too slowly
       change = calsAdherence === 'hit' ? -150 : -100;
-      calNote = "Weight is coming down slower than the target rate.";
+      calNote = calmMode
+        ? "Your weight trend is coming down, at a pace a little under the rate you chose. Taking a little off your daily calories should bring it back on pace."
+        : "Your weight trend is coming down more slowly than the rate you chose. Taking a little off your daily calories should bring it back on pace.";
     } else if (phase.isCut && offTargetDirection < 0) {
       // Losing too fast, protect muscle (standard, non-compressed)
       change = +125;
-      calNote = "Weight is dropping faster than the target rate. Slowing it down protects muscle.";
+      calNote = calmMode
+        ? "Your weight trend is dropping at a pace a little above the rate you chose. Adding a little to your daily calories slows it down, which protects muscle."
+        : "Your weight trend is dropping faster than the rate you chose. Adding a little to your daily calories slows it down, which protects muscle.";
     } else if (phase.isBulk && offTargetDirection < 0) {
       // Gaining too slowly
       change = +150;
-      calNote = "Weight gain is below the target rate.";
+      calNote = calmMode
+        ? "Your weight trend is rising, at a pace a little under the rate you chose. Adding a little to your daily calories should bring it back on pace."
+        : "Your weight trend is rising more slowly than the rate you chose. Adding a little to your daily calories should bring it back on pace.";
     } else if (phase.isBulk && offTargetDirection > 0) {
       // Gaining too fast
       change = -125;
-      calNote = "Weight is going on faster than the target rate. Pulling back keeps fat gain in check.";
+      calNote = calmMode
+        ? "Your weight trend is rising at a pace a little above the rate you chose. Taking a little off your daily calories keeps fat gain in check."
+        : "Your weight trend is rising faster than the rate you chose. Taking a little off your daily calories keeps fat gain in check.";
     }
 
     // Adaptive resize (when confident): use the energy-balance-sized change
@@ -2075,8 +2083,8 @@ export function runWeeklyCoach(inputs) {
     heldDecisions.push({
       type: 'target_not_tested',
       reason: intakeDaysForCopy >= MIN_INTAKE_DAYS_FOR_COPY
-        ? `Calorie target stays the same. Your logged intake averaged ${Math.round(recentIntakeAvgKcal)} kcal against a ${currentCalTarget} kcal target, so this target has not really been tried yet. Worth giving it a fair run before the number changes.`
-        : 'Calorie target stays the same. What you said in your check-in about your eating does not match the target you were given, so this target has not really been tried yet. Worth giving it a fair run before the number changes.',
+        ? `Calorie target stays the same. You logged about ${Math.round(recentIntakeAvgKcal)} kcal a day against a ${currentCalTarget} kcal target, so this target has not really been tried yet. Your coach gives it a fair run before changing the number.`
+        : 'Calorie target stays the same. What you said in your check-in about your eating does not match the target you were given, so this target has not really been tried yet. Your coach gives it a fair run before changing the number.',
     });
   }
 
@@ -2094,7 +2102,7 @@ export function runWeeklyCoach(inputs) {
   if (oscillationHeld) {
     heldDecisions.push({
       type: 'awaiting_last_change',
-      reason: `Calorie target stays the same. It was ${oscillationHeld.direction > 0 ? 'raised' : 'lowered'} recently and that change has not had long enough to show yet. Reversing it now would tell your coach nothing.`,
+      reason: `Calorie target stays the same. It was ${oscillationHeld.direction > 0 ? 'raised' : 'lowered'} recently and it has not had long enough to show in your weight trend. Changing it back now would tell your coach nothing.`,
     });
   }
 

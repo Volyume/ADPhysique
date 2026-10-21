@@ -232,7 +232,7 @@ export default function PrivacyPolicyScreen() {
           <Body>
             You can leave a challenge at any time. After you leave, your records are not read for it again and you
             are taken off its board. We use this data with your explicit consent, which you give when you join.
-            Joining a challenge also keeps Volyume free for you for life. Deleting your account deletes all of it,
+            Completing a challenge with a final score of 50 or more earns free for life. Deleting your account deletes all of it,
             except the record of each prize draw, which is kept so the draw can be checked and no longer links to
             you once your account is gone.
           </Body>

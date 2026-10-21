@@ -81,8 +81,8 @@ test('the free-for-life offer shows even when no prizes are listed', async () =>
 
 test('the free-for-life line is not inside the Prizes card', () => {
   const prizesCard = html.match(/<div class="card" id="prizes">[\s\S]*?<\/div>/)[0];
-  expect(prizesCard).not.toContain('free for you for life');
-  expect(html).toContain('<p class="lead" id="free">Volyume is free. Join through the challenge and it stays free for you for life, even if we ever introduce paid plans.</p>');
+  expect(prizesCard).not.toContain('earns free for life');
+  expect(html).toContain('<p class="lead" id="free">Volyume is free. Completing a challenge with a final score of 50 or more earns free for life.</p>');
 });
 
 test.each(['ended', 'closed', 'cancelled'])('the %s challenge: a calm sentence, nothing to join or score', async (status) => {

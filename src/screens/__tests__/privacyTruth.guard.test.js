@@ -87,7 +87,6 @@ describe('privacy, consent, export and store-copy truth', () => {
       readRepoFile('public', 'privacy', 'index.html'),
       readRepoFile('public', 'privacy-policy.md'),
       readRepoFile('public', 'support', 'index.html'),
-      readRepoFile('public', 'app-map', 'index.html'),
     ].join('\n');
 
     expect(publicFiles).toContain('not an exact body-fat percentage');

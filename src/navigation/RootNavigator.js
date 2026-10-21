@@ -38,6 +38,7 @@ import { getSupabaseClient, hasStoredAuthSession } from '../lib/supabase';
 // Campaign 24 Wave E: the pure boot-time auth presentation decision (the
 // startup auth-hydration flash fix — see the give-up branch in the render).
 import { classifyAuthBoot, classifyFreshInstall, classifySessionRead } from '../lib/authBootGate';
+import { isPasswordRecoveryPending, takePasswordRecoveryPending, subscribePasswordRecovery, canOpenPasswordRecovery } from '../lib/passwordRecoveryState';
 import { readHealthConsentStatus } from '../lib/consent/healthConsentRead';
 import {
   setPendingChallenge, takePendingChallenge, peekPendingChallenge,
@@ -102,8 +103,11 @@ const VolumeHeatmapScreen = lazyScreen(() => require('../screens/VolumeHeatmapSc
 const SettingsScreen = lazyScreen(() => require('../screens/SettingsScreen').default);
 const SettingsWorkoutScreen = lazyScreen(() => require('../screens/SettingsWorkoutScreen').default);
 const SettingsAccountScreen = lazyScreen(() => require('../screens/SettingsAccountScreen').default);
+const SettingsSignInMethodsScreen = lazyScreen(() => require('../screens/SettingsSignInMethodsScreen').default);
+const SetNewPasswordScreen = lazyScreen(() => require('../screens/SetNewPasswordScreen').default);
 const SettingsProfileScreen = lazyScreen(() => require('../screens/SettingsProfileScreen').default);
 const SettingsCoachingScreen = lazyScreen(() => require('../screens/SettingsCoachingScreen').default);
+const SettingsUnitsScreen = lazyScreen(() => require('../screens/SettingsUnitsScreen').default);
 const SettingsDisplayScreen = lazyScreen(() => require('../screens/SettingsDisplayScreen').default);
 // CC26: the capability lane's settings home. UNGUARDED by law (CAP-19,
 // pinned by capabilityGuards.test.js) - core capability accommodation is
@@ -706,9 +710,12 @@ function ProfileStack({ navigation }) {
           HowYouTrain, already above). */}
       <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsSignInMethods" component={SettingsSignInMethodsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SetNewPassword" component={SetNewPasswordScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsUnits" component={SettingsUnitsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsDietary" component={SettingsDietaryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ headerShown: false }} />
@@ -1303,6 +1310,31 @@ export default function RootNavigator() {
     })();
     return () => { alive = false; clearTimeout(ceiling); unsubscribe(); };
   }, []);
+
+  // Password-reset link: a verified recovery link signs the person in
+  // (authDeepLink) and marks this pending. The set-new-password screen opens
+  // only once the SAME conditions as the challenge join below hold (signed in,
+  // onboarding finished, Article 9 consent granted), so the consent gate and
+  // the routing order above are untouched; until then the marker simply waits.
+  // Not while a workout is active: the screen opens once the workout ends.
+  const workoutActive = useAppStore(s => !!s.activeWorkout);
+  const recoveryReady = canOpenPasswordRecovery({ user, firstRunComplete, healthConsent, workoutActive });
+  useEffect(() => {
+    if (!recoveryReady) return undefined;
+    let cancelled = false;
+    const tryOpen = (attempts = 0) => {
+      if (cancelled || !isPasswordRecoveryPending()) return;
+      if (navigationRef.isReady()) {
+        takePasswordRecoveryPending();
+        navigationRef.navigate('ProfileTab', { screen: 'SetNewPassword', initial: false });
+      } else if (attempts < 20) {
+        setTimeout(() => tryOpen(attempts + 1), 150);
+      }
+    };
+    tryOpen();
+    const unsub = subscribePasswordRecovery(() => tryOpen());
+    return () => { cancelled = true; unsub(); };
+  }, [recoveryReady]);
 
   // An already-onboarded person (consent granted, setup done) with a waiting
   // code gets the join screen over the current stack. The code is taken as

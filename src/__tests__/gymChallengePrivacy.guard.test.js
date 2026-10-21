@@ -32,7 +32,7 @@ describe.each(Object.entries(COPIES))('%s privacy copy', (name, text) => {
     expect(text).toMatch(/your name and county are published unless you object/);
     expect(text).toMatch(/your records are not read for it again/);
     expect(text).toMatch(/explicit consent, which you give when you join/);
-    expect(text).toMatch(/free for you for life/);
+    expect(text).toMatch(/earns free for life/);
     expect(text).toMatch(/except the record of each prize draw/);
     expect(/—/.test(text)).toBe(false);
   });

@@ -26,7 +26,7 @@
 
 import { CURATED_FOODS } from './curatedFoods';
 import { roleOf } from './foodRoles';
-import { hasCookToggle, nativeState, convertCookGrams, uncookedWord } from './cookYield';
+import { hasCookToggle, nativeState, convertCookGrams, uncookedWord, weighAsListed } from './cookYield';
 import { kitchenRound } from './gramSolve';
 
 // Macro role -> quiet section label. 'free' and any unknown role fall to Other.
@@ -117,7 +117,12 @@ export function buildGroceryList(plan, { basis = 'shop', repeat = 1 } = {}) {
     const grams = row.grams * times;
     const native = hasCookToggle(row.key) ? nativeState(row.key) : null;
     if (!native) {
-      (bySection[label] ||= []).push({ name: row.name, grams: kitchenRound(grams) });
+      // Item 27: a food named cooked or dry with no pair is weighed as listed.
+      (bySection[label] ||= []).push({
+        name: row.name,
+        grams: kitchenRound(grams),
+        ...(weighAsListed(row.key, row.name) ? { asListed: true } : {}),
+      });
       continue;
     }
     const raw = native === 'raw' ? grams : convertCookGrams(row.key, grams, 'cooked', 'raw');
@@ -152,10 +157,10 @@ export function buildGroceryList(plan, { basis = 'shop', repeat = 1 } = {}) {
   return { sections, dayCount: plan.days.length, repeat: times, basis: view, isEmpty: sections.length === 0 };
 }
 
-/** "595 g raw (445 g cooked)", or "120 g" for a food with no pair. */
+/** "595 g raw (445 g cooked)", or "120 g" for a food with no pair ("120 g as listed" when its name says cooked or dry). */
 export function groceryQuantityText(item) {
   if (item?.grams == null) return '';
-  if (!item.state) return `${item.grams} g`;
+  if (!item.state) return item.asListed ? `${item.grams} g as listed` : `${item.grams} g`;
   return `${item.grams} g ${item.state}${item.alt ? ` (${item.alt.grams} g ${item.alt.state})` : ''}`;
 }
 

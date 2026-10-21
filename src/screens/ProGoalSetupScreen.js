@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { setupFormSignature, SETUP_CHANGED_NOTICE, COACH_FORM_FIELDS } from '../lib/setupFormSeed';
 import {
   View, StyleSheet, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform,
@@ -15,23 +17,15 @@ import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Dropdown from '../components/Dropdown';
-import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
 import CoachingSetupCard from '../components/CoachingSetupCard';
 import useCoachingSetUp from '../hooks/useCoachingSetUp';
 import Button from '../components/Button';
-import Chip from '../components/Chip';
-import ArchetypePicker from '../components/ArchetypePicker';
-import { trackNow, trackFeatureSeen } from '../lib/telemetry/growth';
-import { archetypeApplies, normaliseArchetype } from '../lib/trainingArchetypes';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
-import { logError, logWarn } from '../lib/errorLog';
 import {
-  PHYSIQUE_GOALS,
   TRAINING_PHASES,
-  GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
   phaseToCoachingKey, phaseToNutritionKey, buildNutritionEngineInputs,
   isCompetitionGoal,
 } from '../lib/coachingGoals';
@@ -41,42 +35,10 @@ import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceS
 import {
   saveNutritionTargets, getNutritionTargets, getMorningWeightsLast14Days,
   getLatestBodyComposition, getUserBodyProfile, getActivePeakWeekPlan, setPeakWeekShowDate,
-  getActivePlan,
 } from '../lib/database';
 import { ageYearsFromDateOfBirth } from '../lib/profileAge';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
-// D139: the goal/phase change rebuilds the plan, so it previews first.
-// prepareStartWithPlan owns the capability pre-flight this path already took
-// (CC27 section 9.6) plus the READ-ONLY dry run; commitStartWithPlan is the
-// generation, run only after the athlete confirms in PlanPreviewSheet.
-// F-16 REVISED, parity with first run and Adjust training (founder ruling
-// 2026-09-11): 'Kettlebells' and 'Bands' are answers that install a library
-// plan and never generate, and are stored as the equipment PROFILE
-// generationEquipmentFor maps them to. Same helpers, same copy as
-// ProOnboardingScreen and PlanUpdateScreen, so the three screens cannot drift
-// (the installed line itself is shown by GoalChangeSummary, this screen's
-// receipt).
-import {
-  prepareStartWithPlan, commitStartWithPlan, installLibraryPlanForKit, libraryKitForEquipment,
-  prepareStartWithPlanOption, saveChosenProfile,
-  generationEquipmentFor, libraryKitOfferLine, libraryKitWord,
-} from '../lib/startWithPlan';
-// The equipment answers themselves live in ONE shared list with onboarding
-// and Adjust training.
-import { EQUIPMENT_OPTIONS } from '../lib/equipmentOptions';
-import PlanPreviewSheet from '../components/PlanPreviewSheet';
-import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
-// F-16 REVISED point 3 / F-15 (docs/final-certification-2026-09-05/
-// 07-FINDINGS.md). This screen rebuilds the active plan on save, so an
-// athlete on a kettlebell, circuit or band library plan who came here to
-// change a GOAL had their plan silently replaced by a generated one. Same
-// rule as Adjust training, from the one shared module.
-import {
-  styleLockFromTags, styleLockGoalNotice, styleLockBrowseLabel,
-} from '../lib/exercise/styleLock';
-import { activePlanHasCircuitGroups, CIRCUIT_FLATTEN_NOTICE } from '../lib/planAutoGen';
-import { appAlert } from '../components/AppAlert';
 
 const APPROACH_SHORT = {
   standard:  'Enough for consistent training. Easy to sustain day to day.',
@@ -84,53 +46,14 @@ const APPROACH_SHORT = {
   advanced:  'Upper end for competitive athletes and harder cuts.',
 };
 
-// Training setup options, mirror the lists in ProOnboardingScreen so
-// re-running this screen produces the same plan structure as a fresh
-// wizard run with identical answers.
-const EXPERIENCE_OPTIONS = [
-  { value: 'beginner',     label: 'Beginner',     sub: 'Less than 18 months of consistent training' },
-  { value: 'intermediate', label: 'Intermediate', sub: '18 months to 3 years of consistent training' },
-  { value: 'advanced',     label: 'Advanced',     sub: '3 to 5 years, consistently adding weight over time' },
-  { value: 'competitive',  label: 'Competitive',  sub: '5+ years, training for physique or performance' },
-];
-
-const DAYS_OPTIONS = [3, 4, 5, 6];
-
-const SESSION_LENGTH_OPTIONS = [
-  { label: '45 min', value: 45 },
-  { label: '60 min', value: 60 },
-  { label: '75 min', value: 75 },
-  { label: '90 min', value: 90 },
-];
-
-// The equipment answers are NOT listed here: they come from the ONE shared
-// list (src/lib/equipmentOptions.js, imported above), so this screen cannot
-// drift from first run or Adjust training.
-
-const RECOVERY_OPTIONS = [
-  { value: 'poor',    label: 'Poor',    sub: 'Often sore, disrupted sleep, high life stress' },
-  { value: 'average', label: 'Average', sub: 'Typical recovery between sessions' },
-  { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, nutrition on point' },
-];
-
 const NUTRITION_KEY = '@volyume_nutrition_targets';
 
-// D112 R5 (closes audit T1-12): after a successful generation, the count of
-// slots the capability lane blocked. Mirrors PlanUpdateScreen's dry-run
-// preview (the model), which is the source of the exact copy this pins.
-function capabilityBlockedNote(n) {
-  return n === 1
-    ? "1 movement clashed with an injury or limitation you have set, so your plan works without it."
-    : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
-}
-
-// F-16 REVISED: the calm line when a kit answer's library install did not
-// finish. Nothing was written (the install runs before any save), so the
-// athlete's answers are still on the form and the plan is as it was.
-function kitInstallFailedLine(kit) {
-  return `Could not add the ${libraryKitWord(kit)} plan, so nothing was changed. Please try again, or choose a ${libraryKitWord(kit)} plan in the Plan Library.`;
-}
-
+// Owns goal, phase, protein target, show date and the calorie and macro targets
+// (proposal 10, Option B). The training setup (category, style, weak points,
+// experience, days, session length, equipment, recovery) is owned by "Adjust
+// training plan" on the Train tab. The phase does not feed the plan builder
+// (planAutoGen.buildPlanInputs -> structure/adapt.structureArgs reads no phase),
+// so this save never rebuilds the plan.
 export default function ProGoalSetupScreen({ navigation }) {
   // Coaching-first onboarding (founder brief 2026-10-19): goal and phase set
   // nutrition targets, so a quick-start person sets them through coaching
@@ -147,12 +70,9 @@ export default function ProGoalSetupScreen({ navigation }) {
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
-  // Telemetry: the training-style cards were shown (first sighting only).
-  const archetypeCardsShown = archetypeApplies(selectedGoal);
-  useEffect(() => {
-    if (archetypeCardsShown) trackFeatureSeen('archetype_cards');
-  }, [archetypeCardsShown]);
+  // The physique category is owned by Adjust training plan: read here only, for
+  // the show-date question and the target calculation.
+  const selectedGoal = userProfile?.trainingGoal ?? null;
   // Wave A B4: the footer names the next check-in day. Same flat prefs blob
   // the check-in screen reads (checkinDay 0=Sunday, default 0); best-effort.
   const [nextCheckinLabel, setNextCheckinLabel] = useState(null);
@@ -169,16 +89,6 @@ export default function ProGoalSetupScreen({ navigation }) {
     return () => { cancelled = true; };
   }, []);
   const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? 'lean_gain');
-  // D139: the staged plan preview for the rebuild half of this save, and the
-  // resolver the sheet's two buttons settle. Nothing about the plan is
-  // written while it is open; the goal and nutrition targets are already
-  // saved by then, exactly as they were before the preview existed.
-  const [planPreview, setPlanPreview] = useState(null);
-  const [planCommitting, setPlanCommitting] = useState(false);
-  const planPreviewResolveRef = useRef(null);
-  // D222 phase 7 (R83): the profile the open preview was prepared from, and
-  // the profile one of the structure engine's choices made from it.
-  const goalPreviewRef = useRef(null);
   // One save at a time. The ref is the guard (state lags a render, so two
   // quick taps would both read it as idle); the state drives the spinner.
   const savingRef = useRef(false);
@@ -210,58 +120,26 @@ export default function ProGoalSetupScreen({ navigation }) {
     })();
     return () => { cancelled = true; };
   }, []);
-  // Weak points, only meaningful for goals that bias volume towards priority
-  // muscles. Hidden in the UI otherwise but the value is preserved across edits.
-  const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
-  // Founder ruling 2026-10-19: the training style (see PlanUpdateScreen).
-  const [trainingArchetype, setTrainingArchetype] = useState(normaliseArchetype(userProfile?.trainingArchetype) ?? 'balanced');
   // B4: optional show date for competition divisions, stored on the user's
   // active peak_week_plans row (its only writer). Feeds the ED-gated
   // countdown on CoachOutput (docs/b4-contest-countdown-ed-review).
   const [showDateInput, setShowDateInput] = useState('');
-  // Training setup, prefilled from the user's existing profile so they
-  // can review and tweak. Changing any of these rerolls the plan around
-  // the new values (different days, equipment, experience all affect
-  // exercise selection + volume).
-  const [experience, setExperience] = useState(userProfile?.experience ?? 'intermediate');
-  const [daysPerWeek, setDaysPerWeek] = useState(userProfile?.daysPerWeek ?? 4);
-  const [sessionLengthMinutes, setSessionLengthMinutes] = useState(userProfile?.sessionLengthMinutes ?? 60);
-  const [equipment, setEquipment] = useState(userProfile?.equipment ?? 'full_gym');
-  const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
-
-  // F-16 REVISED point 3 / F-15: what the ACTIVE plan is, read once on entry.
-  // `styleLock` non-null withholds the rebuild entirely (goal, phase, protein
-  // and nutrition still save); `hasCircuit` keeps the rebuild but discloses
-  // that the rounds are not carried across it.
-  const [planKind, setPlanKind] = useState(null);
-  const [kindChecked, setKindChecked] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      let styleLock = null;
-      let hasCircuit = false;
-      try {
-        const active = user?.id ? await getActivePlan(user.id) : null;
-        styleLock = styleLockFromTags(active?.tags);
-        // A style-locked plan never reaches the rebuild, so the circuit read
-        // is only needed for the plans that still can.
-        if (!styleLock) hasCircuit = await activePlanHasCircuitGroups(user?.id ?? null);
-      } catch (_) {
-        // Best effort: an unreadable plan behaves exactly as it did before
-        // this existed, which is the ordinary rebuild.
-      }
-      if (cancelled) return;
-      setPlanKind({ styleLock, hasCircuit });
-      setKindChecked(true);
-    })();
-    return () => { cancelled = true; };
-  }, [user?.id]);
-  const styleLock = planKind?.styleLock ?? null;
-  const hasCircuitGroups = !!planKind?.hasCircuit;
-  // F-16 REVISED: non-null for the two kit answers, which install a LIBRARY
-  // plan in place of the active one and never generate. A style plan never
-  // renders the equipment field, so under a lock this is always null.
-  const libraryKit = styleLock ? null : libraryKitForEquipment(equipment);
+  // Proposal 10 (F1): reload the form from the saved profile whenever the
+  // screen regains focus AND the saved setup has changed since this form last
+  // seeded. Tabs keep their stack, so this form can sit mounted while the other
+  // setup screen saves; without this, pressing save writes the old values back.
+  // Unsaved edits survive a trip to a sub-screen (same signature, no reseed).
+  const seededSigRef = useRef(setupFormSignature(userProfile, COACH_FORM_FIELDS));
+  const [setupReloaded, setSetupReloaded] = useState(false);
+  useFocusEffect(useCallback(() => {
+    const sig = setupFormSignature(userProfile, COACH_FORM_FIELDS);
+    if (sig === seededSigRef.current) return;
+    seededSigRef.current = sig;
+    const p = userProfile || {};
+    setSelectedPhase(p.trainingPhase ?? 'lean_gain');
+    if (p.proteinApproach && PROTEIN_APPROACHES[p.proteinApproach]) setProteinApproach(p.proteinApproach);
+    setSetupReloaded(true);
+  }, [userProfile]));
 
   // The weight the targets are actually built from: the smoothed morning-weight
   // trend if there's history, otherwise the profile value. Read-only here, the
@@ -283,9 +161,8 @@ export default function ProGoalSetupScreen({ navigation }) {
   }, [user?.id]);
 
   const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(selectedGoal) ? 'advanced' : 'optimised';
-  const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
   const showDateApplicable = isCompetitionGoal(selectedGoal);
-  const canSave = selectedGoal !== null && selectedPhase !== null;
+  const canSave = selectedPhase !== null;
 
   // Pre-fill the show date from the active peak-week plan, if one exists.
   useEffect(() => {
@@ -298,45 +175,8 @@ export default function ProGoalSetupScreen({ navigation }) {
     })();
   }, [user?.id]);
 
-  function toggleWeakPoint(muscle) {
-    setPlanWeakPoints(prev => {
-      if (prev.includes(muscle)) return prev.filter(m => m !== muscle);
-      if (prev.length >= 3) {
-        toast.show('Pick up to 3 muscles. Deselect one first', { variant: 'warning' });
-        return prev;
-      }
-      return [...prev, muscle];
-    });
-  }
-
   // Phases that represent a calorie deficit, used to track when the deficit began.
   const DEFICIT_PHASES = ['cut'];
-
-  // D222 phase 7 (R83): one of the structure engine's choices in the sheet
-  // (more days, a longer session, without a focus pick). The plan is prepared
-  // again from the changed profile and the sheet shows it; the confirm then
-  // builds from that profile. Nothing is saved until the person confirms.
-  async function handleGoalPlanOption(option) {
-    const base = goalPreviewRef.current;
-    if (!base || planCommitting) return;
-    setPlanCommitting(true);
-    try {
-      const again = await prepareStartWithPlanOption(user.id, base.chosen ?? base.profile, option, {
-        mode: 'goal',
-        currentSessionLengthMinutes: userProfile?.sessionLengthMinutes ?? null,
-      });
-      if (again.ok) {
-        goalPreviewRef.current = { ...base, chosen: again.profile };
-        setPlanPreview({ preview: again.preview, otherPlansCount: again.otherPlansCount });
-      } else {
-        logError('ProGoalSetupScreen.planOption', new Error(again.error ?? again.reason ?? 'plan_preview_failed'), { userId: user?.id });
-      }
-    } catch (e) {
-      logError('ProGoalSetupScreen.planOption', e, { userId: user?.id });
-    } finally {
-      setPlanCommitting(false);
-    }
-  }
 
   async function handleSave() {
     if (savingRef.current) return;
@@ -358,69 +198,6 @@ export default function ProGoalSetupScreen({ navigation }) {
     if (showDateApplicable && trimmedShowDate && parseShowDate(trimmedShowDate) === null) {
       toast.show('Show date needs the format YYYY-MM-DD, for example 2026-09-19', { variant: 'warning' });
       return;
-    }
-
-    // C5-P30-04 (D96): saving here rebuilds the plan and starts a NEW
-    // six-week block (generateAndSavePlan -> activatePlanWithBlock), which
-    // deactivates the block in progress. The only explanation was
-    // GoalChangeSummary, navigated to AFTER the write. This is the same
-    // confirm every other plan-replacing path already runs, in its usual
-    // position: before the write, with the rebuild wording, and silent in
-    // week 1 or once the block is past its training weeks (nothing to lose).
-    // F-16 REVISED point 3: a style-locked plan is NOT rebuilt by this save,
-    // so no block is replaced and there is nothing to confirm. The goal,
-    // phase, protein approach and nutrition targets below all still save.
-    // F-16 REVISED: a kit answer (libraryKit) replaces the plan outright and
-    // asks its own confirm below, naming the plan, at the point every other
-    // plan-replacing path asks it. The rebuild wording here is not its case.
-    if (!styleLock && !libraryKit) {
-      const proceed = await confirmPlanSwitchMidBlock(user?.id, { mode: 'rebuild' });
-      if (!proceed) return;
-
-      // F-15 (evidence A3): no generation path emits `groupKind`, so a plan
-      // with circuit groups comes back as ungrouped straight sets. Said in
-      // full, and answered, BEFORE anything is written.
-      if (hasCircuitGroups) {
-        const acceptsFlatten = await new Promise((resolve) => {
-          appAlert('Your plan has circuits', CIRCUIT_FLATTEN_NOTICE, [
-            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'Rebuild anyway', onPress: () => resolve(true) },
-          ]);
-        });
-        if (!acceptsFlatten) return;
-      }
-    }
-
-    // F-16 REVISED, parity with first run and Adjust training: 'Kettlebells'
-    // and 'Bands' install the library plan that fits the week and never
-    // reach the generator. It runs FIRST, before anything is written, with
-    // the D139 mid-block confirm asked once the plan is known: a no, or a
-    // failed install, leaves the goal, the targets and the plan exactly as
-    // they were (FF-002, nothing half-saves) and the athlete stays on the
-    // form with their answers intact.
-    let installedPlan = null;
-    if (!styleLock && libraryKit) {
-      let install = { ok: false, error: 'not attempted' };
-      try {
-        install = await installLibraryPlanForKit(user?.id, {
-          kit: libraryKit,
-          daysPerWeek,
-          experience,
-          confirm: ({ planName }) => confirmPlanSwitchMidBlock(user?.id, { newPlanName: planName }),
-        });
-      } catch (e) {
-        // The real exception is logged; install.error is never shown.
-        logError('ProGoalSetupScreen.installKitPlan', e, { userId: user?.id });
-        install = { ok: false, error: e?.message ?? 'unknown' };
-      }
-      if (!install.ok) {
-        // The athlete's own no at the confirm is not a failure.
-        if (install.error === 'cancelled') return;
-        logWarn('ProGoalSetupScreen.installKitPlan', install.error ?? 'unknown', { userId: user?.id });
-        toast.show(kitInstallFailedLine(libraryKit), { variant: 'error', duration: 5000 });
-        return;
-      }
-      installedPlan = { kit: libraryKit, planName: install.planName ?? null };
     }
 
     const goalPhase = phaseToCoachingKey(selectedPhase);
@@ -461,48 +238,24 @@ export default function ProGoalSetupScreen({ navigation }) {
     }
     // If staying in a deficit phase, preserve the existing start date.
 
-    // Only keep weak points if the new goal supports them, switching to a
-    // non-applicable goal clears them so the plan generator doesn't keep
-    // biasing towards muscles the user no longer wants prioritised.
-    const nextWeakPoints = GOALS_WITH_WEAK_POINTS.includes(selectedGoal)
-      ? planWeakPoints
-      : [];
-
+    // Proposal 10 (F1, F2): built on the LATEST saved profile, not the render's
+    // copy, and carrying only the fields this screen owns (phase, protein,
+    // start date). Training fields belong to Adjust training plan, so a form
+    // left open can never write an older days or equipment value back.
     const updatedProfile = {
-      ...(userProfile || {}),
-      trainingGoal: selectedGoal,
+      ...(useAppStore.getState().userProfile || userProfile || {}),
       trainingPhase: selectedPhase,
       goalPhase,
       // nutrition goal key, kept in step with the phase so surfaces reading
       // userProfile.goal (Nutrition Targets summary) match the saved calories.
       goal: phaseToNutritionKey(selectedPhase),
-      // C6 Phase 1 seam 4 (D97): the phase clock. phaseStartedAt was
-      // written exactly once, at onboarding, and never on a phase change,
-      // so weeksInPhase measured weeks-since-account for ever: every coach
-      // output after a change carried a false week label, and a brand-new
-      // cut skipped the honest baseline period (weeksInPhase >= 2 was
-      // permanently satisfied) and got full trend coaching in week one
-      // from a weight series built during the previous phase. Reset ONLY
-      // when the phase genuinely changes - saving schedule or equipment
-      // tweaks through this screen must not touch the clock.
+      // C6 Phase 1 seam 4 (D97): the phase clock. Reset ONLY when the phase
+      // genuinely changes, so a protein or show-date save never touches it.
       ...(selectedPhase !== userProfile?.trainingPhase
         ? { phaseStartedAt: Date.now() }
         : {}),
       proteinApproach,
       goalStartDate,
-      planWeakPoints: nextWeakPoints,
-      trainingArchetype: archetypeApplies(selectedGoal) ? trainingArchetype : (normaliseArchetype(userProfile?.trainingArchetype) ?? null),
-      // Training setup fields, picking up changes the user made to
-      // experience / schedule / equipment / recovery. generateAndSavePlan
-      // reads these from the profile to drive plan generation.
-      experience,
-      daysPerWeek,
-      sessionLengthMinutes,
-      // F-16 REVISED: the equipment PROFILE (a kit answer maps to the profile
-      // its library plan is nearest to), never the raw answer, which the
-      // engines' bare membership test would reject.
-      equipment: generationEquipmentFor(equipment),
-      recoveryRating,
     };
 
     // Recalculate nutrition. Pulls userProfile from the store to make sure we
@@ -604,11 +357,13 @@ export default function ProGoalSetupScreen({ navigation }) {
         weightKg: safeWeightKg,
         bodyFatPct,
         bodyFatSource,
-        daysPerWeek,
+        // Days and experience are set on Adjust training plan; this save is
+        // where the targets pick up whatever was saved there.
+        daysPerWeek: wp.daysPerWeek ?? 4,
         trainingPhase: selectedPhase,
-        trainingGoal: selectedGoal,
+        trainingGoal: wp.trainingGoal ?? null,
         proteinApproach,
-        experience,
+        experience: wp.experience ?? 'intermediate',
       });
       const authority = await resolveEffectiveMaintenanceForUser(user.id, {
         ...engineInputs,
@@ -640,7 +395,15 @@ export default function ProGoalSetupScreen({ navigation }) {
       updatedProfile.bodyFatSource = bodyFatSource;
     }
 
+    // F2: the latest weigh-in was written back above; the profile saved here
+    // must carry that weigh-in too or this write puts the enrolment weight back.
+    if (latestWeightKg && latestWeightKg !== updatedProfile.weightKg) {
+      updatedProfile.weightKg = latestWeightKg;
+    }
     await saveLocalProfile(user.id, updatedProfile);
+    // Our own save is not "another screen": keep the reload check quiet.
+    seededSigRef.current = setupFormSignature(updatedProfile, COACH_FORM_FIELDS);
+    setSetupReloaded(false);
 
     // B4: store or clear the show date on the active peak-week plan row.
     // Best effort: the goal save must not fail on this.
@@ -652,92 +415,9 @@ export default function ProGoalSetupScreen({ navigation }) {
       }
     }
 
-    // Pro users keep an always-active plan, a goal change resets the
-    // mesocycle to week 1 of a freshly-generated plan that reflects the
-    // new goal/phase. The previous plan is deactivated by
-    // activatePlanWithBlock; session history stays intact.
-    // CC27 (section 9.6): the capability pre-flight runs BEFORE the engine
-    // call. With no readable capability state and none known this session,
-    // the choice is the user's - hold, or continue without those checks.
-    // Holding skips only the REBUILD (the goal itself saved above); the
-    // existing not-rebuilt path already tells the user how to retry.
-    // D139: the rebuild is previewed before it runs. The pre-flight moved
-    // inside prepareStartWithPlan, in the same position (before the engine);
-    // a hold there still skips ONLY the rebuild, and so does "Not yet".
-    let planResult = { ok: false, error: 'not attempted' };
-    let previewDeclined = false;
-    if (styleLock) {
-      // F-16 REVISED point 3: the plan is deliberately left exactly as it is.
-      // Not a failure, so no warning toast and no retry instruction: the
-      // summary below says so in its own words.
-      planResult = { ok: false, error: 'style_locked' };
-    } else if (installedPlan) {
-      // F-16 REVISED: the library plan is already active (installed above,
-      // before any write), so there is nothing to preview or generate.
-      planResult = { ok: true, planName: installedPlan.planName };
-    } else {
-    // D222 phase 7 (R83): the profile this preview was prepared from, for
-    // the structure engine's choices (handleGoalPlanOption), which prepare it
-    // again from a changed profile; the plan is then built from that profile
-    // and it is saved with the plan.
-    goalPreviewRef.current = { profile: updatedProfile, chosen: null };
-    const prep = await prepareStartWithPlan(user.id, updatedProfile, {
-      mode: 'goal',
-      currentSessionLengthMinutes: userProfile?.sessionLengthMinutes ?? null,
-    });
-    if (!prep.ok) {
-      planResult = { ok: false, error: prep.reason ?? 'plan_preview_failed' };
-    } else {
-      const confirmed = await new Promise((resolve) => {
-        planPreviewResolveRef.current = resolve;
-        setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount });
-      });
-      planPreviewResolveRef.current = null;
-      if (!confirmed) {
-        previewDeclined = true;
-        setPlanPreview(null);
-        planResult = { ok: false, error: 'plan_preview_declined' };
-      } else {
-        setPlanCommitting(true);
-        const chosenProfile = goalPreviewRef.current?.chosen ?? null;
-        try {
-          if (chosenProfile) planResult = await commitStartWithPlan(user.id, chosenProfile);
-          else planResult = await commitStartWithPlan(user.id, updatedProfile);
-          if (planResult?.ok && chosenProfile) {
-            await saveChosenProfile(user.id, chosenProfile, updatedProfile)
-              .catch((e) => logError('ProGoalSetupScreen.saveChosenProfile', e, { userId: user?.id }));
-          }
-        } catch (e) {
-          planResult = { ok: false, error: e?.message ?? 'unknown' };
-        }
-        setPlanCommitting(false);
-        setPlanPreview(null);
-      }
-    }
-    }
-    if (styleLock) {
-      // Nothing to say beyond the summary: this is the intended outcome.
-    } else if (installedPlan) {
-      // The summary carries the one shared line for the plan that was added.
-    } else if (previewDeclined) {
-      // The athlete chose not to rebuild. That is a valid answer, so it gets
-      // no warning: the change summary below already reports the plan as not
-      // rerolled, and Adjust training rebuilds whenever they want it.
-    } else if (!planResult.ok) {
-      // Don't block navigation, the goal is saved, nutrition updated. Just
-      // tell the user the training plan was not rebuilt so they can retry.
-      // D88: the raw caught message no longer reaches the user.
-      toast.show('Goal and targets saved, but the training plan did not rebuild. Open Today and choose Start with a plan to retry', { variant: 'warning', duration: 5000 });
-    } else if (planResult.capabilityBlockedCount > 0) {
-      // D112 R5 (closes audit T1-12): every generation entry reveals
-      // capability effects.
-      toast.show(capabilityBlockedNote(planResult.capabilityBlockedCount), { variant: 'info', duration: 5000 });
-    }
-
-    // Navigate to the change-summary screen instead of just popping back so
-    // the user can see exactly what shifted and why. planRerolled tells the
-    // summary whether the active plan was rebuilt (the path generateAndSavePlan
-    // returns ok) or left in place (engine failure, see the toast above).
+    // The plan is not part of this save: the phase is no input to the plan
+    // builder, and the category and every training field are set on Adjust
+    // training plan, which previews and rebuilds. The summary says so.
     navigation.replace('GoalChangeSummary', {
       previous: {
         goal: previousProfile.goal,
@@ -749,7 +429,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         fat: previousTargets?.fatG ?? null,
       },
       next: {
-        goal: selectedGoal,
+        goal: previousProfile.goal,
         phase: selectedPhase,
         approach: proteinApproach,
         kcal: nextTargets?.targetKcal ?? null,
@@ -757,27 +437,14 @@ export default function ProGoalSetupScreen({ navigation }) {
         carbs: nextTargets?.carbsG ?? null,
         fat: nextTargets?.fatG ?? null,
       },
-      planRerolled: !!planResult?.ok,
-      // F-16 REVISED point 3: the summary must not report a style-locked plan
-      // as "didn't rebuild this time" (a failure, whose retry instruction
-      // would GENERATE over the very plan being protected). Named, so the
-      // summary can say the plan was kept on purpose.
-      planKeptReason: styleLock ? 'style_lock' : null,
-      planStyleLabel: styleLock?.label ?? null,
-      // F-16 REVISED: a kit answer installed a library plan. Named, so the
-      // summary shows the shared installed line and never claims a plan was
-      // built for them.
-      planInstalledKit: installedPlan?.kit ?? null,
-      planInstalledName: installedPlan?.planName ?? null,
+      planRerolled: false,
+      planKeptReason: 'training_on_train',
     });
   }
 
-  // The primary action names what it does: a review of a rebuild for the
-  // six profile answers, the library install for the two kit answers. Same
-  // words as Adjust training.
-  const primaryLabel = libraryKit
-    ? `Add the ${libraryKitWord(libraryKit)} plan`
-    : 'Review my plan changes';
+  // The save writes the goal, phase, protein target and targets. Same words as
+  // the owner's Stage 2 answer for item 10.
+  const primaryLabel = 'Review and save';
 
   if (!coachingSetUp) {
     return (
@@ -803,58 +470,11 @@ export default function ProGoalSetupScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Physique category (optional) ──
-            Most users leave this on "Not competing, General". Competitive
-            lifters pick their division so volume gets biased towards the
-            muscles their category is judged on. */}
-        <SectionLabel style={styles.sectionLabel}>Competing in a category? (optional)</SectionLabel>
-        <Text style={[styles.sectionSub, live.sectionSub]}>
-          Only matters if you are chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
-        </Text>
-
-        <Dropdown
-          value={selectedGoal}
-          options={PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }))}
-          onChange={setSelectedGoal}
-          placeholder="Not competing, General"
-        />
-
-        {/* ── Training style (founder ruling 2026-10-19): not competing only ── */}
-        {archetypeApplies(selectedGoal) ? (
-          <>
-            <SectionLabel style={styles.sectionLabelSpaced}>Your training style</SectionLabel>
-            <Text style={[styles.sectionSub, live.sectionSub]}>
-              How your plan shares out its work. The muscle map shows where the extra work goes.
-            </Text>
-            <ArchetypePicker
-              value={trainingArchetype}
-              onChange={(v) => { trackNow('archetype_chosen', { archetype: v, surface: 'goal_setup' }); setTrainingArchetype(v); }}
-            />
-          </>
+        {setupReloaded ? (
+          <Text style={[styles.sectionSub, live.sectionSub]} accessibilityLiveRegion="polite">
+            {SETUP_CHANGED_NOTICE}
+          </Text>
         ) : null}
-
-        {/* ── Weak points (only for goals that support them) ── */}
-        {weakPointsApplicable && (
-          <>
-            <SectionLabel style={styles.sectionLabelSpaced}>
-              Weak points <Text style={[styles.optionalTag, live.optionalTag]}>(optional, max 3)</Text>
-            </SectionLabel>
-            <Text style={[styles.sectionSub, live.sectionSub]}>
-              Muscles you want to bring up. Your plan puts extra work into them.
-            </Text>
-            <View style={styles.weakPointGrid}>
-              {WEAK_POINT_MUSCLES.map(muscle => (
-                <Chip
-                  key={muscle}
-                  label={muscle}
-                  selected={planWeakPoints.includes(muscle)}
-                  onPress={() => toggleWeakPoint(muscle)}
-                />
-              ))}
-            </View>
-          </>
-        )}
-
         {/* ── Show date (competition divisions only, optional) ──
             B4: feeds the ED-gated countdown on CoachOutput. Process copy
             only; safety holds always outrank the countdown. */}
@@ -888,7 +508,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             (weak_point spec, strength_size's isolation reduction). */}
         <SectionLabel style={styles.sectionLabelSpaced}>What are you focused on right now?</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          Drives your calorie target and how the plan is built.
+          Drives your calorie and protein targets.
         </Text>
 
         <Dropdown
@@ -898,102 +518,18 @@ export default function ProGoalSetupScreen({ navigation }) {
           placeholder="Choose your focus"
         />
 
-        {/* F-16 REVISED point 3: saving this screen rebuilds the active
-            plan, and generation cannot rebuild a kettlebell, circuit or band
-            plan as the same kind of plan. So for a style-locked plan the
-            training-setup fields are withheld along with the rebuild, and
-            the reason takes their place. Goal, phase, protein approach and
-            nutrition targets below are unaffected and still save. */}
-        {kindChecked && styleLock ? (
-          <>
-            <Text style={[styles.sectionSub, live.sectionSub, styles.sectionLabelSpaced]}>
-              {styleLockGoalNotice(styleLock.label)}
-            </Text>
-            <Button
-              title={styleLockBrowseLabel(styleLock.label)}
-              onPress={() => navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary', { initialCollection: styleLock.collection })}
-              accessibilityLabel={styleLockBrowseLabel(styleLock.label)}
-              variant="secondary"
-            />
-          </>
-        ) : null}
-
-        {kindChecked && !styleLock ? (
-        <>
-        {/* ── Training experience ── */}
-        <SectionLabel style={styles.sectionLabelSpaced}>Experience</SectionLabel>
+        {/* Proposal 10 (Option B): the training setup lives on the Train tab's
+            "Adjust training plan". Here it is a read-out with the link. */}
+        <SectionLabel style={styles.sectionLabelSpaced}>Training setup</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          This sets your starting volume and exercise selection. Change it as you get more experience.
+          {`${userProfile?.daysPerWeek ?? 4} days a week, ${userProfile?.sessionLengthMinutes ?? 60} minutes a session. Your category, training style, experience, days, equipment and recovery are set on the Train tab.`}
         </Text>
-        <Dropdown
-          value={experience}
-          options={EXPERIENCE_OPTIONS}
-          onChange={setExperience}
-          placeholder="Choose your experience"
+        <Button
+          title="Adjust training plan"
+          onPress={() => navigateCrossTab(navigation, 'PlansTab', 'PlanUpdate')}
+          accessibilityLabel="Adjust training plan"
+          variant="secondary"
         />
-
-        {/* ── Training schedule ── */}
-        <SectionLabel style={styles.sectionLabelSpaced}>Training days per week</SectionLabel>
-        <Text style={[styles.sectionSub, live.sectionSub]}>
-          Changing how many days you train changes the exercise mix. Your plan rebuilds around it.
-        </Text>
-        <SegmentedControl
-          options={DAYS_OPTIONS.map(d => ({ label: String(d), value: d }))}
-          value={daysPerWeek}
-          onChange={setDaysPerWeek}
-          accessibilityLabel="Training days per week"
-        />
-
-        <SectionLabel style={styles.sectionLabelSpaced}>Session length</SectionLabel>
-        <SegmentedControl
-          options={SESSION_LENGTH_OPTIONS}
-          value={sessionLengthMinutes}
-          onChange={setSessionLengthMinutes}
-          accessibilityLabel="Session length"
-        />
-
-        {/* ── Equipment ── */}
-        <SectionLabel style={styles.sectionLabelSpaced}>Equipment</SectionLabel>
-        <Text style={[styles.sectionSub, live.sectionSub]}>
-          What you have access to. The exercises adapt to your equipment.
-        </Text>
-        <Dropdown
-          value={equipment}
-          options={EQUIPMENT_OPTIONS}
-          onChange={setEquipment}
-          placeholder="Choose your equipment"
-        />
-        {/* F-16 REVISED: said as soon as a kit answer is chosen, because the
-            copy on this screen and the button below otherwise promise a
-            rebuild, and these two answers never rebuild. */}
-        {libraryKit ? (
-          <Text style={[styles.sectionSub, live.sectionSub]}>{libraryKitOfferLine(libraryKit)}</Text>
-        ) : null}
-
-        {/* ── Recovery ── */}
-        <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
-        <Text style={[styles.sectionSub, live.sectionSub]}>
-          How well you are recovering between sessions. This sets how much volume your plan includes, so it can protect your recovery.
-        </Text>
-        <Dropdown
-          value={recoveryRating}
-          options={RECOVERY_OPTIONS}
-          onChange={setRecoveryRating}
-          placeholder="Choose your recovery"
-        />
-
-        {/* F-15 (evidence A3): the circuit grouping is not carried across a
-            rebuild. Said here, before save is even pressed, and answered
-            explicitly before anything is written. A kit answer replaces the
-            plan outright rather than rebuilding it (its own line above says
-            so), so the rebuild wording is not shown for it. */}
-        {hasCircuitGroups && !libraryKit ? (
-          <Text style={[styles.sectionSub, live.sectionSub, styles.sectionLabelSpaced]}>
-            {CIRCUIT_FLATTEN_NOTICE}
-          </Text>
-        ) : null}
-        </>
-        ) : null}
 
         {/* ── Protein target ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Protein target</SectionLabel>
@@ -1075,26 +611,6 @@ export default function ProGoalSetupScreen({ navigation }) {
       </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* D139: a goal or phase change rebuilds the plan and restarts the
-          block. It said so only AFTER the write (GoalChangeSummary); now the
-          same sheet the other three generation moments use shows what the
-          rebuild would do, and the generator runs on confirm. */}
-      <PlanPreviewSheet
-        userId={user?.id ?? null}
-        source="goal"
-        visible={!!planPreview}
-        preview={planPreview?.preview ?? null}
-        currentPlanName={planPreview?.preview?.currentPlanName ?? null}
-        otherPlansCount={planPreview?.otherPlansCount ?? 0}
-        confirmLabel="Confirm and rebuild"
-        onConfirm={() => planPreviewResolveRef.current?.(true)}
-        onChooseOption={handleGoalPlanOption}
-        onChooseEquipment={() => { planPreviewResolveRef.current?.(false); navigateCrossTab(navigation, 'PlansTab', 'PlanUpdate'); }}
-        onChooseAvoided={() => { planPreviewResolveRef.current?.(false); navigation.navigate('AvoidedMovements'); }}
-        onChooseManual={() => { planPreviewResolveRef.current?.(false); navigateCrossTab(navigation, 'PlansTab', 'ManualBuilder'); }}
-        onClose={() => { if (!planCommitting) planPreviewResolveRef.current?.(false); }}
-        busy={planCommitting}
-      />
     </SafeAreaView>
   );
 }

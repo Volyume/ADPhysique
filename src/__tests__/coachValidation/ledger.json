@@ -2485,38 +2485,6 @@
   }
  },
  {
-  "rule_id": "T-VOLUME-01",
-  "domain": "volume",
-  "source_file": "src/lib/algorithms.js",
-  "authority": "src/lib/algorithms.js:25 VOLUME_LANDMARKS, :277 getVolumeStatus",
-  "decision": "",
-  "thresholds": "workingSets<=0 or non-finite -> below; <mev -> below; <=mev+2 -> minimum; <=mav -> optimal; <=mrv -> near_mrv; else over_mrv. Per- muscle mev/mav/mrv table hardcoded (e.g. chest mev6/mav14/mrv22, back mev10/mav16/mrv25, quads mev8/mav14/mrv20 \u2014 full table at lines 25-59)",
-  "precedence": "zero-work short-circuit fires even for a muscle with mev=0 (front_delts) so the heatmap never shows \"optimal\" before any set is logged",
-  "direct_case": [
-   "TRN-62",
-   "TRN-63",
-   "TRN-64"
-  ],
-  "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
-  "safety_case": [],
-  "safety_na_reason": null,
-  "whole_scenario_ids": [
-   "TRN-62",
-   "TRN-63",
-   "TRN-64"
-  ],
-  "property_test_ids": [],
-  "status": "WHOLE_CHAIN_PROVEN",
-  "oracle": {
-   "expected": null,
-   "authority_source": null,
-   "suspected_defect": false,
-   "notes": null
-  }
- },
- {
   "rule_id": "T-VOLUME-02",
   "domain": "volume",
   "source_file": "src/lib/algorithms.js",
@@ -3310,9 +3278,9 @@
   "rule_id": "T-LIVESET-09",
   "domain": "liveset",
   "source_file": "src/lib/livePrescription.js",
-  "authority": "src/lib/livePrescription.js:829-844 determineWorkingLoad (layoff / block-finished senior opening-time overrides, \u00a710.5/\u00a714)",
+  "authority": "src/lib/livePrescription.js:829-844 determineWorkingLoad (layoff / block-finished senior opening-time overrides, \u00a710.5/\u00a714; layoff threshold 14 days, G2 item 17)",
   "decision": "",
-  "thresholds": "senior.layoffDays > 7 (the \"layoff >7d\" named in the mission) OR senior.blockFinished -> cap the opening load at the most recent comparable session's top load (never let the ADVANCE gate fire), still respect a genuine consecutive-miss DROP, still allow back-off structure to compose. Layoff specifically applies seniorMultiplier = 0.9 (the \"\u00d70.9\" named in the mission) on top of the capped load; block-finished applies no multiplier (cap only)",
+  "thresholds": "senior.layoffDays > 14 (more than 14 days since last logged; owner 2026-10-20, was 7) OR senior.blockFinished -> cap the opening load at the most recent comparable session's top load (never let the ADVANCE gate fire), still respect a genuine consecutive-miss DROP, still allow back-off structure to compose. Layoff specifically applies seniorMultiplier = 0.9 (the \"\u00d70.9\" named in the mission) on top of the capped load; block-finished applies no multiplier (cap only). Layoff trims LOAD only: its rep target is exactly last time's reps at the position (no plus one), never above the un-flagged baseline's reps (strict older-lifter property); block-finished keeps the band-floor reps",
   "precedence": "fires only when today.working.length===0 (no today evidence yet); ordinary nextSessionOpeningLoad gate runs afterward if neither layoff nor block-finished condition triggers",
   "direct_case": [
    "LSO-30"

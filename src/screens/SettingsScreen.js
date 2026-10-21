@@ -1,7 +1,7 @@
 import { View, Platform } from 'react-native';
 import { appAlert } from '../components/AppAlert';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
+import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import * as haptics from '../lib/haptics';
@@ -25,36 +25,15 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <SettingsPage title="Settings">
+      {/* Stage 2 item 11 (owner answer): six headings, rows exactly as the
+          owner's table. Row mapping old -> new is in J2.md. */}
+      <SectionHeader title="Training" />
       <View style={[styles.section, live.section]}>
-        {/* CC33 close-out: the subtitle front-loads the recognisable
-            words. Banked research (S1-RESEARCH-EVIDENCE-BANKED.md, the
-            naming/entry section): the DfE teacher-training design history
-            moved disclosure from 4% to 15% across ~8,000 applications by
-            replacing a gatekeeping question with one ungated list of
-            recognisable words, and ONS shows an identity-first door
-            ("are you disabled?") misroutes under half the intended
-            audience - pain, fatigue and breathing limits are the commonly
-            missed ones. So the label keeps naming the EFFECT on training
-            (one door, no self-classification) and the subtitle carries the
-            words a person actually searches for. */}
         <SettingRow
           icon="body"
           label="Injuries & limitations"
           sub="Injuries, pain, long-term conditions or disabilities that affect your training."
-          accessibilityLabel="Injuries & limitations. Injuries, pain, long-term conditions or disabilities that affect your training."
           onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-        />
-        <SettingRow
-          icon="person-circle-outline"
-          label="Account"
-          sub={user?.email || ''}
-          onPress={() => { haptics.selection(); navigation.navigate('SettingsAccount'); }}
-        />
-        <SettingRow
-          icon="person-outline"
-          label="Profile"
-          sub="Name, sex, height, date of birth and diet preference"
-          onPress={() => { haptics.selection(); navigation.navigate('SettingsProfile'); }}
         />
         <SettingRow
           icon="barbell-outline"
@@ -62,17 +41,15 @@ export default function SettingsScreen({ navigation }) {
           sub="Calmer coaching, session readiness and coaching preferences"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsCoaching'); }}
         />
-        {/* CP-6 (2026-07-09 UX audit): this used to render inline on this
-            screen (Hevy teardown 2026-06-29, R1/R2), breaking Settings' own
-            "tap for a sub-page" contract. Moved wholesale into its own
-            sub-page, SettingsWorkoutScreen.js; this is now just a row like
-            every sibling above and below it. */}
         <SettingRow
           icon="body-outline"
-          label="Workout & units"
-          sub="Body weight unit, default rest timer and rest alerts"
+          label="Workout"
+          sub="Session length, default rest timer and rest alerts"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
         />
+      </View>
+      <SectionHeader title="Nutrition" />
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="nutrition-outline"
           label="Nutrition targets"
@@ -85,30 +62,35 @@ export default function SettingsScreen({ navigation }) {
           sub="Diet, allergies and foods to avoid"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsDietary'); }}
         />
-        {/* Item 9(a) (D141): both subtitles used to say "check-ins", but only
-            CoachingRemindersScreen owns check-in reminders -- this screen's
-            own check-in toggles were removed and now live there (see
-            NotificationSettingsScreen's "Morning weight + weekly check-in
-            reminders moved to a dedicated screen" comment). Rewritten to
-            name only what each destination screen actually owns, so the two
-            rows no longer overlap. */}
+      </View>
+      <SectionHeader title="Reminders" />
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="notifications-outline"
-          label="Notifications and reminders"
-          sub="Training reminder, meal reminders and quiet hours"
+          label="Notifications"
+          sub="Training reminder, getting-started nudges, welcome-back note, Community alerts, meal-log reminders and quiet hours"
           onPress={() => { haptics.selection(); navigation.navigate('NotificationSettings'); }}
         />
         <SettingRow
           icon="pulse-outline"
           label="Coaching reminders"
-          sub="Weigh-in and weekly check-in schedule"
+          sub="Morning weigh-in, weekly check-in, missed check-in follow-up and planned-meal confirmation"
           onPress={() => { haptics.selection(); navigation.navigate('CoachingReminders'); }}
         />
+      </View>
+      <SectionHeader title="Display & accessibility" />
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="contrast-outline"
-          label="Display and accessibility"
-          sub="Appearance, energy units, text size, contrast, motion"
+          label="Display"
+          sub="Appearance, text size, contrast, colour-blind palette, motion and haptics"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsDisplay'); }}
+        />
+        <SettingRow
+          icon="scale-outline"
+          label="Units"
+          sub="Body weight and food energy"
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsUnits'); }}
         />
         {Platform.OS === 'android' && (
           <SettingRow
@@ -122,30 +104,42 @@ export default function SettingsScreen({ navigation }) {
             ); }}
           />
         )}
+      </View>
+      <SectionHeader title="Privacy & data" />
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="cloud-outline"
           label="Your data"
           sub="Sync, backup, import, export"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsData'); }}
         />
-        {/* Community (founder order 2026-09-22, item 2; audit A-10: this
-            row used to open CommunityPrivacy, not Community, so someone
-            looking for "my Community feed" landed on "who can follow you"
-            instead). Now opens the Hub itself; the privacy controls are
-            one tap further in, from inside Community. Community lives in
-            the Home stack, so this is a cross-tab jump like the
-            Community row on Coach. */}
+        <SettingRow
+          icon="shield-checkmark-outline"
+          label="Privacy and legal"
+          sub="Consent, data sharing and policy"
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsPrivacy'); }}
+        />
+        {/* Community: cross-tab jump, unchanged (founder order 2026-09-22, item 2). */}
         <SettingRow
           icon="people-outline"
           label="Community"
           sub="Your feed, people, groups and privacy"
           onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab'); }}
         />
+      </View>
+      <SectionHeader title="Account & help" />
+      <View style={[styles.section, live.section]}>
         <SettingRow
-          icon="shield-checkmark-outline"
-          label="Privacy and legal"
-          sub="Consent, data sharing and policy"
-          onPress={() => { haptics.selection(); navigation.navigate('SettingsPrivacy'); }}
+          icon="person-circle-outline"
+          label="Account"
+          sub={user?.email || ''}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsAccount'); }}
+        />
+        <SettingRow
+          icon="person-outline"
+          label="Profile"
+          sub="Name, sex, height, date of birth and diet preference"
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsProfile'); }}
         />
         <SettingRow
           icon="information-circle-outline"

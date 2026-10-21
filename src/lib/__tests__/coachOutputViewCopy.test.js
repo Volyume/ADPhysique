@@ -1,6 +1,6 @@
 import {
   DAY_NAMES_FULL,
-  CONFIDENCE_CAPTIONS,
+  buildConfidenceLine,
   buildFocus,
   buildOffItems,
   weekRangeLabel,
@@ -46,15 +46,16 @@ describe('coach output view copy helpers', () => {
     )).toBe('Sleep is the priority this week. Aim for 7 hours or more. Nothing else will improve until your sleep does.');
   });
 
-  test('exports the forward-pull day names and confidence captions used by the screen', () => {
+  test('exports the forward-pull day names and confidence line used by the screen', () => {
     expect(DAY_NAMES_FULL[0]).toBe('Sunday');
-    expect(CONFIDENCE_CAPTIONS).toEqual({
-      high: 'Confidence: high. A full week of data sits behind this decision.',
-      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
-      medium: 'Confidence: medium. There was less information than usual this week, so your coach waits an extra week before changing your calorie target.',
-      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
-      low: 'Confidence: low. Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target.',
-    });
+    // Item 12: the line names its basis (weigh-ins and the check-in), never food or sessions.
+    expect(buildConfidenceLine('high', 6)).toBe('Confidence: high. Based on 6 morning weigh-ins and your check-in.');
+    expect(buildConfidenceLine('high', 1)).toBe('Confidence: high. Based on 1 morning weigh-in and your check-in.');
+    expect(buildConfidenceLine('high')).toBe('Confidence: high. Based on your morning weigh-ins and your check-in.');
+    expect(buildConfidenceLine('medium', 3)).toBe('Confidence: medium. Based on 3 morning weigh-ins and your check-in. That is less to go on than usual, so your coach waits an extra week before changing your calorie target.');
+    expect(buildConfidenceLine('low', 4)).toBe('Confidence: low. Based on 4 morning weigh-ins and your check-in. Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target.');
+    expect(buildConfidenceLine('data_hold', 2)).toBeNull();
+    expect(buildConfidenceLine('high', 6)).not.toMatch(/full week|session|food/i);
   });
 });
 

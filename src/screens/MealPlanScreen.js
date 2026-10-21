@@ -39,12 +39,13 @@ import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
-import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
+import { todayLocalKey, parseLocalDay, localDayKey } from '../lib/dayKey';
 import { shiftDate } from '../lib/food/diaryDates';
 // Campaign 17B job 4: stated vs observed, from CONFIRMED intake only.
 import { mealCountObservation } from '../lib/food/habits';
 // Campaign 17B job 5: why these meals, from the codes stamped at generation.
-import { explainMeal, explainDay, explainFood, explainAbsence } from '../lib/food/mealRationale';
+import { explainMeal, explainDay, explainFood, explainAbsence, MEAL_REASON } from '../lib/food/mealRationale';
+import { countOilyMeals, oilyFishCapFromProfile, OILY_FISH_NO_LIMIT } from '../lib/food/oilyFish';
 import { getNutritionTargets } from '../lib/database';
 
 // How far back the meal-count observation looks. Four weeks is long enough to
@@ -58,8 +59,12 @@ import {
   setMealPinOnActivePlan,
   regenerateActiveMealPlan,
   planConflictsWithExclusions,
-  applyPlanDayToDiary,
+  applyPlanDayMerging,
   applyPlanWeekToDiary,
+  planDayMergePlan,
+  readDiaryMealsPerDay,
+  describeDayMerge,
+  describeWeekMerge,
   repeatPlanDayOnActivePlan,
   swapMealInPlan,
   swapFoodInMeal,
@@ -67,12 +72,12 @@ import {
   excludedRoleAlternatives,
 } from '../lib/food/mealPlanService';
 import {
-  updateMealPlan, getFoodEntriesForDay, clearPlannedDay, recordFoodSwap,
+  updateMealPlan, getFoodEntriesForDay, recordFoodSwap,
   getFoodEntriesForRange, getRollupsForRange,
 } from '../lib/food/db';
 // Campaign 17A job 3: what a food swap MEANS, in the user's own words.
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from '../lib/food/foodSwapScope';
-import { hasCookToggle, nativeState, convertCookGrams, uncookedWord } from '../lib/food/cookYield';
+import { hasCookToggle, nativeState, convertCookGrams, uncookedWord, weighAsListed } from '../lib/food/cookYield';
 import { kitchenRound } from '../lib/food/gramSolve';
 import { buildGroceryList, formatGroceryListForShare, GROCERY_REPEAT_DAYS } from '../lib/food/groceryList';
 import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
@@ -193,7 +198,7 @@ const DIETARY_CHIP_HINT_KEY = '@volyume_seen_mealplan_dietary_chip';
 
 // One labelled segmented row of preference options (a small radio group).
 function PrefRow({
-  label, help, options, value, onSelect, busy,
+  label, help, options, value, onSelect, busy, a11yLabel,
 }) {
   // CP-10 batch E (2026-07-10): sibling function-component scope (not
   // prop-drilled `live`/`t` from MealPlanScreen, matching AddCustomFoodScreen's
@@ -218,7 +223,7 @@ function PrefRow({
               hitSlop={hitSlop}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected, disabled: busy }}
-              accessibilityLabel={`${label}: ${opt.label}`}
+              accessibilityLabel={`${a11yLabel || label}: ${opt.label}`}
             >
               <Text style={[styles.prefOptText, live.prefOptText, selected && [styles.prefOptTextOn, live.prefOptTextOn]]}>{opt.label}</Text>
             </TouchableOpacity>
@@ -311,6 +316,16 @@ function MealPreferencesControls({
         ]}
         value={prefs.variety}
         onSelect={(v) => onSetPref({ mealPlanVariety: v })}
+        busy={busy}
+      />
+      {/* Item 25: how many oily fish meals a plan may hold in a week. Counted
+          in meals; kept on this phone with the other meal plan choices. */}
+      <PrefRow
+        label={`Oily fish meals a week: ${prefs.oilyFish === Infinity ? 'no limit' : `up to ${prefs.oilyFish}`}`}
+        a11yLabel="Oily fish meals a week"
+        options={[...[0, 1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: n, label: String(n) })), { value: Infinity, label: 'No limit' }]}
+        value={prefs.oilyFish}
+        onSelect={(v) => onSetPref({ mealPlanOilyFish: v === Infinity ? OILY_FISH_NO_LIMIT : v })}
         busy={busy}
       />
     </>
@@ -523,10 +538,15 @@ export default function MealPlanScreen({ navigation, route }) {
     if (!user?.id || !day) return;
     setBusy(true);
     try {
-      if (clearPlannedFirst) await clearPlannedDay(user.id, planStartDate);
-      const n = await applyPlanDayToDiary(user.id, day, { entryDate: planStartDate });
-      const verb = clearPlannedFirst ? `replaced the plan for ${planStartLabel}` : `added to ${planStartLabel}`;
-      toast.show(n > 0 ? `${n} ${n === 1 ? 'food' : 'foods'} ${verb}.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
+      // Item 24: only the plan meals whose diary meal holds no eaten food are
+      // added; a replace clears every planned row on the date first (and only
+      // when something is going to be added). Eaten food is never touched.
+      const res = await applyPlanDayMerging(user.id, day, { entryDate: planStartDate, replacePlanned: !!clearPlannedFirst });
+      const n = res.logged;
+      toast.show(
+        describeDayMerge(res, planStartLabel, mealSlotLabel, !!clearPlannedFirst),
+        { variant: n > 0 ? 'success' : 'info' },
+      );
       // A successful add lands the user on the result (founder 2026-07-03:
       // staying here read as nothing happening). Diary is this stack's
       // root, so navigate pops back to it; the toast rides the transition
@@ -569,12 +589,33 @@ export default function MealPlanScreen({ navigation, route }) {
       );
       return;
     }
-    // Real eaten food is present: never delete it. Add the plan alongside,
-    // clearing only stale planned scaffolding so the plan can't double up.
+    // Real eaten food is present: never delete it. Only the plan meals whose
+    // diary meal is empty are added; meals that already hold food are skipped
+    // and named. Planned rows, if any, are replaced as a group.
     if (eatenCount > 0) {
+      const diaryMeals = await readDiaryMealsPerDay();
+      const { entries: wouldAdd, skippedSlots } = planDayMergePlan(day, existing, planStartDate, diaryMeals);
+      const skippedNames = skippedSlots.map(mealSlotLabel).join(', ');
+      if (wouldAdd.length === 0 && skippedSlots.length > 0) {
+        appAlert(
+          'Food already logged',
+          `Every meal in this plan already has food logged on ${planStartLabel} (${skippedNames}), so nothing would be added.`,
+          [{ text: 'OK', style: 'cancel' }],
+        );
+        return;
+      }
+      if (skippedSlots.length === 0 && plannedCount === 0) {
+        await writeLogDay(false);
+        return;
+      }
+      const lines = [
+        `You have already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten on ${planStartLabel}. That food stays.`,
+        skippedSlots.length ? `Skipped, already logged: ${skippedNames}. The rest of the plan is added.` : 'The plan is added.',
+        plannedCount > 0 ? 'Planned meals already on this day are replaced.' : null,
+      ].filter(Boolean);
       appAlert(
         'Food already logged',
-        `You have already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten on ${planStartLabel}. This will not remove it; the planned meals are added alongside.`,
+        lines.join(' '),
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Add plan', onPress: () => writeLogDay(plannedCount > 0) },
@@ -588,28 +629,54 @@ export default function MealPlanScreen({ navigation, route }) {
 
   // Feature B: schedule the whole week into the diary (today onward), without
   // overwriting any day that already has food logged.
-  const handleLogWeek = useCallback(async () => {
-    if (!user?.id || !plan || busy) return;
+  const runLogWeek = useCallback(async (planned) => {
+    if (!user?.id || !plan) return;
     setBusy(true);
     try {
-      const { addedDays, skippedDays } = await applyPlanWeekToDiary(user.id, plan, { startDate: planStartDate });
-      if (addedDays === 0) {
-        toast.show('Those days already have food logged, so nothing changed.', { variant: 'info' });
-      } else {
-        const skipNote = skippedDays > 0 ? ` ${skippedDays} day${skippedDays === 1 ? '' : 's'} left as-is.` : '';
-        toast.show(`${addedDays} day${addedDays === 1 ? '' : 's'} added to your diary.${skipNote}`, { variant: 'success' });
-        // Same landing rule as writeLogDay: a successful add returns the
-        // user to the diary they just filled, with the same one-shot
-        // `justAddedPlan` teach signal.
-        navigation.navigate('Diary', { justAddedPlan: true });
-      }
+      const res = await applyPlanWeekToDiary(user.id, plan, { startDate: planStartDate, planned });
+      toast.show(describeWeekMerge(res, mealSlotLabel), { variant: res.addedDays > 0 ? 'success' : 'info' });
+      // Same landing rule as writeLogDay: a successful add returns the
+      // user to the diary they just filled, with the same one-shot
+      // `justAddedPlan` teach signal.
+      if (res.addedDays > 0) navigation.navigate('Diary', { justAddedPlan: true });
     } catch (e) {
       logError('MealPlanScreen.logWeek', e, { days: plan?.days?.length ?? 0 });
       toast.show('The week was not added to your diary. Try again in a moment.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
-  }, [user?.id, plan, busy, planStartDate, toast, navigation]);
+  }, [user?.id, plan, planStartDate, toast, navigation]);
+
+  // Item 24: when any of the seven days already holds planned meals, offer to
+  // replace them (clearPlannedDay per day, the Day button's own scope) or to
+  // leave those days as they are. Eaten food is never touched either way.
+  const handleLogWeek = useCallback(async () => {
+    if (!user?.id || !plan || busy) return;
+    let anyPlanned = false;
+    try {
+      const count = Array.isArray(plan.days) ? plan.days.length : 0;
+      const start = parseLocalDay(planStartDate);
+      for (let i = 0; i < count && !anyPlanned; i += 1) {
+        const d = new Date(start.getTime());
+        d.setDate(d.getDate() + i);
+        // eslint-disable-next-line no-await-in-loop
+        const rows = (await getFoodEntriesForDay(user.id, localDayKey(d.getTime()))) || [];
+        anyPlanned = rows.some((r) => r.is_planned);
+      }
+    } catch (e) {
+      logError('MealPlanScreen.readWeekEntries', e); // the check falls back to "none planned"; the cause is kept
+    }
+    if (!anyPlanned) { await runLogWeek('leave'); return; }
+    appAlert(
+      'Replace planned meals?',
+      'Some of these days already have planned meals. Replace them with this plan, or leave those days as they are. Food you have logged stays either way.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Leave those days', onPress: () => runLogWeek('leave') },
+        { text: 'Replace planned meals', style: 'destructive', onPress: () => runLogWeek('replace') },
+      ],
+    );
+  }, [user?.id, plan, busy, planStartDate, runLogWeek]);
 
   // "Repeat this day" (audit §15 item 6): copy the day in view onto another
   // day of the same week plan, reusing its already-assembled meals as-is
@@ -871,7 +938,7 @@ export default function MealPlanScreen({ navigation, route }) {
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: "Don't suggest it",
+          text: "Don't suggest again",
           onPress: async () => {
             setBusy(true);
             try {
@@ -906,12 +973,13 @@ export default function MealPlanScreen({ navigation, route }) {
     );
   }, [user?.id, record, plan, day, dayIndex, busy, addMealPlanExcludedFood, toast]);
 
-  // Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
-  // NA-nutrition-1): record which basis the user will weigh this plate item
-  // in. Only the grams shown convert (src/lib/food/cookYield.js); calories
-  // and macros are untouched, so the day's totals never move when this is
-  // set. Persists the same way a swap does: rewrite the slot's items array in
-  // the stored plan JSON and push it through updateMealPlan.
+  // Ultimate-Audit item 12 (raw/cooked weighing, founder ruling 2026-10-19,
+  // which superseded NA-nutrition-1 for foods with a CoFID pair): an item with
+  // a pair can be shown in either weight. Only the grams shown convert
+  // (src/lib/food/cookYield.js); calories and macros are untouched, so the
+  // day's totals never move when this is set. Persists the same way a swap
+  // does: rewrite the slot's items array in the stored plan JSON and push it
+  // through updateMealPlan.
   // The day-wide switch: every paired item in the day to one weight state,
   // in one write. Items without a CoFID pair are left as they are.
   const handleSetDayWeightState = useCallback(async (value) => {
@@ -1103,7 +1171,8 @@ export default function MealPlanScreen({ navigation, route }) {
     mealsPerDay: plan?.prefs?.mealsPerDay ?? userProfile?.mealPlanMealsPerDay ?? 4,
     periWorkoutSlots: plan?.prefs?.periWorkoutSlots ?? !!userProfile?.mealPlanPeriWorkout,
     variety: userProfile?.mealPlanVariety ?? 0,
-  }), [plan?.prefs, userProfile?.mealPlanMealsPerDay, userProfile?.mealPlanPeriWorkout, userProfile?.mealPlanVariety]);
+    oilyFish: oilyFishCapFromProfile(userProfile),
+  }), [plan?.prefs, userProfile]);
   const prefSummary = useMemo(() => {
     const meals = prefs.mealsPerDay ?? 4;
     const variety = prefs.variety === 1
@@ -1271,7 +1340,7 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={[styles.planOptionTitle, live.planOptionTitle]}>Week ahead</Text>
             </View>
             <Text style={[styles.planOptionDesc, live.planOptionDesc]}>
-              Build seven dated days and a shopping list. Existing logged food is left alone.
+              Build seven dated days and a shopping list. Nothing is added to your diary until you tap Add this week.
             </Text>
             <Button title="Build week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
@@ -1431,7 +1500,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <Text style={[styles.reviewTitle, live.reviewTitle]}>Review meals</Text>
             <Text style={[styles.reviewSub, live.reviewSub]}>
               {hasSwappableFoods
-                ? 'Tap a food to swap it. Hold a swappable food to leave it out of future plans.'
+                ? 'Tap a food to swap it. Hold a swappable food, or open its swap list, and choose "Don\'t suggest again" to leave it out of future plans.'
                 : 'Review the meals and add the plan when it looks right.'}
             </Text>
           </View>
@@ -1489,6 +1558,9 @@ export default function MealPlanScreen({ navigation, route }) {
                             <Text style={[styles.itemLine, live.itemLine]} numberOfLines={1} ellipsizeMode="tail">{`${formatNumber(shown.grams)} g ${shown.name}`}</Text>
                             {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={t.colors.textSecondary} /> : null}
                           </TouchableOpacity>
+                          {weighAsListed(foodKey, it.name) ? (
+                            <Text style={[styles.foodReason, live.foodReason]}>Weigh as listed</Text>
+                          ) : null}
                           {foodWhy ? (
                             <Text style={[styles.foodReason, live.foodReason]}>{foodWhy}</Text>
                           ) : null}
@@ -1523,13 +1595,13 @@ export default function MealPlanScreen({ navigation, route }) {
                       );
                     })}
                     <Text style={[styles.macroLine, live.macroLine]} numberOfLines={1} ellipsizeMode="tail">
-                      {`P ${formatNumber(slot.totals.protein)} g - C ${formatNumber(slot.totals.carbs)} g - F ${formatNumber(slot.totals.fat)} g`}
+                      {`P ${formatNumber(Math.round(slot.totals.protein))} g · C ${formatNumber(Math.round(slot.totals.carbs))} g · F ${formatNumber(Math.round(slot.totals.fat))} g`}
                     </Text>
                     {/* Campaign 17B job 5: WHY THIS MEAL. Rendered only when a
                         reason was actually recorded - a meal with none shows
                         nothing, which is honest, rather than a guess dressed
                         up as an explanation. */}
-                    {explainMeal(slot.reason) ? (
+                    {slot.reason !== MEAL_REASON.GENERIC_START && explainMeal(slot.reason) ? (
                       <Text style={[styles.mealReason, live.mealReason]}>{explainMeal(slot.reason)}</Text>
                     ) : null}
                     {/* Season to taste: the free additions that suit this meal
@@ -1600,7 +1672,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <View style={styles.totalsRow}>
               <Text style={[styles.totalsLabel, live.totalsLabel]}>Day total</Text>
               <Text style={[styles.totalsText, live.totalsText]}>
-                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${formatNumber(day.totals.protein)} g - C ${formatNumber(day.totals.carbs)} g - F ${formatNumber(day.totals.fat)} g`}
+                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${formatNumber(Math.round(day.totals.protein))} g · C ${formatNumber(Math.round(day.totals.carbs))} g · F ${formatNumber(Math.round(day.totals.fat))} g`}
               </Text>
             </View>
           ) : null}
@@ -1614,8 +1686,8 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Text style={[styles.planActionTitle, live.planActionTitle]}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
                 <Text style={[styles.planActionSub, live.planActionSub]}>
                   {isDayPlan
-                    ? 'Adds these meals to today. Existing logged food is left alone.'
-                    : 'Adds the week from the date shown. Any day that already has food logged is left alone.'}
+                    ? `Adds the meals that are still empty on ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}. Food you have logged stays, and planned meals already there are replaced.`
+                    : 'Adds the week from the date shown, into meals that are still empty. Food you have logged stays, and you can choose to replace planned meals.'}
                 </Text>
               </View>
             </View>
@@ -1709,14 +1781,14 @@ export default function MealPlanScreen({ navigation, route }) {
                   onPress={() => applyMealChoice(swapSheet.slotKey, meal)}
                   disabled={busy}
                   accessibilityRole="button"
-                  accessibilityLabel={`${meal.name}, ${formatEnergy(meal.totals.kcal, energyUnit)} ${energyWord}, ${meal.totals.protein} grams protein${recommended ? '. Closest match.' : ''}`}
+                  accessibilityLabel={`${meal.name}, ${formatEnergy(meal.totals.kcal, energyUnit)} ${energyWord}, ${Math.round(meal.totals.protein)} grams protein${recommended ? '. Closest match.' : ''}`}
                 >
                   <View style={styles.swapOptionMain}>
                     <Text style={[styles.swapOptionName, live.swapOptionName]}>{meal.name}</Text>
                     {recommended ? <Text style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
                   </View>
                   <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
-                    {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${meal.totals.protein} g`}
+                    {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${Math.round(meal.totals.protein)} g`}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1809,18 +1881,31 @@ export default function MealPlanScreen({ navigation, route }) {
                       onPress={() => setFoodSwapSheet((sh) => (sh ? { ...sh, pending: { foodIn, name } } : sh))}
                       disabled={busy}
                       accessibilityRole="button"
-                      accessibilityLabel={`${name}, ${formatEnergy(totals.kcal, energyUnit)} ${energyWord}, ${totals.protein} grams protein${i === 0 ? '. Closest match.' : ''}`}
+                      accessibilityLabel={`${name}, ${formatEnergy(totals.kcal, energyUnit)} ${energyWord}, ${Math.round(totals.protein)} grams protein${i === 0 ? '. Closest match.' : ''}`}
                     >
                       <View style={styles.swapOptionMain}>
                         <Text style={[styles.swapOptionName, live.swapOptionName]}>{name}</Text>
                         {i === 0 ? <Text style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
                       </View>
                       <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
-                        {`${formatEnergy(totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${totals.protein} g`}
+                        {`${formatEnergy(totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${Math.round(totals.protein)} g`}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+                <TouchableOpacity
+                  style={styles.swapBackRow}
+                  onPress={() => {
+                    const sh = foodSwapSheet;
+                    setFoodSwapSheet(null);
+                    handleFlagFood(sh.slotKey, sh.foodKeyOut, sh.foodOutName);
+                  }}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Don't suggest ${foodSwapSheet.foodOutName} again`}
+                >
+                  <Text style={[styles.swapSheetSub, live.swapSheetSub]}>Don't suggest again</Text>
+                </TouchableOpacity>
                 {/* Campaign 17B job 5: the foods that are NOT here, and why.
                     Only ever the user's own instructions - a food left out on
                     macro fit is simply not mentioned, because there is no
@@ -1918,6 +2003,11 @@ export default function MealPlanScreen({ navigation, route }) {
                     ))}
                   </View>
                 ) : null}
+                {grocerySheet.dayCount === 1 && grocerySheet.repeat >= 5 && countOilyMeals(plan?.days?.[0]) > 0 ? (
+                  <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
+                    {`This day has ${countOilyMeals(plan.days[0]) === 1 ? 'an oily fish meal' : `${countOilyMeals(plan.days[0])} oily fish meals`}, so ${grocerySheet.repeat} days of it is ${countOilyMeals(plan.days[0]) * grocerySheet.repeat} oily fish meals.`}
+                  </Text>
+                ) : null}
                 <ScrollView
                   style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
                   contentContainerStyle={styles.swapListContent}
@@ -1936,7 +2026,7 @@ export default function MealPlanScreen({ navigation, route }) {
                             onPress={() => toggleGroceryTick(tickKey)}
                             accessibilityRole="checkbox"
                             accessibilityState={{ checked: ticked }}
-                            accessibilityLabel={`${item.name}${item.count ? ` x${item.count}` : ''}${item.grams != null ? `, ${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : ''}${item.alt ? `, ${formatNumber(item.alt.grams)} g ${item.alt.state}` : ''}` : ''}`}
+                            accessibilityLabel={`${item.name}${item.count ? ` x${item.count}` : ''}${item.grams != null ? `, ${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : (item.asListed ? ' as listed' : '')}${item.alt ? `, ${formatNumber(item.alt.grams)} g ${item.alt.state}` : ''}` : ''}`}
                           >
                             <Ionicons
                               name={ticked ? 'checkbox' : 'square-outline'}
@@ -1951,7 +2041,7 @@ export default function MealPlanScreen({ navigation, route }) {
                             </Text>
                             {item.grams != null ? (
                               <Text style={[styles.groceryQty, live.groceryQty, ticked && [styles.groceryQtyTicked, live.groceryQtyTicked]]}>
-                                {`${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : ''}`}
+                                {`${formatNumber(item.grams)} g${item.state ? ` ${item.state}` : (item.asListed ? ' as listed' : '')}`}
                                 {item.alt ? (
                                   <Text style={[styles.groceryQtyTicked, live.groceryQtyTicked]}>{` (${formatNumber(item.alt.grams)} g ${item.alt.state})`}</Text>
                                 ) : null}

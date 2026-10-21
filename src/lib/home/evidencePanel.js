@@ -32,6 +32,12 @@
  */
 import { buildCoachLedger, formatCheckinCountdown } from '../coachLedger';
 import { MIN_WEIGH_INS } from '../trialActivation';
+import { MIN_INTAKE_DAYS } from '../coachContext';
+
+// Item 12: a row's marker. 'tick' is a GOOD outcome (a target met), 'neutral'
+// is "logged" (a count, no verdict), 'open' is not yet. `done` stays as
+// `marker === 'tick'` for existing readers.
+const row = (key, marker, label) => ({ key, marker, done: marker === 'tick', label });
 
 function plural(n, word) {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -116,41 +122,37 @@ export function resolveEvidencePanel({
   // the ledger's own gate row is the honest read.
   if (hasCheckedInEver) {
     if (Number.isFinite(sessionsSinceCheckin)) {
-      rows.push({
-        key: 'sessions',
-        done: sessionsSinceCheckin >= 1,
-        label: sessionsSinceCheckin >= 1
+      rows.push(row(
+        'sessions',
+        sessionsSinceCheckin >= 1 ? 'neutral' : 'open',
+        sessionsSinceCheckin >= 1
           ? `${plural(sessionsSinceCheckin, 'training session')} logged`
           : 'No training sessions since your check-in',
-      });
+      ));
     }
   } else {
-    rows.push({
-      key: 'sessions',
-      done: completedSessions >= 1,
-      label: completedSessions >= 1
+    rows.push(row(
+      'sessions',
+      completedSessions >= 1 ? 'neutral' : 'open',
+      completedSessions >= 1
         ? `${plural(completedSessions, 'training session')} logged`
         : 'No training sessions yet',
-    });
+    ));
   }
 
   // Weigh-ins second, and the latest logged weight on its OWN row directly
   // behind it (founder device order 2026-08-18, corrected same day: "have
   // it in the next row", never merged onto the count line).
   const weighInsMet = weighIns7d >= MIN_WEIGH_INS;
-  rows.push({
-    key: 'weighIns',
-    done: weighInsMet,
-    label: weighInsMet
+  rows.push(row(
+    'weighIns',
+    weighInsMet ? 'tick' : 'open',
+    weighInsMet
       ? `${plural(weighIns7d, 'morning weigh-in')} this week`
       : `${weighIns7d} of ${MIN_WEIGH_INS} morning weigh-ins this week`,
-  });
+  ));
   if (todayWeightLabel) {
-    rows.push({
-      key: 'weight',
-      done: true,
-      label: `Morning weight ${todayWeightLabel}`,
-    });
+    rows.push(row('weight', 'neutral', `Morning weight ${todayWeightLabel}`));
   }
 
   // Food adherence (founder order 2026-08-17): IF food has been logged,
@@ -158,11 +160,11 @@ export function resolveEvidencePanel({
   // engine's own intake summary reads. Day count only, never amounts;
   // omitted entirely at zero and under the neutral variant above.
   if (Number.isFinite(foodDays7) && foodDays7 >= 1) {
-    rows.push({
-      key: 'food',
-      done: true,
-      label: `Food logged on ${foodDays7} of the last 7 days`,
-    });
+    // Item 12: five logged days is the coach's own bar (MIN_INTAKE_DAYS).
+    // Below it the row is a plain count with a neutral marker and says so.
+    rows.push(foodDays7 >= MIN_INTAKE_DAYS
+      ? row('food', 'tick', `Food logged on ${foodDays7} of the last 7 days`)
+      : row('food', 'neutral', `Not enough food logged to judge (${foodDays7} of the last 7 days)`));
   }
 
   return {

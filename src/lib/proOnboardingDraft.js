@@ -38,6 +38,17 @@ const MAX_STEP = 7;
 
 export const DRAFT_DEBOUNCE_MS = 600;
 
+// Pure: the draft is keyed per user, not per setup mode, so a draft saved by
+// the full setup can be resumed through the shorter coaching setup, which
+// skips some steps. Returns `step` if the mode runs it, else the next step
+// the mode does run, else the mode's last step. `modeSteps` is ascending.
+export function clampResumeStep(step, modeSteps) {
+  if (!Array.isArray(modeSteps) || modeSteps.length === 0) return step;
+  if (modeSteps.includes(step)) return step;
+  const next = modeSteps.find((s) => s > step);
+  return next !== undefined ? next : modeSteps[modeSteps.length - 1];
+}
+
 export function draftKey(userId) {
   return userId ? `${DRAFT_KEY_PFX}${userId}` : null;
 }

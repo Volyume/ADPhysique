@@ -660,7 +660,7 @@ describe('the normal screen, in the spec\'s order', () => {
     await press(tree, 'Progress photos');
     expect(mockNavigation.navigate).toHaveBeenCalledWith('ProgressPhotos');
     await press(tree, 'Weight units');
-    expect(navigateCrossTab).toHaveBeenCalledWith(mockNavigation, 'ProfileTab', 'SettingsWorkout');
+    expect(navigateCrossTab).toHaveBeenCalledWith(mockNavigation, 'ProfileTab', 'SettingsUnits');
   });
 });
 

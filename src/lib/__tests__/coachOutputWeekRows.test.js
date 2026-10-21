@@ -13,7 +13,7 @@
 import fs from 'fs';
 import path from 'path';
 import {
-  buildWeekRows, splitLead, formatCoachingRate, ENERGY_LABELS, SORENESS_LABELS,
+  buildWeekRows, splitLead, formatCoachingRate, formatCoachingRateWeight, buildTimingLine, ENERGY_LABELS, SORENESS_LABELS,
 } from '../coachOutput/viewCopy';
 import { BODY_METRICS_FLAG_LINE } from '../bodyMetricsPolicy';
 import { deriveSafetyState, withholdsWeightFigures, SAFETY_STATE_UNKNOWN } from '../safetyState';
@@ -35,13 +35,13 @@ describe('buildWeekRows: the founder\'s week of 21 September', () => {
   const k = byKey(rows);
 
   test('rows come in training, body, food, recovery order', () => {
-    expect(rows.map((r) => r.key)).toEqual(['sessions', 'prs', 'weight', 'rate', 'food', 'calories', 'energy', 'soreness']);
+    expect(rows.map((r) => r.key)).toEqual(['sessions', 'prs', 'rate', 'food', 'calories', 'energy', 'soreness']);
   });
 
   test('values read as the check-in and the chips did', () => {
     expect(k.sessions.value).toBe('2 of 4');
     expect(k.prs.value).toBe('7');
-    expect(k.weight.value).toBe('+1.1 lbs');
+    expect(k.weight).toBeUndefined(); // item 15: one weight row, the coaching trend
     expect(k.rate.value).toBe('Gaining 0.28%/wk');
     expect(k.food.value).toBe('0 of 7 days');
     expect(k.calories.value).toBe('Hit your target');
@@ -54,9 +54,15 @@ describe('buildWeekRows: the founder\'s week of 21 September', () => {
     expect(k.prs.mark).toBe('good');
   });
 
-  test('tooltips travel with the weight and rate rows', () => {
-    expect(k.weight.tooltip).toBe('gloss');
-    expect(k.rate.tooltip).toBe('rate gloss');
+  test('the scale reading moves into the coaching trend row\'s info sheet (item 15)', () => {
+    expect(k.rate.tooltip).toBe('rate gloss Your scale reading over the same seven days: +1.1 lbs.');
+  });
+
+  test('with no rate (an output from before C10F) the scale reading stays as the one weight row', () => {
+    const old = byKey(buildWeekRows({ ...FOUNDER_WEEK, rate: null }));
+    expect(old.rate).toBeUndefined();
+    expect(old.weight.value).toBe('+1.1 lbs');
+    expect(old.weight.tooltip).toBe('gloss');
   });
 });
 
@@ -187,8 +193,7 @@ describe('buildWeekRows: the weight figures under the safety state (D228 item 2,
     const rows = buildWeekRows({ ...FOUNDER_WEEK, withholdWeight: withholdsWeightFigures(STATES[name]) });
     expect(rows).toEqual(buildWeekRows(FOUNDER_WEEK));
     const k = byKey(rows);
-    expect(k.weight.value).toBe('+1.1 lbs');
-    expect(k.weight.icon).toBe('arrow-up-outline');
+    expect(k.weight).toBeUndefined();
     expect(k.rate.value).toBe('Gaining 0.28%/wk');
   });
 
@@ -219,5 +224,96 @@ describe('buildWeekRows: the weight figures under the safety state (D228 item 2,
     const src = fs.readFileSync(path.join(__dirname, '..', 'coachOutput', 'viewCopy.js'), 'utf8');
     expect(src).toMatch(/import \{ BODY_METRICS_FLAG_LINE \} from '\.\.\/bodyMetricsPolicy';/);
     expect(src).not.toMatch(/Your weigh-ins are kept here/);
+  });
+});
+
+// Owner order 2026-10-20 (Stage 2, item 12 safety part): under the safety
+// verdict the Coaching decision screen showed "Calories: Under target" and
+// "Food logged 1 of 7 days" with an open ED flag, because the builder took no
+// safety input. Under `suppressed` (calm, an open flag, a failed read, the
+// unknown state) the food rows go and no row carries a good/attention mark.
+describe('buildWeekRows: food rows and marks under the safety verdict', () => {
+  const STATES = {
+    'calm alone': deriveSafetyState({ mode: 'calm', edFlag: null }),
+    'an open flag': deriveSafetyState({ mode: 'normal', edFlag: { id: 'f' } }),
+    'a failed flag read': deriveSafetyState({ mode: 'normal', edFlag: 'read_failed' }),
+    'a failed wellbeing read': deriveSafetyState({ mode: 'read_failed', edFlag: null }),
+    'the unknown state': SAFETY_STATE_UNKNOWN,
+  };
+  // A week with every mark the builder can give and both food rows present.
+  const MARKED_WEEK = {
+    ...FOUNDER_WEEK,
+    context: {
+      nutrition: { coverage: { signal: 'poor', value: 1 } },
+      training: { progress: { signal: 'poor' } },
+      recovery: { systemic: { signal: 'poor' } },
+    },
+    checkin: { calsAdherence: 'under', energyScore: 1, sorenessScore: 5, sleepHours: 5, jointPain: true },
+  };
+  const rowsFor = (state) => buildWeekRows({
+    ...MARKED_WEEK, withholdWeight: withholdsWeightFigures(state), suppressed: state.suppressed,
+  });
+
+  test('the fixture really carries both food rows and marks when nothing is suppressed', () => {
+    const rows = buildWeekRows(MARKED_WEEK);
+    expect(rows.map((r) => r.key)).toEqual(expect.arrayContaining(['food', 'calories']));
+    expect(rows.some((r) => r.mark)).toBe(true);
+  });
+
+  test.each(Object.keys(STATES))('%s: no Food logged row, no Calories row, no mark on any row', (name) => {
+    expect(STATES[name].suppressed).toBe(true);
+    const rows = rowsFor(STATES[name]);
+    const keys = rows.map((r) => r.key);
+    expect(keys).not.toContain('food');
+    expect(keys).not.toContain('calories');
+    expect(rows.every((r) => r.mark === null)).toBe(true);
+    expect(JSON.stringify(rows)).not.toMatch(/Under target|Off target|Hit your target|Over target|of 7 days/);
+  });
+
+  test('the other facts are still stated, only unmarked', () => {
+    const k = byKey(rowsFor(STATES['calm alone']));
+    expect(k.sessions.value).toBe('2 of 4');
+    expect(k.energy.value).toBe('Low');
+    expect(k.joints.value).toBe('Flagged');
+  });
+
+  test('the screen passes the safetyState.js verdict, not its own reading of calm or the flag', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'CoachOutputScreen.js'), 'utf8');
+    expect(src).toMatch(/buildWeekRows\(\{[\s\S]{0,400}suppressed: safety\.suppressed \|\| edPatternOpen,/);
+    expect(src).toMatch(/const safety = useSafetyState\(user\?\.id\);/);
+  });
+});
+
+describe('formatCoachingRateWeight: the coaching trend in the person\'s own body-weight unit (item 15)', () => {
+  test('kg users read kg a week; lb and stone users read lbs a week', () => {
+    // 0.5% of 80 kg is 0.4 kg a week.
+    expect(formatCoachingRateWeight(-0.5, 80, 'kg')).toBe('-0.4 kg a week');
+    expect(formatCoachingRateWeight(-0.5, 80, 'lbs')).toBe('-0.88 lbs a week');
+    expect(formatCoachingRateWeight(-0.5, 80, 'st')).toBe('-0.88 lbs a week');
+    expect(formatCoachingRateWeight(0.25, 80, 'kg')).toBe('+0.2 kg a week');
+  });
+  test('the engine\'s steady band, and a rate that rounds to nothing, read Steady', () => {
+    expect(formatCoachingRateWeight(0.01, 80, 'kg')).toBe('Steady');
+    expect(formatCoachingRateWeight(0.02, 20, 'kg')).toBe('Steady');
+  });
+  test('no weight or no rate gives no figure, never the old percentage', () => {
+    expect(formatCoachingRateWeight(-0.5, null, 'kg')).toBeNull();
+    expect(formatCoachingRateWeight(-0.5, 0, 'kg')).toBeNull();
+    expect(formatCoachingRateWeight(null, 80, 'kg')).toBeNull();
+    expect(formatCoachingRateWeight(NaN, 80, 'kg')).toBeNull();
+  });
+});
+
+describe('buildTimingLine: when a decision is looked at again, on every decision (item 15)', () => {
+  test('names the check-in day, or says next check-in when unknown', () => {
+    expect(buildTimingLine({ checkinDayName: 'Sunday' })).toBe('Your coach looks at this again at your Sunday check-in.');
+    expect(buildTimingLine()).toBe('Your coach looks at this again at your next check-in.');
+  });
+  test('a change waiting for a tap says from when it starts', () => {
+    expect(buildTimingLine({ checkinDayName: 'Monday', pending: true }))
+      .toBe('A change starts from the moment you tap Apply. Your coach looks at this again at your Monday check-in.');
+  });
+  test('it carries no weight, food or calorie figure', () => {
+    expect(buildTimingLine({ checkinDayName: 'Sunday', pending: true })).not.toMatch(/\d|kg|lb|kcal|calorie/i);
   });
 });

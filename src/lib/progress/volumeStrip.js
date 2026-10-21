@@ -5,8 +5,8 @@
  * section 7.1 item 2, line 3 and the strip).
  *
  *   This week so far: 42 sets logged across 12 muscles · 2 below maintenance
- *   [ a segmented bar in three tones ]
- *   Below maintenance · Within the studied range · Beyond the studied range
+ *   [ a segmented bar in four tones ]
+ *   Low · Steady · Growing · Very high
  *
  * D219 (design 5.3, lane A5): the strip reads the ONE judgement every surface
  * that judges a muscle's weekly sets reads (volumeJudgement.judgeWeek: the
@@ -33,12 +33,11 @@
  *     counted. Each muscle is judged on the heatmap's own figure (the credit
  *     rounded once).
  *
- * THE THREE TONES. The strip folds the eight groups into three, named in its
- * legend: Below maintenance (`textMuted`), Within the studied range (every
- * group from maintenance up to the top of what studies have tested, `success`)
- * and Beyond the studied range (an information colour). Tones come from the one
- * `stripToneColors` so the legend swatches and the bar's segments can never
- * name different colours.
+ * THE FOUR TONES (item 14). The strip paints the same four tones, in the same
+ * words and colours, as the Volume heatmap's figure legend: Low, Steady,
+ * Growing and Very high (volumeBandLabels.js VOLUME_TONE_LABELS, volumeJudgement
+ * toneForGroup and toneColors). Tones come from the one `stripToneColors` so
+ * the legend swatches and the bar's segments can never name different colours.
  *
  * A RECOVERY WEEK. In the block's planned recovery week sets are planned lower,
  * so no verdict is drawn and no count is printed (PR-14): the line keeps the
@@ -54,11 +53,14 @@
 import {
   LISTED_MUSCLES, buildDataset, buildWindowView, bandGroupFor,
 } from '../volumeLogged';
-import { judgeWeek, roleFor, GROUP } from '../volumeJudgement';
+import {
+  judgeWeek, roleFor, GROUP, TONE, toneForGroup as judgementToneForGroup, toneColors,
+} from '../volumeJudgement';
+import { VOLUME_TONE_LABELS, volumeGroupLines, volumeToneLine } from '../volumeBandLabels';
 import { RECOVERY_STATE } from '../recoveryState';
 
-/** The three tones of the strip's bar and legend. */
-export const STRIP_TONE = Object.freeze({ UNDER: 'under', IN: 'in', OVER: 'over' });
+/** The four tones of the strip's bar and legend: the figure legend's own (volumeJudgement TONE). */
+export const STRIP_TONE = TONE;
 
 /** The strip's one recovery-week sentence (the heatmap prints the same words). */
 export const RECOVERY_WEEK_LINE = 'Recovery week: sets are planned lower this week';
@@ -73,12 +75,10 @@ const STRIP_CREDIT_SENTENCE = 'A set counts once for the muscle it works most an
 /** The (i) behind the strip in a normal week. */
 export const STRIP_TOOLTIP = STRIP_OPENING
   + STRIP_CREDIT_SENTENCE
-  + 'Under 2 sets a week is too few to hold a muscle\'s size. 2 to 6 holds it, and 6 to 10 holds it with some growth. '
-  + '10 to 20 is the usual range for growth. 20 to 30 is the higher range, for a muscle you picked to bring up. '
-  + '30 to 42 is close to the upper limit, and past 42 extra sets are more than needed. '
-  + 'A muscle you picked to bring up in your plan is read against that higher range. '
+  + 'A muscle is read against these bands:\n'
+  + `${volumeGroupLines()}\n\n`
   + 'A muscle your plan trains reads as too few to hold size until its first set. '
-  + 'The colour labelled Enough sets covers 2 to 42 sets a week.';
+  + volumeToneLine();
 
 /**
  * The same (i) in the planned recovery week: the same opening and credit
@@ -91,26 +91,21 @@ export const STRIP_RECOVERY_TOOLTIP = STRIP_OPENING
   + 'In a recovery week sets are planned lower, so no muscle is judged against a band. '
   + 'The bar draws one shade for the muscles you trained.';
 
-/** The legend's words, in the order the bar's tones read. */
+/** The legend's words, in the order the bar's tones read: the figure legend's four, then the recovery week's one. */
 export const STRIP_LEGEND_LABEL = Object.freeze({
-  under: 'Too few to hold size',
-  in: 'Enough sets',
-  over: 'More than needed',
+  ...VOLUME_TONE_LABELS,
   neutral: 'Trained',
 });
 
 /**
- * The strip tone a volumeJudgement group folds into: below maintenance is
- * Under, beyond the studied range is Over, and every group from maintenance up
- * to the top of the studied range is Within. A group the strip does not know
- * reads as no verdict (Under, as an unknown status always did).
+ * The strip tone a volumeJudgement group folds into: the same fold the figure
+ * and the lists paint (volumeJudgement.toneForGroup).
  * @param {string} group
- * @returns {'under'|'in'|'over'}
+ * @returns {'below'|'building'|'growth'|'beyond'}
  */
 export function toneForGroup(group) {
-  if (group === GROUP.BEYOND) return STRIP_TONE.OVER;
-  if (group === GROUP.BELOW) return STRIP_TONE.UNDER;
-  return Object.values(GROUP).includes(group) ? STRIP_TONE.IN : STRIP_TONE.UNDER;
+  // A group the strip does not know reads as no verdict (Low, as an unknown status always did).
+  return Object.values(GROUP).includes(group) ? judgementToneForGroup(group) : TONE.BELOW;
 }
 
 /**
@@ -118,21 +113,14 @@ export function toneForGroup(group) {
  * legend and the bar read, so they cannot drift. `neutral` is the recovery
  * week's single shade (the heatmap's "Trained" fill).
  * @param {object} colors - a theme colour table (`t.colors`)
- * @returns {{ under: string, in: string, over: string, neutral: string }}
+ * @returns {{ below: string, building: string, growth: string, beyond: string, neutral: string }}
  */
 export function stripToneColors(colors) {
-  return {
-    under: colors.textMuted,
-    in: colors.success,
-    // D219: beyond the studied range is a note, an information colour, never the
-    // error token (nothing below it is a warning, and this is not one either).
-    over: colors.macroCarb,
-    neutral: colors.surface3,
-  };
+  return { ...toneColors(colors), neutral: colors.surface3 };
 }
 
 /**
- * The legend items for `LegendRow`: the three tones, or in a recovery week the
+ * The legend items for `LegendRow`: the four tones, or in a recovery week the
  * one neutral shade it draws.
  * @param {{ colors: object, recoveryWeek?: boolean }} args
  * @returns {Array<{ key: string, label: string, swatch: object }>}
@@ -143,9 +131,9 @@ export function stripLegendItems({ colors, recoveryWeek = false }) {
     return [{ key: 'trained', label: STRIP_LEGEND_LABEL.neutral, swatch: { fill: tone.neutral, outline: 'solid' } }];
   }
   return [
-    { key: STRIP_TONE.UNDER, label: STRIP_LEGEND_LABEL.under, swatch: { fill: tone.under } },
-    { key: STRIP_TONE.IN, label: STRIP_LEGEND_LABEL.in, swatch: { fill: tone.in } },
-    { key: STRIP_TONE.OVER, label: STRIP_LEGEND_LABEL.over, swatch: { fill: tone.over } },
+    ...[TONE.BELOW, TONE.BUILDING, TONE.GROWTH, TONE.BEYOND].map((key) => ({
+      key, label: STRIP_LEGEND_LABEL[key], swatch: { fill: tone[key] },
+    })),
   ];
 }
 

@@ -47,7 +47,7 @@ const COMPLETION = SRC.slice(SRC.indexOf('async function advanceFrom8'), SRC.ind
 describe('the wizard has the step, in its place', () => {
   test('eight steps, "Your gym" fifth, between Training week and Injuries', () => {
     expect(SRC).toMatch(/const TOTAL_STEPS = 8;/);
-    expect(SRC).toMatch(/const STEP_LABELS = \['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Targets', 'Check-in rhythm'\];/);
+    expect(SRC).toMatch(/const STEP_LABELS = \['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Training focus', 'Check-in rhythm'\];/);
     expect(STEP5.length).toBeGreaterThan(0);
     expect(STEP5).toMatch(/title="Where you train, and Community"/);
   });
@@ -298,8 +298,8 @@ describe('copy', () => {
   // Founder order 2026-09-22: "Share what I did" is on by default, so the
   // step states, in plain words and before its Join button, what that
   // shares and where it is switched off.
-  test('the step says finished sessions are shared with everyone, and where to switch it off', () => {
-    const line = STEP5.indexOf('Every session you finish is shared with everyone in Community: exercises, sets, the total lifted and any PRs. Turn it off any time from your Training profile.');
+  test('the step says finished sessions are shared with the people who follow you, and where to switch it off', () => {
+    const line = STEP5.indexOf('Every session you finish is shared with the people who follow you in Community: exercises, sets, the total lifted and any PRs. Turn it off any time from your Training profile.');
     expect(line).toBeGreaterThan(STEP5.indexOf('<PrivacyReceipt />'));
     expect(line).toBeLessThan(STEP5.indexOf('title="Join Community"'));
   });

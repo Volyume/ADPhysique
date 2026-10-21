@@ -6,7 +6,6 @@ import {
   muscleDisplayName,
   calculateWeeklyVolume,
   calculateExcludedWeeklyVolume,
-  getVolumeStatus,
   detectLaggingMuscles,
   defaultIncrement,
   calculate1RM,
@@ -80,52 +79,6 @@ describe('MUSCLE_DISPLAY_NAMES, delt labels (en-GB)', () => {
 
   test('shoulders key removed from display names', () => {
     expect(MUSCLE_DISPLAY_NAMES.shoulders).toBeUndefined();
-  });
-});
-
-// ─── getVolumeStatus, acceptance criteria ────────────────────────────────────
-
-describe('getVolumeStatus, delt heads', () => {
-  test('4 sets lateral raises → side_delts below min (textMuted)', () => {
-    const result = getVolumeStatus(4, 'side_delts');
-    expect(result.status).toBe('below');
-  });
-
-  test('12 sets → front_delts approaching MRV (near_mrv warning)', () => {
-    const result = getVolumeStatus(12, 'front_delts');
-    expect(result.status).toBe('near_mrv');
-  });
-
-  test('15 sets → front_delts over MRV (over_mrv)', () => {
-    const result = getVolumeStatus(15, 'front_delts');
-    expect(result.status).toBe('over_mrv');
-  });
-
-  test('getVolumeStatus("rear_delt", 14), acceptance criteria: optimal', () => {
-    // rear_delts mev:4, mav:16 → 14 sets is within optimal range
-    const result = getVolumeStatus(14, 'rear_delts');
-    expect(result.status).toBe('optimal');
-    // Colour resolution moved to theme.volumeStatusColor (A2-038); the pure
-    // algorithm returns only the status string now.
-  });
-
-  test('8 sets side_delts → minimum stimulus (at MEV)', () => {
-    const result = getVolumeStatus(8, 'side_delts');
-    expect(result.status).toBe('minimum');
-  });
-
-  test('27 sets side_delts → over MRV', () => {
-    const result = getVolumeStatus(27, 'side_delts');
-    expect(result.status).toBe('over_mrv');
-  });
-
-  test('0 sets front_delts → below (zero-work short-circuit overrides mev=0)', () => {
-    // front_delts.mev is 0 because pressing movements provide plenty of
-    // indirect volume, but zero LOGGED sets shouldn't render green on
-    // the heatmap. The zero-work short-circuit in getVolumeStatus catches
-    // this case before the mev comparison.
-    const result = getVolumeStatus(0, 'front_delts');
-    expect(result.status).toBe('below');
   });
 });
 
@@ -457,14 +410,14 @@ describe('calculateTonnage excludes non-load exercise types', () => {
   });
 });
 
-// CALC-2/4/6/7: numeric edge-case hardening. CALC-5 (bodyweight/all-zero
+// CALC-2/6/7 (CALC-4 went with getVolumeStatus): numeric edge-case hardening. CALC-5 (bodyweight/all-zero
 // history never suggests a weight increase) moved with getProgressionSuggestion's
 // retirement (Campaign 20 Phase 2 Stage 12) - now pinned at
 // livePrescription.test.js's "CALC-5 / FR-C4-4" describe, against the
 // resolver's own reps_only/zero-weight law, not a standalone function.
-describe('numeric edge cases (CALC-2/4/6/7)', () => {
+describe('numeric edge cases (CALC-2/6/7)', () => {
   const {
-    calculate1RM, getVolumeStatus,
+    calculate1RM,
     generateDeloadPrescription,
   } = require('../algorithms');
 
@@ -476,11 +429,6 @@ describe('numeric edge cases (CALC-2/4/6/7)', () => {
     expect(calculate1RM(100, '5')).toBeCloseTo(calculate1RM(100, 5), 5);
     expect(calculate1RM(100, '5')).toBeGreaterThan(100);
     expect(calculate1RM('100', 5)).toBeCloseTo(calculate1RM(100, 5), 5);
-  });
-
-  test('CALC-4: getVolumeStatus(NaN) is not "over_mrv"', () => {
-    const s = getVolumeStatus(NaN, 'chest');
-    expect(s.status).not.toBe('over_mrv');
   });
 
   test('CALC-6: generateDeloadPrescription never prescribes a negative load', () => {

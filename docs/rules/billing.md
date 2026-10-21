@@ -90,12 +90,14 @@ All billing changes must be sandbox tested before production.
 Never test billing on a production account.
 Never submit a billing change to production without sandbox confirmation first.
 
-## FREE FOR LIFE PROMISE (founder, 2026-10-19)
+## FREE FOR LIFE PROMISE (founder, 2026-10-19; earned at close, 2026-10-20)
 
-Everyone who joins a gym challenge is promised Volyume free for life, even if
-paid plans are ever introduced. The promise is recorded server side in
-`public.free_for_life_grants` (migrate_201), written on join and kept through
-withdrawal and challenge deletion. Re-arming monetisation (D137's two steps)
+Everyone who completes a gym challenge with a final score of 50 or more is
+promised Volyume free for life, even if paid plans are ever introduced.
+Joining alone earns nothing and withdrawing ends the chance. The promise is
+recorded server side in `public.free_for_life_grants` (migrate_201), written
+when the founder closes the challenge (migrate_203, not yet applied) and kept
+through challenge deletion. Re-arming monetisation (D137's two steps)
 gains a third: every entitlement check grants full access to a user with a
 grant row, before any purchase or trial logic runs. Never drop, truncate or
 filter that table without an explicit founder decision.

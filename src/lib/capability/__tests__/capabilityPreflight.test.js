@@ -79,7 +79,8 @@ describe('capabilityPreflight postures', () => {
 describe('the gate lives OUTSIDE the engine, at every generation surface (source pins)', () => {
   const read = (p) => fs.readFileSync(path.resolve(__dirname, '../../..', p), 'utf8');
   test.each([
-    'screens/ProGoalSetupScreen.js',
+    // Item 10: ProGoalSetupScreen is not a generation surface any more (the
+    // phase is no plan-builder input); PlanUpdateScreen owns the rebuild.
     'screens/PlanUpdateScreen.js',
     'screens/ProOnboardingScreen.js',
     // Red-team finding 1 (bundle): the block-boundary refinement and the

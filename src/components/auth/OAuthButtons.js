@@ -3,6 +3,7 @@ import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, fontSize, fontWeight, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import { isGoogleIosConfigured } from '../../lib/supabase';
 
 // expo-apple-authentication is iOS-only; require it lazily and only on iOS so
 // Android never loads the native module. Falls back to null where absent so the
@@ -20,8 +21,8 @@ if (Platform.OS === 'ios') {
 // The "Continue with Apple / Google" block plus the "or with email" divider.
 // Shared by the LoginScreen and the Pro onboarding account step so the two
 // auth surfaces stay byte-identical. Presentational only: the screens pass the
-// handlers and the disabled state; no auth logic lives here. Apple is iOS-only
-// (App Store rule: offering any social sign-in requires Sign in with Apple).
+// handlers and the disabled state; no auth logic lives here. Both providers show
+// on both platforms (App Store rule: any social sign-in needs Sign in with Apple).
 //
 // On iOS the official AppleAuthenticationButton is rendered (Guideline 4.8
 // requires Apple's own button). If the native component is unavailable (e.g.
@@ -38,10 +39,12 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
+  // Google on iPhone needs the iOS client id; hide the button until it is set.
+  const showGoogle = Platform.OS !== 'ios' || isGoogleIosConfigured();
   const AppleButton = AppleAuthentication?.AppleAuthenticationButton;
   return (
     <View style={styles.block}>
-      {Platform.OS === 'ios' && (
+      {(
         AppleButton ? (
           <View
             style={[styles.appleNativeWrap, disabled && styles.btnDisabled]}
@@ -72,22 +75,23 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
           </TouchableOpacity>
         )
       )}
-      {/* Google native sign-in needs an iOS OAuth client id that isn't wired
-          for iOS; offering it there fails ("failed to determine clientID").
-          iOS therefore shows Apple + email only, which still satisfies
-          Guideline 4.8 (Apple sign-in present). Android keeps Google. */}
-      {Platform.OS !== 'ios' && (
-        <TouchableOpacity
-          style={[styles.btn, live.btn, raised && live.btnRaised, disabled && styles.btnDisabled]}
-          onPress={onGoogle}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel="Continue with Google"
-        >
-          <Ionicons name="logo-google" size={18} color={t.colors.textPrimary} />
-          <Text style={[styles.btnText, live.btnText]}>Continue with Google</Text>
-        </TouchableOpacity>
-      )}
+      {/* Founder ruling (Batch 4, item 2): Apple and Google are offered on
+          iPhone and Android alike. Apple on Android uses the existing web
+          OAuth flow (the custom button above, since the native component is
+          iOS-only); Google on iPhone uses the iOS client id from
+          docs/release/SIGN-IN-SETUP.md. */}
+      {showGoogle ? (
+      <TouchableOpacity
+        style={[styles.btn, live.btn, raised && live.btnRaised, disabled && styles.btnDisabled]}
+        onPress={onGoogle}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel="Continue with Google"
+      >
+        <Ionicons name="logo-google" size={18} color={t.colors.textPrimary} />
+        <Text style={[styles.btnText, live.btnText]}>Continue with Google</Text>
+      </TouchableOpacity>
+      ) : null}
       {dividerLabel ? (
         <View style={styles.divider}>
           <View style={[styles.dividerLine, live.dividerLine]} />

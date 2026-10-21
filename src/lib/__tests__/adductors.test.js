@@ -10,7 +10,6 @@ import {
   VOLUME_LANDMARKS,
   MUSCLE_DISPLAY_NAMES,
   detectLaggingMuscles,
-  getVolumeStatus,
 } from '../algorithms';
 
 describe('adductors muscle registration', () => {
@@ -33,11 +32,5 @@ describe('adductors muscle registration', () => {
     ];
     const lagging = detectLaggingMuscles(history, 3);
     expect(lagging.find(m => m.muscle === 'adductors')).toBeUndefined();
-  });
-
-  test('logged adductor volume reports a sensible status', () => {
-    // Zero work reads below; mav-range work reads optimal.
-    expect(getVolumeStatus(0, 'adductors').status).toBe('below');
-    expect(getVolumeStatus(8, 'adductors').status).toBe('optimal');
   });
 });

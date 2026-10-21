@@ -65,7 +65,7 @@ export default function TodaysPlateTeaser() {
         ))}
         <View style={styles.totalRow}>
           <Text style={[styles.totalText, live.totalText]}>
-            {`${toEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${day.totals.protein} - C ${day.totals.carbs} - F ${day.totals.fat}`}
+            {`${toEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${Math.round(day.totals.protein)} g · C ${Math.round(day.totals.carbs)} g · F ${Math.round(day.totals.fat)} g`}
           </Text>
         </View>
       </View>

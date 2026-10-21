@@ -57,6 +57,7 @@ import HeightFeetInchesField from '../components/HeightFeetInchesField';
 import AgeYearsField from '../components/AgeYearsField';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { touchTarget } from '../styles/layout';
+import { CALCULATION_ONLY_NOTES } from '../lib/sensitiveFieldNotes';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -402,7 +403,11 @@ export default function NutritionTargetsScreen({ navigation, route }) {
   }, [user?.id]);
 
   // ── Form state ────────────────────────────────────────────────────────────────
-  const [sex,            setSex]            = useState('male');
+  // F6: no silent default. Sex is empty until the saved profile has loaded
+  // (and stays empty if the profile holds none), so the person chooses it.
+  // The calculation stays blocked until they have (formComplete requires it).
+  const [sex,            setSex]            = useState(null);
+  const [profileLoaded,  setProfileLoaded]  = useState(false);
   const [age,            setAge]            = useState('');
   const [heightFt,       setHeightFt]       = useState('');
   const [heightIn,       setHeightIn]       = useState('');
@@ -591,10 +596,10 @@ export default function NutritionTargetsScreen({ navigation, route }) {
   // Pre-populate form from saved body profile so users don't re-enter stats
   useEffect(() => {
     async function prefill() {
-      if (!user?.id) return;
+      if (!user?.id) { setProfileLoaded(true); return; }
       try {
         const profile = await getUserBodyProfile(user.id).catch(() => null);
-        if (profile?.sex) setSex(profile.sex);
+        if (profile?.sex === 'male' || profile?.sex === 'female') setSex(profile.sex);
         if (profile?.heightCm) {
           const totalIn = Math.round(profile.heightCm / 2.54);
           setHeightFt(String(Math.floor(totalIn / 12)));
@@ -632,7 +637,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
         if (typeof userProfile?.daysPerWeek === 'number' && userProfile.daysPerWeek > 0) {
           setActivity(daysToActivityLevel(userProfile.daysPerWeek));
         }
-      } catch (_) {}
+      } catch (_) { /* the form stays blank; the person fills it in */ } finally { setProfileLoaded(true); }
     }
     prefill();
     // Runs once per user. userProfile fields are read as one-shot prefill seeds,
@@ -1089,12 +1094,14 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 <PillGroup
                   options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
                   selected={sex}
-                  onSelect={setSex}
+                  onSelect={(v) => { if (profileLoaded) setSex(v); }}
                 />
+                <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.sex}</Text>
               </View>
               <View style={styles.formGroup}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
                 <AgeYearsField value={age} onChangeText={setAge} />
+                <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.age}</Text>
               </View>
               <View style={styles.formGroup}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
@@ -1104,6 +1111,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                   inches={heightIn}
                   onChangeInches={setHeightIn}
                 />
+                <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.height}</Text>
               </View>
               <View style={styles.formGroup}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
@@ -1121,6 +1129,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                   maxLength={5}
                   accessibilityLabel="Current weight in kilograms"
                 />
+                <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.weight}</Text>
               </View>
 
               {/* The same GDPR consent the full form requires, bound to the same
@@ -1180,14 +1189,16 @@ export default function NutritionTargetsScreen({ navigation, route }) {
             <PillGroup
               options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
               selected={sex}
-              onSelect={setSex}
+              onSelect={(v) => { if (profileLoaded) setSex(v); }}
             />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.sex}</Text>
           </View>
 
           {/* Age */}
           <View style={styles.formGroup}>
             <Text style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
             <AgeYearsField value={age} onChangeText={setAge} />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.age}</Text>
           </View>
 
           {/* Height */}
@@ -1199,6 +1210,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
               inches={heightIn}
               onChangeInches={setHeightIn}
             />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.height}</Text>
           </View>
 
           {/* Weight */}
@@ -1218,6 +1230,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
               maxLength={5}
               accessibilityLabel="Current weight in kilograms"
             />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.weight}</Text>
           </View>
 
           {/* Body fat */}
@@ -1231,6 +1244,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
               maxLength={4}
               accessibilityLabel="Body fat estimate percentage"
             />
+            <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.sensitiveNote]}>{CALCULATION_ONLY_NOTES.bodyFat}</Text>
           </View>
 
           {/* BF Source, only shown when BF is entered */}
@@ -1401,7 +1415,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 <Ionicons name="nutrition" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.collapsedText, live.collapsedText]} numberOfLines={1}>
                   {age && weight && heightFt
-                    ? `${sex === 'male' ? 'Male' : 'Female'} · ${age} · ${heightFt} ft${heightIn ? ` ${heightIn} in` : ''} · ${formatBodyWeight(Number(weight), bodyWeightUnits)} · ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
+                    ? `${sex === 'male' ? 'Male · ' : sex === 'female' ? 'Female · ' : ''}${age} · ${heightFt} ft${heightIn ? ` ${heightIn} in` : ''} · ${formatBodyWeight(Number(weight), bodyWeightUnits)} · ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
                     : `${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
                 </Text>
               </View>
@@ -2177,6 +2191,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   fieldHintKg: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
+  // Item 4: the "who can see this" line under a sensitive field.
+  sensitiveNote: { marginTop: spacing.xs, marginBottom: 0 },
   optional: {
     fontFamily: fontFamily.regular, fontWeight: fontWeight.regular,
     color: colors.textMuted,

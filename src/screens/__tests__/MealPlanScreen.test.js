@@ -438,10 +438,17 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain('bottomScrollPadding');
     expect(source).toContain('emptyBottomPadding');
     expect(source).toContain('const hasSwappableFoods = (day?.slots || []).some');
-    expect(source).toContain('Hold a swappable food to leave it out of future plans.');
+    expect(source).toContain('Hold a swappable food, or open its swap list, and choose "Don\\\'t suggest again" to leave it out of future plans.');
     expect(source).toContain('Review the meals and add the plan when it looks right.');
     expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
-    expect(source).toContain('Adds these meals to today. Existing logged food is left alone.');
+    // Item 24 / F4 (2026-10-20): the card names the diary day it writes to and
+    // says what the button really does; the Build week card no longer claims
+    // to leave logged food alone, because it writes nothing to the diary.
+    expect(source).toContain('Adds the meals that are still empty on ${planStartDate === todayLocalKey() ? \'today\' : planStartLabel}. Food you have logged stays, and planned meals already there are replaced.');
+    expect(source).toContain('Adds the week from the date shown, into meals that are still empty. Food you have logged stays, and you can choose to replace planned meals.');
+    expect(source).not.toContain('Adds these meals to today');
+    expect(source).toContain('Build seven dated days and a shopping list. Nothing is added to your diary until you tap Add this week.');
+    expect(source).not.toContain('Build seven dated days and a shopping list. Existing logged food is left alone.');
     expect(source).toContain('accessibilityLabel="Refresh meals"');
     expect(source).toContain("isDayPlan ? 'Create week' : 'Create day'");
     expect(source).toMatch(/swapBtn: \{[\s\S]*borderWidth: 1,[\s\S]*backgroundColor: colors\.surface2/);
@@ -798,7 +805,7 @@ describe('MealPlanScreen — calm failures with a logged cause, sheet headings (
     act(() => { row.props.onLongPress(); });
     const [title, , alertButtons] = appAlert.mock.calls[0];
     expect(title).toBe('Stop suggesting this?');
-    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest it").onPress(); });
+    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest again").onPress(); });
 
     expect(mockToastShow).toHaveBeenCalledWith('Porridge oats will not be suggested again.', { variant: 'success' });
     expect(mockToastShow).not.toHaveBeenCalledWith(expect.stringContaining('We will not'), expect.anything());
@@ -812,7 +819,7 @@ describe('MealPlanScreen — calm failures with a logged cause, sheet headings (
       && /Porridge oats/.test(String(n.props.accessibilityLabel || '')))[0];
     act(() => { row.props.onLongPress(); });
     const [, , alertButtons] = appAlert.mock.calls[0];
-    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest it").onPress(); });
+    await act(async () => { await alertButtons.find((b) => b.text === "Don't suggest again").onPress(); });
 
     expect(logError).toHaveBeenCalledWith('MealPlanScreen.flagFood', expect.any(Error), { slotKey: 'meal_1' });
     expect(mockToastShow).toHaveBeenCalledWith('That food was not left out of your plans. Try again in a moment.', { variant: 'error' });

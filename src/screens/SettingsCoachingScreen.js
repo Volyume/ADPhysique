@@ -144,7 +144,7 @@ export default function SettingsCoachingScreen() {
         <SettingRow
           icon="heart-outline"
           label="Calmer coaching"
-          sub="Quieter progress prompts, and coaching never pushes for more while it is on. Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change. The safety limits on calories and training load are always on, in both modes."
+          sub={'Quieter progress prompts, and coaching never pushes for more while it is on. Your plan, your numbers and your weight figures do not change. Calmer coaching:\n\u2022 Hides your Community counts, presence, group boards and challenge board from other members\n\u2022 Stops new automatic posts from your workouts (posts already on the feed stay)\n\u2022 Stops reminders to come back, and keeps the monthly recap neutral\n\u2022 Switches off photo prompts, comparisons and share cards\n\u2022 Turns the PR vibration into a plain tap\n\u2022 Quietens Home\'s comparison prompts\nThe safety limits on calories and training load are always on, in both modes.'}
           showArrow={false}
           rightElement={
             <Switch
@@ -233,7 +233,7 @@ export default function SettingsCoachingScreen() {
               // D93 (Campaign 2, Phase 12): the D16 rule was a source
               // comment only - a Coached user whose week reverted to
               // confirm-first was told nothing. One honest sentence.
-              ? "Your coach applies each week's changes for you. Anything safety-related still waits for your confirmation."
+              ? "Your coach applies each week's changes when you open this week's Coaching decision. Anything safety-related still waits for your confirmation."
               : coachAutonomy === 'manual'
                 ? 'Your coach shows each change and the reason. You make the change yourself.'
                 : 'Your coach suggests each change. You tap to apply it.'}

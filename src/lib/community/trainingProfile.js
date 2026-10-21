@@ -180,6 +180,23 @@ export const SESSIONS_AUDIENCE_LABELS = Object.freeze({
 // to followers on the Join screen, in `ambient.js` and by the server.
 export const DEFAULT_SESSIONS_AUDIENCE = 'everyone';
 
+// Stage 2 item 31 (owner answer): a NEW member's "Share what I did" audience
+// starts at Followers on both entry paths (Join screen, onboarding step).
+// Kept apart from DEFAULT_SESSIONS_AUDIENCE above, which is how a STORED
+// settings row with no audience is read, so existing members are unchanged.
+export const JOIN_DEFAULT_SESSIONS_AUDIENCE = 'followers';
+
+/** Where the Community feed opens (item 31): the gym feed if a gym is set,
+ *  else Everyone, until the person follows FEED_FOLLOWING_THRESHOLD people;
+ *  then Following. An unknown follow count keeps Following (today's value). */
+export const FEED_FOLLOWING_THRESHOLD = 5;
+export function defaultFeedScope({ joined, followingCount, gymId }) {
+  if (!joined) return 'everyone';
+  if (followingCount == null || !Number.isFinite(Number(followingCount))) return 'following';
+  if (Number(followingCount) >= FEED_FOLLOWING_THRESHOLD) return 'following';
+  return gymId ? 'gym' : 'everyone';
+}
+
 /**
  * L5 (D221 spec 2.6): one truthful sentence naming the real audience of
  * "Share what I did", used by the sharing row, the Privacy row and the

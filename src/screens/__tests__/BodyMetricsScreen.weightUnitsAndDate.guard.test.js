@@ -72,7 +72,7 @@ describe('A1 follow-up: the takeaway and every other figure read in the person\'
 
   test('the person can reach the units setting from this screen (campaign3 discoverability)', () => {
     expect(SOURCE).toMatch(/label="Weight units"/);
-    expect(SOURCE).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'SettingsWorkout'\)/);
+    expect(SOURCE).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'SettingsUnits'\)/);
   });
 });
 

@@ -168,7 +168,7 @@ describe('the words agree across the surfaces', () => {
 
   test('the meal plan asks in the same language the search row answers in', () => {
     expect(MEAL_PLAN).toContain("'Stop suggesting this?'");
-    expect(MEAL_PLAN).toContain('"Don\'t suggest it"');
+    expect(MEAL_PLAN).toContain('"Don\'t suggest again"');
     expect(SEARCH).toContain('This will not be suggested again.');
   });
 

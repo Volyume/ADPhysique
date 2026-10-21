@@ -19,6 +19,18 @@ const COLUMN = { protein: 'protein_100g', carbs: 'carbs_100g' };
 
 describe('every ratio is CoFID data', () => {
   for (const [key, p] of Object.entries(COOK_YIELD_PAIRS)) {
+    if (p.sources) {
+      test(`${key}: averaged pair, every source row exists and the means match`, () => {
+        p.sources.forEach((src) => {
+          expect(byName.get(src.raw)[COLUMN[p.conserved]]).toBe(src.rawValue);
+          expect(byName.get(src.cooked)[COLUMN[p.conserved]]).toBe(src.cookedValue);
+        });
+        const mean = (k) => p.sources.reduce((n, x) => n + x[k], 0) / p.sources.length;
+        expect(p.raw.value).toBeCloseTo(mean('rawValue'), 6);
+        expect(p.cooked.value).toBeCloseTo(mean('cookedValue'), 6);
+        expect(cookedPerRaw(key)).toBeCloseTo(3.14, 2);
+      });
+    } else
     test(`${key}: both rows exist and carry the copied ${p.conserved} value`, () => {
       const raw = byName.get(p.raw.name);
       const cooked = byName.get(p.cooked.name);
@@ -36,7 +48,7 @@ describe('every ratio is CoFID data', () => {
 });
 
 describe('foods without a pair', () => {
-  test.each(['oats', 'quinoa', 'lentils', 'turkey_mince', 'kidney_beans', 'prawns', 'eggs', 'broccoli'])('%s has no toggle and no figure', (key) => {
+  test.each(['oats', 'quinoa', 'turkey_mince', 'kidney_beans', 'prawns', 'eggs', 'broccoli'])('%s has no toggle and no figure', (key) => {
     expect(hasCookToggle(key)).toBe(false);
     expect(cookedPerRaw(key)).toBeNull();
     expect(convertCookGrams(key, 100, 'raw', 'cooked')).toBeNull();
@@ -89,5 +101,22 @@ describe('logging grams as weighed', () => {
     const a = buildFoodEntryPayload({ entryDate: '2026-10-19', mealSlot: 'meal_1', foodRef: oats.food_ref, quantityG: 60, food: oats, weightState: 'cooked' });
     const b = buildFoodEntryPayload({ entryDate: '2026-10-19', mealSlot: 'meal_1', foodRef: oats.food_ref, quantityG: 60, food: oats });
     expect(a.kcal).toBe(b.kcal);
+  });
+});
+
+describe('lentils (averaged pair) and the "weigh as listed" rule', () => {
+  const { weighAsListed } = require('../cookYield');
+  test('lentils convert at the averaged ratio, about 3.14 g cooked per g dry', () => {
+    expect(hasCookToggle('lentils')).toBe(true);
+    expect(convertCookGrams('lentils', 100, 'cooked', 'raw')).toBeCloseTo(31.9, 1);
+  });
+  test('weigh as listed: only foods named cooked/dry with no pair', () => {
+    expect(weighAsListed('quinoa', 'Quinoa (cooked)')).toBe(true);
+    expect(weighAsListed('turkey_mince', 'Turkey breast mince (cooked)')).toBe(true);
+    expect(weighAsListed('prawns', 'King prawns, cooked & peeled')).toBe(true);
+    expect(weighAsListed('lentils', 'Lentils (cooked)')).toBe(false);
+    expect(weighAsListed('chicken_breast', 'Chicken breast fillet (cooked)')).toBe(false);
+    expect(weighAsListed('eggs', 'Whole eggs (medium/large)')).toBe(false);
+    expect(weighAsListed('broccoli', 'Broccoli')).toBe(false);
   });
 });

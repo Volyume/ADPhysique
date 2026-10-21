@@ -251,7 +251,7 @@ describe('PHASE 6 (D91-25 characterisation): the stored-ledger asymmetry, pinned
 });
 
 describe('PHASE 6: the existing session-level re-entry mechanism (what protects loads today)', () => {
-  test('a 7-day exercise gap applies the one-time 10% layoff reduction in the live session path', () => {
+  test('a gap of more than 14 days (G2 / item 17, was 7) applies the one-time 10% layoff reduction in the live session path', () => {
     // Campaign 20 Phase 2 (live set prescription resolver): the screen no
     // longer computes its own layoffMultiplier - it derives layoffDays and
     // passes it into the packet as a senior fact; livePrescription.js's
@@ -262,8 +262,9 @@ describe('PHASE 6: the existing session-level re-entry mechanism (what protects 
     const src = read('screens/ActiveWorkoutScreen.js');
     expect(src).toMatch(/const layoffDays = lastTs > 0 \? Math\.floor\(\(Date\.now\(\) - lastTs\) \/ \(24 \* 60 \* 60 \* 1000\)\) : null;/);
     const engine = read('lib/livePrescription.js');
-    expect(engine).toMatch(/Number\.isFinite\(senior\.layoffDays\) && senior\.layoffDays > 7/);
-    expect(engine).toMatch(/seniorMultiplier: isLayoff \? 0\.9 : null/);
+    expect(engine).toMatch(/export const LAYOFF_DAYS = 14;/);
+    expect(engine).toMatch(/Number\.isFinite\(senior\?\.layoffDays\) && senior\.layoffDays > LAYOFF_DAYS/);
+    expect(engine).toMatch(/seniorMultiplier: layoff \? 0\.9 : null/);
   });
 
   test('under a layoff multiplier the resolver reduces the load and never claims an increase', () => {
@@ -291,7 +292,7 @@ describe('PHASE 6: the existing session-level re-entry mechanism (what protects 
       1,
     );
     const flagged = resolveSetPrescription(
-      assembleEvidencePacket({ exercise: { id: 'ex1', exerciseType: 'weight_reps', category: 'compound', units: 'kg' }, prescription: { repsMin: 6, repsMax: 12 }, senior: { layoffDays: 10 }, rawHistory, now }),
+      assembleEvidencePacket({ exercise: { id: 'ex1', exerciseType: 'weight_reps', category: 'compound', units: 'kg' }, prescription: { repsMin: 6, repsMax: 12 }, senior: { layoffDays: 20 }, rawHistory, now }),
       1,
     );
     expect(flagged.weight).toBeLessThan(100);

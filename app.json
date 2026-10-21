@@ -11,7 +11,15 @@
     "scheme": "volyume",
     "version": "3.2.0",
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2f60a6ed-8b37-4cd6-8057-60ee04e39ea8",
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "orientation": "portrait",
     "icon": "./assets/volyume-icon.png",
@@ -251,7 +259,12 @@
         }
       ],
       "expo-apple-authentication",
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.REPLACE_WITH_IOS_CLIENT_ID"
+        }
+      ],
       [
         "expo-local-authentication",
         {

@@ -1,3 +1,4 @@
+import { MIN_INTAKE_DAYS } from '../lib/coachContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import { appAlert } from '../components/AppAlert';
@@ -635,7 +636,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
             ? existingCheckin.calsAdherence
             : calsAdh;
           setFastPrefilled(
-            perfAtLoad != null && (!targets?.targetKcal || calsAtLoad != null),
+            perfAtLoad != null && (!targets?.targetKcal
+              || loggedRollups.length < MIN_INTAKE_DAYS || calsAtLoad != null),
           );
           if (alreadyDone) {
             // Re-entry: prefill the user's saved answers so they edit, not
@@ -663,8 +665,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
               : (existingCheckin.cycleOverride ? 'yes' : 'no'));
             const VALID_CALS = ['yes', 'no', 'untracked'];
             const VALID_PERF = ['exceeded', 'hit', 'struggled', 'dropped'];
+            // Item 12: a legacy or empty stored answer falls back to the diary
+            // only when it can judge the week (MIN_INTAKE_DAYS), as on a first
+            // check-in; otherwise the person answers it themselves.
             setCalsAdherence(VALID_CALS.includes(existingCheckin.calsAdherence)
-              ? existingCheckin.calsAdherence : (calsAdh ?? null));
+              ? existingCheckin.calsAdherence
+              : ((calsAdh && loggedRollups.length >= MIN_INTAKE_DAYS) ? calsAdh : null));
             // Legacy rows (pre-fix) could hold a session-difficulty string in
             // training_performance, which matches no card. Fall back to the
             // derived verdict so the user never sees a stuck non-selection or
@@ -678,7 +684,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
             // First check-in this week: pre-select the derived values so the
             // user only overrides when the data is wrong, not pick from scratch.
             if (trainingPerf) setTrainingPerformance(trainingPerf);
-            if (calsAdh) setCalsAdherence(calsAdh);
+            // Item 12 (owner 2026-10-20): under MIN_INTAKE_DAYS logged days the
+            // diary cannot judge the week, so nothing is derived and stored
+            // from 1 to 4 days. The quick check-in asks one tap instead.
+            if (calsAdh && loggedRollups.length >= MIN_INTAKE_DAYS) setCalsAdherence(calsAdh);
           }
         }
 
@@ -834,15 +843,24 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // value the user couldn't auto-fill (e.g. no food logged) falls back to the
   // wizard rather than silently saving a guess. Weight is already covered:
   // gateState only reaches 'open' once MIN_WEIGH_INS is met.
+  // Item 12: fewer than MIN_INTAKE_DAYS logged days is too few to judge the
+  // week. The quick check-in then asks the person instead of storing an
+  // answer derived from 1 to 4 days. Under calm, an open flag or a failed
+  // read (quiet) nothing food-adjacent is asked; the answer stays unset.
+  const calsLowCoverage = hasNutritionTarget
+    && (autoDerived.calsMeta?.daysLogged ?? 0) < MIN_INTAKE_DAYS;
+  const calsAsk = calsLowCoverage && !quiet;
   const fastEligible =
     gateState === 'open' &&
     !forceFullWizard &&
     fastPrefilled &&
     trainingPerformance != null &&
-    (!hasNutritionTarget || calsAdherence != null);
+    (!hasNutritionTarget || calsAdherence != null || calsLowCoverage);
 
-  // The fast card's only required inputs: the two we never derive.
-  const fastCanSubmit = energyScore !== null && sorenessScore !== null;
+  // The fast card's required inputs: the two we never derive, plus the one
+  // calorie tap when the diary is too thin to answer it (item 12).
+  const fastCanSubmit = energyScore !== null && sorenessScore !== null
+    && (!calsAsk || calsAdherence != null);
 
   function stepCanAdvance(s) {
     if (s === 0) return energyScore !== null;
@@ -870,7 +888,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       const targetKcal = autoDerived.calsMeta?.target ?? null;
       const calsAdh = deriveCalsAdherence({ rollups, targetKcal });
       const loggedRollups = rollups.filter((r) => Number.isFinite(r.kcal_total) && r.kcal_total > 0);
-      if (calsAdh) setCalsAdherence(calsAdh);
+      if (calsAdh && loggedRollups.length >= MIN_INTAKE_DAYS) setCalsAdherence(calsAdh);
       setAutoDerived((prev) => ({
         ...prev,
         calsAdherence: calsAdh,
@@ -1536,6 +1554,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
         icon: 'barbell-outline',
         label: 'Training',
         value: trainingPerformance ? PERF_VERDICT_TEXT[trainingPerformance] : null,
+        // Item 12: a tick only for a good outcome.
+        good: !quiet && (trainingPerformance === 'hit' || trainingPerformance === 'exceeded'),
       },
       hasNutritionTarget && {
         key: 'cals',
@@ -1543,7 +1563,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
         label: 'Nutrition',
         // Quiet: the verdict word ("Off your target") goes and, with no value,
         // the row is left out below. Nothing is said in its place.
-        value: (calsAdherence && !quiet) ? CALS_TEXT[calsAdherence] : null,
+        // Item 12: under five logged days the row says it cannot judge (the
+        // quick path stays; the stored answer is unchanged, see D2.md Q).
+        // Below MIN_INTAKE_DAYS the row is the one-tap question below, not a
+        // verdict, so it is not listed here.
+        value: (calsAdherence && !quiet && !calsLowCoverage) ? CALS_TEXT[calsAdherence] : null,
+        good: !quiet && !calsLowCoverage && calsAdherence === 'yes',
       },
       {
         key: 'weight',
@@ -1575,7 +1600,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
               <Ionicons name={row.icon} size={16} color={t.colors.textSecondary} style={styles.fastSummaryIcon} />
               <Text style={[styles.fastSummaryLabel, live.fastSummaryLabel]} numberOfLines={1}>{row.label}</Text>
               <Text style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={1}>{row.value}</Text>
-              <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
+              {/* Item 12: tick = good outcome; a quiet dot = filled in from logs. */}
+              {row.good
+                ? <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
+                : <Ionicons name="ellipse" size={8} color={t.colors.textMuted} style={{ width: 16, textAlign: 'center' }} />}
             </View>
           ))}
           {/* Wave A B6: the fastest path was the least transparent, one
@@ -1627,6 +1655,25 @@ export default function WeeklyCheckInScreen({ navigation }) {
             fields that are ALREADY confidently auto-derived. The cycle answer
             is not derived at all and cannot be, so it is asked here too rather
             than being dropped. Same single row, same wording as the wizard. */}
+        {calsAsk && (
+          <View style={styles.section}>
+            <SectionLabel
+              hint={`Your diary has ${autoDerived.calsMeta?.daysLogged ?? 0} of the last 7 days, which is too few to judge your week. Your answer is what your coach reads.`}
+            >
+              Did you mostly eat to your target this week?
+            </SectionLabel>
+            <ChipRow
+              options={[
+                { value: 'yes', label: 'Yes' },
+                { value: 'no', label: 'No' },
+                { value: 'untracked', label: "Didn't track" },
+              ]}
+              selected={calsAdherence}
+              onSelect={setCalsAdherence}
+            />
+          </View>
+        )}
+
         {showCycle && (
           <View style={styles.section}>
             <SectionLabel
@@ -2071,7 +2118,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
           )}
 
           {fastEligible && !fastCanSubmit && (
-            <Text style={[styles.ctaHint, live.ctaHint]}>Rate your energy and soreness to continue.</Text>
+            <Text style={[styles.ctaHint, live.ctaHint]}>
+              {calsAsk && calsAdherence == null && energyScore !== null && sorenessScore !== null
+                ? 'Answer the question about your eating to continue.'
+                : 'Rate your energy and soreness to continue.'}
+            </Text>
           )}
 
           {!fastEligible && !stepCanAdvance(step) && step !== 1 && (

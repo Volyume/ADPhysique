@@ -165,7 +165,7 @@ describe('§10.5 layoff: opening x0.9, advance/anchor logic skipped', () => {
   test('a session that would normally ADVANCE instead gets the flat 0.9 reduction', () => {
     const packet = packetWithHistory(
       [historySession({ at: NOW - 20 * DAY, sets: [{ weight: 80, reps: 12 }] })],
-      { senior: { layoffDays: 10 } },
+      { senior: { layoffDays: 20 } },
     );
     const rx = resolveSetPrescription(packet, 1);
     expect(rx.provenance).toBe(PROVENANCE.SENIOR_RECOVERY_HOLD);

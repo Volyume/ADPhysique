@@ -106,9 +106,9 @@ describe('2. The strip: the pure model, one tap target, one legend', () => {
     // (design 5.3): the strip reads the one judgement, so its tones are Below
     // maintenance, Within the studied range and Beyond the studied range; the old
     // "Under the range", "Inside the range" and "Too much" are retired.
-    expect(STRIP).toContain("under: 'Too few to hold size'");
-    expect(STRIP).toContain("in: 'Enough sets'");
-    expect(STRIP).toContain("over: 'More than needed'");
+    // Item 14: the strip's legend IS the figure legend's four tone words (VOLUME_TONE_LABELS).
+    expect(STRIP).toContain('...VOLUME_TONE_LABELS');
+    expect(STRIP).not.toContain("in: 'Enough sets'");
     expect(CODE_OF(STRIP)).not.toMatch(/Too much|Under the range|Inside the range/);
   });
 

@@ -2789,19 +2789,6 @@ export default function HomeScreen({ navigation, route }) {
           <HomeWelcomeCard onDismiss={dismissWelcome} />
         )}
 
-        {/* D134 (founder 2026-09-03): one calm, one-time offer for a person
-            with nothing set up, once the welcome card has retired, and only
-            when no ranked banner holds the attention slot (D14's cap). An
-            offer in the person's words, never a question about the person.
-            Either button dismisses it forever; it also retires by itself
-            the moment anything is set up. */}
-        {!initialLoading && hytNothingSetUp && !hytOfferDismissed && (totalSessions > 0 || welcomeDismissed) && shownBannerKey == null && (
-          <HomeHowYouTrainOfferCard
-            onSetUp={() => { haptics.selection(); dismissHytOffer(); navigation.navigate('HowYouTrainAdd'); }}
-            onDismiss={() => { haptics.selection(); dismissHytOffer(); }}
-          />
-        )}
-
         {/* D219 lane C1b: the one-time note of what changed after the plan was
             rebuilt at its first open. Renders nothing when there is none, and
             nothing after the person dismisses it. */}
@@ -3106,6 +3093,20 @@ export default function HomeScreen({ navigation, route }) {
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </PressableCard>
           </View>
+        )}
+
+        {/* D134 (founder 2026-09-03): one calm, one-time offer for a person
+            with nothing set up, once the welcome card has retired, and only
+            when no ranked banner holds the attention slot (D14's cap). An
+            offer in the person's words, never a question about the person.
+            Either button dismisses it forever; it also retires by itself
+            the moment anything is set up. Stage 2 item 8 (owner answer): it sits
+            directly under the main card, not above it. */}
+        {!initialLoading && hytNothingSetUp && !hytOfferDismissed && (totalSessions > 0 || welcomeDismissed) && shownBannerKey == null && (
+          <HomeHowYouTrainOfferCard
+            onSetUp={() => { haptics.selection(); dismissHytOffer(); navigation.navigate('HowYouTrainAdd'); }}
+            onDismiss={() => { haptics.selection(); dismissHytOffer(); }}
+          />
         )}
 
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero

@@ -546,7 +546,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="flag-outline"
             label="Update goal and phase"
-            sub="Change goal, phase, schedule, equipment or experience."
+            sub="Change your goal, phase, protein target or show date."
             onPress={() => navigation.navigate('ProGoalSetup')}
           />
           <NavRow
@@ -558,7 +558,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="notifications-outline"
             label="Coaching reminders"
-            sub="Reminders for your weekly check-in, weigh-ins and logging."
+            sub="Reminders for your weigh-ins, weekly check-in, missed check-ins and planned meals."
             onPress={() => navigation.navigate('CoachingReminders')}
           />
           </NavGroup>

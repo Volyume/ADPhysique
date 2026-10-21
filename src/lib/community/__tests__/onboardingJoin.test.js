@@ -134,7 +134,7 @@ describe('performCommunityJoin: the success order', () => {
     expect(suggestHandle).toHaveBeenCalledTimes(1);
     expect(upsertProfile).toHaveBeenCalledWith({
       handle: 'suggested_1', display_name: 'Rowan', visibility: 'public',
-      share_sessions: true, sessions_audience: 'everyone',
+      share_sessions: true, sessions_audience: 'followers',
     });
     expect(setGyms).toHaveBeenCalledWith('g1', []);
     expect(loadMe).toHaveBeenCalledWith({ force: true, userId: 'u1' });
@@ -149,7 +149,7 @@ describe('performCommunityJoin: the success order', () => {
     expect(suggestHandle).not.toHaveBeenCalled();
     expect(upsertProfile).toHaveBeenCalledWith({
       handle: 'rowan_lifts', display_name: 'Rowan', visibility: 'public',
-      share_sessions: true, sessions_audience: 'everyone',
+      share_sessions: true, sessions_audience: 'followers',
     });
   });
 
@@ -159,16 +159,16 @@ describe('performCommunityJoin: the success order', () => {
   });
 
   // RE-ANCHORED 2026-09-22 (founder order supersedes CR-13): "Share what I
-  // did" is on by default, to everyone, and the wizard's step says so above
+  // did" is on by default, to followers (item 31), and the wizard's step says so above
   // its Join button, so the create carries it. Avatar preset, discipline
   // keys and the rules version still never travel from here.
-  test('the profile call carries sharing on (to everyone) and never an avatar preset, discipline keys or a rules version', async () => {
+  test('the profile call carries sharing on (to followers) and never an avatar preset, discipline keys or a rules version', async () => {
     await performCommunityJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null });
     const sent = upsertProfile.mock.calls[0][0];
     expect(sent).not.toHaveProperty('avatar_preset');
     expect(sent).not.toHaveProperty('discipline_keys');
     expect(sent.share_sessions).toBe(true);
-    expect(sent.sessions_audience).toBe('everyone');
+    expect(sent.sessions_audience).toBe('followers');
     expect(sent).not.toHaveProperty('accept_rules_version');
   });
 
@@ -289,7 +289,7 @@ describe('performCommunityJoin: lead review 2026-09-11 (existing profile, empty 
     await performCommunityJoin('u1', { handle: null, displayName: '  ', gymId: null });
     expect(upsertProfile).toHaveBeenCalledWith({
       handle: 'suggested_1', display_name: 'suggested_1', visibility: 'public',
-      share_sessions: true, sessions_audience: 'everyone',
+      share_sessions: true, sessions_audience: 'followers',
     });
   });
 
@@ -365,7 +365,7 @@ describe('performEarlyCommunityJoin (founder order 2026-09-22, item 3): saves th
     // Passed straight into the ONE join path, unchanged.
     expect(upsertProfile).toHaveBeenCalledWith({
       handle: 'rowan_lifts', display_name: 'Rowan', visibility: 'public',
-      share_sessions: true, sessions_audience: 'everyone',
+      share_sessions: true, sessions_audience: 'followers',
     });
     expect(setGyms).toHaveBeenCalledWith('g1', []);
     expect(out).toEqual({ ok: true, queued: false, error: null });

@@ -1,6 +1,7 @@
 // D228 item 2, tier c: the line Body metrics prints in the weight's place under
 // an open flag, imported so the two screens can never say it differently.
 import { BODY_METRICS_FLAG_LINE } from '../bodyMetricsPolicy';
+import { formatBodyWeightRate } from '../units';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -106,15 +107,45 @@ export function buildFocus(output, checkin) {
   return 'Keep doing what you did this week.';
 }
 
-export const CONFIDENCE_CAPTIONS = {
-  high: 'Confidence: high. A full week of data sits behind this decision.',
-  // Lead review 2026-09-26: at low and medium confidence the engine needs
-  // three off-target weeks instead of two before it changes calories
-  // (weeklyCoach.js offTargetWeeksRequired). It never makes a change
-  // smaller, so the old "changes are sized cautiously" was not true.
-  medium: 'Confidence: medium. There was less information than usual this week, so your coach waits an extra week before changing your calorie target.',
-  low: 'Confidence: low. Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target.',
-};
+/**
+ * Item 12: the confidence line names its basis. `assessDataConfidence`
+ * (weeklyCoach.js) reads morning-weigh-in days and the check-in answers,
+ * never food or sessions, so that is all this line claims. The count is the
+ * screen's observable weigh-in count; null falls back to the plain basis.
+ * Safe under calm and an open flag: it quotes a count of weigh-ins, never a
+ * weight (owner 2026-10-20). At low and medium confidence the engine needs
+ * three off-target weeks instead of two before it changes calories
+ * (weeklyCoach.js offTargetWeeksRequired); it never makes a change smaller.
+ */
+export function buildConfidenceLine(level, weighIns = null) {
+  const n = Number.isFinite(weighIns) ? weighIns : null;
+  const basis = n == null
+    ? 'Based on your morning weigh-ins and your check-in.'
+    : `Based on ${n} morning weigh-in${n === 1 ? '' : 's'} and your check-in.`;
+  if (level === 'high') return `Confidence: high. ${basis}`;
+  if (level === 'medium') {
+    return `Confidence: medium. ${basis} That is less to go on than usual, so your coach waits an extra week before changing your calorie target.`;
+  }
+  if (level === 'low') {
+    return `Confidence: low. ${basis} Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target.`;
+  }
+  return null;
+}
+
+/**
+ * Item 15: the fourth part of a decision, when it is looked at again, and
+ * from when a change takes effect. `pending` is true while an adjustment
+ * waits for the person's tap (never in Manual mode, which has no Apply and
+ * already says so above). Names the check-in day when it is known. Shown
+ * on every decision, hold weeks included; it states no weight and no food.
+ */
+export function buildTimingLine({ checkinDayName = null, pending = false } = {}) {
+  const again = checkinDayName
+    ? `Your coach looks at this again at your ${checkinDayName} check-in.`
+    : 'Your coach looks at this again at your next check-in.';
+  if (pending) return `A change starts from the moment you tap Apply. ${again}`;
+  return again;
+}
 
 // ─── The "Your week" rows (D206, founder order 2026-09-26) ─────────────────
 //
@@ -160,6 +191,10 @@ const capitalise = (s) => (typeof s === 'string' && s.length ? s.charAt(0).toUpp
  *   open ED flag, a failed safety read or the unknown state (never calm alone).
  *   The weight row then prints the Body metrics line in the chip's place, with
  *   no direction glyph and no gloss, and the coaching-rate row is left out.
+ * @param {boolean} [input.suppressed] the safety verdict (`safetyState.js`
+ *   `suppressed`: calm OR an open flag OR a failed read, and the unknown
+ *   state). True leaves out the food rows (Food logged, Calories) and every
+ *   good/attention mark, matching Today, which shows no rows at all then.
  * @param {object|null} [input.context] the coach context the run decided from
  * @param {object|null} [input.checkin] this week's check-in answers
  * @returns {Array<{key: string, icon: string, label: string, value: string,
@@ -168,10 +203,11 @@ const capitalise = (s) => (typeof s === 'string' && s.length ? s.charAt(0).toUpp
 export function buildWeekRows({
   sessionsCompleted = null, sessionsPlanned = null, prsThisWeek = null,
   weight = null, rate = null, context = null, checkin = null, withholdWeight = false,
+  suppressed = false,
 } = {}) {
   const rows = [];
   const push = (key, icon, label, value, mark = null, tooltip = null, wrap = false) => {
-    rows.push({ key, icon, label, value, mark, tooltip, ...(wrap ? { wrap: true } : {}) });
+    rows.push({ key, icon, label, value, mark: suppressed ? null : mark, tooltip, ...(wrap ? { wrap: true } : {}) });
   };
 
   // Training.
@@ -197,16 +233,26 @@ export function buildWeekRows({
     // the lines the largest text size needs instead of clipping at two.
     push('weight', 'scale-outline', 'Body weight', BODY_METRICS_FLAG_LINE, null, null, true);
   } else {
-    if (weight?.value) push('weight', weight.icon ?? 'remove-outline', weight.label ?? '7-day trend', weight.value, null, weight.tooltip ?? null);
-    if (rate?.value) push('rate', 'analytics-outline', rate.label ?? 'Coaching trend', capitalise(rate.value), null, rate.tooltip ?? null);
+    // Item 15: ONE weight row, the coaching rate (the number the decision was
+    // made from). The scale reading moves into its info sheet. With no rate
+    // (an output from before C10F) the scale reading stays as it was.
+    if (rate?.value) {
+      const scale = weight?.value && weight.value !== 'No weights logged'
+        ? ` Your scale reading over the same seven days: ${weight.value}.` : '';
+      push('rate', 'analytics-outline', rate.label ?? 'Coaching trend', capitalise(rate.value), null, `${rate.tooltip ?? ''}${scale}`.trim() || null);
+    } else if (weight?.value) {
+      push('weight', weight.icon ?? 'remove-outline', weight.label ?? '7-day trend', weight.value, null, weight.tooltip ?? null);
+    }
   }
 
-  // Food: never marked.
-  const coverage = context?.nutrition?.coverage ?? null;
-  const days = finite(coverage?.value);
-  if (days != null) push('food', 'restaurant-outline', 'Food logged', `${days} of 7 days`);
-  const cals = checkin?.calsAdherence ?? null;
-  if (cals && CALORIE_VALUES[cals]) push('calories', 'flame-outline', 'Calories', CALORIE_VALUES[cals]);
+  // Food: never marked, and left out entirely under the safety verdict.
+  if (!suppressed) {
+    const coverage = context?.nutrition?.coverage ?? null;
+    const days = finite(coverage?.value);
+    if (days != null) push('food', 'restaurant-outline', 'Food logged', `${days} of 7 days`);
+    const cals = checkin?.calsAdherence ?? null;
+    if (cals && CALORIE_VALUES[cals]) push('calories', 'flame-outline', 'Calories', CALORIE_VALUES[cals]);
+  }
 
   // Recovery: an answer worth a look is marked; a fine one is simply stated.
   const energy = finite(checkin?.energyScore);
@@ -247,6 +293,25 @@ export function splitLead(text) {
  * The number is the engine's coachingRatePct (C10F), already rounded for
  * display; nothing is recalculated. Non-finite input returns null.
  */
+/**
+ * Item 15: the coaching rate in the person's own body-weight unit (kg users
+ * read kg a week; lb and stone users read lb a week, the app's one spelling
+ * of a rate, units.formatBodyWeightRate). Worked out from the engine's own
+ * %/wk and its smoothed weight, nothing re-judged. "Steady" inside the
+ * engine's 0.01 band. Null when either number is missing: no figure is
+ * better than the old %/wk. Weight figures: the caller withholds this row
+ * under withholdsWeightFigures.
+ */
+export function formatCoachingRateWeight(pct, weightKg, bodyWeightUnits = 'st') {
+  if (typeof pct !== 'number' || !Number.isFinite(pct)) return null;
+  if (Math.abs(pct) <= 0.01) return 'Steady';
+  if (typeof weightKg !== 'number' || !Number.isFinite(weightKg) || weightKg <= 0) return null;
+  const kgPerWeek = (pct / 100) * weightKg;
+  const out = formatBodyWeightRate(kgPerWeek, bodyWeightUnits);
+  // A rate that rounds to nothing in the person's unit reads as steady.
+  return /^[+-]?0 /.test(out) ? 'Steady' : out;
+}
+
 export function formatCoachingRate(pct) {
   if (typeof pct !== 'number' || !Number.isFinite(pct)) return null;
   if (Math.abs(pct) <= 0.01) return 'Steady';

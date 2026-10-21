@@ -168,8 +168,8 @@ describe('ExerciseSection states', () => {
   });
 
   test('moreHint: the word sits beside the overflow glyph in amber and the label says what is behind it', () => {
-    const tree = render({ moreHint: 'Help' });
-    textHost(tree, 'Help');
+    const tree = render({ moreHint: 'More' });
+    textHost(tree, 'More');
     one(byLabel(tree, 'More options for this exercise, including how logging works'));
     expect(byLabel(render({}), 'More options for this exercise')).toHaveLength(1);
   });
@@ -231,6 +231,24 @@ describe('ExerciseSection header', () => {
     expect(hosts(tree, (p) => p.accessible === false && p.importantForAccessibility === 'no')).toHaveLength(0);
     // The only pressable thing is the header itself.
     expect(hosts(tree, (p) => typeof p.onPress === 'function')).toHaveLength(1);
+  });
+
+  // Item 18 (option A): the active header's empty right slot carries an information
+  // glyph, a cue for the tap that opens the exercise guide. Decoration only.
+  test('active and pressable: an information glyph in the right-hand slot, hidden from the accessibility tree; no other state shows it', () => {
+    const glyph = (tree) => tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'information-circle-outline');
+    const active = render({ state: 'active', onPressHeader: jest.fn() });
+    expect(glyph(active)).toHaveLength(1);
+    expect(glyph(active)[0].props.size).toBe(iconSize.md);
+    const cue = one(hosts(active, (p) => p.testID === 'volyume-exercise-info-cue'));
+    expect(cue.props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(cue.props.accessibilityElementsHidden).toBe(true);
+    // Still ONE pressable thing: the header.
+    expect(hosts(active, (p) => typeof p.onPress === 'function' && p.testID !== 'volyume-section-more'
+      && p.testID !== 'volyume-btn-extra-set')).toHaveLength(1);
+    expect(glyph(render({ state: 'active' }))).toHaveLength(0);
+    expect(glyph(render({ state: 'done', onPressHeader: jest.fn() }))).toHaveLength(0);
+    expect(glyph(render({ state: 'upcoming', onPressHeader: jest.fn() }))).toHaveLength(0);
   });
 
   test('the header button names the exercise, carries the accordion state and a hint: the guide when active and pressable, make-current when collapsed', () => {

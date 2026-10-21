@@ -14,7 +14,7 @@
  *
  * A food with no CoFID pair has no entry, so it gets no toggle and no figure
  * is ever invented for it: oats (porridge depends on the liquid), quinoa (no
- * cooked row), lentils (the curated food does not say which), turkey mince
+ * cooked row), turkey mince
  * (no raw row), tinned beans and cooked prawns (bought as they are eaten).
  *
  * Converting changes only the gram figure for the same amount of food; the
@@ -45,8 +45,30 @@ export const COOK_YIELD_PAIRS = Object.freeze({
   beef_mince_5: pair('protein', 'raw', 'Beef, mince, raw, extra lean', 21.9, 'Beef, mince, extra lean, stewed', 24.7),
   cod: pair('protein', 'raw', 'Cod, flesh only, raw', 17.5, 'Cod, flesh only, baked', 23.9),
   salmon: pair('protein', 'raw', 'Salmon, farmed, flesh only, raw', 20.4, 'Salmon, farmed, flesh only, baked', 25.2),
+  // Averaged pair (owner 2026-10-20, item 27): the curated "Lentils (cooked)"
+  // does not say which lentil, so the ratio is the mean of the two CoFID
+  // varieties, protein as the conserved nutrient (raw 24.3 and 25.6, boiled
+  // 7.8 and 8.1; 24.95 / 7.95 = 3.14 g cooked per g dry; the two varieties
+  // sit at 3.12 and 3.16). Each source row is pinned by cookYield.test.js.
+  lentils: Object.freeze({
+    ...pair('protein', 'dry', 'Lentils, green and brown and red split, dried, raw (mean of 13-089 and 13-657)', 24.95, 'Lentils, green and brown and red split, dried, boiled (mean of 13-661 and 13-658)', 7.95),
+    sources: Object.freeze([
+      Object.freeze({ raw: 'Lentils, green and brown, whole, dried, raw', rawValue: 24.3, cooked: 'Lentils, green and brown, whole, dried, boiled in unsalted water', cookedValue: 7.8 }),
+      Object.freeze({ raw: 'Lentils, red, split, dried, raw', rawValue: 25.6, cooked: 'Lentils, red, split, dried, boiled in unsalted water', cookedValue: 8.1 }),
+    ]),
+  }),
   bacon_medallions: pair('protein', 'raw', 'Bacon rashers, back, fat trimmed, raw', 18.8, 'Bacon rashers, back, fat trimmed, grilled', 25.7),
 });
+
+/**
+ * True for a food whose name says cooked or dry but which has no pair, so
+ * the grams are weighed as listed (item 27). Name-based on purpose: eggs,
+ * vegetables and the like say neither word and get no label.
+ */
+export function weighAsListed(foodKey, name) {
+  if (foodKey && hasCookToggle(foodKey)) return false;
+  return /\b(cooked|dry)\b/i.test(String(name || ''));
+}
 
 /** Grams cooked per gram raw for a paired curated food, else null. */
 export function cookedPerRaw(foodKey) {

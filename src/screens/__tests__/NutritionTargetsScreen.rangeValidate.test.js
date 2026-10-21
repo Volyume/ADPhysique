@@ -45,6 +45,7 @@ import { act, create } from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../../store/useAppStore';
 import NutritionTargetsScreen from '../NutritionTargetsScreen';
+import Chip from '../../components/Chip';
 
 const nav = { navigate: jest.fn(), goBack: jest.fn() };
 
@@ -92,6 +93,12 @@ async function fillRequiredFields(tree, { weight = '82', bodyFat, expandFull = f
     await act(async () => { fineTune.props.onPress(); });
     await flush();
   }
+
+  // F6 (2026-10): sex has no default any more, so a person has to choose it;
+  // this suite used to pass on the silent 'male' default.
+  const male = tree.root.findAllByType(Chip).find((c) => c.props.label === 'Male');
+  expect(male).toBeTruthy();
+  await act(async () => { male.props.onPress(); });
 
   const age = findInput(tree, 'Age');
   await act(async () => { age.props.onChangeText('30'); });

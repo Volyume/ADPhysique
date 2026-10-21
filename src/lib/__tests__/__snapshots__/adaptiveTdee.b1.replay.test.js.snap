@@ -43,7 +43,7 @@ exports[`B1 replay corpus — runWeeklyCoach (integration seam) R5 [must never d
 {
   "calories": {
     "change": -98,
-    "note": "Weight is coming down slower than the target rate.",
+    "note": "Your weight trend is coming down more slowly than the rate you chose. Taking a little off your daily calories should bring it back on pace.",
   },
   "confidence": "high",
   "held": [],
@@ -55,7 +55,7 @@ exports[`B1 replay corpus — runWeeklyCoach (integration seam) R6 [expected to 
 {
   "calories": {
     "change": -23,
-    "note": "Weight is coming down slower than the target rate.",
+    "note": "Your weight trend is coming down more slowly than the rate you chose. Taking a little off your daily calories should bring it back on pace.",
   },
   "confidence": "medium",
   "held": [],

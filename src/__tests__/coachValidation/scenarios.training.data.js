@@ -33,7 +33,7 @@
  * T-PROGRAMME-08/10, is covered by a hand-written IO-mocked describe() block
  * in scenarios.training.test.js mocking ONLY database.getRecentCheckins,
  * mirroring the CFL-20 exemplar), interBlock (classifyMuscleBlock),
- * landmarks (getVolumeStatus/computeAdaptiveLandmarks/detectLaggingMuscles/
+ * landmarks (computeAdaptiveLandmarks/detectLaggingMuscles/
  * mergeLandmarkPrecedence/isManualEdit).
  *
  * T-PROGRAMME-11 (TRN-52) is registered `expectedFail: true`: the ORACLE-LOCK
@@ -1055,37 +1055,6 @@ export const SCENARIOS = [
   },
 
   // ═════════════════════════════════════════════════════════════════════════
-  // T-VOLUME-01: getVolumeStatus display classifier boundaries
-  // ═════════════════════════════════════════════════════════════════════════
-  {
-    id: 'TRN-62',
-    family: 'training',
-    why: 'below mev classifies "below" (ORACLE T-VOLUME-01 BOUNDARIES, "<mev below")',
-    rules: ['T-VOLUME-01'],
-    facts: { _fn: 'getVolumeStatus', workingSets: 5, muscle: 'chest' },
-    run: 'landmarks',
-    must: [{ kind: 'equals', path: 'status', equals: 'below' }],
-  },
-  {
-    id: 'TRN-63',
-    family: 'training',
-    why: 'exactly mev+2 (the inclusive upper edge of the "minimum" band) classifies "minimum" (ORACLE T-VOLUME-01 BOUNDARIES, "<=mev+2 minimum")',
-    rules: ['T-VOLUME-01'],
-    facts: { _fn: 'getVolumeStatus', workingSets: 8, muscle: 'chest' },
-    run: 'landmarks',
-    must: [{ kind: 'equals', path: 'status', equals: 'minimum' }],
-  },
-  {
-    id: 'TRN-64',
-    family: 'training',
-    why: 'above mrv classifies "over_mrv" -- "Too much" (ORACLE T-VOLUME-01 BOUNDARIES, "else over_mrv")',
-    rules: ['T-VOLUME-01'],
-    facts: { _fn: 'getVolumeStatus', workingSets: 23, muscle: 'chest' },
-    run: 'landmarks',
-    must: [{ kind: 'equals', path: 'status', equals: 'over_mrv' }],
-  },
-
-  // ═════════════════════════════════════════════════════════════════════════
   // T-VOLUME-08: manual > adapted (Pro only) > research precedence
   // ═════════════════════════════════════════════════════════════════════════
   {
@@ -1355,11 +1324,11 @@ export const SCENARIOS = [
       { kind: 'equals', path: 'adjustments.training.signal', equals: 'reduce' },
       { kind: 'equals', path: 'volumeSignal', equals: -2 },
       { kind: 'equals', path: 'recoveryFlag', equals: 'concerned' },
-      { kind: 'contains', path: 'adjustments.training.note', contains: 'Recovery dipped this week' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Your recovery dipped this week' },
     ],
     mustNot: [
       { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
-      { kind: 'contains', path: 'adjustments.training.note', contains: 'Multiple signs are pointing to fatigue' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Several signs point to fatigue building up' },
     ],
   },
   {
@@ -1376,7 +1345,7 @@ export const SCENARIOS = [
       { kind: 'equals', path: 'adjustments.training.signal', equals: 'reduce' },
       { kind: 'equals', path: 'volumeSignal', equals: -2 },
       { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
-      { kind: 'contains', path: 'adjustments.training.note', contains: 'Multiple signs are pointing to fatigue' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Several signs point to fatigue building up' },
     ],
     mustNot: [
       { kind: 'equals', path: 'recoveryFlag', equals: 'concerned' },

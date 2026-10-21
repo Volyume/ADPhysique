@@ -692,8 +692,9 @@ render.
   - Winners are picked at random. The eligible list and its fingerprint are
     stored.
   - A winner is excluded from later draws, and known under-18s are excluded.
-- **Free for life:** joining writes a grant that survives withdrawal. No app
-  code reads it, because the app is free.
+- **Free for life:** earned by a final score of 50 or more when the founder
+  closes the challenge (migrate_203, written, not applied); joining writes
+  nothing. No app code reads it, because the app is free.
 - **Web pages:**
   - `public/c/index.html` is the landing page. It shows the challenge, the
     scoring, the free-for-life line, "Open in Volyume" and "Get Volyume". It

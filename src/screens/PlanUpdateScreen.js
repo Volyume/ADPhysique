@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { setupFormSignature, SETUP_CHANGED_NOTICE, TRAIN_FORM_FIELDS } from '../lib/setupFormSeed';
 import {
   View, StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
@@ -12,6 +14,8 @@ import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import Chip from '../components/Chip';
 import ArchetypePicker from '../components/ArchetypePicker';
 import { trackNow, trackFeatureSeen } from '../lib/telemetry/growth';
@@ -92,11 +96,16 @@ const RECOVERY_OPTIONS = [
 // this is shown, so the diagnostic survives, it is just never displayed.
 const REBUILD_FAILED_MESSAGE = "Could not rebuild your plan. Your training setup has not changed. Please try again.";
 
-// Training-only plan update for the Train tab. Changes training parameters and
-// rebuilds the plan around them. It deliberately does NOT touch calories or
-// macros: nutrition targets are recalculated only from the Coach tab (Update goal
-// plan / Nutrition targets), which is the single place body composition and
-// goal drive the calorie maths.
+// Training-only plan update for the Train tab. It OWNS the training setup
+// (category, style, weak points, experience, days, session length, equipment,
+// recovery) and rebuilds the plan around it; "Update goal and phase" on the
+// Coach tab owns goal, phase, protein, show date and targets (proposal 10,
+// Option B). It deliberately does NOT touch calories or macros: nutrition
+// targets are recalculated only from the Coach tab, which is the single place
+// body composition and goal drive the calorie maths. Save order: the plan
+// first, the profile after, so a declined preview or a failed build saves
+// nothing; the staged sheet stays open after a failure so confirming again
+// is the retry.
 export default function PlanUpdateScreen({ navigation, route }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
@@ -135,6 +144,47 @@ export default function PlanUpdateScreen({ navigation, route }) {
     scrollRef.current?.scrollTo?.({ y: Math.max(0, styleYRef.current - spacing.md), animated: true });
   };
   const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
+
+  // Proposal 10 (F1): reload the form from the saved profile whenever the
+  // screen regains focus AND the saved setup has changed since this form last
+  // seeded. Tabs keep their stack, so this form can sit mounted while the other
+  // setup screen saves; without this, pressing save writes the old values back.
+  // Unsaved edits survive a trip to a sub-screen (same signature, no reseed).
+  const seededSigRef = useRef(setupFormSignature(userProfile, TRAIN_FORM_FIELDS));
+  const [setupReloaded, setSetupReloaded] = useState(false);
+  useFocusEffect(useCallback(() => {
+    const sig = setupFormSignature(userProfile, TRAIN_FORM_FIELDS);
+    if (sig === seededSigRef.current) return;
+    seededSigRef.current = sig;
+    const p = userProfile || {};
+    setSelectedGoal(p.trainingGoal ?? null);
+    setPlanWeakPoints(p.planWeakPoints ?? []);
+    setTrainingArchetype(normaliseArchetype(p.trainingArchetype) ?? 'balanced');
+    setExperience(p.experience ?? 'intermediate');
+    setDaysPerWeek(p.daysPerWeek ?? 4);
+    setSessionLengthMinutes(p.sessionLengthMinutes ?? 60);
+    setEquipment(p.equipment ?? 'full_gym');
+    setRecoveryRating(p.recoveryRating ?? 'average');
+    setSetupReloaded(true);
+  }, [userProfile]));
+  // Days and experience feed the calorie calculation, which this screen never
+  // runs (item 10, owner answer): say so once either differs from what is
+  // saved. "Update now" opens the Coach form, whose save recalculates targets.
+  const targetsMayBeOutOfStep = daysPerWeek !== (userProfile?.daysPerWeek ?? 4)
+    || experience !== (userProfile?.experience ?? 'intermediate');
+  const [nextCheckinLabel, setNextCheckinLabel] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+        const day = raw ? (JSON.parse(raw).checkinDay ?? 0) : 0;
+        const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        if (!cancelled) setNextCheckinLabel(DAYS[day] ?? 'Sunday');
+      } catch (_) { /* the line falls back to the undated wording */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const [saving, setSaving] = useState(false);
   // Plan diff/preview (ULTIMATE-PLANDIFF-01): a pre-commit dry-run + diff sheet.
   const [previewing, setPreviewing] = useState(false);
@@ -443,6 +493,9 @@ export default function PlanUpdateScreen({ navigation, route }) {
 
     try {
       await saveLocalProfile(user.id, updatedProfile);
+      // Our own save is not "another screen": keep the reload check quiet.
+      seededSigRef.current = setupFormSignature(updatedProfile, TRAIN_FORM_FIELDS);
+      setSetupReloaded(false);
     } catch (_) {}
 
     setSaving(false);
@@ -513,6 +566,9 @@ export default function PlanUpdateScreen({ navigation, route }) {
     // the plan is active, so a failed install can never split-brain.
     try {
       await saveLocalProfile(user.id, updatedProfile);
+      // Our own save is not "another screen": keep the reload check quiet.
+      seededSigRef.current = setupFormSignature(updatedProfile, TRAIN_FORM_FIELDS);
+      setSetupReloaded(false);
     } catch (_) {}
     setSaving(false);
     // The ONE line first run shows for the same answer: it names the plan
@@ -562,11 +618,23 @@ export default function PlanUpdateScreen({ navigation, route }) {
           </>
         ) : null}
 
+        {setupReloaded ? (
+          <Text style={[styles.sectionSub, live.sectionSub]} accessibilityLiveRegion="polite">
+            {SETUP_CHANGED_NOTICE}
+          </Text>
+        ) : null}
+
         {kindChecked && !styleLock ? (
         <>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          Adjust your training setup and rebuild the plan around it. Your calorie and macro targets stay as they are. Update those from the Coach tab.
+          Adjust your training setup and rebuild the plan around it. Your goal, phase, protein target and calorie and macro targets are set on the Coach tab.
         </Text>
+        <Button
+          title="Update goal and phase"
+          onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'ProGoalSetup')}
+          accessibilityLabel="Update goal and phase"
+          variant="secondary"
+        />
 
         {/* ── Physique category (optional) ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Competing in a category? (optional)</SectionLabel>
@@ -643,6 +711,21 @@ export default function PlanUpdateScreen({ navigation, route }) {
           onChange={setDaysPerWeek}
           accessibilityLabel="Training days per week"
         />
+        {targetsMayBeOutOfStep ? (
+          <>
+            <Text style={[styles.sectionSub, live.sectionSub]}>
+              {nextCheckinLabel
+                ? `Your calorie and macro targets stay as they are. Your coach will update them at your next check-in on ${nextCheckinLabel}.`
+                : 'Your calorie and macro targets stay as they are. Your coach will update them at your next check-in.'}
+            </Text>
+            <Button
+              title="Update now"
+              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'ProGoalSetup')}
+              accessibilityLabel="Update now"
+              variant="secondary"
+            />
+          </>
+        ) : null}
 
         <SectionLabel style={styles.sectionLabelSpaced}>Session length</SectionLabel>
         <SegmentedControl

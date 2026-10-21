@@ -75,8 +75,6 @@
   .hero .display{max-width:14ch;}
   .hero-sub{font-size:clamp(18px,2.4vw,22px); color:var(--textSecondary); margin:22px 0 0; max-width:38ch; line-height:1.45;}
   .hero-cta{display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-top:34px;}
-  .hero-trial{font-size:14px; color:var(--textMuted);}
-  .hero-trial b{color:var(--text); font-weight:600;}
 
   /* ---- Section frame ---- */
   section.block{padding:96px 0; border-top:1px solid var(--borderSubtle);}
@@ -130,23 +128,8 @@
   .shot-cap span{color:var(--textMuted); font-weight:400;}
 
   /* ---- Pricing ---- */
-  .tiers{display:grid; gap:18px; margin-top:46px; grid-template-columns:1fr;}
-  @media(min-width:760px){.tiers{grid-template-columns:1fr 1.25fr; align-items:start;}}
-  .tier{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:20px; padding:30px;}
-  .tier.pro{border:1.5px solid var(--amber); position:relative; box-shadow:0 4px 30px rgba(245,166,35,0.10);}
-  .tier .tname{font-weight:800; font-size:20px;}
-  .tier .tsub{color:var(--textMuted); font-size:14px; margin:6px 0 0;}
-  .price{display:flex; align-items:baseline; gap:8px; margin:22px 0 2px;}
-  .price .amt{font-weight:900; font-size:44px; letter-spacing:-1.5px;}
-  .price .per{color:var(--textMuted); font-size:15px;}
-  .price-alt{color:var(--textSecondary); font-size:14px; margin:0 0 4px;}
   .save{display:inline-block; background:var(--amberBg); color:var(--amber); font-weight:700; font-size:12px;
     border-radius:8px; padding:5px 9px; margin-left:4px;}
-  .tier ul{list-style:none; margin:22px 0 0; padding:0; display:flex; flex-direction:column; gap:12px;}
-  .tier li{display:flex; gap:11px; align-items:flex-start; font-size:15px; color:var(--textSecondary);}
-  .tier li svg{flex:0 0 auto; margin-top:2px;}
-  .tier .btn{width:100%; margin-top:26px;}
-  .trial-note{font-size:13px; color:var(--textMuted); margin:14px 0 0; text-align:center;}
 
   /* ---- Founder line ---- */
   .founder{text-align:center;}
@@ -199,13 +182,12 @@
   <div class="hero-glow"></div>
   <div class="wrap">
     <h1 class="display reveal">Your plan adjusts to what you log.</h1>
-    <p class="hero-sub reveal">Free is the logbook a coach would write in. Pro is the coach who writes back.</p>
+    <p class="hero-sub reveal">Training, nutrition and coaching, connected in one free app.</p>
     <div class="hero-cta reveal">
       <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=app.volyume">
         <svg class="play-tri" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#0D0D0D"/></svg>
         Get it on Google Play
       </a>
-      <p class="hero-trial"><b>Free for 14 days.</b> Then £2.99/month or £19.99/year.</p>
     </div>
   </div>
 </header>
@@ -324,51 +306,6 @@
   </div>
 </section>
 
-<!-- 7. PRICING -->
-<section class="block">
-  <div class="wrap">
-    <p class="eyebrow reveal">Pricing</p>
-    <h2 class="h2 reveal">Free, Pro, and your data.</h2>
-    <div class="tiers">
-      <div class="tier reveal">
-        <div class="tname">Free</div>
-        <p class="tsub">The logbook a coach would write in.</p>
-        <div class="price"><span class="amt">£0</span></div>
-        <ul>
-          <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#9E9E9E" stroke-width="2"/><path d="M7 12.5l3 3 7-7" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Unlimited workout logging, fully offline</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#9E9E9E" stroke-width="2"/><path d="M7 12.5l3 3 7-7" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exercise library and Personal Records</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#9E9E9E" stroke-width="2"/><path d="M7 12.5l3 3 7-7" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Plan library and custom plan builder</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#9E9E9E" stroke-width="2"/><path d="M7 12.5l3 3 7-7" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training blocks and full progress stats</span></li>
-        </ul>
-      </div>
-      <div class="tier pro reveal">
-        <div class="tname">Pro <span class="save">Save 44%</span></div>
-        <p class="tsub">The coach who writes back.</p>
-        <div class="price"><span class="amt">£19.99</span><span class="per">/year</span></div>
-        <p class="price-alt">or £2.99/month</p>
-        <ul>
-          <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#F5A623" stroke-width="2"/><path d="M7 12.5l3 3 7-7" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>A plan built around your schedule, goals, and experience level</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#F5A623" stroke-width="2"/><path d="M7 12.5l3 3 7-7" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Precision Coaching™ that adjusts your training and nutrition as your body responds</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#F5A623" stroke-width="2"/><path d="M7 12.5l3 3 7-7" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Personalised calorie and protein targets, updated as your goals change</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#F5A623" stroke-width="2"/><path d="M7 12.5l3 3 7-7" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>After every check-in, your coach explains every decision. What changed, what was left alone, and why.</span></li>
-        </ul>
-        <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=app.volyume">
-          <svg class="play-tri" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#0D0D0D"/></svg>
-          Get it on Google Play
-        </a>
-        <p class="trial-note">New accounts get Pro free for 14 days. Google Play adds a further 7 days free when you subscribe.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 8. FOUNDER LINE -->
-<section class="block founder">
-  <div class="wrap narrow">
-    <p class="reveal">We won't quietly raise prices, change what's free, or hold your data behind a paywall. If something changes, you'll hear about it first.</p>
-  </div>
-</section>
-
 <!-- 9. FINAL CTA -->
 <section class="block final">
   <div class="final-glow"></div>
@@ -380,7 +317,6 @@
         Get it on Google Play
       </a>
     </div>
-    <p class="hero-trial" style="margin-top:18px"><b>Free for 14 days.</b> Then £2.99/month or £19.99/year.</p>
   </div>
 </section>
 

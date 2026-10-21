@@ -70,7 +70,6 @@ We use a small number of processors to run the app:
 |---|---|---|
 | Supabase | Database, authentication and cloud backup | Cloud-backed account data, never progress-photo image files |
 | Sentry | Crash and performance reporting | Scrubbed diagnostic events |
-| Apple App Store / Google Play | Subscription purchases | Store receipt and transaction metadata |
 | Expo push | Push notification delivery | Device push token |
 | Resend (sends from Ireland, records kept in the United States under the standard contract clauses) | Sending the news emails | Your email address and the email itself |
 | Open Food Facts / USDA FoodData Central | Food lookup data | Search terms and barcode values only |
@@ -101,7 +100,7 @@ To score you, the challenge reads your training, your check-ins and Community po
 
 If you are in the top 10, the name you choose and your score are shown to the other people in that challenge. Nobody else sees them. Winners are picked by a recorded computer draw. If you win, we use your email address to tell you, and your name and county are published unless you object.
 
-You can leave a challenge at any time. After you leave, your records are not read for it again and you are taken off its board. We use this data with your explicit consent, which you give when you join. Joining a challenge also keeps Volyume free for you for life. Deleting your account deletes all of it, except the record of each prize draw, which is kept so the draw can be checked and no longer links to you once your account is gone.
+You can leave a challenge at any time. After you leave, your records are not read for it again and you are taken off its board. We use this data with your explicit consent, which you give when you join. Completing a challenge with a final score of 50 or more earns free for life. Deleting your account deletes all of it, except the record of each prize draw, which is kept so the draw can be checked and no longer links to you once your account is gone.
 
 ## 9. Health-app access
 
@@ -123,7 +122,7 @@ To make a request, use the in-app controls or email support@volyume.app. We resp
 
 ## 12. Children
 
-Volyume is not directed at children under 13 and we do not knowingly collect data from anyone under 13. If we discover an account belongs to someone under 13, we delete it and refund any active subscription where possible.
+Volyume is not directed at children under 13 and we do not knowingly collect data from anyone under 13. If we discover an account belongs to someone under 13, we delete it.
 
 In Community, anyone under 18 shares with their followers only and never appears on pages shown outside the app.
 

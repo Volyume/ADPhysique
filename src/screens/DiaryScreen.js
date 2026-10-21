@@ -127,7 +127,7 @@ import { trackNow } from '../lib/telemetry/growth';
 import { toBucket } from '../lib/telemetry/schema';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate, entryToPatch } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
-import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, mealSlotLabel, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
+import { buildMealSlots, foldedMealSlot, highestLoggedMeal, inferMealSlotForHour, mealSlotLabel, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 import { scaleMacrosAsWeighed } from '../lib/food/cookYield';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { parseLocalDay } from '../lib/dayKey';
@@ -751,16 +751,6 @@ export default function DiaryScreen({ navigation, route }) {
     }
   }, [load]);
 
-  // Bucket every entry by its slot, whatever the slot key (numbered, legacy or
-  // peri-workout), so nothing logged is ever dropped.
-  const entriesBySlot = useMemo(() => {
-    const out = {};
-    for (const e of viewEntries) {
-      (out[e.meal_slot] ??= []).push(e);
-    }
-    return out;
-  }, [viewEntries]);
-
   // The flexible numbered-meal model: a ladder of "Meal 1..N" plus the two
   // peri-workout meals, never fewer than the highest numbered meal already
   // logged, extended by the "Add meal" affordance. buildMealSlots also folds in
@@ -970,12 +960,31 @@ export default function DiaryScreen({ navigation, route }) {
   }, []);
 
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
+  // Meal cards, item 22 (view only): a row stored under an old meal name
+  // (Breakfast, Lunch, Dinner) is drawn inside the numbered meal it maps to
+  // (Meal 1 to 3, never past the last meal), keeping its old name as a label
+  // on the row group. Nothing in storage moves: the row keeps its own
+  // meal_slot, the edit sheet and the cloud still see 'breakfast'. A 'snack'
+  // row keeps its own card, and only while it holds food (buildMealSlots).
+  const slotRows = useMemo(
+    () => viewEntries.map((e) => ({ meal_slot: foldedMealSlot(e.meal_slot, mealsPerDay) })),
+    [viewEntries, mealsPerDay],
+  );
+  // Bucket every entry by its (folded) slot, whatever the slot key (numbered,
+  // legacy or peri-workout), so nothing logged is ever dropped.
+  const entriesBySlot = useMemo(() => {
+    const out = {};
+    for (const e of viewEntries) {
+      (out[foldedMealSlot(e.meal_slot, mealsPerDay)] ??= []).push(e);
+    }
+    return out;
+  }, [viewEntries, mealsPerDay]);
   const mealSlots = useMemo(
-    () => buildMealSlots(viewEntries, mealsPerDay, periWorkoutSlots),
+    () => buildMealSlots(slotRows, mealsPerDay, periWorkoutSlots),
     // mealLabelsVersion is not read by the builder: it is the signal that a
     // meal name changed in mealSlots' own label cache (D230 R11).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [viewEntries, mealsPerDay, periWorkoutSlots, mealLabelsVersion],
+    [slotRows, mealsPerDay, periWorkoutSlots, mealLabelsVersion],
   );
   const likelyMealSlot = useMemo(() => {
     const keys = mealSlots.map((m) => m.key);

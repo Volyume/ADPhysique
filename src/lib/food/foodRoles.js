@@ -300,8 +300,9 @@ export function stateOf(foodKey) {
 /**
  * Whether a curated food has a meaningful raw/cooked weighing choice, i.e.
  * its table entry is NOT already 'ready' (eaten as weighed: cooked meat,
- * fruit, dairy...). Drives whether the food-logging and meal-plan surfaces
- * show the "Weigh: Raw / Cooked" choice at all (Ultimate-Audit item 12).
+ * fruit, dairy...). It does NOT decide whether the "Weigh: Raw / Cooked"
+ * choice shows: the surfaces use hasCookToggle (cookYield.js), which also
+ * needs a CoFID pair (Ultimate-Audit item 12).
  */
 export function hasWeightChoice(foodKey) {
   return stateOf(foodKey) !== 'ready';
@@ -310,15 +311,15 @@ export function hasWeightChoice(foodKey) {
 /**
  * The weight-state VALUE ('raw' | 'cooked') that matches a curated food's own
  * table basis, or null when the food has no raw/cooked distinction (state
- * 'ready', no choice shown). Founder ruling (NA-nutrition-1, pass3-v2-founder-
- * decisions.md:195-196, 2026-06-14): "Raw/cooked = store the basis, no
- * conversion (record which basis the grams are in; use the matching entry).
- * Deterministic; no conversion table needed." There is no per-food conversion
- * factor anywhere in this module and none is invented here: this only labels
- * which choice matches the SAME per-100g entry the food already resolves
- * against, so picking it leaves every gram figure and macro exactly as
- * computed today. An untouched item defaults to this value, so it is
- * unchanged from today's implicit meaning.
+ * 'ready'). It only names which choice matches the SAME per-100g entry the
+ * food already resolves against, so an untouched item keeps its meaning.
+ * Since the founder ruling of 2026-10-19 (cookYield.js) a food WITH a CoFID
+ * raw/cooked pair converts its grams when the other weight is chosen, for the
+ * same amount of food; a food without a pair is weighed as listed and shows
+ * no choice. This function holds no conversion factor: those live only in
+ * cookYield.js, and calories and macros never change with the choice. It
+ * replaces the NA-nutrition-1 "store the basis, no conversion" wording for
+ * paired foods.
  */
 export function defaultWeightStateFor(foodKey) {
   const s = stateOf(foodKey);

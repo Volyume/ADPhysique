@@ -352,8 +352,7 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
           </Text>
         </View>
 
-        {/* Provider sign-in: Apple on iOS, Google on Android (see
-            OAuthButtons for the platform split). Hidden while the email form
+        {/* Provider sign-in: Apple and Google on both platforms. Hidden while the email form
             is open in create-account mode; the sheet then holds the form. */}
         {!(emailMode === 'signup' && emailFormOpen) ? (
           <OAuthButtons
@@ -362,6 +361,14 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
             disabled={loading}
             raised
           />
+        ) : null}
+        {/* Founder ruling (Batch 4, item 2): no remote switch and no account
+            merge on sign-in; Supabase joins a same verified email, and this
+            line covers the rest. Sign-in mode only. */}
+        {emailMode === 'signin' ? (
+          <Text style={[styles.oauthWaiting, live.oauthWaiting]}>
+            If you signed up with Apple, use Apple to sign in.
+          </Text>
         ) : null}
         {/* A7: a calm caption names what is in progress while the provider
             dialog is up. AX-08: announced (polite live region) and marked

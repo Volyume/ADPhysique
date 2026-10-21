@@ -83,6 +83,7 @@ import {
   listMyGroups, acceptGroupInvite, declineGroupInvite,
   readShareSettings, sessionShareGateState, sessionsSharingSentence,
 } from '../lib/community';
+import { defaultFeedScope } from '../lib/community/trainingProfile';
 // D228 item 1 (option C): the one-time receipt's seen-flag. A direct import,
 // beside the barrel, because the module is new in this lane.
 import { readJoinReceiptSeen, markJoinReceiptSeen } from '../lib/community/joinReceipt';
@@ -225,6 +226,7 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [sort, setSortState] = useState('newest');
   const scopeRef = useRef('following');
   const sortRef = useRef('newest');
+  const [gymFallbackNote, setGymFallbackNote] = useState(false);
   const [scopeUnavailable, setScopeUnavailable] = useState(false);
   const [sortUnavailable, setSortUnavailable] = useState(false);
   const [hub, setHub] = useState(null);
@@ -426,22 +428,49 @@ export default function CommunityHubScreen({ navigation, route }) {
     const id = requestRef.current + 1;
     requestRef.current = id;
     if (!opts.quiet) setLoading(true);
-    const out = await loadHub(sc, {
+    let out = await loadHub(sc, {
       limit: PAGE, joined, sort: so,
     });
     if (id !== requestRef.current) return;
+    // Item 31 (owner answer): an AUTOMATIC gym default that comes back empty
+    // falls back to Everyone, with one line saying so. A chip the person
+    // tapped is never second-guessed, and an error is not an empty gym.
+    let usedGymFallback = false;
+    if (opts.autoDefault && sc === 'gym' && !out?.error && !out?.fallback
+        && (out?.posts ?? []).length === 0) {
+      const every = await loadHub('everyone', { limit: PAGE, joined, sort: so });
+      if (id !== requestRef.current) return;
+      if (!every?.error && !every?.fallback) {
+        out = every;
+        usedGymFallback = true;
+        setScope('everyone');
+      }
+    }
+    // Only the automatic-default path decides the note. A pull-to-refresh or
+    // focus reload of the fallen-back Everyone feed leaves it as it is.
+    if (opts.autoDefault) setGymFallbackNote(usedGymFallback);
     if (out?.fallback === 'scope') { setScopeUnavailable(true); setScope('following'); }
     if (out?.fallback === 'sort') { setSortUnavailable(true); setSort('newest'); }
     setHub(out);
     setLoading(false);
   }, [joined, setScope, setSort]);
 
+  // Stage 2 item 31: the opening feed is the gym feed if a gym is set, else
+  // Everyone, until the member follows 5 people, then Following
+  // (defaultFeedScope). It re-resolves when the follow count or gym arrives
+  // or changes, but never overrides a chip the person has tapped.
+  const feedDefaultScope = defaultFeedScope({
+    joined,
+    followingCount: me?.profile?.following_count,
+    gymId: me?.profile?.gym_id,
+  });
+  const scopeChosenRef = useRef(false);
   useEffect(() => {
-    const sc = joined ? 'following' : 'everyone';
-    setScope(sc);
+    if (scopeChosenRef.current && joined) return;
+    setScope(feedDefaultScope);
     setSort('newest');
-    load({ scope: sc, sort: 'newest' });
-  }, [joined, load, setScope, setSort]);
+    load({ scope: feedDefaultScope, sort: 'newest', autoDefault: true });
+  }, [joined, feedDefaultScope, load, setScope, setSort]);
 
   // F5 (Opus adversarial review, founder order 2026-09-22): after Say
   // hello -> Post -> Back, the Hub still showed the zero state. Reload on
@@ -652,6 +681,8 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   const selectScope = useCallback((key) => {
     if (key === scopeRef.current) return;
+    scopeChosenRef.current = true;
+    setGymFallbackNote(false);
     setScope(key);
     setHub(null);
     load({ scope: key });
@@ -1024,6 +1055,11 @@ export default function CommunityHubScreen({ navigation, route }) {
       {notices}
       {hero}
       {challengeBand}
+      {gymFallbackNote && scope === 'everyone' ? (
+        <Text style={[styles.offline, t.type.caption, { color: t.colors.textMuted }]}>
+          Nobody at your gym has posted yet. Showing everyone.
+        </Text>
+      ) : null}
       {offline ? (
         <Text style={[styles.offline, t.type.caption, { color: t.colors.textMuted }]}>
           Showing what you last saw. You are offline.

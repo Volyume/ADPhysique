@@ -17,10 +17,10 @@ describe('goal setup surfaces use shared section labels', () => {
     expect(source).not.toMatch(/sectionLabel:\s*\{[\s\S]*?\.\.\.type\.label/);
   });
 
-  test('Pro goal setup retry copy uses current navigation names and avoids internal plan terms', () => {
+  test('Pro goal setup no longer carries plan-retry copy, because it never rebuilds the plan (item 10)', () => {
     const source = read('ProGoalSetupScreen.js');
 
-    expect(source).toContain('Open Today and choose Start with a plan to retry');
+    expect(source).not.toContain('Start with a plan');
     expect(source).not.toContain('On Home, tap Build my plan to retry');
     expect(source).not.toContain("plan didn't reroll");
   });

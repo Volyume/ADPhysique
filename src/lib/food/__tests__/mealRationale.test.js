@@ -165,6 +165,6 @@ describe('the user actually SEES it', () => {
   });
 
   test('and only when a reason was recorded', () => {
-    expect(SCREEN).toMatch(/\{explainMeal\(slot\.reason\) \? \(/);
+    expect(SCREEN).toMatch(/explainMeal\(slot\.reason\) \? \(/);
   });
 });

@@ -80,6 +80,7 @@ import {
   suggestHandle, readOnboardingChoice, clearOnboardingChoice, readPendingJoin, clearPendingJoin,
   ensureBodyProfilePushed,
 } from '../lib/community';
+import { JOIN_DEFAULT_SESSIONS_AUDIENCE } from '../lib/community/trainingProfile';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
 import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
@@ -207,7 +208,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
   // from (sessions, staple lifts and experience on; days, time bands and
   // age band off).
   const [tpBands, setTpBands] = useState(null);
-  const [tpShare, setTpShare] = useState(TP_DEFAULT_SHARE);
+  const [tpShare, setTpShare] = useState({ ...TP_DEFAULT_SHARE, sessions_audience: JOIN_DEFAULT_SESSIONS_AUDIENCE });
   // D212 (ICO Children's Code standard 7, high privacy by default): for a
   // person under 18, or whose age is not known yet (`isMinor` fails closed
   // while `me` loads), "Share what I did" reads OFF until they switch it

@@ -147,13 +147,13 @@ describe('the words: nothing blames, nothing instructs, nothing warns below the 
 
   test('the tone colours use no warning or error token (a note is a neutral information token)', () => {
     const c = {
-      textMuted: 'MUTED', volumeMinimum: 'MIN', success: 'GOOD', macroCarb: 'INFO', warning: 'WARN', error: 'ERR',
+      textMuted: 'MUTED', volumeMinimum: 'MIN', success: 'GOOD', volumeBeyond: 'NOTE', warning: 'WARN', error: 'ERR',
     };
     const colours = toneColors(c);
     expect(Object.values(colours)).not.toContain('WARN');
     expect(Object.values(colours)).not.toContain('ERR');
     expect(colours[TONE.BELOW]).toBe('MUTED');
-    expect(colours[TONE.BEYOND]).toBe('INFO');
+    expect(colours[TONE.BEYOND]).toBe('NOTE');
   });
 });
 

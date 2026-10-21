@@ -439,6 +439,12 @@ const useAppStore = create((set, get) => ({
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
     const prevUid = get().user?.id ?? null;
+    // A recovery marker must not outlive the session it belonged to, or the
+    // next account to sign in would be sent to set a new password.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/passwordRecoveryState').clearPasswordRecoveryPending();
+    } catch (_) { /* tolerate */ }
     try { log.logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid }); } catch (_) {}
 
     // Funnel telemetry: sign_out at the top of the flow, before the
@@ -2350,6 +2356,8 @@ const useAppStore = create((set, get) => ({
     // never push and could be silently reverted by the next pull.
     const allowed = ['mealPlanMealsPerDay', 'mealPlanVariety', 'mealPlanFatConvention',
       'mealPlanPeriWorkout', 'mealPlanPinnedMeals',
+      // Item 25: oily fish meals a week (0 to 7 or 'nolimit'), phone only.
+      'mealPlanOilyFish',
       // Campaign 17B job 4: the meal-count observation the user DECLINED. A
       // declined question is an answer, so it is remembered and not asked
       // again for that same count. It changes no target and no plan.
@@ -2427,6 +2435,7 @@ const useAppStore = create((set, get) => ({
     // animations" setting, hydrated + kept live from App.js via AccessibilityInfo.
     reduceMotion: false,          // skips PRCelebration particles, RestTimer pulse, big spring anims
     reduceMotionUserPref: false, // the user's own in-app toggle; Settings reads/writes THIS
+    hapticsEnabled: true,  // item 11: own switch, default on; Reduce motion no longer silences haptics
     theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
     energyUnit: 'kcal',    // food-UI energy DISPLAY unit: 'kcal' | 'kj'. Display-only (read reactively,
                            // no reload); stored values, targets + the coaching engine stay in kcal.
@@ -2464,7 +2473,16 @@ const useAppStore = create((set, get) => ({
         : !!parsed.reduceMotion;
       const merged = { ...get().accessibility, ...parsed, reduceMotionUserPref: userPref };
       merged.reduceMotion = !!(get().systemReduceMotion || userPref);
+      // Haptics got their own switch after Reduce motion used to silence
+      // them. Someone who already had Reduce motion on had no haptics, so
+      // seed the new switch off for them once (persisted); everyone else
+      // starts on.
+      const seedHapticsOff = parsed.hapticsEnabled === undefined && userPref;
+      if (seedHapticsOff) merged.hapticsEnabled = false;
       set({ accessibility: merged, accessibilityLoaded: true });
+      if (seedHapticsOff) {
+        await get().setAccessibilityPref('hapticsEnabled', false);
+      }
     } else {
       set({ accessibilityLoaded: true });
     }

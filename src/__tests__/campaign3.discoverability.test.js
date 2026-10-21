@@ -76,8 +76,8 @@ describe('CONTEXTUAL shortcuts navigate to the canonical owner', () => {
     expect(src).not.toContain('label="Volume targets"');
   });
 
-  test('Body metrics links its displayed unit to the Workout and units editor', () => {
-    expect(read('screens/BodyMetricsScreen.js')).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'SettingsWorkout'\)/);
+  test('Body metrics links its displayed unit to the Units screen', () => {
+    expect(read('screens/BodyMetricsScreen.js')).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'SettingsUnits'\)/);
   });
 });
 

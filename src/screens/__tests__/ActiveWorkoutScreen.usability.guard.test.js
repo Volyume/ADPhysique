@@ -136,8 +136,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // education is pull-only behind a named row.
     expect(SHEETS).toContain("'How logging works'");
     expect(SHEETS).toContain('accessibilityLabel="How logging works"');
-    expect(SHEETS).toContain('Use exercise options for form tips, warm-ups, swaps and session settings.');
+    expect(SHEETS).toContain('Tap the exercise name to see its info and form tips. Use exercise options for warm-ups, swaps and session settings.');
     expect(SHEETS).toContain('accessibilityLabel="Exercise options"');
+    // The Exercise info row is gone: form tips open from the exercise name, not from options.
+    expect(SHEETS).not.toContain('Use exercise options for form tips');
+    expect(ACTIVE_WORKOUT).toContain('onPressHeader={handleOpenExerciseDetails}');
     expect(SHEETS).not.toContain('accessibilityLabel="More options for this exercise"');
     expect(ACTIVE_WORKOUT).not.toContain('accessibilityLabel="More options for this exercise"');
     // The hint's RENDER is gone (its frozen style entries await the queued
