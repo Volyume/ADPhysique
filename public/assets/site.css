@@ -949,10 +949,6 @@ body[data-section="support"] .site-nav__link[href="/support/"] {
   font-variant-numeric: tabular-nums;
 }
 
-.prose .legal-section > * + h2 {
-  margin-top: 0;
-}
-
 .prose .updated {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
@@ -1108,11 +1104,34 @@ body[data-section="support"] .site-nav__link[href="/support/"] {
   margin-top: var(--space-xl);
 }
 
-.working p.intro {
+.intro {
   color: var(--color-text-secondary);
   font-size: var(--font-size-lg);
   line-height: var(--line-height-relaxed);
   max-width: 40em;
+}
+
+/* Shown by the page's script once it has what it needs. */
+.reveal {
+  display: none;
+}
+
+.card > * + * {
+  margin-top: var(--space-sm);
+}
+
+.working .actions {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.working .actions .button {
+  width: 100%;
+}
+
+.working .row-actions .button,
+.working .choices .button {
+  width: auto;
 }
 
 /* A message the page shows after something happens. */
@@ -1483,4 +1502,23 @@ textarea::placeholder {
 .path {
   color: var(--color-text-primary);
   font-weight: var(--font-weight-semibold);
+}
+
+/* The survey page holds two forms, one of which the script reveals. */
+.working #legacy > * + *,
+.working #generic > * + * {
+  margin-top: var(--space-xl);
+}
+
+.working > .container > #content {
+  margin-top: 0;
+}
+
+.prose h1,
+.prose .display {
+  color: var(--color-text-primary);
+}
+
+.page-intro + .section--plain {
+  padding-top: 0;
 }

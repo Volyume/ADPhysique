@@ -3,57 +3,130 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirming your email · Volyume</title>
+<meta name="description" content="Confirming your email address. This page hands you back to Volyume once it has checked your link.">
 <meta name="robots" content="noindex">
-<title>Confirming your email — Volyume</title>
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta name="theme-color" content="#0D0D0D">
-<style>
-  :root{
-    --bg:#0D0D0D; --surface:#191917; --borderSubtle:#2E2E2C;
-    --amber:#F5A623; --amberFill:#E08C0B;
-    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  }
-  *{box-sizing:border-box;}
-  html{color-scheme:dark;}
-  body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--font);
-    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;padding:24px;}
-  .card{width:100%;max-width:440px;background:var(--surface);border:1px solid var(--borderSubtle);
-    border-radius:20px;padding:40px 32px;text-align:center;}
-  .logo{height:34px;width:auto;margin:0 auto 28px;display:block;}
-  h1{font-size:24px;font-weight:800;letter-spacing:-0.25px;margin:0 0 12px;}
-  p{font-size:15px;line-height:1.6;color:var(--textSecondary);margin:0 0 22px;}
-  .spinner{width:26px;height:26px;border:3px solid var(--borderSubtle);border-top-color:var(--amber);
-    border-radius:50%;margin:0 auto 22px;animation:spin .8s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  @media(prefers-reduced-motion:reduce){.spinner{animation:none;}}
-  .btn{display:inline-block;background:var(--amberFill);color:var(--bg);font-weight:700;font-size:15px;
-    text-decoration:none;border-radius:12px;padding:13px 24px;}
-  .btn:hover{background:var(--amber);}
-  .muted{font-size:13px;color:var(--textMuted);margin:18px 0 0;}
-  .muted a{color:var(--amber);text-decoration:none;}
-  #err{display:none;}
-</style>
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Volyume">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Confirming your email · Volyume">
+<meta property="og:description" content="Confirming your email address. This page hands you back to Volyume once it has checked your link.">
+<meta property="og:image" content="https://volyume.app/assets/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Confirming your email · Volyume">
+<meta name="twitter:description" content="Confirming your email address. This page hands you back to Volyume once it has checked your link.">
+<meta name="twitter:image" content="https://volyume.app/assets/share.png">
 </head>
 <body>
-  <main class="card">
-    <img class="logo" src="/volyume-wordmark.png" alt="Volyume">
+<!-- site:header -->
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume">
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul class="site-nav__list">
+        <li><a class="site-nav__link" href="/features/">Features</a></li>
+        <li><a class="site-nav__link" href="/how-the-coach-works/">How the coach works</a></li>
+        <li><a class="site-nav__link" href="/articles/">Articles</a></li>
+        <li><a class="site-nav__link" href="/support/">Support</a></li>
+      </ul>
+    </nav>
+    <a class="button button--primary site-header__get" href="/get/">Get the app</a>
+    <details class="site-menu">
+      <summary class="site-menu__toggle">
+        <svg class="icon site-menu__open" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#menu-outline"></use></svg>
+        <svg class="icon site-menu__close" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#close-outline"></use></svg>
+        <span class="site-menu__label">Menu</span>
+      </summary>
+      <nav class="site-menu__panel" aria-label="Main">
+        <ul class="site-menu__list">
+          <li><a class="site-menu__link" href="/features/">Features</a></li>
+          <li><a class="site-menu__link" href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a class="site-menu__link" href="/articles/">Articles</a></li>
+          <li><a class="site-menu__link" href="/support/">Support</a></li>
+          <li><a class="site-menu__link" href="/get/">Get the app</a></li>
+        </ul>
+      </nav>
+    </details>
+  </div>
+</header>
+<!-- /site:header -->
 
-    <div id="main">
-      <div class="spinner" aria-hidden="true"></div>
-      <h1>Confirming your email</h1>
-      <p>One moment, we're taking you back to Volyume.</p>
-      <a id="go" class="btn" href="#">Continue</a>
+<main class="working">
+  <div class="container container--narrow">
+    <h1 class="display">Email confirmation</h1>
+
+    <div id="main" class="stack">
+      <h2 class="heading">Confirming your email</h2>
+      <p class="lead">One moment, we're taking you back to Volyume.</p>
+      <div class="actions"><a id="go" class="button button--primary" href="#">Continue</a></div>
       <p class="muted">Not redirected automatically? Tap Continue above.</p>
     </div>
 
-    <div id="err">
-      <h1>This link can't be used</h1>
-      <p>It looks like this confirmation link is invalid or has already been used. Open Volyume and request a new one.</p>
+    <div id="err" class="stack reveal">
+      <h2 class="heading">This link can't be used</h2>
+      <p class="lead">It looks like this confirmation link is invalid or has already been used. Open Volyume and request a new one.</p>
       <p class="muted"><a href="/privacy/">Privacy policy</a></p>
     </div>
-  </main>
+  </div>
+</main>
 
+<!-- site:footer -->
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__about">
+      <a class="brand" href="/">
+        <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume" loading="lazy">
+      </a>
+      <p>Training, food and a weekly check-in, with a coach that explains every change. On iPhone and Android.</p>
+    </div>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Get the app</h2>
+        <ul class="site-footer__list">
+          <li><a href="https://apps.apple.com/gb/app/volyume/id6777083702">App Store, for iPhone</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=app.volyume">Google Play, for Android</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Volyume</h2>
+        <ul class="site-footer__list">
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a href="/articles/">Articles</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Help</h2>
+        <ul class="site-footer__list">
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/challenge-terms/">Challenge terms</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Contact</h2>
+        <ul class="site-footer__list">
+          <li><a class="site-footer__email" href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@<wbr>gmail.com</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="site-footer__legal">&copy; 2026 Volyume</p>
+  </div>
+</footer>
+<!-- /site:footer -->
 <script src="./security.js"></script>
 <script>
   (function(){

@@ -5,114 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Volyume: a two-minute survey</title>
 <meta name="description" content="A short, two-minute survey. Your answers shape what gets built next in Volyume.">
-<link rel="icon" type="image/png" href="/favicon.png">
-<meta name="theme-color" content="#0D0D0D">
 <meta name="robots" content="noindex, nofollow">
-<style>
-  :root{
-    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
-    --border:#6E6E6E; --borderSubtle:#2E2E2C;
-    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
-    --silver:#C0C0C0;
-    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    --nav-h:78px;
-  }
-  *{box-sizing:border-box;}
-  html{color-scheme:dark;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
-    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
-  a{color:inherit; text-decoration:none;}
-  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
-
-  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
-    font-weight:700; font-size:15px; border-radius:12px; padding:13px 22px; cursor:pointer; border:1px solid transparent;
-    transition:background-color .2s cubic-bezier(.2,0,0,1);}
-  .btn-primary{background:var(--amberFill); color:var(--bg);}
-  .btn-primary:hover{background:var(--amber);}
-  .btn-primary:disabled{opacity:.5; cursor:default;}
-
-  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
-    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--borderSubtle);}
-  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
-  .brand{display:flex; align-items:center; gap:10px;}
-  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
-
-  .survey{padding:calc(var(--nav-h) + 56px) 0 24px;}
-  .survey .head{max-width:760px;}
-  .survey h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(32px,6vw,46px); line-height:1.08; margin:0;}
-  .survey .intro{color:var(--textSecondary); font-size:18px; line-height:1.6; margin:22px 0 0; max-width:68ch;}
-
-  form{max-width:760px; margin:8px 0 0;}
-  fieldset{border:none; margin:0; padding:38px 0; border-top:1px solid var(--borderSubtle);}
-  fieldset:first-of-type{border-top:none;}
-  legend{padding:0; font-weight:700; letter-spacing:-0.25px; font-size:20px; line-height:1.3; color:var(--text);}
-  .q-index{color:var(--amber); font-weight:900; font-size:16px; margin-right:8px;}
-  .q-optional{color:var(--textMuted); font-weight:600; font-size:14px; margin-left:8px;}
-  .q-help{color:var(--textSecondary); font-size:15px; line-height:1.55; margin:10px 0 0; max-width:66ch;}
-
-  .chips{display:flex; flex-wrap:wrap; gap:12px; margin:20px 0 0;}
-  .chip{position:relative;}
-  .chip input{position:absolute; opacity:0; width:0; height:0;}
-  .chip label{display:inline-flex; align-items:center; cursor:pointer; user-select:none;
-    padding:11px 18px; border-radius:999px; border:1px solid var(--border); background:var(--surface);
-    color:var(--textSecondary); font-size:15px; font-weight:600;
-    transition:border-color .15s, background-color .15s, color .15s;}
-  .chip label:hover{border-color:var(--silver); color:var(--text);}
-  .chip input:checked + label{border-color:var(--amber); background:var(--amberBg); color:var(--text);}
-  .chip input:focus-visible + label{outline:2px solid var(--amber); outline-offset:2px;}
-
-  textarea{width:100%; margin:18px 0 0; background:var(--surface); color:var(--text);
-    border:1px solid var(--borderSubtle); border-radius:12px; padding:14px 16px;
-    font-family:var(--font); font-size:16px; line-height:1.55; resize:vertical; min-height:110px;}
-  textarea:focus{outline:none; border-color:var(--amber);}
-  textarea::placeholder{color:var(--textMuted);}
-
-  .actions{padding:32px 0 8px; border-top:1px solid var(--borderSubtle);}
-  .form-note{color:var(--textMuted); font-size:14px; margin:16px 0 0;}
-
-  .result{max-width:760px; margin:8px 0 0; padding:38px 0;}
-  .result p{color:var(--textSecondary); font-size:19px; line-height:1.6; margin:0; max-width:60ch;}
-  .result strong{color:var(--text); font-weight:600;}
-  .hidden{display:none;}
-
-  .g-error{color:var(--amber); font-size:17px; line-height:1.55; margin:24px 0 0; max-width:60ch;}
-  .g-closed-text{color:var(--textSecondary);}
-  #g-closed{color:var(--textSecondary); font-size:19px; margin:34px 0;}
-  #g-error{margin:0 0 18px;}
-  .chip input[type="checkbox"]{position:absolute; opacity:0; width:0; height:0;}
-
-  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
-  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
-  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
-  footer a{color:var(--textMuted); font-size:14px;}
-  footer a:hover{color:var(--amber);}
-  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
-
-  @media(max-width:600px){
-    :root{--nav-h:60px;}
-    .wrap{padding:0 16px;}
-    .survey h1{font-size:30px;}
-    footer .wrap{gap:14px;}
-  }
-</style>
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Volyume">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Volyume: a two-minute survey">
+<meta property="og:description" content="A short, two-minute survey. Your answers shape what gets built next in Volyume.">
+<meta property="og:image" content="https://volyume.app/assets/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Volyume: a two-minute survey">
+<meta name="twitter:description" content="A short, two-minute survey. Your answers shape what gets built next in Volyume.">
+<meta name="twitter:image" content="https://volyume.app/assets/share.png">
 </head>
 <body>
-
-<nav>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+<!-- site:header -->
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume">
     </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul class="site-nav__list">
+        <li><a class="site-nav__link" href="/features/">Features</a></li>
+        <li><a class="site-nav__link" href="/how-the-coach-works/">How the coach works</a></li>
+        <li><a class="site-nav__link" href="/articles/">Articles</a></li>
+        <li><a class="site-nav__link" href="/support/">Support</a></li>
+      </ul>
+    </nav>
+    <a class="button button--primary site-header__get" href="/get/">Get the app</a>
+    <details class="site-menu">
+      <summary class="site-menu__toggle">
+        <svg class="icon site-menu__open" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#menu-outline"></use></svg>
+        <svg class="icon site-menu__close" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#close-outline"></use></svg>
+        <span class="site-menu__label">Menu</span>
+      </summary>
+      <nav class="site-menu__panel" aria-label="Main">
+        <ul class="site-menu__list">
+          <li><a class="site-menu__link" href="/features/">Features</a></li>
+          <li><a class="site-menu__link" href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a class="site-menu__link" href="/articles/">Articles</a></li>
+          <li><a class="site-menu__link" href="/support/">Support</a></li>
+          <li><a class="site-menu__link" href="/get/">Get the app</a></li>
+        </ul>
+      </nav>
+    </details>
   </div>
-</nav>
+</header>
+<!-- /site:header -->
 
-<main class="survey">
-  <div class="wrap">
+<main id="main" class="working">
+  <div class="container container--narrow">
+    <h1 class="display">Volyume survey</h1>
     <div id="legacy">
-    <div class="head">
-      <h1>A two-minute survey</h1>
+    <div class="stack">
+      <h2 class="heading">A two-minute survey</h2>
       <p class="intro">Thank you for taking the time. Only the first question is needed, the rest are optional, and your answers genuinely shape what gets built next. There is no wrong answer here.</p>
     </div>
 
@@ -162,7 +119,7 @@
       </fieldset>
 
       <div class="actions">
-        <button type="submit" class="btn btn-primary" id="submit-btn">Send my answers</button>
+        <button type="submit" class="button button--primary" id="submit-btn">Send my answers</button>
         <p class="form-note">Your answers are stored on Volyume's EU database and used only to improve the app.</p>
       </div>
     </form>
@@ -173,8 +130,8 @@
     </div>
 
     <div id="generic" class="hidden">
-      <div class="head">
-        <h1 id="g-title" tabindex="-1">Survey</h1>
+      <div class="stack">
+        <h2 class="heading" id="g-title" tabindex="-1">Survey</h2>
         <p class="intro" id="g-intro"></p>
       </div>
       <p class="g-error hidden" id="g-closed" role="status">This survey is closed. Thank you for looking.</p>
@@ -182,7 +139,7 @@
         <div id="g-questions"></div>
         <div class="actions">
           <p class="g-error hidden" id="g-error" role="alert"></p>
-          <button type="submit" class="btn btn-primary" id="g-submit">Send my answers</button>
+          <button type="submit" class="button button--primary" id="g-submit">Send my answers</button>
           <p class="form-note" id="g-note"></p>
         </div>
       </form>
@@ -193,19 +150,50 @@
   </div>
 </main>
 
-<footer>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
-    </a>
-    <div class="links">
-      <a href="/privacy/">Privacy Policy</a>
-      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+<!-- site:footer -->
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__about">
+      <a class="brand" href="/">
+        <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume" loading="lazy">
+      </a>
+      <p>Training, food and a weekly check-in, with a coach that explains every change. On iPhone and Android.</p>
     </div>
-    <p class="copy">© 2026 Volyume</p>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Get the app</h2>
+        <ul class="site-footer__list">
+          <li><a href="https://apps.apple.com/gb/app/volyume/id6777083702">App Store, for iPhone</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=app.volyume">Google Play, for Android</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Volyume</h2>
+        <ul class="site-footer__list">
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a href="/articles/">Articles</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Help</h2>
+        <ul class="site-footer__list">
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/challenge-terms/">Challenge terms</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Contact</h2>
+        <ul class="site-footer__list">
+          <li><a class="site-footer__email" href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@<wbr>gmail.com</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="site-footer__legal">&copy; 2026 Volyume</p>
   </div>
 </footer>
-
+<!-- /site:footer -->
 <script>
   var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1anJ5bHp6eGNxeHhmeWdwdG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODIxODksImV4cCI6MjA5NDc1ODE4OX0.NjRsRu8pL1UEJe3z9TTfSrvpruKqQYQ-HrN4zXvsVVY";
   var ENDPOINT = "https://sujrylzzxcqxxfygptns.supabase.co/rest/v1/marketing_survey_responses";
@@ -427,6 +415,5 @@
     });
   });
 </script>
-
 </body>
 </html>
