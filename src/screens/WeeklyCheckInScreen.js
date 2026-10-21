@@ -845,11 +845,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // gateState only reaches 'open' once MIN_WEIGH_INS is met.
   // Item 12: fewer than MIN_INTAKE_DAYS logged days is too few to judge the
   // week. The quick check-in then asks the person instead of storing an
-  // answer derived from 1 to 4 days. Under calm, an open flag or a failed
-  // read (quiet) nothing food-adjacent is asked; the answer stays unset.
+  // answer derived from 1 to 4 days. Founder 2026-10-21: calm mode still
+  // asks (the question carries no figure and no verdict), so a calm week is
+  // not held for want of an answer. An open flag, a failed read or the
+  // unknown state (the same tier that withholds weight figures, never calm
+  // alone) asks nothing food-adjacent; the answer stays unset.
   const calsLowCoverage = hasNutritionTarget
     && (autoDerived.calsMeta?.daysLogged ?? 0) < MIN_INTAKE_DAYS;
-  const calsAsk = calsLowCoverage && !quiet;
+  const calsAsk = calsLowCoverage && !withholdWeight;
   const fastEligible =
     gateState === 'open' &&
     !forceFullWizard &&

@@ -280,3 +280,32 @@ describe('computeAdaptiveTDEEAdjustment.rapidLossOverride', () => {
     expect(result.adjustmentKcal).toBeGreaterThan(0);
   });
 });
+
+// Founder 2026-10-21: the rapid-loss raise is a safety correction and no
+// longer waits for a food answer. A calm user with a thin diary (no answer,
+// read as untracked) or anyone who taps "Didn't track" still gets it. Every
+// other calorie change on an untracked week still holds.
+describe('Move #3 rapid-loss compression -- untracked food no longer blocks the raise', () => {
+  test.each([['untracked'], [null]])('calsAdherence %s: the raise still fires, upward only, capped', (answer) => {
+    const out = runWeeklyCoach(baseInputs({
+      morningWeights: trend(85, -1.6),
+      checkin: checkin({ energyScore: 2, calsAdherence: answer }),
+      consecutiveOffTargetWeeks: 0,
+      lastCalAdjustmentWeeksAgo: 0,
+    }));
+    expect(out.rapidLossCorrectionApplied).toBe(true);
+    expect(out.adjustments.calories.change).toBeGreaterThan(0);
+    expect(out.adjustments.calories.change).toBeLessThanOrEqual(300);
+  });
+
+  test('an untracked week with slow loss (no rapid-loss signal) still holds calories', () => {
+    const out = runWeeklyCoach(baseInputs({
+      morningWeights: trend(85, -0.1),
+      checkin: checkin({ calsAdherence: 'untracked' }),
+      consecutiveOffTargetWeeks: 5,
+      lastCalAdjustmentWeeksAgo: 99,
+    }));
+    expect(out.rapidLossCorrectionApplied).toBeFalsy();
+    expect(out.adjustments.calories).toBeNull();
+  });
+});
