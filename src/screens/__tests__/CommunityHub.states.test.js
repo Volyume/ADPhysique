@@ -703,6 +703,22 @@ describe('quiet reload on focus', () => {
   });
 });
 
+describe('gym fallback note survives a reload', () => {
+  test('pull-to-refresh on the fallen-back Everyone feed keeps the note', async () => {
+    asMember({ profile: { ...ME_WITH_PROFILE.profile, gym_id: 'gym-1', following_count: 0 } });
+    loadHub.mockImplementation(async (scope) => emptyHub({
+      segment: scope,
+      posts: scope === 'everyone' ? [post()] : [],
+    }));
+    const view = await render();
+    expect(view.text).toContain('Nobody at your gym has posted yet. Showing everyone.');
+    await act(async () => { await view.list.props.refreshControl.props.onRefresh(); });
+    await flush();
+    view.refresh();
+    expect(view.text).toContain('Nobody at your gym has posted yet. Showing everyone.');
+  });
+});
+
 describe('audit 2026-10-17: paging and the foreground guard', () => {
   test('item 3: a next page that fails keeps the posts and the cursor, and a later scroll retries', async () => {
     asMember();

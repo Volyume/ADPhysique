@@ -446,7 +446,9 @@ export default function CommunityHubScreen({ navigation, route }) {
         setScope('everyone');
       }
     }
-    setGymFallbackNote(usedGymFallback);
+    // Only the automatic-default path decides the note. A pull-to-refresh or
+    // focus reload of the fallen-back Everyone feed leaves it as it is.
+    if (opts.autoDefault) setGymFallbackNote(usedGymFallback);
     if (out?.fallback === 'scope') { setScopeUnavailable(true); setScope('following'); }
     if (out?.fallback === 'sort') { setSortUnavailable(true); setSort('newest'); }
     setHub(out);
