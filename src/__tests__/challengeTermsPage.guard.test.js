@@ -91,6 +91,11 @@ describe('the ten sections', () => {
     ].forEach((sentence) => expect(bodyText).toContain(sentence));
   });
 
+  it('are dated 21 October 2026, the day the site was last reviewed (REVIEW-1, N14)', () => {
+    expect(bodyText).toContain('Last updated: 21 October 2026');
+    expect(bodyText).not.toContain('20 October 2026');
+  });
+
   it('send the data section to section 9, Gym challenges, of the privacy policy', () => {
     expect(terms).toMatch(/section 9, Gym challenges, of the <a class="inline" href="https:\/\/volyume\.app\/privacy\/">/);
   });
