@@ -61,7 +61,7 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: dark light;
   --color-background: #0D0D0D;
   --color-surface: #191917;
   --color-surface-elevated: #222220;

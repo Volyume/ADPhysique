@@ -135,7 +135,7 @@ function buildTokens() {
   }
   lines.push('');
   lines.push(':root {');
-  lines.push('  color-scheme: dark;');
+  lines.push('  color-scheme: dark light;');
   lines.push(...colourBlock(dark.colors));
   lines.push(`  --shadow-card: ${cardShadow(dark)};`);
   lines.push('');
