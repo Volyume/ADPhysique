@@ -60,7 +60,7 @@
   .hero .sub{color:var(--textSecondary); font-size:clamp(18px,2.4vw,21px); line-height:1.6; margin:26px 0 0; max-width:60ch;}
   .hero .cta-row{display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin:38px 0 0;}
   .play-badge{height:60px; width:auto; display:block;}
-  .ios-note{color:var(--textMuted); font-size:14px;}
+  .ios-note{color:var(--text); font-size:15px; font-weight:600; text-decoration:underline; text-underline-offset:3px;}
 
   /* Device frame */
   .device{background:var(--surface); border:1px solid var(--border); border-radius:36px; padding:12px;
@@ -128,6 +128,9 @@
     .wrap{padding:0 16px;}
     nav .navlinks{gap:16px;}
     nav .navlinks a{font-size:14px;}
+    /* The store buttons sit right under the headline on a phone; the header
+       button only crowded the bar and was cut off at the right edge. */
+    nav .navlinks .btn{display:none;}
     .steps,.plans,.fgrid,.privacy-strip{grid-template-columns:1fr;}
     .section-pad{padding:48px 0;}
     footer .wrap{gap:14px;}
@@ -144,7 +147,7 @@
     <div class="navlinks">
       <a href="/articles/">Articles</a>
       <a href="/privacy/">Privacy</a>
-      <a href="https://play.google.com/store/apps/details?id=app.volyume" class="btn btn-primary">Get it on Google Play</a>
+      <a href="#get" class="btn btn-primary">Get the app</a>
     </div>
   </div>
 </nav>
@@ -156,11 +159,11 @@
       <div class="hero-copy">
         <h1>You have the data. Volyume makes the weekly decision, and shows you why.</h1>
         <p class="sub">Training, nutrition, progress and a weekly check-in in one connected system for serious self-coached lifters. Each week it decides whether to change or hold, and writes down the reason.</p>
-        <div class="cta-row">
+        <div class="cta-row" id="get">
           <a href="https://play.google.com/store/apps/details?id=app.volyume" aria-label="Get Volyume on Google Play">
             <img class="play-badge" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
           </a>
-          <span class="ios-note">iOS coming soon</span>
+          <a class="ios-note" href="https://apps.apple.com/gb/app/volyume/id6777083702">Download on the App Store</a>
         </div>
       </div>
       <div class="hero-phone-col">
@@ -248,7 +251,7 @@
       <p class="lead">Volyume is free. Training, nutrition and the weekly coaching decision are all included in one app.</p>
       <div class="plans">
         <div class="plan">
-          <div class="kicker"><h3>Free</h3><span class="price">Free</span></div>
+          <div class="kicker"><h3>Free</h3></div>
           <p class="desc">Everything in Volyume, in one app.</p>
           <ul>
             <li>Full workout logging</li>
