@@ -74,7 +74,7 @@ describe('the ten sections', () => {
       'Each gym challenge on Volyume is run by Volyume (the promoter).',
       'Contact: support@volyume.app',
       'Anyone aged 18 or over who trains at the gym running the challenge can enter. You confirm you are 18 or over when you join, and a winner must show proof of age before a prize is given.',
-      'Entry is free and no purchase is needed. Join in the Volyume app, from the challenge link or code, between the dates shown in the app (UK time). Volyume is free.',
+      'Entry is free and no purchase is needed. Join in the Volyume app, from the challenge link or code, between the dates shown in the app (UK time).',
       'A training day counts when a workout lasts at least 20 minutes, has at least 6 working sets and is saved within 7 days. One training day counts per day.',
       "Your weekly target is your plan's sessions a week, between 2 and 6. It follows your plan during your first week in the challenge, and after that it can only go up.",
       'Food logging counts up to 3 days a week, and a weigh-in once a week. Logging more often earns nothing more.',

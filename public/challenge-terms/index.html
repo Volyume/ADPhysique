@@ -5,134 +5,109 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gym challenge terms · Volyume</title>
 <meta name="description" content="The terms of a Volyume gym challenge: who can enter, how you score, the prize draws and how winners are told.">
-<link rel="icon" type="image/png" href="/favicon.png">
-<meta name="theme-color" content="#0D0D0D">
 <meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Volyume">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Gym challenge terms · Volyume">
+<meta property="og:description" content="The terms of a Volyume gym challenge: who can enter, how you score, the prize draws and how winners are told.">
+<meta property="og:image" content="https://volyume.app/assets/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Gym challenge terms · Volyume">
+<meta name="twitter:description" content="The terms of a Volyume gym challenge: who can enter, how you score, the prize draws and how winners are told.">
+<meta name="twitter:image" content="https://volyume.app/assets/share.png">
 <!--
-  Gym challenge terms (docs/gym-challenge-2026-10-19/SPEC.md section 5 and
-  M10). Served at https://volyume.app/challenge-terms/?c=<code>, outside /c/
-  on purpose: the verified app link captures every /c/ path, so a terms page
-  under it would open the app instead of the page.
-
-  The page layout, header, footer and numbered sections follow
-  public/privacy/index.html, and the scoring table follows the one on the
-  challenge landing page (public/c/index.html), so the numbers agree.
-
-  It reads the code from ?c=<code>, then asks the same anon RPC the landing
-  page asks, gym_challenge_public, for the public fields only (title, gym,
-  dates, status, prizes, thresholds): no names, no scores, no counts, no
-  personal data. The anon key is the same public key the landing page ships;
-  it grants only what the RPC's own grants allow. No tracking scripts.
-
-  The general terms are in the HTML itself, so they read in full without
-  scripts and before the lookup returns. The script only fills in the facts
-  of the challenge it finds. When it finds none it adds one calm line and
-  leaves the facts general ("the dates shown in the app").
+  Gym challenge terms, served at /challenge-terms/?c=CODE and outside /c/ on
+  purpose: the verified app link opens the app for every /c/ path, so a terms
+  page under it would never show. The general terms are in the page itself, so
+  they read in full without scripts and before the lookup returns. The script
+  asks for the same public fields the landing page asks for and fills in the
+  facts of the challenge it finds: dates, draw sentences and prizes. When it
+  finds none it adds one calm line and leaves the facts general. No tracking
+  scripts.
 -->
-<style>
-  :root{
-    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
-    --border:#6E6E6E; --borderSubtle:#2E2E2C;
-    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
-    --silver:#C0C0C0;
-    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    --nav-h:78px;
-  }
-  *{box-sizing:border-box;}
-  html{color-scheme:dark;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
-    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
-  a{color:inherit; text-decoration:none;}
-  [hidden]{display:none !important;}
-  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
-
-  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
-    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--borderSubtle);}
-  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
-  .brand{display:flex; align-items:center; gap:10px;}
-  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
-
-  .policy{padding:calc(var(--nav-h) + 56px) 0 24px;}
-  .policy .head{max-width:760px;}
-  .policy h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(34px,6vw,48px); line-height:1.08; margin:0;}
-  .policy .updated{color:var(--textMuted); font-size:14px; margin:14px 0 0;}
-  .policy .intro{color:var(--textSecondary); font-size:18px; line-height:1.6; margin:24px 0 0; max-width:68ch;}
-
-  .policy section{max-width:760px; padding:38px 0; border-top:1px solid var(--borderSubtle);}
-  .policy section:first-of-type{border-top:none;}
-  .policy h2{display:flex; gap:14px; align-items:baseline; font-weight:700; letter-spacing:-0.25px;
-    font-size:24px; line-height:1.2; margin:0 0 16px;}
-  .policy h2 .n{color:var(--amber); font-weight:900; font-size:18px; min-width:1.6em;}
-  .policy p{color:var(--textSecondary); font-size:16px; line-height:1.65; margin:0 0 14px; max-width:68ch;}
-  .policy p:last-child{margin-bottom:0;}
-  .policy strong{color:var(--text); font-weight:600;}
-  .policy a.inline{color:var(--amber);}
-
-  .policy .card{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:16px;
-    padding:20px; margin:0 0 14px; max-width:68ch;}
-  .policy table{width:100%; border-collapse:collapse; font-size:15px;}
-  .policy td{padding:6px 0; border-bottom:1px solid var(--borderSubtle);}
-  .policy td.pts{text-align:right; color:var(--textSecondary); white-space:nowrap; padding-left:12px;}
-  .policy tr:last-child td{border-bottom:none;}
-  .policy .tag{color:var(--amber); font-size:13px;}
-
-  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
-  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
-  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
-  footer a{color:var(--textMuted); font-size:14px;}
-  footer a:hover{color:var(--amber);}
-  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
-
-  @media(max-width:600px){
-    :root{--nav-h:60px;}
-    .wrap{padding:0 16px;}
-    .policy h1{font-size:32px;}
-    footer .wrap{gap:14px;}
-  }
-</style>
 </head>
-<body>
-
-<nav>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+<body data-section="challenge">
+<!-- site:header -->
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume">
     </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul class="site-nav__list">
+        <li><a class="site-nav__link" href="/features/">Features</a></li>
+        <li><a class="site-nav__link" href="/how-the-coach-works/">How the coach works</a></li>
+        <li><a class="site-nav__link" href="/articles/">Articles</a></li>
+        <li><a class="site-nav__link" href="/support/">Support</a></li>
+      </ul>
+    </nav>
+    <a class="button button--primary site-header__get" href="/get/">Get the app</a>
+    <details class="site-menu">
+      <summary class="site-menu__toggle">
+        <svg class="icon site-menu__open" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#menu-outline"></use></svg>
+        <svg class="icon site-menu__close" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#close-outline"></use></svg>
+        <span class="site-menu__label">Menu</span>
+      </summary>
+      <nav class="site-menu__panel" aria-label="Main">
+        <ul class="site-menu__list">
+          <li><a class="site-menu__link" href="/features/">Features</a></li>
+          <li><a class="site-menu__link" href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a class="site-menu__link" href="/articles/">Articles</a></li>
+          <li><a class="site-menu__link" href="/support/">Support</a></li>
+          <li><a class="site-menu__link" href="/get/">Get the app</a></li>
+        </ul>
+      </nav>
+    </details>
   </div>
-</nav>
+</header>
+<!-- /site:header -->
 
-<main class="policy">
-  <div class="wrap">
-    <div class="head">
-      <h1>Gym challenge terms</h1>
+<main id="main">
+
+  <section class="page-intro" aria-labelledby="page-title">
+    <div class="container prose">
+      <h1 class="display" id="page-title">Gym challenge terms</h1>
       <p class="updated">Last updated: 20 October 2026</p>
       <p class="intro">These are the terms of a Volyume gym challenge. Entry is free, and you can leave at any time.</p>
       <p class="intro" id="notfound" hidden>We could not find this challenge, so these are the general terms. The dates and prizes of your challenge are shown in the app.</p>
     </div>
+  </section>
 
-    <section>
+  <section class="section section--plain" aria-label="The terms">
+    <div class="container prose">
+    <section class="legal-section">
       <h2><span class="n">1</span> Who runs it</h2>
       <p><span id="t-title">Each gym challenge on Volyume</span> is run by <span id="promoterName">Volyume</span> (the promoter).</p>
       <p>Contact: <a class="inline" id="promoterEmail" href="mailto:support@volyume.app">support@volyume.app</a><span id="promoterAddressLine" hidden><br>Address: <span id="promoterAddress"></span></span></p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">2</span> Who can enter</h2>
       <p>Anyone aged 18 or over who trains at <span id="t-gym">the gym running the challenge</span> can enter. You confirm you are 18 or over when you join, and a winner must show proof of age before a prize is given.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">3</span> How to enter</h2>
-      <p>Entry is free and no purchase is needed. Join in the Volyume app, from the challenge link or code, between <span id="t-dates">the dates shown in the app</span> (UK time). Volyume is free.</p>
+      <p>Entry is free and no purchase is needed. Join in the Volyume app, from the challenge link or code, between <span id="t-dates">the dates shown in the app</span> (UK time).</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">4</span> How you score</h2>
       <p>The four core parts add up to 80 points. The three parts marked with coaching add up to 20 more.</p>
       <div class="card">
-        <table aria-label="Points for each part of the score">
+        <table class="score-table" aria-label="Points for each part of the score">
           <tbody>
             <tr><td>Train to your plan</td><td class="pts">40</td></tr>
             <tr><td>Hit your week</td><td class="pts">15</td></tr>
@@ -152,7 +127,7 @@
       <p>The challenge never reads what you ate or what you weigh. While calm mode is on, or while Volyume's safety check has paused your calorie changes, food logging and weigh-ins count as done for those days.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">5</span> The draws</h2>
       <p id="t-drawMain">Everyone who reaches the main prize score shown in the app by the end goes into the main prize draw.</p>
       <p id="t-drawSecond">Everyone who reaches the second prize score shown in the app goes into the second prize draw, except the main draw's winners.</p>
@@ -161,52 +136,86 @@
       <p>Winners are picked by a recorded computer draw within 14 days after the challenge ends. Each draw's list of entries is kept so the draw can be checked.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">6</span> Winners</h2>
       <p>Winners are told by email within 7 days of the draw. If a winner does not reply within 14 days, or cannot show they are 18 or over, the prize is drawn again. There is no cash alternative. The winner's name and county are published unless they object when told.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">7</span> Fair play</h2>
       <p>Volyume can leave out an entry that does not reflect real training, and decides any question about scoring.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">8</span> Leaving</h2>
       <p>You can leave the challenge at any time in the app. You are then taken off the board and are not scored again.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">9</span> Free for life</h2>
       <p>Completing a challenge with a final score of 50 or more earns free for life. If you leave a challenge before it ends, you can no longer earn it.</p>
     </section>
 
-    <section>
+    <section class="legal-section">
       <h2><span class="n">10</span> Your data</h2>
       <p>How a challenge uses your data is explained in section 9, Gym challenges, of the <a class="inline" href="https://volyume.app/privacy/">Volyume privacy policy</a>.</p>
     </section>
-  </div>
+    </div>
+  </section>
+
 </main>
 
-<footer>
-  <div class="wrap">
-    <a class="brand" href="/" aria-label="Volyume">
-      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
-    </a>
-    <div class="links">
-      <a href="/privacy/">Privacy Policy</a>
-      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+<!-- site:footer -->
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__about">
+      <a class="brand" href="/">
+        <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume" loading="lazy">
+      </a>
+      <p>Training, food and a weekly check-in, with a coach that explains every change. On iPhone and Android.</p>
     </div>
-    <p class="copy">© 2026 Volyume</p>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Get the app</h2>
+        <ul class="site-footer__list">
+          <li><a href="https://apps.apple.com/gb/app/volyume/id6777083702">App Store, for iPhone</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=app.volyume">Google Play, for Android</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Volyume</h2>
+        <ul class="site-footer__list">
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a href="/articles/">Articles</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Help</h2>
+        <ul class="site-footer__list">
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/challenge-terms/">Challenge terms</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Contact</h2>
+        <ul class="site-footer__list">
+          <li><a class="site-footer__email" href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@<wbr>gmail.com</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="site-footer__legal">&copy; 2026 Volyume</p>
   </div>
 </footer>
-
+<!-- /site:footer -->
 <script>
   (function () {
     // Founder 2026-10-20: Volyume is the promoter; no postal address is published. The line shows only if one is ever added.
     var PROMOTER_NAME = 'Volyume';
     var PROMOTER_EMAIL = 'support@volyume.app';
-    var PROMOTER_ADDRESS = '';
+    // Owner 2026-10-21 (site rebuild): until the real address is added, the line shows this marked placeholder.
+    var PROMOTER_ADDRESS = '[Promoter postal address to be added before the first challenge]';
 
     var SUPABASE_URL = 'https://sujrylzzxcqxxfygptns.supabase.co';
     var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1anJ5bHp6eGNxeHhmeWdwdG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODIxODksImV4cCI6MjA5NDc1ODE4OX0.NjRsRu8pL1UEJe3z9TTfSrvpruKqQYQ-HrN4zXvsVVY';

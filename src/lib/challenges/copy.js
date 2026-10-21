@@ -37,4 +37,7 @@ export const COACHING_NOTE = 'In the challenge, coaching adds up to 20 more poin
 // or more; leaving before the end ends the chance. Says nothing about the
 // rest of the app staying free.
 export const FREE_FOR_LIFE_JOIN_LINE = 'Completing a challenge with a final score of 50 or more earns free for life.';
-export const FREE_FOR_LIFE_LANDING_LINE = 'Volyume is free. Completing a challenge with a final score of 50 or more earns free for life.';
+// The web landing page (public/c/index.html) carries the same line, word for
+// word, and nothing else about price (owner 2026-10-21, site rebuild). It used
+// to open with "Volyume is free." as a separate constant; only the web page
+// used that, so the constant is gone and the page repeats this one.
