@@ -31,8 +31,9 @@
 --                    privilege revoked from PUBLIC, anon and authenticated.
 --
 -- Applied locally:   no (cloud-only; the app never runs migrations)
--- Applied remotely:  NOT applied. Needs the founder's exact phrase
---                    "run against production 203". Depends on 201.
+-- Applied remotely:  APPLIED 2026-10-21 02:46:54 UTC under the founder's
+--                    "run against production 203" (apply-named-sql.yml
+--                    run 14 from main 40507ed). Depends on 201.
 -- Safe to re-run:    yes (CREATE OR REPLACE; the grant insert is
 --                    ON CONFLICT DO NOTHING).
 -- Rollback:          Re-run the gym_challenge_join and gym_challenge_close

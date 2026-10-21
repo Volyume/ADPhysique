@@ -18,7 +18,7 @@ const body = (name) => {
 describe('migrate_203 free for life on completion', () => {
   it('carries the required header notes and is not applied', () => {
     ['Purpose:', 'Applied locally:', 'Safe to re-run:', 'Rollback:'].forEach((h) => expect(SQL).toContain(h));
-    expect(SQL).toMatch(/Applied remotely:\s+NOT applied/);
+    expect(SQL).toMatch(/Applied remotely:\s+APPLIED 2026-10-21/);
   });
 
   it('the join RPC no longer writes a grant or returns the flag, and keeps the age guards', () => {
