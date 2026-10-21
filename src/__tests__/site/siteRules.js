@@ -109,6 +109,28 @@ const CAP_RULES = [
 const LOSE_NUMBER = [['lose a number of kilos', /\blose \d|\bdrop \d+\s?(kg|lbs?|pounds|stone)\b/i]];
 
 
+// Claims the code does not support, or that FEATURES.md's wording cautions
+// (C1 to C17) and FACTS.md section 5 rule out. Each is a sentence-level test.
+const CLAIM_RULES = [
+  ['an absolute privacy claim', /\bcompletely private\b|\b100% private\b|\bwe never see\b|\bnever leaves? (your|the|this) (phone|device)\b|\bnothing (ever )?leaves\b|\bmilitary[- ]grade\b|\bunhackable\b|\bcannot be (read|hacked|accessed)\b|\bprivate by (default|design)\b|\bno social feed\b/i],
+  ['a claim about analytics identifiers', /\bno personal (identifiers|data|information) (is |are )?(sent|goes?|go|shared)\b|\bno analytics\b|\bwithout (any )?analytics\b|\banonymous (analytics|usage)\b/i],
+  ['a no-AI claim', /\bno AI\b|\bAI[- ]free\b|\bwithout (any )?AI\b|\bnot (use|using|uses) AI\b|\bno artificial intelligence\b|\bnon-AI\b/i],
+  ['an all-data-in-the-EU claim', /\ball (of )?(your )?(data|information)\b[^.]{0,40}\b(EU|Europe|Dublin|Ireland)\b|\bnever leaves the (EU|UK)\b|\bdata (stays|never leaves) in the (EU|UK)\b/i],
+  ['"nothing changes until you tap"', /\bnothing (changes|happens|is applied) until you\b/i],
+  ['a calorie floor figure', /\b1,?[25]00\s*(kcal|calories|cals)\b/i],
+  ['micronutrient tracking', /\bmicronutrient tracking\b|\btrack(s|ing)? (your )?(vitamins|micronutrients|minerals)\b/i],
+  ['foods "up to date"', { test: (t) => (/\bup[- ]to[- ]date\b/i.test(t) && /\b(foods?|database|barcodes?|products?|nutrition)\b/i.test(t)) || /\brefreshes weekly\b|\bupdated weekly\b/i.test(t) }],
+  ['"UK foods" without the hedge', /\bUK foods\b/i],
+  ['recovery measured, not estimated', /\b(measures?|tracks?|monitors?|detects?) (your )?(muscle )?recovery\b/i],
+  ['something the app does not do', /\b(running|cycling|rowing|swimming|cardio) (log|logging|tracking|tracker)\b|\btrack your (runs|cardio)\b|\bdemonstration videos?\b|\bexercise demos?\b|\bvideo demos?\b|\bAI (coach|assistant|trainer)\b|\brestaurant (database|menus)\b|\bmeal photo\b|\bphotograph(ing)? (a|your) meal\b/i],
+  ['pounds for lifting', { test: (t) => /\b(lbs?|pounds?)\b/i.test(t) && !/body ?weight|your weight|weigh|stone/i.test(t) }],
+  ['a photo or video said to stay put with no "unless you share"', {
+    test: (t) => /\b(photos?|videos?)\b/i.test(t)
+      && /\bstays? (on|in) (this|your) (phone|device)\b|\bnever leaves? (this|your) (phone|device)\b/i.test(t)
+      && !/unless you (choose to )?(share|export)/i.test(t),
+  }],
+];
+
 module.exports = {
-  PRICE_RULES, JARGON, JARGON_BY_KEY, jargonKey, AI_TELLS, hasEmoji, hasDash, US_SPELLING, CAP_RULES, LOSE_NUMBER,
+  PRICE_RULES, JARGON, JARGON_BY_KEY, jargonKey, AI_TELLS, hasEmoji, hasDash, US_SPELLING, CAP_RULES, LOSE_NUMBER, CLAIM_RULES,
 };

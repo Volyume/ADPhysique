@@ -22,6 +22,7 @@ const L = require('./siteLinks');
 const F = require('./siteFacts');
 const P = require('./sitePolicy');
 
+const CLAIM = R.CLAIM_RULES;
 const hits = (rules, text) => rules.filter(([, test]) => (typeof test === 'function' ? test(text) : test.test(text))).map(([name]) => name);
 
 describe('the reader', () => {
@@ -400,5 +401,47 @@ describe('the policy reader', () => {
     const md = '# Policy\n\n**Last updated:** 17 October 2026\n\n## 1. One\n\nText one.\n\n## 2. Health-app access\n\nOld claim.\n\n## 3. Three\n\nText three.\n';
     expect(P.markdownWithoutHealth(md)).toBe('# Policy\n\n\n## One\n\nText one.\n\n## Three\n\nText three.\n');
     expect(P.markdownWithoutHealth(md.replace('Health-app access', 'Health apps'))).toBe(P.markdownWithoutHealth(md));
+  });
+});
+
+describe('the claims rules', () => {
+  const claim = (name) => CLAIM.find(([n]) => n === name)[1];
+  const caught = (name, text) => (typeof claim(name) === 'function' ? claim(name)(text) : claim(name).test(text));
+
+  test.each([
+    ['an absolute privacy claim', 'Volyume is completely private.'],
+    ['an absolute privacy claim', 'We never see your data.'],
+    ['an absolute privacy claim', 'Your photos never leave your phone.'],
+    ['an absolute privacy claim', 'Private by design.'],
+    ['a claim about analytics identifiers', 'No personal identifiers go to analytics.'],
+    ['a no-AI claim', 'There is no AI in the coach.'],
+    ['a no-AI claim', 'An AI-free app.'],
+    ['an all-data-in-the-EU claim', 'All your data stays in the EU.'],
+    ['"nothing changes until you tap"', 'Nothing changes until you tap Apply.'],
+    ['a calorie floor figure', 'It never goes below 1,200 kcal.'],
+    ['micronutrient tracking', 'Micronutrient tracking for every food.'],
+    ['foods "up to date"', 'A food database that is always up to date.'],
+    ['"UK foods" without the hedge', 'Over 29,000 UK foods.'],
+    ['recovery measured, not estimated', 'It measures your recovery.'],
+    ['something the app does not do', 'Running tracking and demonstration videos.'],
+    ['pounds for lifting', 'Log your lifts in pounds.'],
+    ['a photo or video said to stay put with no "unless you share"', 'Your photos stay on your phone.'],
+  ])('%s catches "%s"', (name, text) => {
+    expect(caught(name, text)).toBe(true);
+  });
+
+  test.each([
+    ['an absolute privacy claim', 'Your progress photos and workout videos stay on this phone, unless you choose to share them.'],
+    ['a no-AI claim', 'Your coach isn\u2019t an AI chatbot. It follows fixed rules.'],
+    ['an all-data-in-the-EU claim', 'Your account data is stored in the EU (Dublin).'],
+    ['foods "up to date"', 'Keep your phone up to date.'],
+    ['"UK foods" without the hedge', 'Over 29,000 foods, built around UK products.'],
+    ['recovery measured, not estimated', 'It shows an estimate of how recovered each muscle is.'],
+    ['pounds for lifting', 'Body weight can be shown in stone, kg or pounds.'],
+    ['something the app does not do', 'Record a silent video of a set.'],
+    ['a photo or video said to stay put with no "unless you share"', 'Videos stay on your phone unless you choose to share them.'],
+    ['a calorie floor figure', 'Eat 1,800 calories.'],
+  ])('%s leaves "%s" alone', (name, text) => {
+    expect(caught(name, text)).toBe(false);
   });
 });
