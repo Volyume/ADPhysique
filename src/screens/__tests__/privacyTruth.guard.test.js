@@ -229,6 +229,15 @@ describe('privacy, consent, export and store-copy truth', () => {
     // privacy-policy wording.
     expect(entry32).not.toMatch(/never uploaded|privacy policy|Privacy and legal/i);
     expect({ bad: /\bclips?\b|email|plan again/i.test(entry32) }).toEqual({ bad: false });
+    // 3.4.0 (2026-10-21): 3.3.0 build 94 was rejected by App Store Connect,
+    // so the same four lines ship as 3.4.0.
+    const start34 = sheet.indexOf("'3.4.0': [");
+    expect(start34).toBeGreaterThan(-1);
+    const entry34 = sheet.slice(start34, sheet.indexOf('],', start34));
+    expect(entry34).toContain('More ways to sign in');
+    expect(entry34).toContain('oily fish meals a week');
+    expect(entry34).toContain('Settings are grouped more clearly');
+    expect(entry34).not.toMatch(/privacy policy|Privacy and legal|OAuth|identity|OTA|over the air|\u2014/i);
     // 3.3.0 (2026-10-21): new user-facing features only, plain words, no
     // technical terms and no privacy-policy wording (founder 2026-10-20).
     const start33 = sheet.indexOf("'3.3.0': [");

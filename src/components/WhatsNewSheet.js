@@ -166,6 +166,15 @@ export const WHATS_NEW = {
   // and what it adds, not our names for it. What's
   // new changes only when the founder bumps the main version with new
   // user-facing features.
+  // 3.4.0 (2026-10-21): the same four lines as 3.3.0. App Store Connect
+  // rejected 3.3.0 build 94 (a placeholder URL scheme, ITMS-90158), so 3.3.0
+  // never reached iPhone users and the release ships as 3.4.0.
+  '3.4.0': [
+    { icon: 'log-in-outline', text: 'More ways to sign in: Apple now works on Android, and you can add or remove sign-in methods in your account. You can also set a new password from a reset email.' },
+    { icon: 'restaurant-outline', text: 'Meal plans are easier to read, and adding a plan to your diary now fills only the meals you have not logged yet. You can also choose how many oily fish meals a week your plan includes.' },
+    { icon: 'chatbubbles-outline', text: 'Your weekly coaching now says what it saw, what changes and when your coach looks again.' },
+    { icon: 'settings-outline', text: 'Settings are grouped more clearly, with one place for your units and a new switch for vibration.' },
+  ],
   // 3.3.0 (2026-10-21): the October customer-facing release. New features
   // only, plain words: sign-in on every phone, meal plans that fill only
   // empty meals plus the oily fish choice, clearer weekly coaching, and the
