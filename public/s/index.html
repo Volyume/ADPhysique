@@ -168,7 +168,7 @@
 
     // Card renderers, one per story kind (blueprint §8): pr, session,
     // block, milestone, programme. Every field read here is on the
-    // POST_PAYLOAD_KEYS allow-list (src/lib/community/posts.js) —
+    // POST_PAYLOAD_KEYS allow-list (src/lib/community/posts.js):
     // never bodyweight, food or photos; community-public does not return them.
     function renderCard(post) {
       var card = document.getElementById('card');
@@ -189,7 +189,7 @@
         card.appendChild(el('div', 'hero', payload.sessionName || 'Session'));
         if (payload.workingSets != null) card.appendChild(statRow('Working sets', payload.workingSets));
         if (payload.duration != null) card.appendChild(statRow('Duration', payload.duration));
-        if (payload.tonnage != null) card.appendChild(statRow('Tonnage', payload.tonnage + (payload.units || '')));
+        if (payload.tonnage != null) card.appendChild(statRow('Total weight lifted', payload.tonnage + (payload.units || '')));
       } else if (post.kind === 'block') {
         card.appendChild(el('div', 'eyebrow', 'Block complete'));
         card.appendChild(el('div', 'hero', payload.planName || 'Training block'));

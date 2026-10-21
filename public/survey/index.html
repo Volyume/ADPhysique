@@ -70,7 +70,7 @@
     <div id="legacy">
     <div class="stack">
       <h2 class="heading">A two-minute survey</h2>
-      <p class="intro">Thank you for taking the time. Only the first question is needed, the rest are optional, and your answers genuinely shape what gets built next. There is no wrong answer here.</p>
+      <p class="intro">Thank you for taking the time. Only the first question is needed, and the rest are optional. There is no wrong answer here.</p>
     </div>
 
     <form id="survey-form" novalidate>
@@ -120,7 +120,7 @@
 
       <div class="actions">
         <button type="submit" class="button button--primary" id="submit-btn">Send my answers</button>
-        <p class="form-note">Your answers are stored on Volyume's EU database and used only to improve the app.</p>
+        <p class="form-note">Your answers are stored on Volyume's database in the EU and used only to improve the app.</p>
       </div>
     </form>
 
@@ -246,7 +246,7 @@
 
     document.getElementById("g-note").textContent = surveyToken
       ? "You opened this from your email, so your answers are linked to your account. If you send again, the new answers replace the first."
-      : "Your answers are stored on Volyume's EU database and used only to improve the app. They are sent without your name.";
+      : "Your answers are stored on Volyume's database in the EU and used only to improve the app. They are sent without your name.";
 
     function showClosed(){
       document.getElementById("g-title").textContent = "Survey";
