@@ -218,6 +218,7 @@ describe('the CSS rules', () => {
     ['a{-webkit-line-clamp:3}', 'clip'],
     ['a{display:-webkit-box;line-clamp:2}', 'clip'],
     ['.btn{white-space:nowrap}', 'nowrap'],
+    ['.btn{white-space:pre}', 'nowrap'],
     ['body{overflow-x:hidden}', 'overflow'],
     ['html{overflow:hidden}', 'overflow'],
     ['.btn{border-radius:999px}', 'radius'],
@@ -246,6 +247,7 @@ describe('the CSS rules', () => {
   test.each([
     'a{text-overflow:clip}',
     '.btn{white-space:normal}',
+    '.btn{white-space:pre-wrap}',
     'img{border-radius:50%}',
     '.avatar{border-radius:999px}',
     '.card img{border-radius:9999px}',

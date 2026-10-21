@@ -236,9 +236,14 @@ describe('the site follows the app', () => {
       const get = (p) => (r.decls.find((d) => d.prop === p) || {}).value || '';
       return { family: get('font-family').replace(/['"]/g, '').trim(), weight: get('font-weight'), display: get('font-display'), src: get('src'), source: r.source };
     });
-    const weights = (family) => faces.filter((f) => f.family === family).flatMap((f) => (f.weight.split(/\s+/).length === 2 ? [] : [Number(f.weight)]));
-    expect(weights('Inter').sort()).toEqual(expect.arrayContaining([400, 500, 600, 700, 800]));
-    expect(weights('Inter Display').sort()).toEqual(expect.arrayContaining([700, 800]));
+    // A face covers one weight ("700") or a range ("100 900", a variable font).
+    const covers = (family) => (w) => faces.some((f) => {
+      if (f.family !== family) return false;
+      const [lo, hi] = f.weight.trim().split(/\s+/).map(Number);
+      return hi === undefined ? lo === w : lo <= w && w <= hi;
+    });
+    expect([400, 500, 600, 700, 800].filter((w) => !covers('Inter')(w))).toEqual([]);
+    expect([700, 800].filter((w) => !covers('Inter Display')(w))).toEqual([]);
     faces.forEach((f) => {
       expect({ family: f.family, swap: /swap|optional/.test(f.display) }).toEqual({ family: f.family, swap: true });
       const urls = [...f.src.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)].map((m) => m[1]);

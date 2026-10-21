@@ -21,7 +21,7 @@ function declProblems(decl, rule, ctx) {
   // 1. Clipped text
   if (prop === 'text-overflow' && /ellipsis/i.test(value)) add('clip', 'text-overflow: ellipsis');
   if (/line-clamp/.test(prop) || /line-clamp/i.test(value)) add('clip', 'line-clamp');
-  if (prop === 'white-space' && /nowrap|\bpre\b/i.test(value) && !allowed(rule, ctx.nowrapOk)) add('nowrap', 'text must wrap');
+  if (prop === 'white-space' && /nowrap|^pre$/i.test(value.trim()) && !allowed(rule, ctx.nowrapOk)) add('nowrap', 'text must wrap');
   if (/^overflow(-x)?$/.test(prop) && /hidden|clip/i.test(value) && selectorsOf(rule).some((s) => /^(html|body|:root)$/i.test(s))) {
     add('overflow', 'hides a horizontal overflow instead of fixing it');
   }
