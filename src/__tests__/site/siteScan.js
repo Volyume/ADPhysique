@@ -226,6 +226,11 @@ function explainedRanges(page) {
     .map((e) => [e.start, e.end]);
 }
 
+/** The ranges of segments inside an element carrying a number from the build step (data-fact). */
+function factRanges(page) {
+  return page.elements.filter((e) => e.attrs['data-fact'] !== undefined).map((e) => [e.start, e.end]);
+}
+
 // Journals and publishers a reference list points to.
 const CITATION_HOST = /(^|\.)(nlm\.nih\.gov|doi\.org|acm\.org|nature\.com|springer\.com|sciencedirect\.com|wiley\.com|oup\.com|tandfonline\.com|bmj\.com|jamanetwork\.com|thelancet\.com|lww\.com|frontiersin\.org|mdpi\.com|plos\.org|cochranelibrary\.com)$/i;
 
@@ -256,8 +261,12 @@ function citationRanges(page) {
  * With skipExplained, text inside an element marked data-explains is left out.
  * Quoted sources (see citationRanges) are left out unless skipCitations is false.
  */
-function bodyBlocks(page, { skipExplained = false, skipCitations = true } = {}) {
-  const skip = [...(skipExplained ? explainedRanges(page) : []), ...(skipCitations ? citationRanges(page) : [])];
+function bodyBlocks(page, { skipExplained = false, skipCitations = true, skipFacts = false } = {}) {
+  const skip = [
+    ...(skipExplained ? explainedRanges(page) : []),
+    ...(skipCitations ? citationRanges(page) : []),
+    ...(skipFacts ? factRanges(page) : []),
+  ];
   const inSkip = (i) => skip.some(([a, b]) => i >= a && i < b);
   const blocks = [];
   let cur = null;
@@ -295,9 +304,9 @@ function metaCopy(page) {
  * Every unit of copy on a page as {where, text}: one per sentence of body
  * text, plus the title, meta and attribute text.
  */
-function copyUnits(page, { skipExplained = false, skipCitations = true } = {}) {
+function copyUnits(page, { skipExplained = false, skipCitations = true, skipFacts = false } = {}) {
   const units = [];
-  bodyBlocks(page, { skipExplained, skipCitations }).forEach((b) => {
+  bodyBlocks(page, { skipExplained, skipCitations, skipFacts }).forEach((b) => {
     sentencesOf(b).forEach((s) => units.push({ where: 'text', text: s }));
   });
   metaCopy(page).forEach((u) => {
@@ -485,7 +494,7 @@ module.exports = {
   REPO, PUBLIC, ORIGIN, SUPABASE_HOST,
   allPublicFiles, readPublic, publicExists, sha256, isMembers, htmlFiles, urlOf, cssFiles,
   decodeEntities, parseHtml, inside, readPage, norm, sentencesOf, bodyBlocks, metaCopy, copyUnits,
-  scriptStrings, scriptCopy, explainedRanges, citationRanges,
+  scriptStrings, scriptCopy, explainedRanges, citationRanges, factRanges,
   parseCss, declarations, pageCss, allCss,
   imageSizeOf, imageSize, fileSize,
   isLocalHost, resolveRef, pathResolves, FORWARDED,

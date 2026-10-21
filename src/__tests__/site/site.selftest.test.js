@@ -19,6 +19,7 @@ const S = require('./siteScan');
 const R = require('./siteRules');
 const { declProblems } = require('./siteCssRules');
 const L = require('./siteLinks');
+const F = require('./siteFacts');
 
 const hits = (rules, text) => rules.filter(([, test]) => (typeof test === 'function' ? test(text) : test.test(text))).map(([name]) => name);
 
@@ -334,5 +335,52 @@ describe('the link checker', () => {
 
   test('flags a #fragment that has no id on the page it points to', () => {
     expect(bad('<a href="/404.html#no-such-id">x</a>')).toHaveLength(1);
+  });
+});
+
+describe('the facts helpers', () => {
+  test('read numbers written as digits, with commas, or as words', () => {
+    expect(['923', '29,279', '923+', 'six', 'Nine', '1,2', 'x'].map(F.parseNumber)).toEqual([923, 29279, 923, 6, 9, null, null]);
+  });
+
+  test('an exact figure must be exact', () => {
+    expect(F.agrees('923', 923)).toBe(true);
+    expect(F.agrees('29,279', 29279)).toBe(true);
+    expect(F.agrees('six', 6)).toBe(true);
+    expect(F.agrees('924', 923)).toBe(false);
+    expect(F.agrees('551', 923)).toBe(false);
+    expect(F.agrees('twelve', 6)).toBe(false);
+  });
+
+  test('"over N" must be a round number at or below the figure and close to it', () => {
+    expect(F.agrees('over 29,000', 29279)).toBe(true);
+    expect(F.agrees('29,000', 29279, { before: 'with over ' })).toBe(true);
+    expect(F.agrees('900', 923, { before: 'More than ' })).toBe(true);
+    expect(F.agrees('over 50', 58)).toBe(true);
+    expect(F.agrees('over 30,000', 29279)).toBe(false);
+    expect(F.agrees('over 10', 923)).toBe(false);
+    expect(F.agrees('29,000', 29279)).toBe(false);
+    expect(F.agrees('nearly 60', 58)).toBe(true);
+    expect(F.agrees('nearly 50', 58)).toBe(false);
+  });
+
+  test('find a fact by key, dotted path, or under "facts", and list the leaves', () => {
+    const facts = { exercises: 923, library: { plans: 58 }, meals: { value: 94, source: 'x' } };
+    expect(F.factFor(facts, 'exercises')).toBe(923);
+    expect(F.factFor(facts, 'library.plans')).toBe(58);
+    expect(F.factFor(facts, 'meals')).toBe(94);
+    expect(F.factFor({ facts: { foods: 29279 } }, 'foods')).toBe(29279);
+    expect(F.factFor(facts, 'nothing')).toBeUndefined();
+    expect(F.leaves(facts)).toEqual([['exercises', 923], ['library.plans', 58], ['meals', 94]]);
+  });
+
+  test('find a number written next to a counted noun, and ignore ordinary small numbers', () => {
+    const noun = (t) => F.claimsIn(t).map((c) => `${c.n} ${c.noun}`);
+    expect(noun('923 built-in exercises, each with setup notes.')).toEqual(['923 exercises']);
+    expect(noun('Over 29,279 foods work without signal.')).toEqual(['29279 foods']);
+    expect(noun('58 plans and six training styles.')).toEqual(['58 plans', '6 training styles']);
+    expect(noun('Nine physique goals to choose from.')).toEqual(['9 physique goals']);
+    expect(noun('Pick 3 exercises, 5 meals a day, one training style and 2 plans.')).toEqual([]);
+    expect(noun('A 4-week plan with 12 sets.')).toEqual([]);
   });
 });
