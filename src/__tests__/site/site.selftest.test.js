@@ -18,6 +18,7 @@ const { Buffer } = require('buffer');
 const S = require('./siteScan');
 const R = require('./siteRules');
 const { declProblems } = require('./siteCssRules');
+const L = require('./siteLinks');
 
 const hits = (rules, text) => rules.filter(([, test]) => (typeof test === 'function' ? test(text) : test.test(text))).map(([name]) => name);
 
@@ -304,5 +305,34 @@ describe('the image and nesting helpers', () => {
     const [inner, outer] = page.elements.filter((e) => e.name === 'img');
     expect(S.inside(inner, a)).toBe(true);
     expect(S.inside(outer, a)).toBe(false);
+  });
+});
+
+describe('the link checker', () => {
+  // /404.html, /CNAME and /.well-known/assetlinks.json are files the site keeps for good.
+  const page = (html) => L.refsOfPage(S.parseHtml(html));
+  const bad = (html) => page(html).map((r) => L.problem('index.html', r)).filter(Boolean);
+
+  test('finds the references on a page', () => {
+    const refs = page('<a href="/a">a</a><img src="/b.png" srcset="/c.png 1x, /d.png 2x"><link rel="icon" href="/e.png"><script src="/f.js"></script><meta property="og:image" content="https://volyume.app/g.png"><meta http-equiv="refresh" content="0; url=/h/">');
+    expect(refs.map((r) => r.ref)).toEqual(['/a', '/b.png', '/c.png', '/d.png', '/e.png', '/f.js', 'https://volyume.app/g.png', '/h/']);
+  });
+
+  test('flags a file that is not there, however it is written', () => {
+    expect(bad('<a href="/no-such-page/">x</a>')).toHaveLength(1);
+    expect(bad('<img src="/no-such.png">')).toHaveLength(1);
+    expect(bad('<meta property="og:image" content="https://volyume.app/no-such.png">')).toHaveLength(1);
+    expect(bad('<a href="no-such-relative.html">x</a>')).toHaveLength(1);
+    expect(bad('<a href="javascript:void(0)">x</a>')).toHaveLength(1);
+  });
+
+  test('passes files that are there, a query string, a forwarded code, an app link and other hosts', () => {
+    expect(bad('<a href="/404.html">x</a><a href="/404.html?x=1">x</a><a href="https://volyume.app/CNAME">x</a>')).toEqual([]);
+    expect(bad('<a href="/partner/ABCDEFGH23">x</a><a href="/c/volt-nov-3f9a1c2e">x</a>')).toEqual([]);
+    expect(bad('<a href="volyume://g/?id=1">x</a><a href="mailto:a@b.c">x</a><a href="https://play.google.com/store">x</a>')).toEqual([]);
+  });
+
+  test('flags a #fragment that has no id on the page it points to', () => {
+    expect(bad('<a href="/404.html#no-such-id">x</a>')).toHaveLength(1);
   });
 });
