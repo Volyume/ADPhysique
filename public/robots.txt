@@ -1,0 +1,8 @@
+# volyume.app
+# Every page may be crawled. Pages that should stay out of search results
+# (challenge, sign-in, email, survey and sharing pages) say so with their own
+# noindex tag, which a crawler can only read if it is allowed to fetch them.
+User-agent: *
+Allow: /
+
+Sitemap: https://volyume.app/sitemap.xml

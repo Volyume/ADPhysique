@@ -2,189 +2,191 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Get Volyume</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get Volyume for iPhone and Android</title>
+<meta name="description" content="Volyume is on the App Store for iPhone and on Google Play for Android. What you need: a phone and an account with Apple, Google on Android, or an email address. Logging works without signal.">
 <link rel="canonical" href="https://volyume.app/get/">
+<meta name="robots" content="index, follow">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta name="theme-color" content="#0D0D0D">
-<meta name="description" content="A chatbot has to make an answer from what it has. Volyume already has the training, nutrition, recovery and progress you have actually logged, so its coaching starts from what you really did.">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Volyume: know what to do next">
-<meta property="og:description" content="AI can guess. Volyume doesn't have to. It already has the training, nutrition, recovery and progress you have actually logged.">
+<meta property="og:site_name" content="Volyume">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Get Volyume for iPhone and Android">
+<meta property="og:description" content="Training, food and a weekly check-in, with a coach that explains every change. On the App Store and Google Play.">
 <meta property="og:url" content="https://volyume.app/get/">
-<meta property="og:image" content="https://volyume.app/volyume-v.png">
+<meta property="og:image" content="https://volyume.app/assets/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Volyume wordmark above the line: Training, food and a weekly check-in, with a coach that explains every change.">
 <meta name="twitter:card" content="summary_large_image">
-<style>
-  :root{
-    --bg:#0D0D0D; --surface:#191917; --surface2:#222220; --borderSubtle:#2E2E2C;
-    --amber:#F5A623; --amberFill:#E08C0B;
-    --text:#FFFFFF; --textSecondary:#9E9E9E;
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  html{color-scheme:dark;-webkit-text-size-adjust:100%;}
-  body{background:var(--bg);color:var(--text);font-family:var(--font);
-    -webkit-font-smoothing:antialiased;display:flex;justify-content:center;overflow-x:hidden;}
-  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-    background:radial-gradient(120% 40% at 50% -6%, rgba(245,166,35,0.18) 0%, rgba(245,166,35,0.04) 44%, transparent 74%);}
-
-  /* Tight above the first CTA, roomier below it. The gap is the single
-     biggest lever on how far a high-intent visitor has to scroll. */
-  .page{position:relative;z-index:1;width:100%;max-width:430px;
-    display:flex;flex-direction:column;gap:12px;
-    padding:calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 28px);}
-
-  .mark{height:21px;width:auto;align-self:flex-start;}
-
-  .eyebrow{font-family:var(--mono);font-size:clamp(9.5px,2.5vw,11px);
-    letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin-bottom:9px;}
-  h1{font-size:clamp(24px,6.6vw,30px);line-height:1.1;letter-spacing:-0.025em;font-weight:800;}
-  h1 .hl{color:var(--amber);}
-  .sub b{color:var(--text);font-weight:600;}
-  .sub{margin-top:11px;font-size:clamp(14.5px,3.9vw,16px);line-height:1.45;color:var(--textSecondary);}
-
-  .deck{display:flex;justify-content:center;align-items:flex-start;}
-  .deck img{width:clamp(58px,16.2vw,73px);height:auto;border-radius:10px;
-    border:1px solid var(--borderSubtle);box-shadow:0 12px 26px rgba(0,0,0,0.55);background:var(--surface);}
-  .deck img:nth-child(1){transform:rotate(-7deg) translateY(7px);z-index:1;}
-  .deck img:nth-child(2){transform:rotate(-2.5deg);margin-left:-15px;z-index:2;}
-  .deck img:nth-child(3){transform:rotate(2.5deg);margin-left:-15px;z-index:3;}
-  .deck img:nth-child(4){transform:rotate(7deg) translateY(7px);margin-left:-15px;z-index:2;}
-
-  /* Three reasons, above the fold. Deliberately one line each. */
-  .reasons{display:flex;flex-direction:column;gap:10px;}
-  .reason{border-left:2px solid var(--amber);padding-left:12px;}
-  .reason b{display:block;font-size:clamp(14px,3.8vw,15.5px);font-weight:700;letter-spacing:-0.01em;color:var(--text);}
-  .reason span{display:block;margin-top:2px;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;color:var(--textSecondary);}
-
-
-  .offer{font-size:clamp(12.5px,3.3vw,13.5px);line-height:1.5;color:var(--textSecondary);}
-  .offer b{color:var(--amber);font-weight:700;}
-  .cta{display:flex;flex-direction:column;gap:9px;}
-  .btn{display:flex;align-items:center;justify-content:center;gap:11px;text-decoration:none;
-    border-radius:14px;padding:12px 16px;min-height:54px;}
-  .btn .lbl{display:flex;flex-direction:column;line-height:1.15;text-align:left;}
-  .btn .lbl .sm{white-space:nowrap;font-size:9.8px;letter-spacing:0.055em;text-transform:uppercase;opacity:0.72;}
-  .btn .lbl .lg{white-space:nowrap;font-size:16px;font-weight:700;letter-spacing:-0.01em;}
-  .btn--primary{background:var(--amberFill);color:#0D0D0D;box-shadow:0 8px 24px rgba(224,140,11,0.28);}
-  .btn--ghost{background:var(--surface2);color:var(--text);border:1px solid var(--borderSubtle);}
-  @media (min-width:380px){ .cta{flex-direction:row;} .cta .btn{flex:1;} }
-
-  /* Everything below is for the visitor who wants convincing. */
-  .more{margin-top:16px;padding-top:22px;border-top:1px solid var(--borderSubtle);}
-  .more h2{font-family:var(--mono);font-size:clamp(10.5px,2.8vw,12px);letter-spacing:0.12em;
-    text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:12px;}
-  .more h3{font-size:clamp(16px,4.3vw,18px);line-height:1.25;letter-spacing:-0.02em;
-    font-weight:800;margin:22px 0 9px;}
-  .more p{font-size:clamp(13.5px,3.7vw,15px);line-height:1.5;color:var(--textSecondary);}
-  .more p + p{margin-top:10px;}
-  .more p b{color:var(--text);font-weight:600;}
-
-  .trust{list-style:none;display:flex;flex-direction:column;gap:13px;margin-top:14px;}
-  .trust li{border-left:2px solid var(--amber);padding-left:12px;}
-  .trust b{display:block;font-size:clamp(14px,3.8vw,15.5px);font-weight:700;color:var(--text);letter-spacing:-0.01em;}
-  .trust span{display:block;margin-top:2px;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;color:var(--textSecondary);}
-
-  .who{display:grid;grid-template-columns:1fr;gap:10px;margin-top:22px;}
-  @media (min-width:400px){ .who{grid-template-columns:1fr 1fr;} }
-  .who div{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:12px;padding:12px 13px;}
-  .who h4{font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;
-    color:var(--amber);font-weight:600;margin-bottom:5px;}
-  .who p{font-size:clamp(12.5px,3.3vw,13.5px);line-height:1.4;color:var(--textSecondary);}
-
-  .privacy{font-size:11px;line-height:1.45;color:#6F6F6F;text-align:center;}
-  .privacy a{color:#6F6F6F;}
-
-  /* Transform only. A fade from opacity 0 leaves the page blank until it
-     runs, which is a bad bet for a link opened in a slow in-app browser. */
-  @media (prefers-reduced-motion:no-preference){
-    .page > *{animation:rise .45s cubic-bezier(.22,.9,.3,1) both;}
-    .page > *:nth-child(2){animation-delay:.04s;}
-    .page > *:nth-child(3){animation-delay:.08s;}
-    @keyframes rise{from{transform:translateY(8px);}to{transform:none;}}
-  }
-</style>
+<meta name="twitter:title" content="Get Volyume for iPhone and Android">
+<meta name="twitter:description" content="Training, food and a weekly check-in, with a coach that explains every change. On the App Store and Google Play.">
+<meta name="twitter:image" content="https://volyume.app/assets/share.png">
 </head>
-<body>
-<main class="page">
-
-  <img class="mark" src="/volyume-wordmark.png" alt="Volyume">
-
-  <div>
-    <p class="eyebrow">Not an AI fitness chatbot</p>
-    <h1>AI can guess. <span class="hl">Volyume doesn't have to.</span></h1>
-    <p class="sub">A chatbot has to make an answer from the information it has. <b>Volyume already has the training, nutrition, recovery and progress you have actually logged</b>, so its coaching starts from what you really did.</p>
-  </div>
-
-  <div class="deck">
-    <img src="/screenshots/02_know_what_to_do_today.jpg" alt="The Today screen showing the session to do" loading="lazy">
-    <img src="/screenshots/05_log_every_set.jpg" alt="Logging a set in the workout logger" loading="lazy">
-    <img src="/screenshots/06_meals_planned_to_your_targets.jpg" alt="Meals planned to your targets" loading="lazy">
-    <img src="/screenshots/03_plan_that_moves_with_you.jpg" alt="A training plan across the week" loading="lazy">
-  </div>
-
-  <div class="reasons">
-    <div class="reason"><b>It follows what actually happened.</b><span>Your workouts, food, progress and check-ins build the picture over time.</span></div>
-    <div class="reason"><b>It tells you what to do next.</b><span>Keep going when things are working. Adjust when there is a genuine reason.</span></div>
-    <div class="reason"><b>It doesn't invent a change.</b><span>If there is not enough yet to justify changing something, it tells you.</span></div>
-  </div>
-
-  <p class="offer"><b>Free. No card, no time limit.</b> Your plan, food targets, progress and weekly coaching, all in one app.</p>
-
-  <div class="cta">
-    <a class="btn btn--primary" href="https://apps.apple.com/gb/app/volyume/id6777083702">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 1.4c0 1.1-.5 2.2-1.2 3-.8.9-2.2 1.6-3.3 1.5-.2-1.1.4-2.3 1.1-3 .9-.9 2.3-1.5 3.4-1.5zm4.1 15.7c-.6 1.3-.8 1.9-1.5 3-1 1.5-2.4 3.5-4.1 3.5-1.5 0-1.9-1-4-1-2.1 0-2.5 1-4 1-1.7 0-3.1-1.8-4.1-3.3C.1 15.9-.2 10.8 1.5 8c1.2-1.9 3.1-3 4.9-3 1.9 0 3 1 4.5 1 1.5 0 2.4-1 4.5-1 1.6 0 3.3.9 4.5 2.4-4 2.2-3.3 7.9.6 9.7z"/></svg>
-      <span class="lbl"><span class="sm">Download on the</span><span class="lg">App Store</span></span>
+<body data-section="get">
+<!-- site:header -->
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume">
     </a>
-    <a class="btn btn--ghost" href="https://play.google.com/store/apps/details?id=app.volyume">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1zm13.5 13.4l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1zm-.2.2l-3.4-3.4-9.9 9.9c.4.4 1 .4 1.7.1l11.6-6.6zm0-6.8L5.3 2C4.6 1.6 4 1.7 3.6 2.1l9.9 9.9 3.4-3.4z"/></svg>
-      <span class="lbl"><span class="sm">Get it on</span><span class="lg">Google Play</span></span>
-    </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul class="site-nav__list">
+        <li><a class="site-nav__link" href="/features/">Features</a></li>
+        <li><a class="site-nav__link" href="/how-the-coach-works/">How the coach works</a></li>
+        <li><a class="site-nav__link" href="/articles/">Articles</a></li>
+        <li><a class="site-nav__link" href="/support/">Support</a></li>
+      </ul>
+    </nav>
+    <a class="button button--primary site-header__get" href="/get/">Get the app</a>
+    <details class="site-menu">
+      <summary class="site-menu__toggle">
+        <svg class="icon site-menu__open" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#menu-outline"></use></svg>
+        <svg class="icon site-menu__close" aria-hidden="true" focusable="false"><use href="/assets/icons/ionicons.svg#close-outline"></use></svg>
+        <span class="site-menu__label">Menu</span>
+      </summary>
+      <nav class="site-menu__panel" aria-label="Main">
+        <ul class="site-menu__list">
+          <li><a class="site-menu__link" href="/features/">Features</a></li>
+          <li><a class="site-menu__link" href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a class="site-menu__link" href="/articles/">Articles</a></li>
+          <li><a class="site-menu__link" href="/support/">Support</a></li>
+          <li><a class="site-menu__link" href="/get/">Get the app</a></li>
+        </ul>
+      </nav>
+    </details>
   </div>
+</header>
+<!-- /site:header -->
 
-  <section class="more">
-    <h2>Why Volyume works differently</h2>
+<main id="main">
 
-    <p>A general chatbot has to make its answer from the information available to it. If something important is missing, it can still give you an answer that sounds convincing, and it may answer differently if you word the question another way. That is not how Volyume decides what you should change.</p>
-    <p><b>Volyume already has the history you have been building as you train.</b></p>
-
-    <h3>You are already logging it</h3>
-    <p>So you never have to explain your training again. Volyume follows what actually happens over time: the sessions you complete, the exercises, sets, reps and weights, how your lifts are progressing, how your bodyweight is moving, what you have eaten and what you tell it about recovery.</p>
-    <p>At your weekly check-in it puts those together. If something genuinely needs changing, it tells you what and why. <b>If the right answer is to stay the course, it says that instead.</b></p>
-
-    <ul class="trust">
-      <li><b>Based on what you actually did.</b><span>Uses what you have logged rather than filling in missing history.</span></li>
-      <li><b>Consistent advice.</b><span>The same situation will not suddenly produce different coaching because you asked again.</span></li>
-      <li><b>It knows when not to change things.</b><span>Without enough to go on it can stay the course, instead of inventing a reason to adjust.</span></li>
-      <li><b>You are always in control.</b><span>It explains what it recommends, and its weekly suggestions only take effect when you apply them.</span></li>
-    </ul>
-
-    <div class="who">
-      <div>
-        <h4>New to training?</h4>
-        <p>Know what to do next, and let Volyume guide the journey.</p>
+  <section class="page-intro" aria-labelledby="page-title">
+    <div class="container split">
+      <div class="stack-lg">
+        <h1 class="display" id="page-title">Get Volyume</h1>
+        <p class="lead">Volyume is on the App Store for iPhone and on Google Play for Android. It plans your training, logs your workouts and food, and once a week tells you what changes and why.</p>
+        <div class="store-buttons">
+          <a class="button button--secondary store-button" href="https://apps.apple.com/gb/app/volyume/id6777083702">
+            <span class="store-button__text"><span class="store-button__platform">For iPhone</span><span class="store-button__store">App Store</span></span>
+          </a>
+          <a class="button button--secondary store-button" href="https://play.google.com/store/apps/details?id=app.volyume">
+            <span class="store-button__text"><span class="store-button__platform">For Android</span><span class="store-button__store">Google Play</span></span>
+          </a>
+        </div>
       </div>
-      <div>
-        <h4>Experienced lifter?</h4>
-        <p>Bring training, food and progress together and know what actually needs changing.</p>
+      <figure class="split__media">
+        <div class="screen">
+          <picture>
+            <source type="image/webp" srcset="/assets/screens/today-360.webp 360w, /assets/screens/today-720.webp 720w" sizes="(min-width: 64em) 20rem, (min-width: 52em) 18rem, 17.5rem">
+            <img src="/assets/screens/today-720.jpg" width="720" height="1280" alt="The Today screen on a demo account: the next workout, Upper A, with a Start workout button, and a note that this week's check-in is ready." fetchpriority="high" decoding="async">
+          </picture>
+        </div>
+        <figcaption class="screen-caption">The Today screen on a demo account.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="need-title">
+    <div class="container stack-lg">
+      <h2 class="heading" id="need-title">What you need</h2>
+      <div class="notes notes--two">
+        <div class="notes__item">
+          <h3 class="title">A phone</h3>
+          <p class="body">An iPhone, or a phone that runs Android.</p>
+        </div>
+        <div class="notes__item">
+          <h3 class="title">An account</h3>
+          <p class="body">On iPhone, sign in with Apple or with an email address. On Android, sign in with Apple, Google or an email address. There is no guest mode. Your training and food logs are backed up to your account, so they come with you to a new phone.</p>
+        </div>
+        <div class="notes__item">
+          <h3 class="title">Signal, some of the time</h3>
+          <p class="body">Logging workouts, the rest timer, your plan and your food diary all work without signal. The foods that come with the app search without signal once they have loaded the first time. Looking further for a food, Community and backing up need a connection.</p>
+        </div>
+        <div class="notes__item">
+          <h3 class="title">Your agreement</h3>
+          <p class="body">Before the app opens, it asks for your agreement to hold your health-related data. You can withdraw it later in Settings.</p>
+        </div>
       </div>
     </div>
   </section>
 
-  <div class="cta">
-    <a class="btn btn--primary" href="https://apps.apple.com/gb/app/volyume/id6777083702">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 1.4c0 1.1-.5 2.2-1.2 3-.8.9-2.2 1.6-3.3 1.5-.2-1.1.4-2.3 1.1-3 .9-.9 2.3-1.5 3.4-1.5zm4.1 15.7c-.6 1.3-.8 1.9-1.5 3-1 1.5-2.4 3.5-4.1 3.5-1.5 0-1.9-1-4-1-2.1 0-2.5 1-4 1-1.7 0-3.1-1.8-4.1-3.3C.1 15.9-.2 10.8 1.5 8c1.2-1.9 3.1-3 4.9-3 1.9 0 3 1 4.5 1 1.5 0 2.4-1 4.5-1 1.6 0 3.3.9 4.5 2.4-4 2.2-3.3 7.9.6 9.7z"/></svg>
-      <span class="lbl"><span class="sm">Download on the</span><span class="lg">App Store</span></span>
-    </a>
-    <a class="btn btn--ghost" href="https://play.google.com/store/apps/details?id=app.volyume">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1zm13.5 13.4l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1zm-.2.2l-3.4-3.4-9.9 9.9c.4.4 1 .4 1.7.1l11.6-6.6zm0-6.8L5.3 2C4.6 1.6 4 1.7 3.6 2.1l9.9 9.9 3.4-3.4z"/></svg>
-      <span class="lbl"><span class="sm">Get it on</span><span class="lg">Google Play</span></span>
-    </a>
-  </div>
+  <section class="section" aria-labelledby="start-title">
+    <div class="container split split--even">
+      <div class="stack">
+        <h2 class="heading" id="start-title">Ways to start</h2>
+        <p class="body">You choose when you first open the app. Whichever you pick, you can set up coaching or change plan later.</p>
+      </div>
+      <ul class="rows">
+        <li><strong>Set up coaching</strong>A short guided setup of your details, how you train and your goal. It builds your first plan and your targets.</li>
+        <li><strong>Pick a ready-made plan</strong>Choose from <span data-fact="plans">58</span> plans and start training. You can set up coaching later from the Coach tab.</li>
+        <li><strong>Build your own</strong>Write your own plan by hand, day by day.</li>
+      </ul>
+    </div>
+  </section>
 
-  <p class="privacy">Encrypted on your device and stored in the EU. No ads, and your data is never sold. <a href="/privacy/">Privacy</a> &middot; <a href="/support/">Support</a></p>
+  <section class="section" aria-labelledby="privacy-title">
+    <div class="container split split--even">
+      <h2 class="heading" id="privacy-title">Your data</h2>
+      <div class="stack">
+        <p class="body">Your progress photos and workout videos stay on this phone, unless you choose to share them. Your data on the phone is held in an encrypted database, and you can delete your account and its data in Settings.</p>
+        <p class="body"><a href="/privacy/">Read the privacy policy</a> or <a href="/support/">get help</a>.</p>
+      </div>
+    </div>
+  </section>
 
 </main>
+
+<!-- site:footer -->
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div class="site-footer__about">
+      <a class="brand" href="/">
+        <img class="brand__wordmark" src="/assets/brand/wordmark.png" srcset="/assets/brand/wordmark.png 1x, /assets/brand/wordmark@2x.png 2x, /assets/brand/wordmark@3x.png 3x" width="117" height="28" alt="Volyume" loading="lazy">
+      </a>
+      <p>Training, food and a weekly check-in, with a coach that explains every change. On iPhone and Android.</p>
+    </div>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Get the app</h2>
+        <ul class="site-footer__list">
+          <li><a href="https://apps.apple.com/gb/app/volyume/id6777083702">App Store, for iPhone</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=app.volyume">Google Play, for Android</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Volyume</h2>
+        <ul class="site-footer__list">
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/how-the-coach-works/">How the coach works</a></li>
+          <li><a href="/articles/">Articles</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Help</h2>
+        <ul class="site-footer__list">
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/challenge-terms/">Challenge terms</a></li>
+        </ul>
+      </div>
+      <div class="site-footer__group">
+        <h2 class="site-footer__heading">Contact</h2>
+        <ul class="site-footer__list">
+          <li><a class="site-footer__email" href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@<wbr>gmail.com</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="site-footer__legal">&copy; 2026 Volyume</p>
+  </div>
+</footer>
+<!-- /site:footer -->
 </body>
 </html>
