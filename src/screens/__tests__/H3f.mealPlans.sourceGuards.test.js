@@ -21,6 +21,14 @@ test('the oily fish setting: wording, values 0 to 7 plus No limit, phone only', 
 
 test('the 5 and 7 day chips carry a plain note when the day has oily fish', () => {
   expect(PLAN).toContain('grocerySheet.repeat >= 5 && countOilyMeals(plan?.days?.[0]) > 0');
+  // Lead review 2026-10-21: the note must sit with the shopping list's day chips.
+  // It once landed in the food swap sheet, where grocerySheet is null and the
+  // render threw on every swap.
+  const note = PLAN.indexOf('grocerySheet.repeat >= 5 && countOilyMeals');
+  expect(note).toBeGreaterThan(PLAN.indexOf('<FeatureSeen feature="shopping_list_days" />'));
+  const swapStart = PLAN.indexOf('accessibilityRole="header">Swap this food</Text>');
+  const swapEnd = PLAN.indexOf('foodSwapSheet.options.map', swapStart);
+  expect(PLAN.slice(swapStart, swapEnd)).not.toMatch(/grocerySheet\./);
 });
 
 test('Weigh as listed is in the plan row, the shopping list and the detail sheet', () => {

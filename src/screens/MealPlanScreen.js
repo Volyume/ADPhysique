@@ -1867,11 +1867,6 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
                   Pick any one. Grams are solved to match, so the meal stays close to target; the first is the closest match.
                 </Text>
-                {grocerySheet.dayCount === 1 && grocerySheet.repeat >= 5 && countOilyMeals(plan?.days?.[0]) > 0 ? (
-                  <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
-                    {`This day has ${countOilyMeals(plan.days[0]) === 1 ? 'an oily fish meal' : `${countOilyMeals(plan.days[0])} oily fish meals`}, so ${grocerySheet.repeat} days of it is ${countOilyMeals(plan.days[0]) * grocerySheet.repeat} oily fish meals.`}
-                  </Text>
-                ) : null}
                 <ScrollView
                   style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
                   contentContainerStyle={styles.swapListContent}
@@ -2005,6 +2000,11 @@ export default function MealPlanScreen({ navigation, route }) {
                       />
                     ))}
                   </View>
+                ) : null}
+                {grocerySheet.dayCount === 1 && grocerySheet.repeat >= 5 && countOilyMeals(plan?.days?.[0]) > 0 ? (
+                  <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
+                    {`This day has ${countOilyMeals(plan.days[0]) === 1 ? 'an oily fish meal' : `${countOilyMeals(plan.days[0])} oily fish meals`}, so ${grocerySheet.repeat} days of it is ${countOilyMeals(plan.days[0]) * grocerySheet.repeat} oily fish meals.`}
+                  </Text>
                 ) : null}
                 <ScrollView
                   style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
