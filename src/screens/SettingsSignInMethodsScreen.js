@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
@@ -18,16 +18,21 @@ export default function SettingsSignInMethodsScreen({ navigation }) {
   const [identities, setIdentities] = useState(null);
   const [busy, setBusy] = useState(null);
 
+  // The toast helper is read through a ref so `refresh` is stable: depending
+  // on it directly re-ran the load on every render wherever the helper is not
+  // memoised, and a failing read then looped (lead review 2026-10-21).
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const refresh = useCallback(async () => {
     const { identities: list, error } = await getSignInIdentities();
     if (error) {
       logError('SettingsSignInMethods.read', error, {});
-      toast.show('Could not load your sign-in methods. Try again in a moment.', { variant: 'error' });
+      toastRef.current?.show('Could not load your sign-in methods. Try again in a moment.', { variant: 'error' });
       setIdentities([]);
       return;
     }
     setIdentities(list);
-  }, [toast]);
+  }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
 
