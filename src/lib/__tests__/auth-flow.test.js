@@ -37,6 +37,15 @@ beforeEach(() => {
 });
 
 describe('clearAuthStateForSignOut', () => {
+  test('clears a pending password-recovery marker', async () => {
+    const useAppStore = require('../../store/useAppStore').default;
+    const rec = require('../passwordRecoveryState');
+    rec.markPasswordRecoveryPending();
+    expect(rec.isPasswordRecoveryPending()).toBe(true);
+    await useAppStore.getState().clearAuthStateForSignOut();
+    expect(rec.isPasswordRecoveryPending()).toBe(false);
+  });
+
   test('wipes every AsyncStorage key, sign-out leaves nothing on the device', async () => {
     // Policy 2026-05-24 (founder direction): sign-out wipes
     // everything from the device for this user. Same hammer as

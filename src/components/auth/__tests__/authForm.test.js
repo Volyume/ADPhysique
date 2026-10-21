@@ -6,9 +6,15 @@
 import { create, act } from 'react-test-renderer';
 import { TextInput, TouchableOpacity, Platform } from 'react-native';
 import OAuthButtons from '../OAuthButtons';
+jest.mock('../../../lib/supabase', () => ({
+  isGoogleIosConfigured: jest.fn(() => false),
+}));
+import { isGoogleIosConfigured } from '../../../lib/supabase';
 import EmailPasswordFields from '../EmailPasswordFields';
 
 describe('OAuthButtons', () => {
+  beforeEach(() => isGoogleIosConfigured.mockReturnValue(false));
+
   test('Google press fires onGoogle (Android)', () => {
     const onGoogle = jest.fn();
     const tree = create(<OAuthButtons onGoogle={onGoogle} onApple={() => {}} disabled={false} />);
@@ -23,15 +29,21 @@ describe('OAuthButtons', () => {
     expect(google.props.disabled).toBe(true);
   });
 
-  // Founder-approved rule change (Batch 4, item 2): this replaces the old
-  // "iOS hides Google (no iOS client id)" pin. Apple and Google now show on
-  // both platforms. It is a product rule, not a safety guard.
-  test.each(['ios', 'android'])('%s shows both Apple and Google', (os) => {
+  // Google on iPhone shows only once the iOS client id is configured; Apple
+  // shows everywhere and Android is unchanged.
+  test.each([
+    ['ios', true, true],
+    ['ios', false, false],
+    ['android', false, true],
+    ['android', true, true],
+  ])('%s with iOS client configured=%s: Google shown=%s', (os, configured, googleShown) => {
     const prev = Platform.OS;
     Platform.OS = os;
+    isGoogleIosConfigured.mockReturnValue(configured);
     try {
       const tree = create(<OAuthButtons onGoogle={() => {}} onApple={() => {}} disabled={false} />);
-      expect(tree.root.findAllByProps({ accessibilityLabel: 'Continue with Google' }).length).toBeGreaterThan(0);
+      const google = tree.root.findAllByProps({ accessibilityLabel: 'Continue with Google' }).length > 0;
+      expect(google).toBe(googleShown);
       expect(tree.root.findAllByProps({ accessibilityLabel: 'Continue with Apple' }).length).toBeGreaterThan(0);
     } finally {
       Platform.OS = prev;

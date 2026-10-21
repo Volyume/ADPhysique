@@ -151,3 +151,27 @@ describe('AX-09: loadAccessibility migrates a pre-split persisted reduceMotion i
     expect(useAppStore.getState().accessibility.reduceMotion).toBe(false);
   });
 });
+
+describe('haptics switch seeding on first load', () => {
+  test('Reduce motion users with no stored hapticsEnabled get haptics off, persisted once', async () => {
+    await AsyncStorage.setItem(A11Y_PREFS_KEY, JSON.stringify({ reduceMotionUserPref: true }));
+    useAppStore.setState({ accessibilityLoaded: false, accessibility: baseAccessibility({ hapticsEnabled: true }) });
+    await useAppStore.getState().loadAccessibility();
+    expect(useAppStore.getState().accessibility.hapticsEnabled).toBe(false);
+    expect(JSON.parse(await AsyncStorage.getItem(A11Y_PREFS_KEY)).hapticsEnabled).toBe(false);
+  });
+
+  test('a user who turned haptics back on is not reseeded', async () => {
+    await AsyncStorage.setItem(A11Y_PREFS_KEY, JSON.stringify({ reduceMotionUserPref: true, hapticsEnabled: true }));
+    useAppStore.setState({ accessibilityLoaded: false, accessibility: baseAccessibility({ hapticsEnabled: true }) });
+    await useAppStore.getState().loadAccessibility();
+    expect(useAppStore.getState().accessibility.hapticsEnabled).toBe(true);
+  });
+
+  test('everyone else defaults to haptics on', async () => {
+    await AsyncStorage.setItem(A11Y_PREFS_KEY, JSON.stringify({ reduceMotionUserPref: false }));
+    useAppStore.setState({ accessibilityLoaded: false, accessibility: baseAccessibility({ hapticsEnabled: true }) });
+    await useAppStore.getState().loadAccessibility();
+    expect(useAppStore.getState().accessibility.hapticsEnabled).toBe(true);
+  });
+});

@@ -25,6 +25,18 @@ export function takePasswordRecoveryPending() {
   return was;
 }
 
+export function clearPasswordRecoveryPending() {
+  pending = false;
+}
+
+// The set-new-password screen opens only for a signed-in person who is
+// through onboarding and the Article 9 gate, and never over a workout in
+// progress (it opens once the workout ends). The consent conditions are
+// unchanged; this only adds the workout condition.
+export function canOpenPasswordRecovery({ user, firstRunComplete, healthConsent, workoutActive }) {
+  return !!user && !user.isLocal && !!firstRunComplete && healthConsent === true && !workoutActive;
+}
+
 export function subscribePasswordRecovery(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);

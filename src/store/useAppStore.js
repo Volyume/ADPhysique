@@ -439,6 +439,12 @@ const useAppStore = create((set, get) => ({
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
     const prevUid = get().user?.id ?? null;
+    // A recovery marker must not outlive the session it belonged to, or the
+    // next account to sign in would be sent to set a new password.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/passwordRecoveryState').clearPasswordRecoveryPending();
+    } catch (_) { /* tolerate */ }
     try { log.logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid }); } catch (_) {}
 
     // Funnel telemetry: sign_out at the top of the flow, before the
@@ -2467,7 +2473,16 @@ const useAppStore = create((set, get) => ({
         : !!parsed.reduceMotion;
       const merged = { ...get().accessibility, ...parsed, reduceMotionUserPref: userPref };
       merged.reduceMotion = !!(get().systemReduceMotion || userPref);
+      // Haptics got their own switch after Reduce motion used to silence
+      // them. Someone who already had Reduce motion on had no haptics, so
+      // seed the new switch off for them once (persisted); everyone else
+      // starts on.
+      const seedHapticsOff = parsed.hapticsEnabled === undefined && userPref;
+      if (seedHapticsOff) merged.hapticsEnabled = false;
       set({ accessibility: merged, accessibilityLoaded: true });
+      if (seedHapticsOff) {
+        await get().setAccessibilityPref('hapticsEnabled', false);
+      }
     } else {
       set({ accessibilityLoaded: true });
     }

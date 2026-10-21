@@ -3,6 +3,7 @@ import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, fontSize, fontWeight, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import { isGoogleIosConfigured } from '../../lib/supabase';
 
 // expo-apple-authentication is iOS-only; require it lazily and only on iOS so
 // Android never loads the native module. Falls back to null where absent so the
@@ -38,6 +39,8 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
+  // Google on iPhone needs the iOS client id; hide the button until it is set.
+  const showGoogle = Platform.OS !== 'ios' || isGoogleIosConfigured();
   const AppleButton = AppleAuthentication?.AppleAuthenticationButton;
   return (
     <View style={styles.block}>
@@ -77,6 +80,7 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
           OAuth flow (the custom button above, since the native component is
           iOS-only); Google on iPhone uses the iOS client id from
           docs/release/SIGN-IN-SETUP.md. */}
+      {showGoogle ? (
       <TouchableOpacity
         style={[styles.btn, live.btn, raised && live.btnRaised, disabled && styles.btnDisabled]}
         onPress={onGoogle}
@@ -87,6 +91,7 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
         <Ionicons name="logo-google" size={18} color={t.colors.textPrimary} />
         <Text style={[styles.btnText, live.btnText]}>Continue with Google</Text>
       </TouchableOpacity>
+      ) : null}
       {dividerLabel ? (
         <View style={styles.divider}>
           <View style={[styles.dividerLine, live.dividerLine]} />
