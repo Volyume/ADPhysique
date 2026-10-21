@@ -16,6 +16,7 @@
 
 const S = require('./siteScan');
 const R = require('./siteRules');
+const { declProblems } = require('./siteCssRules');
 
 const hits = (rules, text) => rules.filter(([, test]) => (typeof test === 'function' ? test(text) : test.test(text))).map(([name]) => name);
 
@@ -200,5 +201,72 @@ describe('the weight-loss and review rules', () => {
   test('catches a promised number of kilos', () => {
     expect(hits(R.LOSE_NUMBER, 'Lose 5 kg in a month.')).not.toEqual([]);
     expect(hits(R.LOSE_NUMBER, 'Lose weight slowly.')).toEqual([]);
+  });
+});
+
+describe('the CSS rules', () => {
+  const CTX = { radiusPx: new Set([2, 4, 6, 10, 16, 20]), roundOk: [/(^|[\s>+~(])(img|picture|video|canvas)(?![\w-])/i, /\.avatar(?![\w-])/i], nowrapOk: [], isTokens: false };
+  const cats = (css, ctx = CTX) => S.parseCss(css).flatMap((r) => S.declarations(r.body).flatMap((d) => declProblems(d, r, ctx))).map((p) => p.cat);
+
+  test.each([
+    ['a{text-overflow:ellipsis}', 'clip'],
+    ['a{-webkit-line-clamp:3}', 'clip'],
+    ['a{display:-webkit-box;line-clamp:2}', 'clip'],
+    ['.btn{white-space:nowrap}', 'nowrap'],
+    ['body{overflow-x:hidden}', 'overflow'],
+    ['html{overflow:hidden}', 'overflow'],
+    ['.btn{border-radius:999px}', 'radius'],
+    ['.chip{border-radius:9999px}', 'radius'],
+    ['.dot{border-radius:50%}', 'radius'],
+    ['.btn{border-radius:8px}', 'radius'],
+    ['.btn{border-radius:var(--radius-full)}', 'radius'],
+    ['.btn{border-radius:calc(infinity * 1px)}', 'radius'],
+    [':root{--radius-full:999px}', 'radius-var'],
+    [':root{--pill:12px}', 'radius-var'],
+    ['h1{-webkit-background-clip:text}', 'gradient-text'],
+    ['h1{-webkit-text-fill-color:transparent}', 'gradient-text'],
+    ['h1{text-shadow:0 0 8px #fff}', 'glow'],
+    ['nav{backdrop-filter:blur(10px)}', 'glass'],
+    ['.blob{filter:blur(40px)}', 'glow'],
+    ['.pulse{animation:pulse 2s infinite}', 'motion'],
+    ['a{color:#F5A623}', 'colour'],
+    ['a{background:rgb(10, 20, 30)}', 'colour'],
+    ['a{font-size:17px}', 'size-px'],
+    ['small{font-size:10px}', 'size-min'],
+    ['small{font-size:0.5rem}', 'size-min'],
+  ])('catches %s', (css, cat) => {
+    expect(cats(css)).toContain(cat);
+  });
+
+  test.each([
+    'a{text-overflow:clip}',
+    '.btn{white-space:normal}',
+    'img{border-radius:50%}',
+    '.avatar{border-radius:999px}',
+    '.card img{border-radius:9999px}',
+    '.btn{border-radius:16px}',
+    '.btn{border-radius:1rem}',
+    '.card{border-radius:var(--radius-lg)}',
+    '.sq{border-radius:0}',
+    'a{color:var(--text)}',
+    'a{background:rgba(0,0,0,.5)}',
+    'a{font-size:var(--text-body)}',
+    'p{font-size:1rem}',
+    'h1{text-shadow:none}',
+    '.spin{animation:fade 1s 2}',
+    ':root{--radius-lg:16px}',
+  ])('leaves %s alone', (css) => {
+    expect(cats(css)).toEqual([]);
+  });
+
+  test('tokens.css may write colours and px sizes; nothing else may', () => {
+    expect(cats(':root{--bg:#0D0D0D;--text-body:16px}', { ...CTX, isTokens: true })).toEqual([]);
+    expect(cats(':root{--bg:#0D0D0D}')).toContain('colour');
+  });
+
+  test('a selector on the allow-list is exempt only when every selector in the rule is', () => {
+    expect(cats('img, .btn{border-radius:999px}')).toContain('radius');
+    expect(cats('img, .avatar{border-radius:999px}')).toEqual([]);
+    expect(cats('.btn{white-space:nowrap}', { ...CTX, nowrapOk: [/^\.btn$/] })).toEqual([]);
   });
 });
