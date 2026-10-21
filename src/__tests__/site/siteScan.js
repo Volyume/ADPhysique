@@ -158,7 +158,7 @@ function parseHtml(html) {
     const selfClosing = /\/\s*$/.test(rawAttrs);
     if (selfClosing) rawAttrs = rawAttrs.replace(/\/\s*$/, '');
     const attrs = parseAttrs(rawAttrs);
-    const el = { name, attrs, start: segments.length, end: segments.length };
+    const el = { name, attrs, start: segments.length, end: segments.length, parent: stack.length ? stack[stack.length - 1] : null };
     elements.push(el);
     if (BLOCK.has(name)) block += 1;
 
@@ -190,6 +190,12 @@ function parseHtml(html) {
   };
 
   return { html: src, elements, segments, comments, scripts, styles, title, metas, metaContent, textOf };
+}
+
+/** Is `child` somewhere inside `ancestor`? */
+function inside(child, ancestor) {
+  for (let p = child.parent; p; p = p.parent) { if (p === ancestor) return true; }
+  return false;
 }
 
 const pageCache = new Map();
@@ -478,7 +484,7 @@ const FORWARDED = [/^\/partner\/[A-Za-z0-9]{8,}\/?$/, /^\/c\/[A-Za-z0-9-]{3,32}\
 module.exports = {
   REPO, PUBLIC, ORIGIN, SUPABASE_HOST,
   allPublicFiles, readPublic, publicExists, sha256, isMembers, htmlFiles, urlOf, cssFiles,
-  decodeEntities, parseHtml, readPage, norm, sentencesOf, bodyBlocks, metaCopy, copyUnits,
+  decodeEntities, parseHtml, inside, readPage, norm, sentencesOf, bodyBlocks, metaCopy, copyUnits,
   scriptStrings, scriptCopy, explainedRanges, citationRanges,
   parseCss, declarations, pageCss, allCss,
   imageSizeOf, imageSize, fileSize,

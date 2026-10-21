@@ -14,6 +14,7 @@
  */
 'use strict';
 
+const { Buffer } = require('buffer');
 const S = require('./siteScan');
 const R = require('./siteRules');
 const { declProblems } = require('./siteCssRules');
@@ -268,5 +269,40 @@ describe('the CSS rules', () => {
     expect(cats('img, .btn{border-radius:999px}')).toContain('radius');
     expect(cats('img, .avatar{border-radius:999px}')).toEqual([]);
     expect(cats('.btn{white-space:nowrap}', { ...CTX, nowrapOk: [/^\.btn$/] })).toEqual([]);
+  });
+});
+
+describe('the image and nesting helpers', () => {
+  test('read the size of a PNG, a JPEG and a WebP from the header', () => {
+    const png = Buffer.alloc(33);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
+    png.writeUInt32BE(1200, 16);
+    png.writeUInt32BE(630, 20);
+    expect(S.imageSizeOf(png)).toEqual({ type: 'png', w: 1200, h: 630 });
+
+    // SOI, an APP0 segment of 16 bytes, then SOF0 with height 630 and width 1200.
+    const jpeg = Buffer.concat([
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]), Buffer.alloc(14),
+      Buffer.from([0xff, 0xc0, 0x00, 0x11, 0x08, 0x02, 0x76, 0x04, 0xb0, 0x03, 0x01, 0x22, 0x00]), Buffer.alloc(8),
+    ]);
+    expect(S.imageSizeOf(jpeg)).toEqual({ type: 'jpeg', w: 1200, h: 630 });
+
+    const webp = Buffer.alloc(40);
+    webp.write('RIFF', 0, 'ascii');
+    webp.write('WEBP', 8, 'ascii');
+    webp.write('VP8X', 12, 'ascii');
+    webp.writeUIntLE(1199, 24, 3);
+    webp.writeUIntLE(629, 27, 3);
+    expect(S.imageSizeOf(webp)).toEqual({ type: 'webp', w: 1200, h: 630 });
+
+    expect(S.imageSizeOf(Buffer.from('not an image at all, just text'))).toBeNull();
+  });
+
+  test('knows which elements sit inside which', () => {
+    const page = S.parseHtml('<a href="/x"><img alt="inside" src="/a.png"></a><img alt="outside" src="/b.png">');
+    const a = page.elements.find((e) => e.name === 'a');
+    const [inner, outer] = page.elements.filter((e) => e.name === 'img');
+    expect(S.inside(inner, a)).toBe(true);
+    expect(S.inside(outer, a)).toBe(false);
   });
 });
