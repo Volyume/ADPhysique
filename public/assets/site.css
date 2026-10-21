@@ -921,3 +921,566 @@ body[data-section="support"] .site-nav__link[href="/support/"] {
     align-items: center;
   }
 }
+
+/* ── Long text: policy, terms, articles ───────────────────────────────── */
+
+/* Numbered legal sections. The number is part of the heading, as in the
+   policy the app shows. */
+.legal-section {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-xl);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.legal-section > * + * {
+  margin-top: var(--space-md);
+}
+
+.prose .legal-section h2 {
+  margin-top: 0;
+  font-size: var(--font-size-xl);
+}
+
+.prose h2 .n {
+  display: inline-block;
+  min-width: 1.75em;
+  margin-right: var(--space-sm);
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.prose .legal-section > * + h2 {
+  margin-top: 0;
+}
+
+.prose .updated {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* The path back to the articles, and a little line about the piece. */
+.crumb {
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-sm);
+}
+
+.crumb a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: var(--font-weight-medium);
+}
+
+.article-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.prose .refs {
+  margin-top: var(--space-xxl);
+  padding-top: var(--space-xl);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.prose .refs h2 {
+  margin-top: 0;
+  font-size: var(--font-size-xl);
+}
+
+.prose .refs ol {
+  margin-top: var(--space-md);
+  font-size: var(--font-size-sm);
+}
+
+.prose .refs li {
+  overflow-wrap: anywhere;
+}
+
+/* A short pointer to the app, inside an article. */
+.prose .card {
+  color: var(--color-text-secondary);
+}
+
+.prose .card > * + * {
+  margin-top: var(--space-md);
+}
+
+/* The list of articles: each one a single tap target. */
+.article-list {
+  list-style: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.article-list > li {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.article-card {
+  display: block;
+  padding-block: var(--space-xl);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.article-card .title {
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-snug);
+}
+
+.article-card:hover .title {
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary);
+  text-underline-offset: 0.18em;
+}
+
+.article-card p {
+  margin-top: var(--space-sm);
+  max-width: 40em;
+}
+
+.article-card__more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.article-card__more .icon {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+/* ── Working pages: links people reach from a poster, an invite or an email ── */
+
+.hidden,
+[hidden] {
+  display: none !important;
+}
+
+.container--narrow {
+  max-width: 44rem;
+}
+
+.working {
+  padding-block: var(--space-xxl) calc(var(--space-xxxl) * 1.5);
+}
+
+.working > .container > * + * {
+  margin-top: var(--space-xl);
+}
+
+.working .actions,
+.working .row-actions,
+.working .choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.working .actions {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.working .button {
+  max-width: 100%;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.note,
+.form-note,
+.muted {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.working .muted {
+  margin-top: var(--space-xl);
+}
+
+.working p.intro {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-relaxed);
+  max-width: 40em;
+}
+
+/* A message the page shows after something happens. */
+.result,
+.notice {
+  padding: var(--space-lg);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.result p,
+.notice p {
+  color: var(--color-text-primary);
+}
+
+.g-error {
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+}
+
+.status-line {
+  padding-block: var(--space-xxxl);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+}
+
+.reason-box {
+  padding: var(--space-xl);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.reason-box > * + * {
+  margin-top: var(--space-md);
+}
+
+.reason-box h2 {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-snug);
+}
+
+.reason-box p {
+  color: var(--color-text-secondary);
+}
+
+/* Forms: the app's rounded fields, with the amber focus ring. */
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+fieldset + fieldset,
+fieldset + .actions,
+form > * + * {
+  margin-top: var(--space-xl);
+}
+
+legend {
+  display: block;
+  margin-bottom: var(--space-md);
+  padding: 0;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-snug);
+}
+
+.q-index {
+  display: inline-block;
+  min-width: 1.5em;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.q-optional {
+  margin-left: var(--space-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-sm);
+}
+
+.q-help {
+  margin-bottom: var(--space-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 7.5rem;
+  padding: var(--space-md) var(--space-lg);
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-text);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  resize: vertical;
+}
+
+textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* A choice from a short list, as a full-width row (the survey's options). */
+.chips {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-height: 48px;
+  padding-left: var(--space-lg);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.chip input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.chip label {
+  flex: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg) var(--space-md) 0;
+  cursor: pointer;
+}
+
+/* Email topics: a switch row for each kind of email. */
+.topics {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.topic {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  min-height: 48px;
+  padding: var(--space-lg);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+
+.topic input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.topic .name {
+  display: block;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.topic .what {
+  display: block;
+  margin-top: var(--space-xxs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* The challenge's points table. */
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.score-table td {
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: top;
+}
+
+.score-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.score-table td.pts {
+  padding-left: var(--space-lg);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tag {
+  margin-left: var(--space-xs);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+}
+
+/* People and stories shared from Community. The page's script builds these. */
+.community-card {
+  padding: var(--space-xl);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.community-card > * + * {
+  margin-top: var(--space-xs);
+}
+
+.community-card h2,
+.community-card .eyebrow {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-overline);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
+}
+
+.community-card .hero {
+  padding: 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xxl);
+  line-height: var(--line-height-tight);
+}
+
+.community-card .sub,
+.community-card .k {
+  color: var(--color-text-secondary);
+}
+
+.stat-row,
+.lift {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-xs) var(--space-lg);
+  padding-block: var(--space-sm);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.stat-row:first-of-type {
+  margin-top: var(--space-md);
+}
+
+.list-row {
+  display: block;
+  min-height: 44px;
+  padding-block: var(--space-md);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.list-row .sub {
+  display: block;
+  margin-top: var(--space-xxs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-sm);
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.author .name {
+  color: var(--color-text-secondary);
+}
+
+.author .name b {
+  color: var(--color-text-primary);
+}
+
+/* The one round shape on the site: a person's initials. */
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background-color: var(--color-primary-bg);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.profile .avatar {
+  width: 4.5rem;
+  height: 4.5rem;
+  font-size: var(--font-size-xxl);
+}
+
+.profile .handle,
+.profile .meta,
+.caption {
+  color: var(--color-text-secondary);
+}
+
+.profile .bio,
+.caption {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.profile .bio {
+  color: var(--color-text-primary);
+}
+
+.profile .followers {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Plain words in a row, not capsules. */
+.profile .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-lg);
+  color: var(--color-text-secondary);
+}
+
+.profile .chip {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.empty {
+  color: var(--color-text-secondary);
+}
+
+.code-line {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+/* A route through the app's menus, as it is written on screen. */
+.path {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
