@@ -4,7 +4,10 @@
 Marketing HQ. Every public marketing claim (ads, store listing, website,
 social, press) must trace to a fact stated in this file.
 
-**Date.** 2026-07-12.
+**Date.** 2026-07-12. Corrected 2026-07-13, 2026-08-25, 2026-09-03 and
+2026-10-21. The 2026-10-21 corrections are collected in section 0 below; where
+a line elsewhere in this file disagrees with section 0, section 0 wins. Lines
+it replaces are kept as history and marked SUPERSEDED 2026-10-21.
 
 **Verification method.** Facts below come from two sources only, both dated
 2026-07-12: (1) direct statements from the founder in this session, marked
@@ -19,6 +22,97 @@ re-verified before reuse if the app has been updated since this date.
 
 ---
 
+## 0. Corrections of 2026-10-21 (volyume.app rebuild; read first)
+
+Re-verified against the code on main at app version 3.3.0. The evidence, with
+file and line for every item, is in docs/site-rebuild-2026-10/FACTS.md and
+FEATURES.md; the owner's rules for the site are in
+docs/site-rebuild-2026-10/BRIEF.md. The Claim Rule still applies: a claim is
+public only if it is here (or in section 0) and true of the shipped app.
+
+1. **Counts.** 923 built-in exercises (was 551), counted from `CORPUS` in
+   `src/lib/exerciseCorpus/index.js`. 58 built-in training plans (was 47),
+   counted from `LIBRARY_PLANS` in `src/lib/seedRoutines.js`. 4 personal-best
+   types (was 3: the fourth, least assistance, is for assisted lifts;
+   `src/lib/algorithms.js`). Unchanged: 29,279 bundled food rows and 9 physique
+   goal options. New: 94 curated meals (83 curated staple foods behind them)
+   and 6 training styles. On volyume.app these figures are written from the
+   code into `public/assets/facts.json` by the site build step and pinned by
+   `src/__tests__/site/site.facts.guard.test.js`; do not copy a figure from
+   this file onto a page.
+2. **iPhone is live.** The App Store page is live (2026-10-21). Copy says
+   iPhone and Android and links both stores. Every line in this file that says
+   TestFlight, "coming soon" or "not yet on the public App Store" is
+   SUPERSEDED (sections E and F). Platform limits stay: home-screen widgets,
+   the lock-screen rest countdown, "Set as wallpaper" and exact rest alerts
+   are Android only; Google sign-in is offered on Android only while the
+   iPhone client id is empty; Apple sign-in is offered on both.
+3. **No Pro, no trial, no prices.** Volyume has no tier, trial, subscription
+   or in-app purchase (founder decision 2026-09-03, D137;
+   `src/lib/proGate.js` `FULL_ACCESS_FOR_ALL = true`). Section G (a free week
+   of Volyume Pro as a Google Play promo code) is SUPERSEDED: there is no Pro
+   to give a week of. Nothing in public copy names a Pro tier, a trial, a
+   price or an upgrade.
+4. **Barcode scanning is not Pro.** It is available to every account, like
+   everything else in section B (`src/navigation/RootNavigator.js` registers
+   it with no guard). The old rule that barcode scanning must not be called
+   free described a tier that no longer exists and is SUPERSEDED in
+   CLAIMS-STANDARDS section 5.
+5. **No price or cost claims on volyume.app (owner brief, 2026-10-21).** No
+   "free", "all free", "no card", "no time limit", "no ads" or anything
+   similar. This supersedes the section B instruction to "state plainly that
+   the app is free with no card and no time limit", and the word "permanently"
+   in section B (a promise about the future). Two exceptions only: the
+   challenge pages and terms may carry, exactly, "Completing a challenge with
+   a final score of 50 or more earns free for life."; and /challenge-terms/
+   alone may carry the legal sentence "Entry is free, and you can leave at any
+   time." Enforced by `src/__tests__/site/site.copy.guard.test.js`.
+6. **Health Connect and Apple Health are gone.** The link was removed on
+   2026-06-30 (`src/screens/ProOnboardingScreen.js`, founder), no health-app
+   module is installed and the app asks for no health permission. The
+   privacy policy's section 6 is replaced by "Volyume does not connect to
+   Apple Health or Health Connect. It does not read from or write to any
+   health app on your phone." No copy claims a health-app or wearable link;
+   the app has no wearable companion.
+7. **The weekly decision.** By default your coach suggests each change and
+   you tap to apply it (Collaborative). There are two other modes: Coached
+   applies the week's changes when you open the decision (a safety hold still
+   waits for you), and Manual removes Apply. So "nothing changes until you
+   tap" is not true of every account; say "by default". Section A's "no silent
+   auto-apply" is narrowed to the default.
+8. **Privacy lines.** The usage events the app records are first-party,
+   tied to a pseudonymous account id, kept six months and switchable off in
+   Settings. "No PII is sent to analytics" (section E) is therefore
+   SUPERSEDED; the true line is "no third-party analytics or tracking tools,
+   and usage data never contains your weights, foods or notes". Cloud account
+   data is in the EU (Dublin, documented not code-verified), but member and
+   sign-in emails go through Resend, which keeps its records in the United
+   States; a residency line must say so. Progress photos and workout videos
+   stay on the phone unless you choose to share them, and "never uploaded" is
+   not true once a person shares one. Use the app's own wording: "Your
+   progress photos and workout videos stay on this phone, unless you choose
+   to share them." and "Your coach isn't an AI chatbot. It follows fixed
+   rules."
+9. **Weigh-ins.** The weekly coach's minimum number of morning weigh-ins is
+   not one stable fact (the code carries both 3 and 4). Do not cite a number
+   (section D's "at least 3" is SUPERSEDED); weight is one input among
+   several and never the headline.
+10. **Vitamins and minerals.** Shown on a food's detail where the food data
+    has them, and averaged in Food Insights; display only, never read by the
+    coach. Do not say "micronutrient tracking" (section F's flat "no" is
+    narrowed to this).
+11. **Names.** The in-app name for the photo score is Volyume Score (not
+    "Progress Scan" or "Physique Scan"); it is a score from your own photos,
+    with a confidence level, worked out on your phone, and it can decline to
+    score. It is not a body-fat measurement and the in-app band label
+    "Leanness" stays off public pages. "Precision Coaching" is used sparingly;
+    people meet "Weekly check-in", "Coaching decision" and the Coach tab.
+12. **Foods.** "Over 29,000 foods, built around UK products", not "UK foods".
+    The Open Food Facts part is a snapshot dated 2026-07-05 inside the app;
+    "refreshes weekly" is a pipeline claim and "up to date" is not said.
+
+---
+
 ## A. What Volyume Is (founder-stated)
 
 - Connected physique coaching system for serious self-coached lifters.
@@ -30,7 +124,8 @@ re-verified before reuse if the app has been updated since this date.
   - Google Play: https://play.google.com/store/apps/details?id=app.volyume
   - App Store:   https://apps.apple.com/gb/app/volyume/id6777083702
   Copy may therefore say the app is available for iPhone and Android, and
-  may link to both.
+  may link to both. CONFIRMED 2026-10-21: the App Store page is live; see
+  section 0, item 2.
 - Zero users at build date; no marketing has been done before this system.
 - The end user (not gyms, not coaches) is the intended audience.
 - The problem: users of workout loggers (Strong/Hevy), nutrition apps
@@ -65,7 +160,8 @@ re-verified before reuse if the app has been updated since this date.
 - **The coach PROPOSES, the athlete APPLIES (founder direction 2026-05-27,
   reaffirmed 2026-05-28 for calories).** Every weekly adjustment is surfaced
   as a suggestion with an Apply button, and nothing changes until the user
-  taps it. There is no silent auto-apply, calories included. Verified
+  taps it. There is no silent auto-apply, calories included. [NARROWED
+  2026-10-21 to the default mode; section 0, item 7.] Verified
   `src/lib/coachApply.js` header and `CoachOutputScreen.js`. COPY RULE:
   never write that Volyume "decides what to change", "changes your plan" or
   "adjusts your targets" unqualified, because each implies it acts on its
@@ -97,11 +193,16 @@ re-verified before reuse if the app has been updated since this date.
 
 ## B. Access and pricing (founder-stated 2026-09-03)
 
+[2026-10-21: the facts in this section stand; the copy instructions at its end
+are SUPERSEDED by section 0, item 5. Public copy makes no claim about price or
+cost.]
+
 Volyume is fully free. Every feature listed in this file is available to
 every signed-in account at no cost. There is no Pro tier, no trial, no
 subscription, and no in-app purchase. Founder decision, 2026-09-03.
 
-**Everything is included, permanently:**
+**Everything is included, permanently:** [SUPERSEDED 2026-10-21: "permanently"
+is a promise about the future and is not said; section 0, item 5.]
 - Full workout logging
 - Plan library and plan use
 - Custom plan building
@@ -113,12 +214,15 @@ subscription, and no in-app purchase. Founder decision, 2026-09-03.
 - Meal planning
 - Progress Scan
 - Weekly Precision Coaching
-- Advanced progression
+- Advanced progression [2026-10-21: no screen or label by this name exists in
+  the app; name what exists instead, such as suggested weights and reps set by
+  set in the logger and the plan's progression]
 
 Do not mention a price, a trial length, a subscription, or a "Pro" tier in
 any public copy. Do not describe former pricing, "for now" framing, or
-future plans; state plainly that the app is free with no card and no time
-limit.
+future plans. [SUPERSEDED 2026-10-21: the closing instruction, "state plainly
+that the app is free with no card and no time limit", is withdrawn. On
+volyume.app nothing is said about price or cost at all; section 0, item 5.]
 
 ---
 
@@ -130,12 +234,17 @@ Each figure below is tied to a specific file reference, verified
 - **551 exercises** in the built-in library, plus unlimited user-added
   custom exercises — `src/lib/seedExercises.js`, RAW array, lines 580-1279.
   NOTE: older marketing material stated 448 — that figure is stale; use 551.
+  [SUPERSEDED 2026-10-21: 923 exercises; the RAW array is gone and the library
+  is `CORPUS` in `src/lib/exerciseCorpus/index.js`. Neither 551 nor 448 is
+  used; section 0, item 1.]
 - **47 built-in training plans** — `src/lib/seedRoutines.js`,
   `LIBRARY_PLANS`. CORRECTED 2026-08-25: this said 31, which was stale and
   was nearly used on an advert. Counted from the live array (47 top-level
   entries) and cross-checked against
   `src/lib/__tests__/seedRoutinesLibraryData.test.js`, which pins 47 and
   guards against the array holes that hid 16 of them from some users.
+  [SUPERSEDED 2026-10-21: 58 plans (the 47 array entries, two band plans and one
+  authored plan were added since); section 0, item 1.]
 - **9 physique goal options**: general (non-competing) plus 8 divisions —
   Men's Physique, Classic Physique, Bodybuilding, Bikini, Wellness, Figure,
   Women's Physique, Women's Bodybuilding —
@@ -144,9 +253,13 @@ Each figure below is tied to a specific file reference, verified
   rows = 29,279 rows total, fully searchable offline —
   `assets/seed/*.dat` `_meta` rowCount headers. The OpenFoodFacts snapshot
   refreshes weekly, so copy should say "over 29,000 UK foods" rather than
-  citing the exact figure.
+  citing the exact figure. [CORRECTED 2026-10-21: the count stands; the wording
+  is "over 29,000 foods, built around UK products", and "refreshes weekly" is
+  not said (section 0, item 12). Searchable offline once the first-launch
+  import has finished.]
 - **3 personal-best types** auto-detected: estimated 1RM, heaviest weight,
   most reps at a weight — `src/lib/algorithms.js`, `PR_TYPE_RANK`.
+  [SUPERSEDED 2026-10-21: 4 types, adding least assistance for assisted lifts.]
 - **Tech stack (developer-audience posts only)**: built with React Native
   0.81.5 + Expo SDK 54 — root `package.json` (`"react-native": "0.81.5"`,
   `"expo": "~54.0.35"`), verified 2026-07-13. Use only where a technical
@@ -162,6 +275,8 @@ Each figure below is tied to a specific file reference, verified
   `coachLedger.test.js` and `weeklyCoach.f10.test.js`; in-app hold message:
   "Need at least 3 morning weights for a reliable trend."). Verified
   2026-07-12 after the compliance gate flagged the number as untraced.
+  [SUPERSEDED 2026-10-21: the code carries 3 in one place and 4 in others, so
+  no number is cited; section 0, item 9.]
 - **Every screen and feature is available to every signed-in account** — see
   section B (founder decision, 2026-09-03). Do not describe any feature as
   gated, locked, or tier-limited in public copy.
@@ -170,15 +285,22 @@ Each figure below is tied to a specific file reference, verified
 
 ## E. Privacy and Platform Posture (code-verified, usable in copy)
 
-- Offline-first: the local database on device is the source of truth.
+- Offline-first: the local database on device is the source of truth. [Copy
+  rule 2026-10-21: "offline-first" and "source of truth" are jargon; say it
+  works without signal, saved on your phone and backed up to your account.]
 - Local data is encrypted on device.
-- Cloud data residency: EU (Dublin).
+- Cloud data residency: EU (Dublin). [2026-10-21: member and sign-in emails
+  go through Resend, which keeps its records in the United States; a residency
+  line must say so. Section 0, item 8.]
 - No adverts anywhere in the app.
 - No user data is sold.
-- No PII is sent to analytics or crash-reporting tooling.
+- No PII is sent to analytics or crash-reporting tooling. [SUPERSEDED
+  2026-10-21: usage events are first-party and tied to a pseudonymous account
+  id; say "no third-party analytics or tracking tools". Section 0, item 8.]
 - Food search works fully offline.
 - iOS is currently TestFlight / "coming soon" — never claim App Store
-  availability on iOS until it is actually live.
+  availability on iOS until it is actually live. [SUPERSEDED 2026-10-21: it is
+  live; copy says iPhone and links the App Store. Section 0, item 2.]
 
 ---
 
@@ -186,9 +308,15 @@ Each figure below is tied to a specific file reference, verified
 
 - No exercise demonstration videos — exercises use text cues, not video.
 - No wearable or smartwatch companion app.
-- iOS is not yet on the public App Store.
+- No Apple Health or Health Connect link (removed 2026-06-30; section 0, item 6).
+- No cardio logging (running, cycling, rowing), no chat assistant, no
+  demonstration videos.
+- iOS is not yet on the public App Store. [SUPERSEDED 2026-10-21: it is; section
+  0, item 2.]
 - No restaurant or takeaway food database.
-- No micronutrient tracking.
+- No micronutrient tracking. [NARROWED 2026-10-21: vitamins and minerals are
+  shown, display only, where the food data has them; still no "tracking".
+  Section 0, item 10.]
 - No meal-photo AI (no photograph-a-meal-to-log-it feature).
 - Progress Scan may withhold a score entirely when photo capture quality or
   confidence is insufficient — never promise a score will always be given.
@@ -196,6 +324,10 @@ Each figure below is tied to a specific file reference, verified
 ---
 
 ## G. Operational Reward Mechanisms (marketing-operated, verified 2026-07-12)
+
+[SUPERSEDED 2026-10-21: there is no Pro tier, so there is no "free week of
+Volyume Pro" to give. Do not promise this reward. Section 0, item 3. Kept as
+history.]
 
 - Survey reward: a free week of Volyume Pro delivered as a Google Play promo
   code. Mechanism: the founder generates promotional codes for the Pro
@@ -260,7 +392,8 @@ voice, which is what the in-app screen already says.
 - **Session share cards.** Redrawn (frame, plan-name pill, hero label, stat
   icons) and the intensity badge is retired, so a session is no longer
   graded on the card. Verified commit `6f32275`.
-- **Plan library.** The library holds 47 plans. Two array holes in
+- **Plan library.** The library holds 47 plans. [SUPERSEDED 2026-10-21: 58;
+  section 0, item 1.] Two array holes in
   `LIBRARY_PLANS` aborted seeding partway, so affected users held 16 fewer
   and could not repair it; the seed marker is written only after the loop
   completes and existing plans are matched by name, so the next launch

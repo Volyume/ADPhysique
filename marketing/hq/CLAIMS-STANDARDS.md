@@ -4,6 +4,16 @@
 **Applies to:** all outward-facing content, without exception.
 **Owner of the gate:** the compliance-reviewer agent.
 **Companion file:** `marketing/hq/PRODUCT-FACTS.md` (the single source of verified fact).
+**Corrected 2026-10-21 (volyume.app rebuild).** Volyume is fully free with no
+trial, no tier and no prices (founder decision 2026-09-03, D137;
+`src/lib/proGate.js` `FULL_ACCESS_FOR_ALL = true`). Sections 3 and 4 (the trial
+and the pricing) and the barcode line in section 5 described a product that no
+longer exists and are marked SUPERSEDED where they stand, kept as history and
+never to be used. Section 4A is the rule that replaces them. The privacy
+bullet in section 6 is corrected in place. The site is enforced by the tests
+in `src/__tests__/site/`. The owner's brief for the site is
+`docs/site-rebuild-2026-10/BRIEF.md`; where this document and that brief meet,
+the stricter rule applies.
 
 ---
 
@@ -77,6 +87,11 @@ it becomes a product claim and must trace to PRODUCT-FACTS.
 
 ## 3. Approved trial wording
 
+> **SUPERSEDED 2026-10-21. Do not use.** There is no trial, no Pro tier and no
+> subscription (D137). Nothing in this section may appear in public copy. It is
+> kept as history of the wording that was approved while a trial existed. The
+> rule now is section 4A.
+
 The trial is the single most distortion-prone thing we say, because it
 combines two separate mechanisms. Get this wrong and it reads as a false
 "free" promise. The exact structure is:
@@ -132,6 +147,11 @@ good offer; it does not need inflating.
 
 ## 4. Pricing
 
+> **SUPERSEDED 2026-10-21. Do not use.** There is no price: no £1.99, no
+> £19.99, no monthly or annual plan, no Pro. The in-code billing surfaces stay
+> dormant and unreachable. Never advertise a price, a former price or a future
+> price. This section is kept as history; the rule now is section 4A.
+
 - Volyume Pro is **£1.99 per month** or **£19.99 per year**, UK.
   (Monthly corrected 2026-08-25 from £2.99, which this line still carried
   after the founder's 2026-08-18 reduction recorded in
@@ -145,6 +165,36 @@ good offer; it does not need inflating.
   founder-only decision (see OPERATING-CHARTER autonomy boundaries).
 - Do not imply an annual saving with a specific figure unless that figure is
   verified in PRODUCT-FACTS and matches the live store prices.
+
+---
+
+## 4A. No price or cost claims (owner brief, 2026-10-21, binding on volyume.app)
+
+On volyume.app (every page, every article, every title and description) there
+is no claim about price or cost: no "free", "all free", "no card", "no time
+limit", "no ads", no currency sign, no "subscription", "trial", "Pro" (as a
+tier), "upgrade", "premium" or "paywall", and nothing that means the same
+thing. Do not describe what the product used to cost or might cost. The page
+that says nothing about price is the compliant page.
+
+Two exceptions, and only these:
+
+- On the challenge landing page, the challenge terms and the privacy policy
+  (existing legal text), the sentence "Completing a challenge with a final
+  score of 50 or more earns free for life." exactly as it is.
+- On `/challenge-terms/` alone, the legal free-entry sentence "Entry is free,
+  and you can leave at any time." (a free way to enter is what keeps a prize
+  draw lawful in Great Britain; owner answer 2026-10-21).
+
+Enforcement: `src/__tests__/site/site.copy.guard.test.js` fails any other
+sentence on any page, and fails the free-for-life or free-entry sentence if it
+turns up on a page that may not carry it. The store listings
+(`docs/PLAY_STORE_LISTING.md`, `docs/APP_STORE_CONNECT_LISTING.md`) are the
+founder's own wording and are not changed by this entry; for any other new
+channel, state nothing about price unless the founder approves the exact line,
+and never use "permanently", "forever", "for now" or "no time limit", which
+are promises about the future. In the PASS record (section 10), "pricing" is
+checked as "no price or cost claim" under this section.
 
 ---
 
@@ -176,7 +226,10 @@ not negotiable on the strength of a clever exception.
 - **Claiming Volyume replaces a good human coach.** — It does not; the honest
   position is that it is a system for self-coached lifters.
 - **Claiming barcode scanning is free.** — Barcode scanning is a Pro feature;
-  saying otherwise misrepresents the free tier.
+  saying otherwise misrepresents the free tier. [SUPERSEDED 2026-10-21: there is
+  no Pro and no free tier. Barcode scanning is available to every account
+  (`src/navigation/RootNavigator.js` registers it with no guard). It is a
+  feature to describe, and section 4A governs any word about cost.]
 - **Superiority claims** ("best", "most accurate", "number one") without a
   verifiable, published basis. — Objective superiority claims require
   substantiation we do not have.
@@ -204,7 +257,12 @@ framings.
   AI", never any wording implying the software forms a model of the person.
 - **"Coach" / "coaching."** Means the structured weekly Precision Coaching
   decision (change or hold, with reasons). Never implies a human coach, a chat
-  assistant, or a conversational agent.
+  assistant, or a conversational agent. [2026-10-21: say "by default your coach
+  suggests and you tap to apply"; a Coached mode applies the week's changes when
+  you open the decision, so "nothing changes until you tap" is not said. People
+  meet "Weekly check-in", "Coaching decision" and the Coach tab; "Precision
+  Coaching" is used sparingly. The app's own line is "Your coach isn't an AI
+  chatbot. It follows fixed rules."]
 - **The engine.** Describe it as **"deterministic coaching, not generative
   coaching"** — explainable, rule-based, the same inputs give the same
   decision. Avoid an unqualified "no AI" slogan, which invites argument and
@@ -215,6 +273,17 @@ framings.
   there are no ads, no data is sold, and no personal identifiers are sent to
   analytics. Do not say "completely private" or "we never see your data" as a
   bare slogan; state the specific, true posture instead.
+  [CORRECTED 2026-10-21. "There are no ads" is a cost-side claim and is not
+  said on volyume.app (section 4A). "No personal identifiers are sent to
+  analytics" is withdrawn: first-party usage events carry a pseudonymous account
+  id, kept six months and switchable off in Settings; say "no third-party
+  analytics or tracking tools, and usage data never contains your weights, foods
+  or notes". A residency line ("account data is stored in the EU, in Dublin")
+  must be followed by the Resend exception: member and sign-in emails are sent
+  through Resend, which keeps its records in the United States. Progress photos
+  and workout videos "stay on this phone, unless you choose to share them";
+  "never uploaded" is not said once a person can share one. There is no Apple
+  Health or Health Connect link (removed 2026-06-30); claim none.]
 
 The test: a qualified claim passes only if a sceptical, informed reader would
 still find it accurate after reading the app's own description of the feature.
@@ -355,6 +424,21 @@ text. Each is banned in all public copy. An artefact containing any of them
     email. Allowed sparingly in social captions only where the platform's
     convention plainly expects it, and then never more than one in a caption.
 
+16. **Jargon (owner brief, 2026-10-21).** Write for someone who has never used a
+    training or food app. Training and food jargon is explained once in plain
+    words or replaced: hypertrophy, deload, mesocycle, progressive overload,
+    TDEE, BMR, maintenance calories, macros, RIR, RPE, AMRAP, myo-reps,
+    rest-pause, offline-first, sync engine, V-taper, X-frame, and "volume" as a
+    training word. Internal terms (ED flag, safety state, telemetry, Supabase,
+    archetype) never reach a page. Plain replacements: building muscle; a
+    lighter recovery week; adding weight or reps over time; how many hard sets
+    each muscle gets in a week; the calories your body uses in a day; protein,
+    carbs and fat; how hard a set felt; works without signal, saved on your
+    phone and backed up to your account. No fragment slogans ("Train. Eat.
+    Grow."), no exclamation marks, no emoji or sparkle icons. Enforcement for
+    volyume.app: `src/__tests__/site/site.copy.guard.test.js` (a term may appear
+    only inside an element marked `data-explains`) and `site.claims.guard.test.js`.
+
 **Write like this instead.** Write like a knowledgeable person talking to
 another adult. Vary sentence length naturally; do not fall into a single
 cadence. Prefer the concrete over the abstract and a specific number over a
@@ -404,9 +488,9 @@ section by hand for artefacts outside those files.
 - **Nothing is marked publish-ready without a recorded PASS from the
   compliance-reviewer agent that cites this document.**
 - A PASS record names the artefact, the version, the reviewer, the date, and
-  the specific sections checked (at minimum: Claim Rule, trial wording if the
-  trial is mentioned, pricing if price is mentioned, prohibited list, qualified
-  claims, ASA/CAP, tone).
+  the specific sections checked (at minimum: Claim Rule, no price or cost claim
+  under 4A, prohibited list, qualified claims, ASA/CAP, tone). [2026-10-21: the
+  trial and pricing checks are retired with sections 3 and 4.]
 - A **FAIL** returns the artefact to the writer with cited reasons — the
   section and the exact wording at fault — and a corrected draft is re-gated.
 - Borderline calls are failed, not waved through, and escalated per the

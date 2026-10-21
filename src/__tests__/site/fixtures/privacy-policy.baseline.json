@@ -1,0 +1,138 @@
+{
+  "note": "Today's text of public/privacy/index.html on main, 2026-10-21, read by sitePolicy.js. Sections 1 to 5 and 7 to 13 must stay word for word; section 6 is replaced by the owner's text (docs/site-rebuild-2026-10/BRIEF.md) and the Last updated date moves to 21 October 2026. Regenerate only when the policy text is changed on purpose.",
+  "lead": [
+    "Privacy policy",
+    "Last updated: 17 October 2026",
+    "This policy explains what Volyume collects, why, and how to delete it. Volyume is a training and nutrition self-coaching tool. Your health data stays private: it is never shown to other people, used for advertising or sold. Community, where you can follow other lifters and share your workouts, is optional, and section 5 explains what it shares."
+  ],
+  "sections": [
+    {
+      "heading": "1 Data we collect",
+      "blocks": [
+        "When you create an account we collect your name, email address, body measurements, workout logs, and training preferences.",
+        "To coach you, Volyume uses your health and nutrition data:",
+        "Your weight and how it changes over time",
+        "Your body fat percentage and lean mass when you enter them",
+        "Everything you log to your food diary",
+        "Your weekly check-ins, including energy, recovery, and how you feel",
+        "The screening questions you answer about eating habits",
+        "Progress photos you choose to take, plus photo quality, result confidence, leanness band, Volyume Score and progress change when you use that feature",
+        "Short workout videos you choose to record (up to two minutes, no sound), kept on your device only",
+        "Volyume Score is a visual progress feature. It is not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment. Progress photo image files stay on your device unless you choose to share or export them. Workout video files stay on your device too: they are never uploaded, are not included in backups, and are deleted when you delete the workout or your account. To save space, a video is removed from your device after 7 days unless you tap Keep on it in Your videos; you can choose a longer time, or to keep every video, in Settings under Your data.",
+        "This is special-category health data under UK GDPR Article 9. We use it only with your explicit consent, recorded on the consent screen at onboarding. Without that consent the engine cannot run."
+      ]
+    },
+    {
+      "heading": "2 How it is used",
+      "blocks": [
+        "Volyume uses your health and food logs to help guide training, nutrition, and recovery. This data is used solely to run the app and give you personalised training and nutrition guidance.",
+        "We also keep first-party usage data to see which features get used, where people get stuck and where the app is slow. It records which screens open and for how long, when something fails or takes too long, and counts of what happens in the app, such as how many sets a finished workout had or whether you logged food that day. It never includes the content: no weights, foods, amounts, notes, names or messages, and nothing about injuries and limitations or Volyume’s wellbeing checks. It is tied to a pseudonymous account id, not your name. Before you agree to the health data terms, the only usage data recorded is whether the app was slow or failed. Usage data is kept for six months and then deleted, and it is used only to improve the app. We do not use third-party analytics or tracking tools, and we do not build advertising profiles. You can switch it off in Settings."
+      ]
+    },
+    {
+      "heading": "3 Where it is stored",
+      "blocks": [
+        "On your phone, your data sits in encrypted local storage: EncryptedSharedPreferences on Android and Keychain on iOS for tokens, and SQLite for your training history, food diary, progress metadata and rollups.",
+        "Progress photo, scan image and workout video files are device-local. Cloud-backed account data is stored in Supabase (EU region), with row-level security so only you, and the team supporting your account when needed, can see it. It does not leave the UK or EU."
+      ]
+    },
+    {
+      "heading": "4 The safety check",
+      "blocks": [
+        "Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support. This runs automatically on your health data.",
+        "When that happens, you can keep using Volyume normally. Your weight log, food diary, training, and check-ins all continue. Only the calorie target stops shifting. The eating-disorder pattern flags are the most sensitive data we hold, and the support team never sees the raw flag data."
+      ]
+    },
+    {
+      "heading": "5 Community",
+      "blocks": [
+        "Community is optional. Nothing you log is shown to other people unless you join it.",
+        "Your profile. When you join, you choose a handle and can add a display name, a short bio, your training styles and goal, and your area and gym. Your profile is public unless you set it to followers only, and you can hide your area and gym at any time. It also shows how many sessions you usually do a week, the lifts you focus on and your experience level, and you can hide any of these. You can choose to show more: the days and times you usually train, your age band, and your training consistency, such as how many sessions you have done this week.",
+        "Your workouts are shared by default. Once you have joined, each workout you finish is posted to Community automatically. The post shows the workout's name and date, how long it took, how many sets you did, the total weight you lifted, the exercises, your best set and how many personal records you set, and up to three of those records are posted alongside it. It never includes your body weight, measurements, food diary, photos or check-ins. Everyone in Community can see these posts, except that if you are under 18 only your followers can. The switch is shown, already on, before you create your profile.",
+        "Turning it off. You can stop sharing at any time by turning off “Share what I did” in Community, under Training profile, and you can remove what you have already shared at the same time. Automatic sharing also pauses on its own while calm mode is on, or while the safety check in section 4 has paused your calorie changes.",
+        "Links outside the app. A post, profile or training plan shared with everyone can be opened from a link by people who do not use Volyume. Nothing from anyone under 18 is ever shown this way.",
+        "Posts, messages and groups. You can also write posts, comment, give Respect, share training plans, join groups and message people you are connected with. Messages are private to the people in the conversation. If someone reports a message, our moderators can see it.",
+        "Location. If you tap “Use my location” in the gym finder, your phone's approximate location is used for that one search and then discarded. It is never stored.",
+        "Notifications. Community can send you notifications, for example when someone follows you, replies to you or messages you. You can turn them off in Settings, under Notifications.",
+        "Keeping Community safe. You can block, mute and report people, posts, comments, plans, messages and groups. The Volyume team reviews reports, and a post, comment or plan reported by three different people is hidden automatically.",
+        "Leaving. You can leave Community at any time in Community, under Privacy. Leaving deletes your profile, posts and follows; your training, plans and food diary are not touched. Deleting your account deletes everything you shared in Community too. Reports you made are kept for moderation, with your account removed from them.",
+        "Why we use this data. To run the Community features you choose to use, which is part of our agreement with you, and to keep Community safe, which is our legitimate interest."
+      ]
+    },
+    {
+      "heading": "6 Health Connect",
+      "blocks": null
+    },
+    {
+      "heading": "7 Third parties",
+      "blocks": [
+        "We never sell it, never share it with advertisers, and never use it to train a public AI model.",
+        "A small number of sub-processors help run the app, each contractually bound to process your data only for the purpose described:",
+        "Supabase (EU region) for the database, authentication and storage",
+        "Sentry for crash and error reporting, on scrubbed events with your weight, intake and body data removed",
+        "Expo push for notification delivery",
+        "Resend (sends from Ireland, keeps email records in the United States under the standard contract clauses) to send the news emails, section 8",
+        "Open Food Facts and USDA FoodData Central for food lookup data",
+        "Adding a new sub-processor requires updating this policy with 30 days' notice via in-app push."
+      ]
+    },
+    {
+      "heading": "8 News emails",
+      "blocks": [
+        "When you create an account you are told that Volyume will email you about new features, short surveys and a weekly summary. These are the news emails.",
+        "Your choice. You can turn them off at any time, in the app under Settings with the “News by email” switch, or with the Unsubscribe link in every email. Turning them off does not change anything else in the app, and you can turn them back on in Settings.",
+        "When we do not send. We do not send news emails while the safety check in section 4 has paused your calorie changes.",
+        "Who sends them. Resend sends these emails for us from Ireland and keeps its email records in the United States under the standard contract clauses. It receives your email address and the email itself, and only for that purpose. We measure whether each news email is opened and which of its links are clicked.",
+        "What the team can see. To choose who to email, the team can see the last day you opened the app, your app version and how many workouts you logged recently, never what was in them.",
+        "What we keep. Your email address, a record of each time you turned them on or off and the wording you saw, a log of which news emails were sent to you, and your answers to any survey you take. A survey opened from one of our emails links your answers to your account, so a second answer replaces the first.",
+        "Deleting. Deleting your account deletes all of this."
+      ]
+    },
+    {
+      "heading": "9 Gym challenges",
+      "blocks": [
+        "A gym challenge is optional and runs at one gym for up to a month. You only take part if you join it yourself, and only adults can join.",
+        "What it reads. To score you, the challenge reads your training, your check-ins and Community posts, whether you logged food, whether you weighed in, and whether calm mode is on or the safety check in section 4 has paused your calorie changes, so it never asks you to log food or weigh in at those times. It never reads what you ate or what you weigh.",
+        "Who sees what. If you are in the top 10, the name you choose and your score are shown to the other people in that challenge. Nobody else sees them. Winners are picked by a recorded computer draw. If you win, we use your email address to tell you, and your name and county are published unless you object.",
+        "Leaving. You can leave a challenge at any time. After you leave, your records are not read for it again and you are taken off its board.",
+        "Why we may use it. Your explicit consent, which you give when you join. Completing a challenge with a final score of 50 or more earns free for life.",
+        "Deleting. Deleting your account deletes all of it, except the record of each prize draw, which is kept so the draw can be checked and no longer links to you once your account is gone."
+      ]
+    },
+    {
+      "heading": "10 Deleting your data",
+      "blocks": [
+        "When you confirm deletion, cloud removal starts immediately and local data is wiped at once on the device that initiated it. If final sign-in removal cannot finish while offline, Volyume tells you and completes it when you reconnect. Backup copies are purged within 30 days. This includes your Community profile and everything you shared there (section 5).",
+        "We keep one thing after deletion: a one-way hash of your email address, held in our deletion record to recognise that an account was deleted before and to count account deletions for our regulatory records. It holds no readable email or other personal data, and is never used to contact you or rebuild your account."
+      ]
+    },
+    {
+      "heading": "11 Your UK GDPR rights",
+      "blocks": [
+        "Under UK and EU GDPR you have the right to:",
+        "Access the personal data we hold about you",
+        "Rectify anything inaccurate",
+        "Erase your account and data, from Settings, Account, Delete account",
+        "Port your data: Settings, Your data lets you export workout sets as CSV and create a JSON app-data backup. The JSON backup includes database records, including progress photo metadata and Volyume Score analysis metadata, but not private photo image files",
+        "Restrict or object to processing",
+        "Withdraw consent for the Article 9 health and nutrition processing at any time, which deletes your account because the engine cannot run without that data",
+        "Lodge a complaint with the ICO",
+        "We respond to verifiable requests within 30 days."
+      ]
+    },
+    {
+      "heading": "12 Children",
+      "blocks": [
+        "Volyume is for users 13 and over, the UK age at which a person can consent to their own data being processed. We do not knowingly create or serve accounts for under-13s.",
+        "In Community, anyone under 18 shares with their followers only and never appears on pages shown outside the app.",
+        "If we discover an account belongs to someone under 13, we delete the account."
+      ]
+    },
+    {
+      "heading": "13 Contact",
+      "blocks": [
+        "Questions or requests: support@volyume.app"
+      ]
+    }
+  ]
+}
