@@ -38,7 +38,7 @@ import { getSupabaseClient, hasStoredAuthSession } from '../lib/supabase';
 // Campaign 24 Wave E: the pure boot-time auth presentation decision (the
 // startup auth-hydration flash fix — see the give-up branch in the render).
 import { classifyAuthBoot, classifyFreshInstall, classifySessionRead } from '../lib/authBootGate';
-import { isPasswordRecoveryPending, takePasswordRecoveryPending, subscribePasswordRecovery } from '../lib/passwordRecoveryState';
+import { isPasswordRecoveryPending, takePasswordRecoveryPending, subscribePasswordRecovery, canOpenPasswordRecovery } from '../lib/passwordRecoveryState';
 import { readHealthConsentStatus } from '../lib/consent/healthConsentRead';
 import {
   setPendingChallenge, takePendingChallenge, peekPendingChallenge,
@@ -1316,7 +1316,9 @@ export default function RootNavigator() {
   // only once the SAME conditions as the challenge join below hold (signed in,
   // onboarding finished, Article 9 consent granted), so the consent gate and
   // the routing order above are untouched; until then the marker simply waits.
-  const recoveryReady = !!user && !user.isLocal && firstRunComplete && healthConsent === true;
+  // Not while a workout is active: the screen opens once the workout ends.
+  const workoutActive = useAppStore(s => !!s.activeWorkout);
+  const recoveryReady = canOpenPasswordRecovery({ user, firstRunComplete, healthConsent, workoutActive });
   useEffect(() => {
     if (!recoveryReady) return undefined;
     let cancelled = false;

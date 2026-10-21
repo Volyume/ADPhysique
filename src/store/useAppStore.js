@@ -439,6 +439,12 @@ const useAppStore = create((set, get) => ({
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
     const prevUid = get().user?.id ?? null;
+    // A recovery marker must not outlive the session it belonged to, or the
+    // next account to sign in would be sent to set a new password.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/passwordRecoveryState').clearPasswordRecoveryPending();
+    } catch (_) { /* tolerate */ }
     try { log.logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid }); } catch (_) {}
 
     // Funnel telemetry: sign_out at the top of the flow, before the
