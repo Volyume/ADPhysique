@@ -169,4 +169,55 @@ describe('PersonRow', () => {
     const tree = render({ person: person(), metric: '4 sessions', metricRole: 'label' });
     expect(metricFontSize(tree)).toBe(type.label.fontSize);
   });
+
+  // D231 (app layout rework, batch 5): the Hub's one "My profile" row. `title`
+  // replaces the name line and `subtitle` stays under it whatever the days or
+  // caption do; both are off by default, so every other caller is unchanged.
+  describe('title and subtitle (D231)', () => {
+    test('title replaces the name line, and the avatar still takes its initial from the name', () => {
+      const tree = render({ person: person({ display_name: 'Rowan M' }), title: 'My profile' });
+      const text = flattenText(tree.toJSON());
+      expect(text).toContain('My profile');
+      expect(text).not.toContain('Rowan M');
+      // The avatar's initial is the person's own, never the title's "M".
+      expect(text).toContain('R');
+      expect(text).not.toMatch(/\bM\b/);
+    });
+
+    test('subtitle shows under the name AND with the day dots, which replace only the caption', () => {
+      const tree = render({
+        person: person({ caption: '2 weeks in a row' }),
+        title: 'My profile',
+        subtitle: '@rowan_lifts',
+        metric: '3 sessions',
+        days: ['mon', 'wed'],
+      });
+      const text = flattenText(tree.toJSON());
+      expect(text).toContain('@rowan_lifts');
+      expect(text).toContain('3 sessions');
+      expect(text).not.toContain('2 weeks in a row');
+      expect(tree.root.findAll((n) => n.props?.accessibilityRole === 'image').length).toBeGreaterThan(0);
+    });
+
+    test('subtitle and the caption both show when there are no days', () => {
+      const tree = render({ person: person({ caption: '2 weeks in a row' }), title: 'My profile', subtitle: '@rowan_lifts' });
+      const text = flattenText(tree.toJSON());
+      expect(text).toContain('@rowan_lifts');
+      expect(text).toContain('2 weeks in a row');
+    });
+
+    test('the spoken label is the title, the subtitle, the days and the metric', () => {
+      const tree = render({
+        person: person(), title: 'My profile', subtitle: '@rowan_lifts', metric: '3 sessions', days: ['mon', 'wed'], onPress: () => {},
+      });
+      const button = tree.root.findAll((n) => n.props?.accessibilityRole === 'button')[0];
+      expect(button.props.accessibilityLabel).toBe('My profile. @rowan_lifts. Trained Mon, Wed. 3 sessions');
+    });
+
+    test('without them nothing changes: the name line is the name and no extra line is drawn', () => {
+      const tree = render({ person: person(), metric: '4 sessions', onPress: () => {} });
+      const button = tree.root.findAll((n) => n.props?.accessibilityRole === 'button')[0];
+      expect(button.props.accessibilityLabel).toBe('Priya K. 4 sessions');
+    });
+  });
 });

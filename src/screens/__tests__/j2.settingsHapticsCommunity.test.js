@@ -18,10 +18,13 @@ describe('item 11 Settings landing', () => {
     const heads = [...src.matchAll(/<SectionHeader title="([^"]+)"/g)].map((m) => m[1]);
     expect(heads).toEqual(['Training', 'Nutrition', 'Reminders', 'Display & accessibility', 'Privacy & data', 'Account & help']);
   });
+  // RE-POINTED (D231, app layout rework batch 5; the owner amended item 11):
+  // "Injuries & limitations" and "Nutrition targets" left Settings (the owner
+  // answered "Remove both"). Every other row and its order is the owner's table.
   test('rows in the owner order', () => {
     const labels = [...src.matchAll(/label="([^"]+)"/g)].map((m) => m[1]);
     expect(labels).toEqual([
-      'Injuries & limitations', 'Coaching', 'Workout', 'Nutrition targets', 'Dietary needs',
+      'Coaching', 'Workout', 'Dietary needs',
       'Notifications', 'Coaching reminders', 'Display', 'Units', 'Home screen widget',
       'Your data', 'Privacy and legal', 'Community', 'Account', 'Profile', 'Help and about',
     ]);
