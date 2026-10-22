@@ -657,7 +657,10 @@ describe('D230 R17: a single write updates in place and reconciles once in the b
   });
 });
 
-describe('D228 item 9: the mark-all toast counts meals, as the banner does', () => {
+// RE-POINTED (D231, app layout rework batch 3): the banner's "Mark as eaten"
+// is the planned-meals line's "Mark all eaten" (same handler, same toast);
+// only the control's name changed.
+describe('D228 item 9: the mark-all toast counts meals, as the planned-meals line does', () => {
   const planned = (id, slot) => entry({ id, entry_date: TODAY, meal_slot: slot, is_planned: 1 });
 
   test('one meal of three foods toasts "1 planned meal marked as eaten."', async () => {
@@ -665,7 +668,7 @@ describe('D228 item 9: the mark-all toast counts meals, as the banner does', () 
     // The write changes three ROWS; the toast must still say one meal.
     require('../../lib/food/db').confirmPlannedDay.mockResolvedValueOnce(3);
     const tree = await mountDiary();
-    await act(async () => { await byLabel(tree, 'Mark planned meals as eaten')[0].props.onPress(); });
+    await act(async () => { await byLabel(tree, 'Mark all eaten')[0].props.onPress(); });
     expect(mockToastShow.mock.calls.at(-1)[0]).toBe('1 planned meal marked as eaten.');
   });
 
@@ -673,7 +676,7 @@ describe('D228 item 9: the mark-all toast counts meals, as the banner does', () 
     dayWith({ today: [planned('p1', 'meal_1'), planned('p2', 'meal_1'), planned('p3', 'meal_2')] });
     require('../../lib/food/db').confirmPlannedDay.mockResolvedValueOnce(3);
     const tree = await mountDiary();
-    await act(async () => { await byLabel(tree, 'Mark planned meals as eaten')[0].props.onPress(); });
+    await act(async () => { await byLabel(tree, 'Mark all eaten')[0].props.onPress(); });
     expect(mockToastShow.mock.calls.at(-1)[0]).toBe('2 planned meals marked as eaten.');
   });
 });

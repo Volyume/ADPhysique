@@ -22,6 +22,15 @@
  *      same idiom as showFoodHint/showWaterHint) teaches that planned meals
  *      can be confirmed one by one or all at once, since the bulk control no
  *      longer sits next to where planned meals first appear.
+ *
+ * RE-POINTED (D231, app layout rework batch 3, owner-approved
+ * docs/app-rework-2026-10/SPEC.md): items 2 and 3 are superseded by ONE
+ * planned-meals line ("3 planned meals . Mark all eaten . Clear") at the top
+ * of the meals, which replaces both the bottom banner (item 2) and the two
+ * hint captions (item 3). Item 1 (the micronutrient panel stays gone) is
+ * unchanged. The per-meal "Mark as eaten" (the primary interaction) is
+ * unchanged. The line's behaviour is mounted in
+ * DiaryScreen.batch3Nutrition.test.js; this file keeps the source guards.
  */
 import fs from 'fs';
 import path from 'path';
@@ -49,81 +58,46 @@ describe('D12 item 1: diary micronutrient panel removed', () => {
   });
 });
 
-describe('D12 item 2: bulk mark-as-eaten demoted to the bottom of the page', () => {
-  test('the planned banner (bulk Mark as eaten + Clear) still exists with its original gating and copy', () => {
-    // CP-10 batch E (2026-07-10): DiaryScreen now reads a live theme
-    // (src/hooks/useTheme.js); styles.plannedBanner gained a live.plannedBanner
-    // override. The pinned contract (gating + which frozen style backs the
-    // banner) is unchanged -- widened only to allow the insertion.
-    expect(SRC).toMatch(/\{plannedCount > 0 && !selectionMode \? \(\s*<View style=\{\[styles\.plannedBanner, live\.plannedBanner\]\}>/);
-    expect(SRC).toMatch(/title="Mark as eaten"/);
-    expect(SRC).toMatch(/onPress=\{handleConfirmPlanned\}/);
-    expect(SRC).toMatch(/title="Clear"/);
-    expect(SRC).toMatch(/onPress=\{handleClearPlanned\}/);
+describe('D231 (was D12 item 2): the bulk mark-as-eaten is the planned-meals line, not a banner', () => {
+  test('the planned-meals line carries the same gating and the same two handlers the banner had', () => {
+    expect(SRC).toMatch(/import PlannedMealsLine from '\.\.\/components\/food\/PlannedMealsLine';/);
+    expect(SRC).toMatch(
+      /\{plannedCount > 0 && !selectionMode \? \(\s*<PlannedMealsLine\s+count=\{plannedCount\}\s+canMarkEaten=\{!isFutureDay\}\s+onMarkAllEaten=\{handleConfirmPlanned\}\s+onClear=\{handleClearPlanned\}/,
+    );
+  });
+
+  test('the bottom banner and its two Buttons are gone', () => {
+    expect(SRC).not.toMatch(/plannedBanner/);
+    expect(SRC).not.toMatch(/plannedBtn/);
+    expect(SRC).not.toMatch(/title="Mark as eaten"/);
+    expect(SRC).not.toMatch(/planned \{plannedCount === 1/);
   });
 
   test('per-meal marking (the primary interaction) is still wired on MealSection, unmoved', () => {
     expect(SRC).toMatch(/onConfirmPlanned=\{!isFutureDay \? \(\) => handleConfirmPlannedSlot\(slot\.key\) : undefined\}/);
   });
 
-  test('the bulk banner now renders AFTER WaterRow (true bottom of the page), not before the meal sections', () => {
-    const waterRowIdx = SRC.indexOf('<WaterRow');
-    const bannerIdx = SRC.indexOf('<View style={[styles.plannedBanner, live.plannedBanner]}>');
+  test('the line renders BEFORE the meal sections (the top of the meals), not at the foot of the page', () => {
+    const lineIdx = SRC.indexOf('<PlannedMealsLine');
     const mealSectionsIdx = SRC.indexOf('visibleSlots.map(');
-    expect(waterRowIdx).toBeGreaterThan(-1);
-    expect(bannerIdx).toBeGreaterThan(-1);
+    const waterRowIdx = SRC.indexOf('<WaterRow');
+    expect(lineIdx).toBeGreaterThan(-1);
     expect(mealSectionsIdx).toBeGreaterThan(-1);
-    expect(bannerIdx).toBeGreaterThan(waterRowIdx);
-    expect(bannerIdx).toBeGreaterThan(mealSectionsIdx);
-  });
-
-  test('the relocated banner sits inside the ScrollView, just before it closes', () => {
-    const bannerIdx = SRC.indexOf('<View style={[styles.plannedBanner, live.plannedBanner]}>');
-    const scrollCloseIdx = SRC.indexOf('</ScrollView>');
-    expect(scrollCloseIdx).toBeGreaterThan(bannerIdx);
-    // Nothing but the banner's own closing tags sits between the banner and
-    // </ScrollView> other than the ": null}" of its own conditional.
-    expect(SRC.slice(bannerIdx, scrollCloseIdx)).not.toMatch(/<WaterRow/);
+    expect(lineIdx).toBeLessThan(mealSectionsIdx);
+    expect(lineIdx).toBeLessThan(waterRowIdx);
   });
 });
 
-describe('D12 item 3: one-time hint teaching mark-as-eaten', () => {
-  test('the hint flag follows the existing @volyume_seen_* once-ever convention', () => {
-    expect(SRC).toMatch(/const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';/);
+describe('D231 (was D12 item 3): the two one-time hint captions are retired with the line that replaces them', () => {
+  test('no HintCaption is imported or rendered by the Diary (the water caption lives inside WaterRow)', () => {
+    expect(SRC).not.toMatch(/HintCaption/);
   });
 
-  test('the hint defaults to hidden and only shows when the stored flag is not "true"', () => {
-    expect(SRC).toMatch(
-      /AsyncStorage\.getItem\(DIARY_MARKEATEN_HINT_KEY\)\.then\(\(v\) => \{\s*if \(active && v !== 'true'\) setShowMarkEatenHint\(true\);\s*\}\)/,
-    );
-  });
-
-  test('dismissing the hint persists the flag so it never returns', () => {
-    expect(SRC).toMatch(
-      /const dismissMarkEatenHint = useCallback\(\(\) => \{\s*setShowMarkEatenHint\(false\);\s*AsyncStorage\.setItem\(DIARY_MARKEATEN_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);(?: \/\/[^\n]*)?\s*\}, \[\]\);/,
-    );
-  });
-
-  test('the hint is gated on planned meals actually being present and not mid-selection', () => {
-    // L08-teach (founder ask 2026-07-09, ux-world-class-audit-2026-07-09):
-    // this hint now also stays hidden while the more specific plan-added
-    // teach (showPlanAddedHint) is showing, so the two never stack; every
-    // other D12 gate (plannedCount, selectionMode) is unchanged. Food Diary
-    // audit 2026-10-16, item 11: not on a future day, where nothing can be
-    // ticked off yet.
-    expect(SRC).toMatch(
-      /\{plannedCount > 0 && !selectionMode && !isFutureDay && !showPlanAddedHint && showMarkEatenHint \? \(\s*<HintCaption/,
-    );
-  });
-
-  test('the copy is calm, explains both the per-meal and bulk paths, and has no em dash', () => {
-    const match = SRC.match(/text="Tick meals off one by one as you eat, or mark them all as eaten at once from the bottom of the page\."/);
-    expect(match).toBeTruthy();
-    expect(match[0]).not.toMatch(/—/);
-  });
-
-  test('marking a planned meal as eaten (bulk or per-meal) counts as discovery and dismisses the hint', () => {
-    expect(SRC).toMatch(/if \(n > 0\) dismissMarkEatenHint\(\); \/\/ discovery: bulk mark-as-eaten used/);
-    expect(SRC).toMatch(/dismissMarkEatenHint\(\); \/\/ discovery: per-meal mark-as-eaten used/);
+  test('the mark-eaten and plan-added hint flags, state and copy are gone', () => {
+    expect(SRC).not.toMatch(/DIARY_MARKEATEN_HINT_KEY|markeaten_hint/);
+    expect(SRC).not.toMatch(/DIARY_PLANADDED_HINT_KEY|planadded_hint/);
+    expect(SRC).not.toMatch(/showMarkEatenHint|showPlanAddedHint|dismissMarkEatenHint|dismissPlanAddedHint/);
+    expect(SRC).not.toMatch(/Tick meals off/);
+    expect(SRC).not.toMatch(/Your meals are in the diary/);
   });
 });

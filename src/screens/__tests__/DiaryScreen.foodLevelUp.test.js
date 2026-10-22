@@ -7,10 +7,12 @@
  *
  *  1. R1, THE SAME WORKSPACE ON EVERY DAY. An empty day renders the meal
  *     cards with their one-tap usual chips, and no EmptyDiary card ("Nothing
- *     logged for this day yet."). "Copy yesterday" is a door only on an empty
- *     day whose yesterday has food. Against the pre-D230 screen an empty day
+ *     logged for this day yet."). Against the pre-D230 screen an empty day
  *     showed EmptyDiary INSTEAD of the cards, so the chip assertions fail
  *     there: the first food of a day could never be one tap.
+ *     RE-POINTED (D231, app layout rework batch 3): "Copy yesterday" is no
+ *     longer a row on the screen; copying yesterday is the first row of Day
+ *     tools -> Copy from another day (the copy tests below go through it).
  *  2. R16, HEADINGS. Every meal name is a header, and the Day tools, Meals
  *     and Copy from another day sheet titles are headers, reached the way a
  *     person reaches them (the day pager's tools button, then a row). Against
@@ -21,7 +23,7 @@
  *     (the calorie ring and the macro bars) and the water fill. Against the
  *     old screen the count was higher (the Trends glyph, the water glyph,
  *     the refresh spinner's tint), so the equality fails there. The one-time
- *     hint captions are marked seen first: their shared "Got it" is outside
+ *     water hint caption is marked seen first: its shared "Got it" is outside
  *     this lane and is reported, not counted.
  *  4. R4/R16, 48 dp CHIPS. Every usual, "Yesterday's <meal>" and suggestion
  *     chip is the house Chip at a minimum height of 48 dp (touchTarget). The
@@ -30,8 +32,10 @@
  *     total computed from the render's `waterMl`), and the screen shows the
  *     value the database returns. Two taps inside one await window are two
  *     +250 deltas, so neither can be lost.
- *  6. R11/R19: Day tools carries "Meals" and "Nutrition targets"; the
- *     latter is the same cross-tab door the no-targets state uses.
+ *  6. R11/R19: Day tools carries "Meals". RE-POINTED (D231): "Nutrition
+ *     targets" left Day tools; it is the calorie card's target, the same
+ *     cross-tab door the no-targets state uses (batch 3 tests, in
+ *     DiaryScreen.batch3Nutrition.test.js).
  *
  * Harness conventions (native mocks, whole-module DB mocks, focus-effect
  * shim) are taken from DiaryScreen.bankingAvailable.test.js and
@@ -195,6 +199,18 @@ async function mountDiary(nav = makeNav()) {
   return tree;
 }
 
+// D231: "Copy yesterday" is the first row of Day tools -> Copy from another
+// day. Opens the tools, opens the picker (which lists `days`, newest first)
+// and taps "Yesterday"; no confirm sits between the tap and the copy.
+async function copyYesterdayViaPicker(tree, days) {
+  mockGetRecentLoggedDays.mockResolvedValue(days);
+  await act(async () => { byLabel(tree, 'Open diary tools')[0].props.onPress(); });
+  await act(async () => { await byLabelStart(tree, 'Copy from another day. ')[0].props.onPress(); });
+  await flush();
+  await act(async () => { await byLabelStart(tree, 'Yesterday. ')[0].props.onPress(); });
+  await flush();
+}
+
 // The shallowest node with this label that is pressable.
 const byLabel = (tree, label) => tree.root.findAll(
   (n) => n.props?.accessibilityLabel === label && typeof n.props?.onPress === 'function',
@@ -307,30 +323,27 @@ describe('D230 R1: the workspace is the same on every day', () => {
     }));
   });
 
-  test('"Copy yesterday" is a door only on an empty day whose yesterday has food', async () => {
-    // Empty day, empty yesterday: no door.
-    dayWith({ today: [], yesterday: [] });
-    const noYesterday = await mountDiary();
-    expect(byLabel(noYesterday, "Copy yesterday's entries")).toHaveLength(0);
-    // The meal builder is a door on every day.
-    expect(byLabel(noYesterday, 'Open meal builder for this day or week')).toHaveLength(1);
-
-    // Empty day, yesterday has food: the door, and it copies through the
-    // same confirm as before.
-    dayWith({ today: [], yesterday: [entry({ id: 'y1', entry_date: YESTERDAY }), entry({ id: 'y2', entry_date: YESTERDAY, meal_slot: 'meal_2' })] });
+  // RE-POINTED (D231, batch 3): the "Copy yesterday" row left the screen.
+  // Nothing on any day offers it; the Meal builder door stays; copying
+  // yesterday is Day tools -> Copy from another day, yesterday first.
+  test('no "Copy yesterday" row on any day; copying yesterday is the first row of Copy from another day', async () => {
+    // Empty day, yesterday has food: no row, the meal builder is still a door.
+    const yEntries = [entry({ id: 'y1', entry_date: YESTERDAY }), entry({ id: 'y2', entry_date: YESTERDAY, meal_slot: 'meal_2' })];
+    dayWith({ today: [], yesterday: yEntries });
     const withYesterday = await mountDiary();
-    const door = byLabel(withYesterday, "Copy yesterday's entries");
-    expect(door).toHaveLength(1);
-    expect(textOf(withYesterday)).toContain('Copy yesterday');
-    await act(async () => { await door[0].props.onPress(); });
-    expect(mockAppAlert).toHaveBeenCalledTimes(1);
-    const [title, , buttons] = mockAppAlert.mock.calls[0];
-    expect(title).toBe('Copy 2 entries from yesterday?');
-    await act(async () => { await buttons.find((b) => b.text === 'Copy').onPress(); });
-    await flush();
-    // RE-POINTED (D230 R10, lane 3A): the whole day is ONE batched write of
-    // both rows (it was one logFoodEntry per row), each dated to the day in
-    // view; the toast that follows carries an Undo removing both new rows.
+    expect(byLabel(withYesterday, "Copy yesterday's entries")).toHaveLength(0);
+    expect(textOf(withYesterday)).not.toContain('Copy yesterday');
+    expect(byLabel(withYesterday, 'Open meal builder for this day or week')).toHaveLength(1);
+
+    // Copy from another day lists yesterday FIRST, and a tap copies it with
+    // no confirm in between (the toast's Undo is the way back).
+    await copyYesterdayViaPicker(withYesterday, [
+      { entry_date: YESTERDAY, count: 2, kcal: 454 },
+      { entry_date: shiftDate(TODAY, -3), count: 4, kcal: 1900 },
+    ]);
+    expect(mockAppAlert).not.toHaveBeenCalled();
+    // The whole day is ONE batched write of both rows, each dated to the day
+    // in view; the toast that follows carries an Undo removing both new rows.
     expect(mockLogFoodEntry).not.toHaveBeenCalled();
     expect(mockLogFoodEntries).toHaveBeenCalledTimes(1);
     const [, copied] = mockLogFoodEntries.mock.calls[0];
@@ -342,7 +355,7 @@ describe('D230 R1: the workspace is the same on every day', () => {
     await act(async () => { await options.action.onPress(); });
     expect(mockDeleteFoodEntries).toHaveBeenCalledWith('u1', ['copied-1', 'copied-2']);
 
-    // A started day never offers the whole-day door, even with yesterday.
+    // A started day never offered the whole-day row either; the meal builder stays.
     dayWith({ today: [entry({ id: 't1', meal_slot: 'meal_3' })], yesterday: [entry({ id: 'y1', entry_date: YESTERDAY })] });
     const started = await mountDiary();
     expect(byLabel(started, "Copy yesterday's entries")).toHaveLength(0);
@@ -351,17 +364,14 @@ describe('D230 R1: the workspace is the same on every day', () => {
 
   // Lead ruling (D33): the whole-day copy leaves out a source row that can
   // never be logged and says so; it never blocks the day on one rogue row.
-  test('"Copy yesterday" with one unloggable row: "Copied 1 entry. 1 could not be copied." and Undo removes only the written row', async () => {
+  test('copying yesterday with one unloggable row: "Copied 1 entry. 1 could not be copied." and Undo removes only the written row', async () => {
     dayWith({ today: [], yesterday: [
       entry({ id: 'y1', entry_date: YESTERDAY }),
       entry({ id: 'y2', entry_date: YESTERDAY, meal_slot: 'meal_2', food_ref: 'global:legacy', quantity_g: 6000 }),
     ] });
     mockLogFoodEntries.mockResolvedValueOnce(['copied-1']);
     const tree = await mountDiary();
-    await act(async () => { await byLabel(tree, "Copy yesterday's entries")[0].props.onPress(); });
-    const [, , buttons] = mockAppAlert.mock.calls.at(-1);
-    await act(async () => { await buttons.find((b) => b.text === 'Copy').onPress(); });
-    await flush();
+    await copyYesterdayViaPicker(tree, [{ entry_date: YESTERDAY, count: 2, kcal: 454 }]);
     const [, written] = mockLogFoodEntries.mock.calls.at(-1);
     expect(written).toHaveLength(1);
     expect(written[0].foodRef).toBe('global:oats');
@@ -372,7 +382,7 @@ describe('D230 R1: the workspace is the same on every day', () => {
     expect(mockDeleteFoodEntries).toHaveBeenLastCalledWith('u1', ['copied-1']);
   });
 
-  test('"Copy yesterday" with several copied and two unloggable: "Copied 3 entries. 2 could not be copied."', async () => {
+  test('copying yesterday with several copied and two unloggable: "Copied 3 entries. 2 could not be copied."', async () => {
     dayWith({ today: [], yesterday: [
       entry({ id: 'y1', entry_date: YESTERDAY }),
       entry({ id: 'y2', entry_date: YESTERDAY, quantity_g: 6000 }),
@@ -382,23 +392,17 @@ describe('D230 R1: the workspace is the same on every day', () => {
     ] });
     mockLogFoodEntries.mockResolvedValueOnce(['c1', 'c2', 'c3']);
     const tree = await mountDiary();
-    await act(async () => { await byLabel(tree, "Copy yesterday's entries")[0].props.onPress(); });
-    const [, , buttons] = mockAppAlert.mock.calls.at(-1);
-    await act(async () => { await buttons.find((b) => b.text === 'Copy').onPress(); });
-    await flush();
+    await copyYesterdayViaPicker(tree, [{ entry_date: YESTERDAY, count: 5, kcal: 1100 }]);
     expect(mockToastShow.mock.calls.at(-1)[0]).toBe('Copied 3 entries. 2 could not be copied.');
   });
 
-  test('"Copy yesterday" when every row is unloggable: "That day could not be copied." as an error, no Undo, no "try again", nothing written', async () => {
+  test('copying yesterday when every row is unloggable: "That day could not be copied." as an error, no Undo, no "try again", nothing written', async () => {
     dayWith({ today: [], yesterday: [
       entry({ id: 'y1', entry_date: YESTERDAY, quantity_g: 6000 }),
       entry({ id: 'y2', entry_date: YESTERDAY, meal_slot: 'meal_2', quantity_g: 6000 }),
     ] });
     const tree = await mountDiary();
-    await act(async () => { await byLabel(tree, "Copy yesterday's entries")[0].props.onPress(); });
-    const [, , buttons] = mockAppAlert.mock.calls.at(-1);
-    await act(async () => { await buttons.find((b) => b.text === 'Copy').onPress(); });
-    await flush();
+    await copyYesterdayViaPicker(tree, [{ entry_date: YESTERDAY, count: 2, kcal: 454 }]);
     expect(mockLogFoodEntries).not.toHaveBeenCalled();
     const [message, options] = mockToastShow.mock.calls.at(-1);
     expect(message).toBe('That day could not be copied.');
@@ -412,7 +416,6 @@ describe('D230 R1: the workspace is the same on every day', () => {
     const tree = await mountDiary();
     expect(byLabel(tree, 'Plan a higher-calorie day')).toHaveLength(0);
     expect(byLabel(tree, 'Open meal builder for this day or week')).toHaveLength(1);
-    expect(byLabel(tree, "Copy yesterday's entries")).toHaveLength(1);
     expect(byLabel(tree, 'Add food to Meal 1')).toHaveLength(1);
     expect(byLabel(tree, 'Scan barcode')).toHaveLength(1);
   });
@@ -449,12 +452,17 @@ describe('D230 R16: headings', () => {
 });
 
 describe('D230 R11 and R19: Day tools rows', () => {
-  test('"Nutrition targets" is the same cross-tab door the no-targets state uses', async () => {
+  // RE-POINTED (D231, batch 3): "Nutrition targets" left Day tools. The same
+  // cross-tab door is the calorie card's target (DiaryScreen.batch3Nutrition
+  // .test.js), so the sheet no longer offers it.
+  test('"Nutrition targets" is no longer a Day tools row', async () => {
     const nav = makeNav();
     const tree = await mountDiary(nav);
     await act(async () => { byLabel(tree, 'Open diary tools')[0].props.onPress(); });
-    await act(async () => { byLabelStart(tree, 'Nutrition targets. ')[0].props.onPress(); });
-    expect(mockParentNavigate).toHaveBeenCalledWith('ProfileTab', expect.objectContaining({ screen: 'NutritionTargets' }));
+    expect(byLabelStart(tree, 'Nutrition targets. ')).toHaveLength(0);
+    expect(byLabelStart(tree, 'Trends. ')).toHaveLength(0);
+    expect(byLabelStart(tree, 'Meals. ')).toHaveLength(1);
+    expect(byLabelStart(tree, 'Copy from another day. ')).toHaveLength(1);
   });
 
   test('"Add meal" reads "Add another meal"', async () => {
@@ -466,10 +474,9 @@ describe('D230 R11 and R19: Day tools rows', () => {
 
 describe('D230 R2: one amber on a populated Diary, the scan button', () => {
   test('the count of non-chart elements drawn in primary is one, the scan glyph', async () => {
-    // The one-time hint captions are marked seen: their shared "Got it"
+    // The water hint caption is marked seen: its shared "Got it"
     // (HintCaption.js) is outside this lane.
     await AsyncStorage.setItem('@volyume_seen_diary_water_hint', 'true');
-    await AsyncStorage.setItem('@volyume_seen_diary_markeaten_hint', 'true');
     dayWith({ today: [entry({ id: 't1', meal_slot: 'meal_1' }), entry({ id: 't2', meal_slot: 'meal_2' })] });
     mockGetWater.mockResolvedValue(1500);
     mockGetSlotRecents.mockImplementation(() => Promise.resolve([

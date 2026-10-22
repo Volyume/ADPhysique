@@ -436,18 +436,25 @@ describe('item 10: an empty day keeps its one-tap chips for history in the old m
   });
 });
 
+// RE-POINTED (D231, app layout rework batch 3): the "Tick meals off..." hint
+// caption is retired; what item 11 protects (nothing on a future day can be
+// ticked off yet, so "mark eaten" is not offered there) now lives on the one
+// planned-meals line: "Mark all eaten" is absent on a future day and present
+// on today. The line's wording and the single-meal case are pinned in
+// DiaryScreen.batch3Nutrition.test.js.
 describe('item 11: a future day', () => {
-  test('does not say "Tick meals off" and its planned rows read as planned', async () => {
+  test('does not offer "Mark all eaten" and its planned rows read as planned', async () => {
     const tomorrow = shiftDate(TODAY, 1);
     const tree = await mountDiary({ [tomorrow]: [oats({ entry_date: tomorrow, is_planned: 1 })] }, { date: tomorrow });
     const text = textOf(tree);
     expect(text).not.toContain('Tick meals off');
+    expect(text).not.toContain('Mark all eaten');
     expect(text).toContain('Planned');
   });
 
-  test('today still offers the hint with planned food', async () => {
+  test('today offers "Mark all eaten" with planned food', async () => {
     const tree = await mountDiary({ [TODAY]: [oats({ is_planned: 1 })] });
-    expect(textOf(tree)).toContain('Tick meals off');
+    expect(textOf(tree)).toContain('Mark all eaten');
   });
 });
 

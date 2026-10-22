@@ -40,8 +40,12 @@ const WATER_SRC = fs.readFileSync(
 );
 
 describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
-  test('imports the shared HintCaption component', () => {
-    expect(SRC).toMatch(/import HintCaption from '\.\.\/components\/HintCaption';/);
+  // RE-POINTED (D231, app layout rework batch 3): the Diary's two planned-
+  // meals hint captions are retired (one planned-meals line replaces them),
+  // so the screen itself no longer imports HintCaption; the water caption
+  // still renders inside WaterRow (pinned below).
+  test('the Diary itself no longer imports the shared HintCaption component', () => {
+    expect(SRC).not.toMatch(/HintCaption/);
   });
 
   test('one-time hint flags follow the existing @volyume_seen_* convention', () => {

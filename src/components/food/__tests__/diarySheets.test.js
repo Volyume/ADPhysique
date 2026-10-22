@@ -7,9 +7,11 @@
  *  - R16: every sheet's title is a heading (accessibilityRole "header"). The
  *    inline sheets' titles were plain overline labels, so the screen-reader
  *    heading rotor had nothing to land on.
- *  - 4.1/R11/R19: Day tools is four house NavRows in this order: Trends, Copy
- *    from another day, Meals, Nutrition targets, each wired to its own
- *    handler, and the sheet carries no amber (R2).
+ *  - 4.1/R11: Day tools is house NavRows, each wired to its own handler, and
+ *    the sheet carries no amber (R2). RE-POINTED (D231, app layout rework
+ *    batch 3): it is TWO rows now, in this order: Copy from another day,
+ *    Meals. Trends (the header door stays) and Nutrition targets (the
+ *    calorie card's target) left it.
  *  - The copy sheet's rows read "3 entries · 1850 kcal" (R15, one spaced
  *    middle dot, never " - "), hand the picked day back, and tap WITHOUT a
  *    haptic: copying a day writes the diary, and diary-marking moments keep
@@ -33,6 +35,7 @@ import CopyFromDaySheet, { copyDayMeta } from '../CopyFromDaySheet';
 import DiaryMoveSheet from '../DiaryMoveSheet';
 import SaveAsMealSheet, { saveMealHint } from '../SaveAsMealSheet';
 import { NavRow } from '../../NavRow';
+import { isoDate, shiftDate } from '../../../lib/food/diaryDates';
 import { colors } from '../../../styles/theme';
 
 function render(element) {
@@ -57,22 +60,31 @@ const byLabel = (tree, label) => tree.root.findAll(
 beforeEach(() => { jest.clearAllMocks(); });
 
 describe('DayToolsSheet', () => {
-  test('its title is a heading and its rows are the four house NavRows, in order', () => {
-    const handlers = {
-      onTrends: jest.fn(), onCopyFromDay: jest.fn(), onMeals: jest.fn(), onNutritionTargets: jest.fn(),
-    };
+  test('its title is a heading and its rows are two house NavRows, in order: Copy from another day, Meals', () => {
+    const handlers = { onCopyFromDay: jest.fn(), onMeals: jest.fn() };
     const tree = render(<DayToolsSheet visible onClose={() => {}} {...handlers} />);
     expect(headers(tree)).toEqual(['Day tools']);
     const rows = tree.root.findAllByType(NavRow);
-    expect(rows.map((r) => r.props.label)).toEqual(['Trends', 'Copy from another day', 'Meals', 'Nutrition targets']);
+    expect(rows.map((r) => r.props.label)).toEqual(['Copy from another day', 'Meals']);
     act(() => { rows[0].props.onPress(); });
     act(() => { rows[1].props.onPress(); });
-    act(() => { rows[2].props.onPress(); });
-    act(() => { rows[3].props.onPress(); });
-    expect(handlers.onTrends).toHaveBeenCalledTimes(1);
     expect(handlers.onCopyFromDay).toHaveBeenCalledTimes(1);
     expect(handlers.onMeals).toHaveBeenCalledTimes(1);
-    expect(handlers.onNutritionTargets).toHaveBeenCalledTimes(1);
+  });
+
+  test('Trends and Nutrition targets are not offered, even when a caller still passes their handlers', () => {
+    const tree = render(
+      <DayToolsSheet visible onClose={() => {}} onTrends={jest.fn()} onNutritionTargets={jest.fn()} onCopyFromDay={jest.fn()} onMeals={jest.fn()} />,
+    );
+    const labels = tree.root.findAllByType(NavRow).map((r) => r.props.label);
+    expect(labels).not.toContain('Trends');
+    expect(labels).not.toContain('Nutrition targets');
+  });
+
+  test('the copy row says yesterday is one of the choices (it replaced the separate "Copy yesterday" row)', () => {
+    const tree = render(<DayToolsSheet visible onClose={() => {}} onCopyFromDay={() => {}} onMeals={() => {}} />);
+    const copyRow = tree.root.findAllByType(NavRow).find((r) => r.props.label === 'Copy from another day');
+    expect(copyRow.props.sub).toMatch(/yesterday/i);
   });
 
   test('carries no amber: the doors are ink (R2)', () => {
@@ -101,6 +113,25 @@ describe('CopyFromDaySheet', () => {
     expect(rows.map((r) => r.props.sub)).toEqual(['3 entries · 1850 kcal', '1 entry · 420 kcal']);
     expect(copyDayMeta({ count: 2, kcal: 1000 }, 'kj')).toBe('2 entries · 4184 kJ');
     expect(JSON.stringify(tree.toJSON())).not.toMatch(/ - \d/);
+  });
+
+  // D231 (batch 3): this sheet is the one way to copy a day, including
+  // yesterday. The rows are the days as handed (getRecentLoggedDays, newest
+  // first, pinned in recentLoggedDays.test.js), so yesterday leads, and it is
+  // named "Yesterday" when the day in view is today.
+  test('yesterday is the first row, named Yesterday, ahead of the older days', () => {
+    const today = isoDate(new Date());
+    const rowsIn = [
+      { entry_date: shiftDate(today, -1), count: 2, kcal: 600 },
+      { entry_date: shiftDate(today, -2), count: 3, kcal: 900 },
+      { entry_date: shiftDate(today, -5), count: 1, kcal: 300 },
+    ];
+    const tree = render(<CopyFromDaySheet days={rowsIn} onClose={() => {}} onPick={() => {}} />);
+    const rows = tree.root.findAllByType(NavRow);
+    expect(rows).toHaveLength(3);
+    expect(rows[0].props.label).toBe('Yesterday');
+    expect(rows.map((r) => r.props.sub)[0]).toBe('2 entries · 600 kcal');
+    expect(rows[1].props.label).not.toBe('Yesterday');
   });
 
   test('a tap hands the day back, with no haptic: it writes the diary', () => {
