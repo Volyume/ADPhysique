@@ -14,8 +14,10 @@
  * OUT: they stay P3, Stage 2's scope, and never reach this resolver):
  *   1. Safety-consequential state (reserved — see note below)
  *   2. Block-complete decision needed
+ *   2.5 Plan update needs a choice (D231, app layout rework batch 1)
  *   3. Coach decision to review
  *   4. Weekly check-in due
+ *   4.2 A limitation waiting for a decision (D231)
  *   4.5 First-review readiness line, CONFLICT DAYS ONLY (spec §17 R4:
  *       "two rows at once (weigh-in wins; readiness line moves to R2 slot
  *       rank 4.5 on conflict days)" — the caller feeds this fact only when
@@ -25,8 +27,16 @@
  *       this fact is null)
  *   5. Recovery adjustment / deload suggestion affecting today
  *   6. Re-entry question
+ *   6.5 The plan-rebuilt note (D231)
  *   7. Nutrition-phase mismatch
  *   -> null (nothing eligible)
+ *
+ * D231 (docs/app-rework-2026-10/SPEC.md, "Batch 1: Today"): the plan update
+ * choice, the plan-rebuilt note and a limitation waiting for a decision used
+ * to be separate cards and rows further down Today; they are occupants of
+ * this one line now, in the rank order the spec gives (block finished, plan
+ * update needs a choice, coaching decision, weekly check-in, limitation
+ * decision, recovery week, re-entry, plan rebuilt note, nutrition phase).
  *
  * FOUNDER DECISION (fully free, no trial, no expiry): rank 8, "Trial ENDING
  * with genuine payment action", is retired along with the trial itself --
@@ -53,7 +63,7 @@
 
 import { isLighterTrainingState, RECOVERY_STATE } from '../recoveryState';
 
-/** @typedef {{key:string,text:string,onPress:Function,onDismiss:(Function|null),accessibilityLabel:string}} TodayLineItem */
+/** @typedef {{key:string,text:string,onPress:Function,onDismiss:(Function|null),accessibilityLabel:string,wrap?:boolean}} TodayLineItem */
 
 // Rank 2 — block-complete decision needed. Spec §18 mock H literal.
 function resolveBlockComplete(facts) {
@@ -184,6 +194,86 @@ function resolvePhaseMismatch(facts) {
   };
 }
 
+// D231: the three occupants below carry `wrap: true`. Each moved onto this line
+// from a card or row whose text never carried a line clamp (the D104 rule:
+// sentence-length copy wraps in full), and the limitation sentence can be long
+// (it names the limitation), so TodayLine must not cut it at two lines at the
+// largest text size. The older occupants keep the two-line clamp they had.
+
+// D231 rank 2.5 — the plan can be updated but needs a choice from the person
+// (the structure engine could not rebuild it without one). Tap does what the
+// old card's "Update your plan" did; the dismissal is the card's "Not now"
+// (the same stored dismissal), supplied by the caller.
+function resolvePlanChoice(facts) {
+  const f = facts?.planChoice;
+  if (!f?.eligible) return null;
+  return {
+    key: 'plan_choice',
+    text: 'Your plan can be updated. It needs a choice from you.',
+    onPress: f.onPress,
+    onDismiss: f.onDismiss ?? null,
+    accessibilityLabel: 'Your plan can be updated. It needs a choice from you. Tap to update your plan.',
+    wrap: true,
+  };
+}
+
+// The two sentences a limitation waiting for a decision has always used on
+// Today. The "Still need it?" wording matches HowYouTrainScreen's own
+// episodeSub for the same state exactly (never invented phrasing); with more
+// than one prompt pending, or a rule that arrived undecided, the generic line
+// stands, since no single sentence is true of them all.
+export const LIMITATION_DECISION_GENERIC = 'A change to your limitations is waiting for your decision.';
+
+/**
+ * The one sentence for a pending limitation decision, or null when nothing is
+ * waiting. Pure.
+ * @param {{ awaitingCount?: number, awaitingSubject?: (string|null), undecided?: boolean }} [f]
+ * @returns {string|null}
+ */
+export function limitationDecisionText(f) {
+  const count = Number(f?.awaitingCount) || 0;
+  if (count === 1) {
+    return f.awaitingSubject
+      ? `You thought you would be back to ${f.awaitingSubject} by about now. Still need it?`
+      : 'You thought this would be done by about now. Still need it?';
+  }
+  if (count > 1 || f?.undecided) return LIMITATION_DECISION_GENERIC;
+  return null;
+}
+
+// D231 rank 4.2 — a limitation waiting for the person's decision (an episode
+// past its planned end still applying, or a rule that arrived undecided).
+// Tap opens Injuries & limitations, as the two rows it replaces did. No
+// dismissal: those rows had none. The rule's own condition is the caller's.
+function resolveLimitationDecision(facts) {
+  const f = facts?.limitation;
+  const text = limitationDecisionText(f);
+  if (!text) return null;
+  return {
+    key: 'limitation_decision',
+    text,
+    onPress: f.onPress,
+    onDismiss: null,
+    accessibilityLabel: `${text} Open Injuries & limitations`,
+    wrap: true,
+  };
+}
+
+// D231 rank 6.5 — the one-time note of what changed after a plan was rebuilt.
+// Tap opens the note in a sheet whose "Got it" retires it; no dismissal here.
+function resolvePlanNote(facts) {
+  const f = facts?.planNote;
+  if (!f?.eligible) return null;
+  return {
+    key: 'plan_note',
+    text: 'Your plan was updated. See what changed.',
+    onPress: f.onPress,
+    onDismiss: null,
+    accessibilityLabel: 'Your plan was updated. Tap to see what changed.',
+    wrap: true,
+  };
+}
+
 // Rank 1 — reserved safety-consequential slot. See module header note.
 function resolveSafety(facts) {
   const f = facts?.safety;
@@ -202,11 +292,14 @@ function resolveSafety(facts) {
 export const TODAY_LINE_RANKS = [
   resolveSafety,
   resolveBlockComplete,
+  resolvePlanChoice,
   resolveCoachDecision,
   resolveCheckIn,
+  resolveLimitationDecision,
   resolveFirstReview,
   resolveRecovery,
   resolveReEntry,
+  resolvePlanNote,
   resolvePhaseMismatch,
 ];
 

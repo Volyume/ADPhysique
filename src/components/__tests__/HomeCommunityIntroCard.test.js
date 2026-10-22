@@ -77,19 +77,27 @@ describe('HomeScreen gating (source-level guard)', () => {
     expect(src).toMatch(/setCommunityIntroDismissed\(isIntroDismissedNow\(parseIntroDismissal\(raw\), completedSessions\)\);/);
   });
 
-  test('renders only after a session, without a ranked banner, and both actions dismiss', () => {
-    expect(src).toMatch(/totalSessions > 0 && !communityIntroDismissed && shownBannerKey == null && \(\s*<HomeCommunityIntroCard/);
+  test('renders only after a session, as the one offer that shows, and both actions dismiss', () => {
+    // RE-POINTED (D231, app layout rework batch 1): the "no ranked banner holds
+    // the slot" condition is replaced by the one offer slot (resolveOfferSlot):
+    // the introduction is eligible after a completed session with no cached
+    // profile and no dismissal, and shows when no higher offer (coaching setup,
+    // the injuries question) holds the slot.
+    expect(src).toMatch(/communityIntro: !initialLoading && !!user\?\.id && totalSessions > 0 && !communityIntroDismissed,/);
+    expect(src).toMatch(/shownOfferKey === 'communityIntro' \? \(\s*<HomeCommunityIntroCard/);
     expect(src).toMatch(/onOpen=\{\(\) => \{ haptics\.selection\(\); dismissCommunityIntro\(\); navigateCrossTab\(navigation, 'CommunityTab'\); \}\}/);
     expect(src).toMatch(/onDismiss=\{\(\) => \{ haptics\.selection\(\); dismissCommunityIntro\(\); \}\}/);
   });
 
-  test('the introduction sits after the last-session card, never above the hero', () => {
+  test('the introduction sits directly under the main card, never above the hero', () => {
+    // RE-POINTED (D231, app layout rework batch 1): it used to sit below the
+    // last-session row; the one offer slot is directly under the main card.
     const hero = src.indexOf('Primary workout area');
-    const last = src.indexOf('<HomeLastSessionCard');
     const intro = src.indexOf('<HomeCommunityIntroCard');
+    const evidence = src.indexOf('<EvidencePanel');
     expect(hero).toBeGreaterThan(0);
-    expect(last).toBeGreaterThan(hero);
-    expect(intro).toBeGreaterThan(last);
+    expect(intro).toBeGreaterThan(hero);
+    expect(evidence).toBeGreaterThan(intro);
   });
 });
 

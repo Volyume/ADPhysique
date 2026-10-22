@@ -735,7 +735,7 @@ describe('State matrix — S8: deload suggested, data-driven only', () => {
 
 // ─── S9 — block finished, awaiting decision ────────────────────────────────
 describe('State matrix — S9: block finished, awaiting decision', () => {
-  test('Today line becomes the decision entry (rank 2, outranks everything junior)', async () => {
+  test('the main card IS the decision, so the Today line does not say "Block finished" again (D231 dedupe)', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: {
@@ -748,7 +748,13 @@ describe('State matrix — S9: block finished, awaiting decision', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe("Block finished. Choose what comes next.");
+    // RE-POINTED (D231, app layout rework batch 1): this state used to put
+    // "Block finished. Choose what comes next." on the Today line directly
+    // above the "Block complete" main card saying the same thing. While the
+    // main card shows "Block complete" the line does not repeat it, so the
+    // next eligible occupant (here the coach decision) takes the line.
+    expect(REGION.todayLineText(tree)).toBe('Calories adjusted to 2100 kcal. See why.');
+    expect(flattenText(tree)).not.toContain('Block finished. Choose what comes next.');
     // RE-PINNED (F-18 / B-3): this state used to render the training hero
     // ("Start workout", eyebrow "Day 1 of N") directly beneath a Today line
     // saying the block was complete. The hero IS the decision now.
@@ -1003,7 +1009,7 @@ describe('State matrix — S17: brand-new user, plan not yet generated', () => {
 
 // ─── S18 — brand-new user, plan active, 0 sessions (welcome card) ─────────
 describe('State matrix — S18: brand-new, plan active, 0 sessions', () => {
-  test('the welcome card renders above the hero; footer is absent (no session history)', async () => {
+  test('no welcome card (D231); the hero starts the first workout; footer is absent (no session history)', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: { ...withPlan(), getAllWorkouts: async () => [] },
@@ -1011,8 +1017,12 @@ describe('State matrix — S18: brand-new, plan active, 0 sessions', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.welcomeCard(tree)).toBe(true);
+    // RE-POINTED (D231, app layout rework batch 1): the Welcome card left
+    // Today; the main card already says "Start workout".
+    expect(REGION.welcomeCard(tree)).toBe(false);
+    expect(flattenText(tree)).not.toContain('Welcome to Volyume');
     expect(REGION.heroPlanned(tree)).toBe(true);
+    expect(flattenText(tree)).toContain('Start workout');
     expect(REGION.footerLastSession(tree)).toBe(false);
   });
 });
@@ -1060,7 +1070,7 @@ describe('Presentation guard — strip renders above the hero, footer below it (
 // already-thorough pure-function adversarial case up to this screen's own
 // loaders) ──────────────────────────────────────────────────────────────
 describe('Presentation guard — R2 single occupancy at the HomeScreen fact-feeding level', () => {
-  test('block-complete, coach-decision and check-in all genuinely eligible at once: only block-complete text renders', async () => {
+  test('block-complete, coach-decision and check-in all genuinely eligible at once: the main card says "Block complete", so only the coach decision renders on the line', async () => {
     useAppStore.setState(PRO_USER);
     const today = new Date().getDay();
     await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({ checkinDay: today }));
@@ -1079,8 +1089,11 @@ describe('Presentation guard — R2 single occupancy at the HomeScreen fact-feed
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
     expect(findByTestID(tree, 'today-line').length).toBe(1);
-    expect(REGION.todayLineText(tree)).toBe("Block finished. Choose what comes next.");
-    expect(flattenText(tree)).not.toContain('1999 kcal');
-    expect(flattenText(tree)).not.toBe("Your weekly check-in is ready. It shapes this week's coaching decision.");
+    // RE-POINTED (D231, app layout rework batch 1): the "Block complete" main
+    // card is showing, so the line does not repeat "Block finished"; the next
+    // rank (the coaching decision) is the one occupant, the check-in waits.
+    expect(REGION.todayLineText(tree)).toBe('Calories adjusted to 1999 kcal. See why.');
+    expect(flattenText(tree)).not.toContain('Block finished. Choose what comes next.');
+    expect(flattenText(tree)).not.toContain("Your weekly check-in is ready. It shapes this week's coaching decision.");
   });
 });

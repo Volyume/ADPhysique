@@ -107,7 +107,11 @@ describe('B-1 — the week-complete state', () => {
   });
 
   test('the readiness chip does not claim a session is pending', () => {
-    expect(home).toMatch(/: weekComplete\s*\n?\s*\? \{ tone: 'go', line: 'Every session done for this week\.' \}/);
+    // RE-POINTED (D231, app layout rework batch 1): the same fixed line, now
+    // held in WEEK_COMPLETE_CHIP_LINE so the "Week complete" main card can
+    // leave the chip out when its text would repeat the card's own title.
+    expect(home).toMatch(/: weekComplete\s*\n?\s*\? \{ tone: 'go', line: WEEK_COMPLETE_CHIP_LINE \}/);
+    expect(home).toContain("const WEEK_COMPLETE_CHIP_LINE = 'Every session done for this week.';");
   });
 });
 

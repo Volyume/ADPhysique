@@ -54,13 +54,13 @@ describe('FOUNDER DECISION (fully free, no tier split): the differential badge i
     )).toThrow();
   });
 
-  test('BANNER_PRIORITY no longer carries an "attention" slot', () => {
-    const site = HOME.indexOf('const BANNER_PRIORITY = [');
-    expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf('];', site));
-    expect(block).not.toMatch(/key: 'attention'/);
-    const order = ['plateau', 'activation'].map((key) => block.indexOf(`key: '${key}'`));
-    expect(order.every((i) => i > -1)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
+  test('Home carries no "attention" slot', () => {
+    // RE-POINTED (D231, app layout rework batch 1): the two-entry BANNER_PRIORITY
+    // array this pinned is gone (the activation banner moved to the one offer
+    // slot, the plateau note stands on its own), so the claim is now simply that
+    // no "attention" slot exists anywhere in Home's banner logic.
+    expect(HOME).not.toMatch(/key: 'attention'/);
+    expect(HOME).not.toMatch(/BANNER_PRIORITY/);
+    expect(HOME).not.toMatch(/showAttentionSlot|showFreeCoachLine|showDifferentialBadge/);
   });
 });

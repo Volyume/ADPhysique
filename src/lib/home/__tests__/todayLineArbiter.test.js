@@ -6,7 +6,9 @@
  * occupant renders, then dismissal (marking the winner ineligible) proves
  * the next-highest eligible occupant takes over on the next render.
  */
-import { resolveTodayLine, TODAY_LINE_RANKS } from '../todayLineArbiter';
+import {
+  resolveTodayLine, TODAY_LINE_RANKS, limitationDecisionText, LIMITATION_DECISION_GENERIC,
+} from '../todayLineArbiter';
 import { RECOVERY_STATE } from '../../recoveryState';
 
 const noop = () => {};
@@ -15,8 +17,11 @@ function fullFacts(overrides = {}) {
   return {
     safety: null,
     blockComplete: { eligible: true, onPress: noop },
+    // D231: the three occupants the Today line took over.
+    planChoice: { eligible: true, onPress: noop, onDismiss: noop },
     coachDecision: { eligible: true, caloriesKcal: null, weekStart: 1, onPress: noop, onDismiss: noop },
     checkIn: { eligible: true, onPress: noop, onDismiss: noop },
+    limitation: { awaitingCount: 1, awaitingSubject: 'your shoulder', undecided: false, onPress: noop },
     firstReview: {
       item: { text: 'First review: 2 more morning weigh-ins.', accessibilityLabel: 'First review: 2 more morning weigh-ins. See your readiness.' },
       onPress: noop,
@@ -29,6 +34,7 @@ function fullFacts(overrides = {}) {
       onDeloadDismiss: noop,
     },
     reEntry: { eligible: true, onPress: noop },
+    planNote: { eligible: true, onPress: noop },
     phaseMismatch: { eligible: true, savedPhaseLabel: 'a cut', onPress: noop, onDismiss: noop },
     ...overrides,
   };
@@ -41,7 +47,11 @@ describe('todayLineArbiter — rank order constant', () => {
   // FOUNDER DECISION (fully free, no trial, no expiry): rank 8 (trial
   // ending) is retired along with the trial itself, back down to 8.
   it('declares exactly the 8 resolver entries in order (7 spec ranks + rank 4.5, §17 R4)', () => {
-    expect(TODAY_LINE_RANKS).toHaveLength(8);
+    // RE-POINTED (D231, app layout rework batch 1): three occupants joined the
+    // line (the plan update choice, a limitation waiting for a decision, the
+    // plan-rebuilt note), so the 8 resolver entries are 11 now. The order
+    // itself is pinned by the walk-the-ladder test below.
+    expect(TODAY_LINE_RANKS).toHaveLength(11);
   });
 });
 
@@ -213,6 +223,133 @@ describe('todayLineArbiter — each rank in isolation', () => {
   // isolate here.
 });
 
+describe('todayLineArbiter — D231 occupants (app layout rework, batch 1)', () => {
+  it('plan update needs a choice: the spec sentence, tap and "Not now" dismissal passed through', () => {
+    const onPress = jest.fn();
+    const onDismiss = jest.fn();
+    const result = resolveTodayLine({ planChoice: { eligible: true, onPress, onDismiss } });
+    expect(result).toEqual({
+      key: 'plan_choice',
+      text: 'Your plan can be updated. It needs a choice from you.',
+      onPress,
+      onDismiss,
+      accessibilityLabel: 'Your plan can be updated. It needs a choice from you. Tap to update your plan.',
+      wrap: true,
+    });
+  });
+
+  it('plan update needs a choice: not eligible renders nothing from this fact', () => {
+    expect(resolveTodayLine({ planChoice: { eligible: false, onPress: noop, onDismiss: noop } })).toBeNull();
+  });
+
+  it('plan rebuilt note: the spec sentence, a tap that opens the note, and no dismissal on the line', () => {
+    const onPress = jest.fn();
+    const result = resolveTodayLine({ planNote: { eligible: true, onPress } });
+    expect(result).toEqual({
+      key: 'plan_note',
+      text: 'Your plan was updated. See what changed.',
+      onPress,
+      onDismiss: null,
+      accessibilityLabel: 'Your plan was updated. Tap to see what changed.',
+      wrap: true,
+    });
+    expect(resolveTodayLine({ planNote: { eligible: false, onPress } })).toBeNull();
+  });
+
+  it('limitation decision: exactly one "Still need it?" prompt pending uses its own sentence (named subject)', () => {
+    const onPress = jest.fn();
+    const result = resolveTodayLine({ limitation: { awaitingCount: 1, awaitingSubject: 'your shoulder', undecided: false, onPress } });
+    expect(result.key).toBe('limitation_decision');
+    expect(result.text).toBe('You thought you would be back to your shoulder by about now. Still need it?');
+    expect(result.onPress).toBe(onPress);
+    expect(result.onDismiss).toBeNull();
+  });
+
+  it('limitation decision: one prompt pending with no subject uses the unnamed sentence', () => {
+    expect(limitationDecisionText({ awaitingCount: 1, awaitingSubject: null })).toBe(
+      'You thought this would be done by about now. Still need it?',
+    );
+  });
+
+  it('limitation decision: several prompts pending, or a rule that arrived undecided, use the generic sentence', () => {
+    expect(limitationDecisionText({ awaitingCount: 2, awaitingSubject: 'your shoulder' })).toBe(LIMITATION_DECISION_GENERIC);
+    expect(limitationDecisionText({ awaitingCount: 0, undecided: true })).toBe('A change to your limitations is waiting for your decision.');
+    // An awaiting prompt wins over an undecided rule, as the two rows did (one ask-class row at a time).
+    expect(limitationDecisionText({ awaitingCount: 1, awaitingSubject: 'your knee', undecided: true })).toMatch(/Still need it\?$/);
+  });
+
+  it('limitation decision: nothing pending renders nothing', () => {
+    expect(limitationDecisionText({ awaitingCount: 0, undecided: false })).toBeNull();
+    expect(limitationDecisionText(undefined)).toBeNull();
+    expect(resolveTodayLine({ limitation: { awaitingCount: 0, undecided: false, onPress: noop } })).toBeNull();
+  });
+
+  it('the three new occupants show in full (wrap), the older ones keep their clamp', () => {
+    expect(resolveTodayLine({ planChoice: { eligible: true, onPress: noop } }).wrap).toBe(true);
+    expect(resolveTodayLine({ planNote: { eligible: true, onPress: noop } }).wrap).toBe(true);
+    expect(resolveTodayLine({ limitation: { awaitingCount: 1, awaitingSubject: 'your shoulder', onPress: noop } }).wrap).toBe(true);
+    expect(resolveTodayLine({ checkIn: { eligible: true, onPress: noop } }).wrap).toBeUndefined();
+    expect(resolveTodayLine({ blockComplete: { eligible: true, onPress: noop } }).wrap).toBeUndefined();
+  });
+
+  it('none of the new copy carries an em dash (CLAUDE.md section 3)', () => {
+    const lines = [
+      resolveTodayLine({ planChoice: { eligible: true, onPress: noop } }).text,
+      resolveTodayLine({ planNote: { eligible: true, onPress: noop } }).text,
+      limitationDecisionText({ awaitingCount: 1, awaitingSubject: 'your shoulder' }),
+      limitationDecisionText({ awaitingCount: 0, undecided: true }),
+    ];
+    for (const t of lines) expect(t).not.toMatch(/\u2014/);
+  });
+});
+
+describe('todayLineArbiter — D231 rank order, pairwise (the spec order, exactly)', () => {
+  // block finished, plan update needs a choice, coaching decision, weekly
+  // check-in, limitation decision, recovery week, re-entry, plan rebuilt note,
+  // nutrition phase.
+  const only = (key) => {
+    const full = fullFacts();
+    const facts = { safety: null };
+    const map = {
+      block_complete: 'blockComplete', plan_choice: 'planChoice', coach_decision: 'coachDecision', check_in: 'checkIn',
+      limitation_decision: 'limitation', recovery_state: 'recovery', re_entry: 'reEntry', plan_note: 'planNote',
+      phase_mismatch: 'phaseMismatch',
+    };
+    facts[map[key]] = full[map[key]];
+    return facts;
+  };
+  const ORDER = [
+    'block_complete', 'plan_choice', 'coach_decision', 'check_in', 'limitation_decision',
+    'recovery_state', 're_entry', 'plan_note', 'phase_mismatch',
+  ];
+
+  it('every senior occupant beats every junior one, for every pair', () => {
+    for (let i = 0; i < ORDER.length; i++) {
+      for (let j = i + 1; j < ORDER.length; j++) {
+        const result = resolveTodayLine({ ...only(ORDER[i]), ...only(ORDER[j]) });
+        expect(result.key).toBe(ORDER[i]);
+      }
+    }
+  });
+
+  it('the plan update choice outranks the coaching decision, and the limitation decision sits under the check-in and over the recovery week', () => {
+    expect(resolveTodayLine({ ...only('plan_choice'), ...only('coach_decision') }).key).toBe('plan_choice');
+    expect(resolveTodayLine({ ...only('check_in'), ...only('limitation_decision') }).key).toBe('check_in');
+    expect(resolveTodayLine({ ...only('limitation_decision'), ...only('recovery_state') }).key).toBe('limitation_decision');
+  });
+
+  it('the plan-rebuilt note sits under re-entry and over the nutrition phase', () => {
+    expect(resolveTodayLine({ ...only('re_entry'), ...only('plan_note') }).key).toBe('re_entry');
+    expect(resolveTodayLine({ ...only('plan_note'), ...only('phase_mismatch') }).key).toBe('plan_note');
+  });
+
+  it('an active workout still silences the new occupants (resume outranks them), safety excepted', () => {
+    expect(resolveTodayLine({ ...only('plan_choice'), hasActiveWorkout: true })).toBeNull();
+    expect(resolveTodayLine({ ...only('plan_note'), hasActiveWorkout: true })).toBeNull();
+    expect(resolveTodayLine({ ...only('limitation_decision'), hasActiveWorkout: true })).toBeNull();
+  });
+});
+
 describe('todayLineArbiter — adversarial: every rank eligible at once', () => {
   it('exactly the senior-most occupant renders when everything is eligible, safety included', () => {
     const result = resolveTodayLine(fullFacts({ safety: { key: 'safety_fact', text: 'safety line', onPress: noop } }));
@@ -226,9 +363,13 @@ describe('todayLineArbiter — adversarial: every rank eligible at once', () => 
 
   it('dismissal advances to the next eligible occupant on re-render, walking the full ladder', () => {
     let facts = fullFacts();
+    // D231 (docs/app-rework-2026-10/SPEC.md, Batch 1): block finished, plan
+    // update needs a choice, coaching decision, weekly check-in, limitation
+    // decision, [first review, unfed since Campaign 26], recovery week,
+    // re-entry, plan rebuilt note, nutrition phase.
     const expectedOrder = [
-      'block_complete', 'coach_decision', 'check_in', 'first_review',
-      'recovery_state', 're_entry', 'phase_mismatch',
+      'block_complete', 'plan_choice', 'coach_decision', 'check_in', 'limitation_decision',
+      'first_review', 'recovery_state', 're_entry', 'plan_note', 'phase_mismatch',
     ];
     for (const expectedKey of expectedOrder) {
       const result = resolveTodayLine(facts);
@@ -274,8 +415,11 @@ function disable(facts, key) {
   const next = { ...facts };
   switch (key) {
     case 'block_complete': next.blockComplete = { ...next.blockComplete, eligible: false }; break;
+    case 'plan_choice': next.planChoice = { ...next.planChoice, eligible: false }; break;
     case 'coach_decision': next.coachDecision = { ...next.coachDecision, eligible: false }; break;
     case 'check_in': next.checkIn = { ...next.checkIn, eligible: false }; break;
+    case 'limitation_decision': next.limitation = { ...next.limitation, awaitingCount: 0, undecided: false }; break;
+    case 'plan_note': next.planNote = { ...next.planNote, eligible: false }; break;
     // Rank 4.5 self-retires (or leaves for R4 once the weigh-in lands):
     // either way the fact's item goes null, never a dismissed flag.
     case 'first_review': next.firstReview = { ...next.firstReview, item: null }; break;

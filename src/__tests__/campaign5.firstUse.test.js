@@ -1145,19 +1145,24 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
 describe('FREE: zero-history Home claims no history it does not have (C5-P7-05 / C5-P1-08, D96)', () => {
   // FOUNDER DECISION (fully free, no tier split): every account has a
   // coach now, so the isPro fork is retired -- one sentence for everyone.
-  test('the welcome card promises a coach to every account (superseded)', () => {
-    const card = stripComments(read('components/HomeWelcomeCard.js'));
-    expect(card).toContain('Your coach learns as you train');
-    expect(card).not.toMatch(/isPro/);
-    expect(read('screens/HomeScreen.js')).toContain('<HomeWelcomeCard onDismiss={dismissWelcome} />');
+  // RE-POINTED (D231, app layout rework batch 1): the Welcome card is gone from
+  // Today (the main card already says "Start your first workout" / "Start
+  // workout"), so the two claims this block pinned about that card's copy have
+  // nothing left to pin. What survives is that the card is really gone: no
+  // component, no render, and the zero-history Home still claims no history.
+  test('the welcome card is gone from Today (D231), so it promises nothing', () => {
+    expect(fs.existsSync(SRC('components/HomeWelcomeCard.js'))).toBe(false);
+    const home = read('screens/HomeScreen.js');
+    expect(home).not.toMatch(/HomeWelcomeCard/);
+    expect(home).not.toContain('Welcome to Volyume');
   });
 
-  test('the free welcome copy claims no past training and no personalisation from it', () => {
-    const card = stripComments(read('components/HomeWelcomeCard.js'));
+  test('the zero-history Home claims no past training and no personalisation from it', () => {
+    const home = stripComments(read('screens/HomeScreen.js'));
     // Nothing may read the app's history back to a user who has none.
-    expect(card).not.toMatch(/based on your (last|previous|recent)/i);
-    expect(card).not.toMatch(/we(?:'ve| have) (?:seen|learned|noticed)/i);
-    expect(card).not.toMatch(/your (?:trend|average|usual)/i);
+    expect(home).not.toMatch(/based on your (last|previous|recent)/i);
+    expect(home).not.toMatch(/we(?:'ve| have) (?:seen|learned|noticed)/i);
+    expect(home).not.toMatch(/your (?:trend|average|usual)/i);
   });
 });
 
@@ -1197,7 +1202,6 @@ describe('PRO: setup hands over live features only, and no removed one (D96)', (
       'screens/WelcomeScreen.js',
       'screens/SubscriptionPolicyScreen.js',
       'components/TierComparisonStrip.js',
-      'components/HomeWelcomeCard.js',
     ]) {
       expect(stripComments(read(f))).not.toMatch(/[Cc]ardio/);
     }

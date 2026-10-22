@@ -1,34 +1,32 @@
 /**
- * Source guard for the gym challenge card on Today (gym challenge SPEC
- * section 2). It pins that the card:
- *  - reads only an active or ended challenge from gym_challenge_mine;
- *  - is never awaited by loadData (a slow connection cannot hold first paint);
- *  - sits under the last-session row, i.e. below today's training, not above;
- *  - waits for the first load like the other Home cards.
+ * Source guard: the gym challenge row is NOT on Today any more.
+ *
+ * History: gym challenge SPEC section 2 put a slim "Challenge" row on Today
+ * under the last-session row. D231 (app layout rework, batch 1,
+ * docs/app-rework-2026-10/SPEC.md "Leaves Today: The challenge row:
+ * Community is its home") removed it, so what this file pins is now the
+ * absence: no card, no read of gym_challenge_mine from Home, and the
+ * Community feed's own challenge band still exists as the one home.
  */
 const fs = require('fs');
 const path = require('path');
 
 const src = fs.readFileSync(path.join(__dirname, '..', 'HomeScreen.js'), 'utf8');
 
-test('the loader keeps only an active or ended challenge and fails to nothing', () => {
-  const at = src.indexOf('function loadHomeChallenge()');
-  expect(at).toBeGreaterThan(-1);
-  const body = src.slice(at, src.indexOf('async function loadData()', at));
-  expect(body).toMatch(/myChallenges\(\)/);
-  expect(body).toMatch(/r\?\.status === 'active' \|\| r\?\.status === 'ended'/);
-  expect(body).toMatch(/\.catch\(/);
+test('Home renders no challenge row and the card component is deleted', () => {
+  expect(src).not.toMatch(/HomeChallengeCard/);
+  expect(fs.existsSync(path.join(__dirname, '..', '..', 'components', 'HomeChallengeCard.js'))).toBe(false);
 });
 
-test('loadData starts the read without awaiting it', () => {
-  expect(src).toMatch(/const loadedForDay = todayLocalKey\(\);\n\s+loadHomeChallenge\(\);/);
-  expect(src).not.toMatch(/await loadHomeChallenge/);
-  expect(src).not.toMatch(/loadHomeChallenge\(\),\s*\n/);
+test('Home no longer reads the person\'s challenges at all', () => {
+  expect(src).not.toMatch(/myChallenges/);
+  expect(src).not.toMatch(/loadHomeChallenge/);
+  expect(src).not.toMatch(/homeChallenge/);
+  expect(src).not.toMatch(/challenges\/api/);
 });
 
-test('the card renders below the last session and after the first load', () => {
-  const card = src.indexOf('<HomeChallengeCard');
-  expect(card).toBeGreaterThan(src.indexOf('<HomeLastSessionCard'));
-  expect(card).toBeLessThan(src.indexOf('<HomeCommunityIntroCard'));
-  expect(src).toMatch(/!initialLoading && homeChallenge && \(/);
+test('Community keeps the challenge: its feed still opens the Challenge screen', () => {
+  const hub = fs.readFileSync(path.join(__dirname, '..', 'CommunityHubScreen.js'), 'utf8');
+  expect(hub).toMatch(/Challenge/);
+  expect(hub).toMatch(/'Challenge'/);
 });

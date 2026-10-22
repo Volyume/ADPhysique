@@ -59,18 +59,30 @@ describe('T1-14/T2-31: standalone constraint line', () => {
 });
 
 describe('T1-15/T2-24: the AWAITING prompt reaches Today', () => {
-  test('awaitingConstraintLine matches HowYouTrainScreen\'s own two-branch wording, never invented phrasing', () => {
-    expect(HOME).toMatch(
-      /awaitingConstraint\.subject\s*\n\s*\? `You thought you would be back to \$\{awaitingConstraint\.subject\} by about now\. Still need it\?`\s*\n\s*: 'You thought this would be done by about now\. Still need it\?'/,
+  // RE-POINTED (D231, app layout rework batch 1): the "Still need it?" row and
+  // the "waiting for your decision" row left the Injuries & limitations group
+  // for the Today line. The pinned rules are unchanged: the sentence matches
+  // HowYouTrainScreen's own wording, and a tap lands on Injuries & limitations.
+  const ARBITER = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'home', 'todayLineArbiter.js'), 'utf8');
+
+  test('the AWAITING sentence matches HowYouTrainScreen\'s own two-branch wording, never invented phrasing', () => {
+    expect(ARBITER).toMatch(
+      /f\.awaitingSubject\s*\n\s*\? `You thought you would be back to \$\{f\.awaitingSubject\} by about now\. Still need it\?`\s*\n\s*: 'You thought this would be done by about now\. Still need it\?'/,
     );
+    const HYT = fs.readFileSync(path.join(__dirname, '..', 'HowYouTrainScreen.js'), 'utf8');
+    expect(HYT).toContain('You thought this would be done by about now. Still need it?');
   });
 
-  test('the AWAITING row is tappable through to Injuries & limitations', () => {
-    const site = HOME.indexOf('{awaitingConstraintLine ? (');
+  test('the limitation decision is tappable through to Injuries & limitations, and the rows are gone from the group', () => {
+    const site = HOME.indexOf('limitation: {');
     expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf(') : null}', site));
+    const block = HOME.slice(site, HOME.indexOf('},', site) + 2);
     expect(block).toMatch(/navigation\.navigate\('HowYouTrain'\)/);
-    expect(block).toMatch(/awaitingConstraintLine/);
+    expect(block).toMatch(/awaitingCount: awaitingConstraint\?\.count \?\? 0,/);
+    expect(block).toMatch(/undecided: undecidedConstraint,/);
+    expect(HOME).not.toContain('{awaitingConstraintLine ? (');
+    expect(HOME).not.toContain('{undecidedConstraint && !awaitingConstraintLine ? (');
+    expect(HOME).not.toContain('A change to your limitations is waiting for your decision.');
   });
 
   test('grouped via capability/model episodeStatus, the same grouping the settings store uses - no reimplemented status logic', () => {

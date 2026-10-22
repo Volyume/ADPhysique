@@ -22,15 +22,20 @@ import useTheme from '../../hooks/useTheme';
  *
  * Presentation only, per the build brief: no data logic here.
  *
+ * D231 (app layout rework, batch 1): an item with `wrap: true` is shown in full
+ * (no two-line clamp). The three occupants that moved onto the line from
+ * unclamped cards and rows set it, so a long limitation sentence or a large
+ * system text size never cuts a question off. Every other item keeps the clamp.
+ *
  * @param {{ item: { key: string, text: string, onPress: Function,
- *   onDismiss?: Function|null, accessibilityLabel?: string } | null,
+ *   onDismiss?: Function|null, accessibilityLabel?: string, wrap?: boolean } | null,
  *   testID?: string }} props
  */
 function TodayLine({ item, testID }) {
   const t = useTheme();
   if (!item) return null;
 
-  const { text, onPress, onDismiss, accessibilityLabel } = item;
+  const { text, onPress, onDismiss, accessibilityLabel, wrap } = item;
   const live = {
     row: { backgroundColor: t.colors.primaryBg },
     accent: { backgroundColor: t.colors.primary },
@@ -50,7 +55,7 @@ function TodayLine({ item, testID }) {
           that would reintroduce the "five idioms" problem this component
           exists to close. */}
       <View style={[styles.accent, live.accent]} />
-      <Text style={[styles.text, live.text]} numberOfLines={2}>{text}</Text>
+      <Text style={[styles.text, live.text]} numberOfLines={wrap ? undefined : 2}>{text}</Text>
       {onDismiss ? (
         <TouchableOpacity
           onPress={onDismiss}

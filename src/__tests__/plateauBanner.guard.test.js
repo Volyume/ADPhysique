@@ -54,20 +54,18 @@ describe('B3 plateau banner priority slot (D7 ranked-list mechanics)', () => {
   // activation and attention. RE-PINNED AGAIN (D137, fully free product):
   // the 'attention' slot (AttentionCard.js, a free-tier-only surface) is
   // deleted outright, so plateau's one remaining peer is activation.
-  test('ranks above the activation slot', () => {
-    const site = HOME.indexOf('const BANNER_PRIORITY = [');
-    expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf('];', site));
-    const order = ['plateau', 'activation']
-      .map((key) => block.indexOf(`key: '${key}'`));
-    expect(order.every((i) => i > -1)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(block).not.toContain("key: 'attention'");
+  // RE-POINTED (D231, app layout rework batch 1): the activation banner left
+  // the shared banner slot for the one offer slot under the main card, so the
+  // plateau note no longer ranks against anything: it stays at the bottom of
+  // Today on its own, shown whenever it is eligible.
+  test('stands on its own: no shared banner slot, and the activation banner is not its peer any more', () => {
+    expect(HOME).not.toMatch(/BANNER_PRIORITY|shownBannerKey/);
+    expect(HOME).not.toMatch(/const showActivationBanner/);
   });
 
-  test('renders only when it is the single highest-priority eligible banner', () => {
+  test('renders whenever it is eligible', () => {
     expect(HOME).toMatch(
-      /const showPlateauBanner = shownBannerKey === 'plateau';/,
+      /const showPlateauBanner = plateauBannerEligible;/,
     );
   });
 });

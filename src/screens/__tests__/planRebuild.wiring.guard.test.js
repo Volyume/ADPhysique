@@ -72,11 +72,21 @@ describe('the screens a plan or a session is opened from trigger the rebuild fir
 });
 
 describe('the one-time note is shown by Home and by the plan screen', () => {
-  test('Home renders it once, after the load, keyed on the active plan', () => {
-    expect(HOME).toContain("import PlanRebuildNote from '../components/PlanRebuildNote';");
-    expect((HOME.match(/<PlanRebuildNote /g) ?? []).length).toBe(1);
-    expect(HOME).toContain('<PlanRebuildNote userId={user?.id} reloadKey={activePlan?.id ?? null} />');
-    expect(HOME).toContain('{!initialLoading && <PlanRebuildNote');
+  test('Home offers it on the Today line and opens it in a sheet, read inside the load', () => {
+    // RE-POINTED (D231, app layout rework batch 1): Home no longer renders the
+    // PlanRebuildNote card. The note is an occupant of the Today line ("Your
+    // plan was updated. See what changed."), its lines open in
+    // PlanRebuildNoteSheet, and "Got it" retires it through the same
+    // dismissPlanRebuildNote. The plan screen below still renders the card.
+    expect(HOME).not.toMatch(/<PlanRebuildNote /);
+    expect(HOME).toContain("import PlanRebuildNoteSheet from '../components/home/PlanRebuildNoteSheet';");
+    expect((HOME.match(/<PlanRebuildNoteSheet/g) ?? []).length).toBe(1);
+    const loadData = between(HOME, 'async function loadData() {', 'async function loadLatestCoachOutput()');
+    // Read AFTER the rebuild (loadData awaits it first), so a note written by a
+    // rebuild during this load is the one read.
+    expect(loadData).toContain('loadPlanRebuildFacts(),');
+    expect(loadData.indexOf('ensureActivePlanRebuilt(user.id)')).toBeLessThan(loadData.indexOf('loadPlanRebuildFacts()'));
+    expect(HOME).toMatch(/getPlanRebuildNote\(user\.id\)/);
   });
 
   test('the plan screen renders it once, keyed on the active plan', () => {

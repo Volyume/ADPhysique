@@ -68,8 +68,15 @@ describe('2. Coach tab: a tier-blind row above the Pro-only Setup', () => {
 });
 
 describe('3. Home: one calm, one-time offer', () => {
-  test('gated on nothing set up, the welcome card retired, and an empty attention slot', () => {
-    expect(home).toContain('{!initialLoading && hytNothingSetUp && !hytOfferDismissed && (totalSessions > 0 || welcomeDismissed) && shownBannerKey == null && (');
+  test('gated on nothing set up, the first session logged (or the old welcome flag), and an empty offer slot', () => {
+    // RE-POINTED (D231, app layout rework batch 1): the Welcome card is gone, so
+    // "the welcome card retired" is "the first session logged, or the old
+    // welcome-dismissed flag set for an existing user" (the same condition,
+    // unchanged); "an empty attention slot" is the one offer slot, where this
+    // question ranks second after the full "Set up coaching" card.
+    expect(home).toContain('howYouTrain: !initialLoading && hytNothingSetUp && !hytOfferDismissed');
+    expect(home).toContain('&& (totalSessions > 0 || welcomeDismissed),');
+    expect(home).toContain("{shownOfferKey === 'howYouTrain' ? (");
   });
   test('"nothing" means no rows at all, history included, so a person who ended things is never re-offered', () => {
     expect(home).toContain('setHytNothingSetUp(!full.unavailable && !full.baseline.length && !full.episodes.length && !full.history.length)');
