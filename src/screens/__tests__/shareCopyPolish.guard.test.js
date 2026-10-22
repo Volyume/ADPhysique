@@ -56,8 +56,10 @@ describe('share copy polish', () => {
     expect(liftProgress).toContain('style={styles.heroCtaRow}');
   });
 
-  test('Analytics recent sessions link uses contained neutral chrome', () => {
-    const analytics = read('AnalyticsScreen.js');
+  // RE-POINTED (D231, app layout rework batch 2): Recent sessions and their "All
+  // sessions" link moved from Progress to Train; the chrome rule is unchanged.
+  test('Train recent sessions link uses contained neutral chrome', () => {
+    const analytics = read('PlansScreen.js');
     // R9 (D70), 2026-07-11: seeAllButton -> shared Button primitive (variant=
     // "outline"); the icon now renders through Button's own `icon` prop
     // (tinted to the variant's ink, textPrimary), rather than a standalone

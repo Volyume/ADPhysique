@@ -607,10 +607,24 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ headerShown: false }} />
+      {/* D231 (app layout rework, batch 2): Train carries Recent sessions (each card
+          opens WorkoutSummary), its All sessions door (WorkoutHistory) and the
+          one-week volume strip (VolumeHeatmap), moved from Progress, so each is
+          registered here as well (deliberate duplicate registrations, same options
+          as ProgressStack) and Back returns to Train. ShareCard and ClipCamera ride
+          along as WorkoutSummary's own outbound targets (transitive closure, as in
+          ProgressStack): a summary opened from Train must still share. */}
+      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
+      {/* D229: the clip camera. No swipe-back: a slip of the thumb must not end a recording. */}
+      <Stack.Screen name="ClipCamera" component={ClipCameraScreen} options={{ headerShown: false, gestureEnabled: false }} />
       {/* D107-2/D109-3: the movement-pattern constraints list, reached from
-          the Plan tools "Avoided movements" row. Set/clear stays on the
-          exercise long-press (RoutineDetailScreen); this is the list home
-          with per-row removal. */}
+          HowYouTrain's "Movements you would rather not do" row (D231: Train's own
+          "Avoided movements" row is gone). Set/clear stays on the exercise
+          long-press (RoutineDetailScreen); this is the list home with per-row
+          removal. */}
       <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
       {/* CC26: capability settings home ("Injuries & limitations"). Free tier, CAP-19. */}
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />

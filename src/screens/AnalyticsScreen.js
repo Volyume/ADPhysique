@@ -9,39 +9,21 @@ import { useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { loadMuscleRecovery } from '../lib/recovery/load';
 import { buildRecoveryPillarCopy } from '../lib/recovery/recoveryPillar';
 import { format } from 'date-fns/format';
-import { safeDate, safeFormatDate } from '../lib/safeFormat';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
-import Button from '../components/Button';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import EmptyState from '../components/EmptyState';
-import InfoTooltip from '../components/InfoTooltip';
-import PlanWeekCard from '../components/PlanWeekCard';
-import LegendRow from '../components/LegendRow';
 import { NavRow, NavGroup } from '../components/NavRow';
 import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
 import useVisualPillar from '../hooks/useVisualPillar';
-import { sessionSummaryParams } from '../lib/sessionReport';
-import { getPlanLandmarks, getPlanRoles } from '../lib/effectiveLandmarks';
-import { resolveProgrammePosition } from '../lib/programmePosition';
-import { planTrainedMuscles } from '../lib/volumeLogged';
-import { logError } from '../lib/errorLog';
-import { buildPlanWeekSummary } from '../lib/progress/planWeek';
-// The strip's (i) text lives with its legend words in the pure model
-// (STRIP_TOOLTIP, STRIP_RECOVERY_TOOLTIP), so the words the (i) names are the
-// words the legend prints.
-import {
-  buildVolumeStrip, isStripRecoveryWeek, stripLegendItems, stripToneColors,
-  STRIP_TOOLTIP, STRIP_RECOVERY_TOOLTIP,
-} from '../lib/progress/volumeStrip';
 import {
   bodyPillarCopy, computeTrainingPillarSummary, buildVisualPillarCopy, trainingPillarCopy,
 } from '../lib/progress/pillars';
@@ -52,25 +34,16 @@ const RECAP_GATE = 10;
 // Year of lifts appears once the first session is a year old (as it always has).
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
-// D214 (PR-17): the loading slots are the real slots' heights, not one 168 dp
+// D214 (PR-17): the loading slot is the real slot's height, not one 168 dp
 // block for a four-row card, so little jumps when the content arrives (measured
-// on the paper render at a 412 dp phone: the plan-week card and the strip under
-// it are about 250 dp together, the four pillar rows about 410 to 450 dp).
-const PLAN_WEEK_SKELETON_HEIGHT = 250;
+// on the paper render at a 412 dp phone: the four pillar rows about 410 to 450
+// dp). D231 (app layout rework, batch 2): the plan-week card and its strip left
+// this screen for Train, so the pillars are the only loading slot left.
 const PILLARS_SKELETON_HEIGHT = 410;
 
 // D214 (PR-2): what the Training row prints when a load failed and it has no
 // earlier copy to keep: its label alone, so the one error state below speaks.
 const NO_TRAINING_COPY = Object.freeze({ state: null, evidence: null });
-
-// What the screen holds for the plan context before it is read (undefined) and
-// when there is no signed-in account (no plan, nothing plan-trained, no roles,
-// so every muscle reads the standard bands).
-const NO_PLAN_CONTEXT = Object.freeze({ position: null, planTrained: new Set(), roles: Object.freeze({}) });
-
-// The person's own word for a session's difficulty (1 to 5), the words the
-// Workout Summary rates it in; the spoken label carries "4 of 5" (D214, PR-1).
-const DIFFICULTY_WORDS = ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'];
 
 // COMP-005: which monthly recap the Recaps tile / ephemeral card opens. The last
 // completed calendar month when the user was training before this month began;
@@ -150,11 +123,9 @@ export default function AnalyticsScreen({ navigation, route }) {
   const toast = useToast();
   const user = useAppStore(s => s.user);
   const tier = useAppStore(s => s.tier);
-  const userProfile = useAppStore(s => s.userProfile);
   const bodyWeightUnits = useAppStore(s => s.bodyWeightUnits);
   const units = useAppStore(s => s.units);
-  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
-  // because this screen renders a recent-sessions list.
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
@@ -193,51 +164,9 @@ export default function AnalyticsScreen({ navigation, route }) {
   // for training wins lives on Recaps and LiftProgress. tonnageMilestone.js
   // remains in the tree, production-unreferenced.
   //
-  // D214 (plan 7.1 item 2, PR-10, PR-14, PR-16): the plan context the plan-week
-  // card and the volume strip read, re-read on EVERY focus and on pull-to-
-  // refresh so it agrees with a session just logged or a target just edited:
-  //   - the programme position (resolveProgrammePosition: null on a read
-  //     failure or with no block, which reads as no plan);
-  //   - the plan-trained muscle set, the plan layer's own source map exactly as
-  //     VolumeHeatmapScreen reads it (never the merged source);
-  //   - each muscle's role in the active plan (getPlanRoles, D219), the roles
-  //     both screens judge by (volumeJudgement.js: the one band function).
-  // undefined until the first read settles; every read is best effort, so a
-  // failure degrades to the no-plan, research-table reading and is logged.
-  const [planContext, setPlanContext] = useState(undefined);
-  const planRequestRef = useRef(0);
-  const userProfileRef = useRef(userProfile);
-  userProfileRef.current = userProfile;
-  const loadPlanContext = useCallback(async () => {
-    const requestId = planRequestRef.current + 1;
-    planRequestRef.current = requestId;
-    if (!user?.id) { setPlanContext(NO_PLAN_CONTEXT); return; }
-    const profile = userProfileRef.current;
-    try {
-      const [position, planLayer, roles] = await Promise.all([
-        resolveProgrammePosition(user.id).catch(() => null),
-        getPlanLandmarks(user.id, { userProfile: profile }).catch((e) => {
-          logError('AnalyticsScreen.readPlanLandmarks', e, { userId: user.id });
-          return null;
-        }),
-        getPlanRoles(user.id),
-      ]);
-      if (planRequestRef.current !== requestId) return;
-      setPlanContext({
-        position: position ?? null,
-        planTrained: planTrainedMuscles(planLayer),
-        roles: roles ?? {},
-      });
-    } catch (e) {
-      // Never an unread plan slot forever: whatever failed, the screen reads as
-      // no plan with the research table, and the failure is logged.
-      logError('AnalyticsScreen.loadPlanContext', e, { userId: user.id });
-      if (planRequestRef.current === requestId) setPlanContext(NO_PLAN_CONTEXT);
-    }
-  }, [user?.id]);
-  useFocusEffect(
-    useCallback(() => { loadPlanContext(); }, [loadPlanContext]),
-  );
+  // D231 (app layout rework, batch 2): the plan-week card and the volume strip
+  // under it (with the plan context they read) left this screen for Train
+  // (src/hooks/useTrainWeek.js); so did Recent sessions.
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -265,9 +194,8 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   const {
     loading, refreshing, loadError,
-    recentSessions, allSets, exerciseMap, exerciseLookup, earliestWorkoutAt, completedWorkoutCount,
-    sessionCount, currentMesoWeek, calValues,
-    hasData,
+    allSets, exerciseMap, exerciseLookup, earliestWorkoutAt, completedWorkoutCount,
+    sessionCount,
     handleRefresh,
   } = useProgressData();
 
@@ -309,46 +237,6 @@ export default function AnalyticsScreen({ navigation, route }) {
     capturedAt: visualPillar.capturedAt,
   }), [visualPillar.hasScan, visualPillar.hasNote, visualPillar.packet, visualPillar.capturedAt]);
 
-  // D214 (plan 7.1 item 2): "Your plan week", the screen's one session count.
-  // The plan-week card is ONE view-model shared with Consistency
-  // (src/lib/progress/planWeek.js): the plan week's completed-over-required
-  // count named as the plan week, the Monday-anchored seven cells and the next
-  // session, or the calendar count ("2 sessions so far this week") with no plan.
-  // D214 addendum 9 (census 6.13): the seven cells light on the days a
-  // completed workout STARTED, the twelve-week grid's own days (calValues), so
-  // "a day with a completed session" means one thing on the card, the grid and
-  // the caption.
-  const completedDays = useMemo(() => calValues.map((v) => v.date), [calValues]);
-  const planWeekSummary = useMemo(
-    () => (planContext
-      ? buildPlanWeekSummary({ position: planContext.position, sets: allSets, completedDays, finished: !!currentMesoWeek?.awaitingDecision })
-      : null),
-    [planContext, allSets, completedDays, currentMesoWeek],
-  );
-  // The strip under it: this Monday week so far, in logged sets (never the
-  // credits summed), judged by the same one judgement (each muscle's role in
-  // the active plan, volumeJudgement.js) and the same plan-trained set the
-  // Volume heatmap reads, so its "below maintenance" count is that screen's
-  // first group (src/lib/progress/volumeStrip.js). The
-  // recovery week is the programme position's GATED planned recovery week,
-  // with the calendar flag only as the fallback when the position is unread.
-  const recoveryWeek = useMemo(
-    () => isStripRecoveryWeek({ position: planContext?.position ?? null, currentMesoWeek }),
-    [planContext, currentMesoWeek],
-  );
-  const strip = useMemo(() => buildVolumeStrip({
-    allSets,
-    exerciseMap: exercisesForSets,
-    nowMs: Date.now(),
-    roles: planContext?.roles ?? null,
-    planTrained: planContext?.planTrained ?? null,
-    recoveryWeek,
-  }), [allSets, exercisesForSets, planContext, recoveryWeek]);
-  const legendItems = useMemo(
-    () => stripLegendItems({ colors: t.colors, recoveryWeek }),
-    [t, recoveryWeek],
-  );
-
   // One session count for Recaps everywhere on this screen: the sessions
   // milestone's own definition, a completed workout with at least one set
   // (D214, PR-12), where the door used to count completed workouts with a start
@@ -379,14 +267,6 @@ export default function AnalyticsScreen({ navigation, route }) {
     AsyncStorage.setItem(`@volyume_recap_card_${recapMonthKey}`, 'dismissed').catch(() => {});
   };
 
-  // Pull to refresh re-reads the plan context beside the progress data.
-  const onRefresh = () => { loadPlanContext(); handleRefresh(); };
-
-  // The plan-week slot: a skeleton in the real slot until both the progress
-  // data and the plan context have been read, then the card; nothing at all
-  // after a failed load (a card built from nothing would claim "0 sessions").
-  const planSlotLoading = !loadError && (loading || planContext === undefined);
-  const showPlanWeek = !loadError && !loading && planContext !== undefined && !!planWeekSummary;
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
@@ -396,7 +276,7 @@ export default function AnalyticsScreen({ navigation, route }) {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={handleRefresh}
             tintColor={t.colors.primary}
           />
         }
@@ -404,31 +284,9 @@ export default function AnalyticsScreen({ navigation, route }) {
         {/* ── Header (R1) ───────────────────────────────────── */}
         <ScreenHeader title="Progress" />
 
-        {/* ── Your plan week (D214, plan 7.1 item 2): the screen's first
-            object, "2 of 4 sessions in week 2 of your plan · Upper A is next"
-            with the seven day cells, drawn by the shared PlanWeekCard from the
-            one view-model. Inside the same card, under a hairline (the spec's
-            "one Card"), the week's volume line and strip, in logged sets, so
-            far. ── */}
-        {!loadError ? <SectionLabel>Your plan week</SectionLabel> : null}
-        {planSlotLoading ? (
-          <SkeletonCard height={PLAN_WEEK_SKELETON_HEIGHT} />
-        ) : null}
-        {showPlanWeek ? (
-          <AnimatedEntrance>
-            <View style={styles.planWeek}>
-              <PlanWeekCard summary={planWeekSummary}>
-                {hasData ? (
-                  <VolumeStrip
-                    strip={strip}
-                    legendItems={legendItems}
-                    onOpen={() => navigation.navigate('VolumeHeatmap', { windowWeeks: 1 })}
-                  />
-                ) : null}
-              </PlanWeekCard>
-            </View>
-          </AnimatedEntrance>
-        ) : null}
+        {/* D231 (app layout rework, batch 2): "Your plan week" (the plan-week card
+            and the volume strip inside it) moved to Train, with Recent sessions
+            below. This screen's first object is Your progress. */}
 
         {/* ── Your progress: three or four compact pillar rows inside one
             container, never hero cards (§26). Each headline is a verdict in
@@ -535,63 +393,6 @@ export default function AnalyticsScreen({ navigation, route }) {
           />
         )}
 
-        {/* ── Evidence trail (R3, cond: any sessions exist). D214: the old
-            "N sessions this week" context line is gone, the plan-week card's
-            count is the one session count on the screen. ── */}
-        {recentSessions.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.rowBetween}>
-              <SectionLabel>Recent sessions</SectionLabel>
-              {/* R9 (D70): seeAllButton -> shared Button outline sm. */}
-              <Button
-                variant="outline"
-                size="sm"
-                fullWidth={false}
-                icon="list-outline"
-                title="All sessions"
-                onPress={() => navigation.navigate('WorkoutHistory')}
-                accessibilityLabel="See all sessions"
-              />
-            </View>
-            {recentSessions.map(w => {
-              // L04-1 (design audit 2026-07-09): these cards used to render
-              // with no onPress while sharing the same tappable-looking Card
-              // styling as every other navigating card on this screen. Wire
-              // them to WorkoutSummary (read-only).
-              //
-              // D218 (founder order 2026-10-03, audit F-2): the params are the
-              // shared session report's (src/lib/sessionReport.js), the very
-              // object History's "View summary" and "Rate your last session"
-              // carry, over the unfiltered, survivor-aware exercise lookup the
-              // hook returns (null until loaded, which the helper accepts). This
-              // card used to count raw ids, name them through the filtered
-              // library and cut the id list to four BEFORE dropping the ones it
-              // could not name, so it could list fewer names than History for
-              // one workout.
-              const mySets = allSets.filter(s => s.workoutId === w.id);
-              return (
-                <SessionCard
-                  key={w.id}
-                  workout={w}
-                  onPress={() => navigation.navigate('WorkoutSummary', {
-                    ...sessionSummaryParams(w, mySets, exerciseLookup),
-                    // Founder device report 2026-08-24: without the routine
-                    // the summary has nothing to title the session with and
-                    // its share card falls back to a join of the first two
-                    // exercise names, which then moves whenever an exercise
-                    // is swapped. getAllWorkouts joins the routine, so both
-                    // are already on the row (the report's params carry them
-                    // too; named here so every route into the summary reads
-                    // as carrying its routine).
-                    routineId: w.routineId ?? null,
-                    routineName: w.routineName ?? null,
-                  })}
-                />
-              );
-            })}
-          </View>
-        )}
-
         {/* ── Moments (R5, cond). Recap-only since the founder device
             order of 2026-08-17 retired the tonnage-milestone row; the
             recap card remains transient and dismissible. ── */}
@@ -620,16 +421,15 @@ export default function AnalyticsScreen({ navigation, route }) {
 
         {/* ── Utilities (R6, always): the doors, one grouped list (D214 plan
             7.1 item 6). Body Metrics and Lifts are not doors here: the pillar
-            rows above already cover them. The Volume heatmap is a PERSISTENT
-            door (PR-15), never conditional on this week's data. The Partners
+            rows above already cover them. D231 (app layout rework, batch 2): the
+            Volume heatmap and Full history rows are gone with the strip and
+            Recent sessions they duplicated; both live on Train now. The Partners
             tile stays removed (blueprint section 1, entry point 4): Community
             is not a stat. ── */}
         <View style={styles.section}>
           <SectionLabel>More</SectionLabel>
           <NavGroup>
             <NavRow icon="pulse" label="Consistency" onPress={() => navigation.navigate('Consistency')} />
-            <NavRow icon="body-outline" label="Volume heatmap" onPress={() => navigation.navigate('VolumeHeatmap')} />
-            <NavRow icon="time-outline" label="Full history" onPress={() => navigation.navigate('WorkoutHistory')} />
             {/* COMP-005: Recaps replaces the year-long locked Year-of-Lifts
                 tile. It unlocks after RECAP_GATE logged sessions (~a fortnight,
                 not a year) and opens the most recent monthly recap; before
@@ -703,131 +503,12 @@ function PillarRow({ icon, label, stateText, evidenceText, onPress }) {
   );
 }
 
-// D214 (plan 7.1 item 2, line 3 and the strip): this Monday week so far, in
-// logged working sets, over a segmented bar in three named tones. The model is
-// pure (src/lib/progress/volumeStrip.js: the count is volumeLogged.js's one
-// definition, the "under" count is the Volume heatmap's first group by
-// construction); this only draws it. The line and bar open the heatmap on
-// "This week"; the legend and its (i) sit outside that touch target so a
-// screen reader reaches each. In a recovery week no verdict is drawn: one
-// neutral shade named "Trained", the recovery sentence under the line.
-// CP-10 batch G (2026-07-11): sibling function-component scope, own
-// useTheme() call (same reasoning as PillarRow above), same shared
-// buildLiveStyles(t).
-function VolumeStrip({ strip, legendItems, onOpen }) {
-  const t = useTheme();
-  const live = useMemo(() => buildLiveStyles(t), [t]);
-  const tone = stripToneColors(t.colors);
-  return (
-    <View testID="volume-strip" style={styles.strip}>
-      <TouchableOpacity
-        style={styles.stripTouch}
-        onPress={() => { haptics.selection(); onOpen?.(); }}
-        activeOpacity={0.75}
-        accessibilityRole="button"
-        accessibilityLabel={strip.spoken}
-        accessibilityHint="Opens the Volume heatmap for this week"
-      >
-        <View style={styles.stripTop}>
-          <View style={styles.stripText}>
-            <Text style={[styles.stripLine, live.stripLine]}>{strip.line}</Text>
-            {strip.recoveryLine ? (
-              <Text style={[styles.stripNote, live.stripNote]}>{strip.recoveryLine}</Text>
-            ) : null}
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </View>
-        {strip.hasSetsThisWeek ? (
-          <View
-            style={styles.volStackBar}
-            testID="volume-strip-bar"
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            {strip.segments.map(seg => (
-              <View
-                key={seg.muscle}
-                style={[
-                  styles.volStackSegment,
-                  { flex: Math.max(seg.sets, 0.5), backgroundColor: strip.recoveryWeek ? tone.neutral : tone[seg.tone] },
-                  strip.recoveryWeek ? live.stripNeutralSegment : null,
-                ]}
-              />
-            ))}
-          </View>
-        ) : null}
-      </TouchableOpacity>
-      {strip.hasSetsThisWeek ? (
-        <LegendRow
-          items={legendItems}
-          trailing={<InfoTooltip text={strip.recoveryWeek ? STRIP_RECOVERY_TOOLTIP : STRIP_TOOLTIP} />}
-        />
-      ) : null}
-    </View>
-  );
-}
-
-// CP-10 batch G (2026-07-11): sibling function-component scope, own
-// useTheme() call (same reasoning as PillarRow above), same shared
-// buildLiveStyles(t).
-function SessionCard({ workout, onPress }) {
-  const t = useTheme();
-  const live = useMemo(() => buildLiveStyles(t), [t]);
-  // D214 (PR-9): the routine's name, else the session's own `name`, else
-  // "Session", the order Home's last-session card reads
-  // (HomeLastSessionCard.js). `name` is overwritten at finish with an
-  // exercise-derived summary, so it is only the right title for a session with
-  // no routine; every session used to read "Session" here.
-  const title = workout.routineName || workout.name || 'Session';
-  const at = workout.startedAt ?? workout.createdAt ?? workout.created_at ?? 0;
-  // D214 (PR-1): the difficulty is rated 1 to 5, so the chip prints the
-  // person's own word ("Hard") and the spoken label carries "4 of 5", never
-  // "/10". A value outside 1 to 5 draws no chip rather than a wrong one.
-  const diff = Number(workout.sessionDifficulty);
-  const diffWord = Number.isInteger(diff) && diff >= 1 && diff <= 5 ? DIFFICULTY_WORDS[diff] : null;
-  // R9 (D70): radius="md" -> default (radius.lg).
-  return (
-    <Card
-      style={styles.sessionCard}
-      onPress={onPress}
-      accessibilityLabel={diffWord ? `View summary for ${title}, difficulty ${diffWord}, ${diff} of 5` : `View summary for ${title}`}
-    >
-      <View style={styles.sessionLeft}>
-        <Text style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{title}</Text>
-        <Text style={[styles.sessionMeta, live.sessionMeta]}>
-          {at && safeDate(at) ? safeFormatDate(at, 'EEE d MMM') : ''}
-          {workout.durationMinutes ? `${at && safeDate(at) ? ' · ' : ''}${workout.durationMinutes} min` : ''}
-        </Text>
-      </View>
-      {diffWord ? (
-        <View style={[styles.diffChip, live.diffChip]} testID="session-difficulty-chip">
-          <Text style={[styles.diffText, live.diffText]}>{diffWord}</Text>
-        </View>
-      ) : null}
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-    </Card>
-  );
-}
-
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.background },
   content:     { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   section:     { gap: spacing.md },
-  rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-
-  // ── Your plan week and the volume strip (D214, plan 7.1 item 2) ──
-  planWeek: { gap: spacing.sm },
-  strip: { gap: spacing.md },
-  stripTouch: { gap: spacing.md },
-  stripTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  stripText: { flex: 1, gap: spacing.xxs },
-  // The strip's line is a sentence of numbers, so it wears tabular figures.
-  stripLine: { ...type.num('bodySm'), color: colors.textPrimary },
-  stripNote: { ...type.bodySm, color: colors.textSecondary },
-  volStackBar: { flexDirection: 'row', height: 8, gap: spacing.xxs },
-  volStackSegment: { borderRadius: radius.hair },
 
   // ── Answer Block (R2) ──
   answerBlock: {},
@@ -850,47 +531,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
-
-  // ── Recent sessions (R3) ──
-  sessionCard: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: spacing.md,
-  },
-  sessionLeft:  { flex: 1 },
-  sessionName:  { ...type.bodyStrong, color: colors.textPrimary },
-  sessionMeta:  { ...type.num('caption'), color: colors.textSecondary, marginTop: spacing.xxs },
-  // D214 (PR-1): the chip prints the person's own word for a 1 to 5 rating, in
-  // ink: a rating is a fact the person gave, not a verdict, so it carries no
-  // warning or error tone (the old tones fired at 6 and 8, which 1 to 5 never
-  // reaches).
-  diffChip:     { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xxs, backgroundColor: colors.surface2 },
-  diffText:     { ...type.captionStrong, color: colors.textSecondary },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
 // identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
 // properties of the matching frozen style, at identical rest values, shared
-// by this screen's several function-component scopes (AnalyticsScreen and
-// its sibling PillarRow/VolumeStrip/SessionCard) so they can
-// never drift out of step with each other or the frozen block. Pure layout
+// by this screen's function-component scopes (AnalyticsScreen and its
+// sibling PillarRow; VolumeStrip and the session card moved to Train, D231) so
+// they can never drift out of step with each other or the frozen block. Pure layout
 // keys (flex/gap/padding/width/borderWidth, no token) are correctly omitted
 // -- there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    stripLine: { ...t.type.num('bodySm'), color: t.colors.textPrimary },
-    stripNote: { ...t.type.bodySm, color: t.colors.textSecondary },
-    // A recovery week's one neutral shade needs a hairline to read on the card.
-    stripNeutralSegment: { borderWidth: 1, borderColor: t.colors.border },
     answerDivider: { backgroundColor: t.colors.border },
     pillarLabel: { ...t.type.overline, color: t.colors.textMuted },
     pillarState: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     pillarEvidence: { ...t.type.bodySm, color: t.colors.textSecondary },
     recapCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     recapCardText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    sessionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    sessionMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    diffChip: { backgroundColor: t.colors.surface2 },
-    diffText: { ...t.type.captionStrong, color: t.colors.textSecondary },
   };
 }

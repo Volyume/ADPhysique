@@ -2223,7 +2223,10 @@ describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)',
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     // -- "moving on" read as the idiom "move on" (proceed), not "moving,
     // dependent on", so both surfaces now say "moving based on".
-    expect(read('screens/HomeScreen.js')).toMatch(/next block's set targets stay where they are rather than moving based on what this block showed/);
+    // RE-POINTED (D231, app layout rework batch 2): the Today sheet moved verbatim to
+    // components/SessionIntentSheet.js (Train's Repeat asks the same question); the
+    // sentence is unchanged.
+    expect(read('components/SessionIntentSheet.js')).toMatch(/next block's set targets stay where they are rather than moving based on what this block showed/);
     expect(read('screens/SettingsCoachingScreen.js')).toMatch(/set targets stay where they are rather than moving based on what the block showed/);
   });
 

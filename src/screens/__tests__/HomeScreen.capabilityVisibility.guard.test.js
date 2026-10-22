@@ -22,6 +22,15 @@ const fs = require('fs');
 const path = require('path');
 
 const HOME = fs.readFileSync(path.join(__dirname, '..', 'HomeScreen.js'), 'utf8');
+// RE-POINTED (D231, app layout rework batch 2): the works-around line, the
+// reintroduction line and the could-not-check line moved from Today to Train.
+// Their logic lives in src/lib/capability/injuryLines.js (read by
+// useInjuryLines) and they are drawn by components/InjuryLines.js under the
+// Injuries & limitations row on PlansScreen. The pinned rules are unchanged.
+const INJURY_LINES = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'capability', 'injuryLines.js'), 'utf8');
+const INJURY_LINES_VIEW = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'InjuryLines.js'), 'utf8');
+const INJURY_LINES_HOOK = fs.readFileSync(path.join(__dirname, '..', '..', 'hooks', 'useInjuryLines.js'), 'utf8');
+const PLANS = fs.readFileSync(path.join(__dirname, '..', 'PlansScreen.js'), 'utf8');
 
 describe('T1-14/T2-31: standalone constraint line', () => {
   test('the episode-role filter requires APPLIED and not HELD (matches the serve gate plus its hold filter)', () => {
@@ -30,9 +39,11 @@ describe('T1-14/T2-31: standalone constraint line', () => {
     // could still drive the "works around" line the serve layer no longer
     // honours. Same pinned intent - the line never claims what serving
     // does not do - with the hold exclusion added.
-    expect(HOME).toMatch(
+    expect(INJURY_LINES).toMatch(
       /state\.restrictions\.filter\(r => r\.role === 'episode' && r\.effectiveChoice === 'applied' && r\.adaptationMode !== 'hold'\)/,
     );
+    // And Today no longer reads it at all.
+    expect(HOME).not.toMatch(/effectiveChoice === 'applied'/);
   });
 
   test('buildCoachBrief() is no longer fed activeConstraint/constraintSubject', () => {
@@ -43,18 +54,22 @@ describe('T1-14/T2-31: standalone constraint line', () => {
     expect(block).not.toMatch(/constraintSubject,/);
   });
 
-  test('the standalone row renders on activeConstraint && activePlan, independent of coachBrief/showCoachBrief', () => {
-    expect(HOME).toMatch(/\{activeConstraint && activePlan \? \(/);
-    const site = HOME.indexOf('{activeConstraint && activePlan ? (');
-    const block = HOME.slice(site, HOME.indexOf(') : null}', site));
-    expect(block).toMatch(/constraintLineText\(constraintSubject\)/);
-    expect(block).toMatch(/navigation\.navigate\('HowYouTrain'\)/);
-    expect(block).not.toMatch(/showCoachBrief/);
-    expect(block).not.toMatch(/coachBrief\./);
+  test('the line renders on activeConstraint && an active plan, independent of any coach brief', () => {
+    expect(INJURY_LINES_VIEW).toMatch(/lines\?\.activeConstraint && hasPlan/);
+    expect(INJURY_LINES_VIEW).toMatch(/constraintLineText\(lines\.constraintSubject\)/);
+    expect(INJURY_LINES_VIEW).not.toMatch(/showCoachBrief|coachBrief\./);
+    // Train hands it the real fact: an active plan.
+    expect(PLANS).toMatch(/<InjuryLines lines=\{injuryLines\} hasPlan=\{!!activePlan\} \/>/);
+  });
+
+  test('D231: on Train the line is plain text under the Injuries & limitations row (the row is the one door), not a second tappable door', () => {
+    expect(INJURY_LINES_VIEW).not.toMatch(/TouchableOpacity|PressableCard|onPress/);
   });
 
   test('constraintLineText is imported from homeCoachBrief.js, not re-implemented inline', () => {
-    expect(HOME).toMatch(/import \{ buildCoachBrief, constraintLineText \} from '\.\.\/lib\/homeCoachBrief';/);
+    expect(INJURY_LINES_VIEW).toMatch(/import \{ constraintLineText \} from '\.\.\/lib\/homeCoachBrief';/);
+    // Today still imports the brief builder only.
+    expect(HOME).toMatch(/import \{ buildCoachBrief \} from '\.\.\/lib\/homeCoachBrief';/);
   });
 });
 
@@ -145,19 +160,18 @@ describe('T1-12: quick-generate reveals capability-blocked slots', () => {
 // (it asks nothing), so the build-back is visible every week it is
 // happening rather than only in the one toast at episode end.
 describe('T2-25: durable reintroduction line', () => {
-  test('the line is derived from the already-loaded planned rows via the reintroduction helpers', () => {
-    expect(HOME).toContain("const { rampMusclesFromPlannedRows, reintroductionRampLine } = require('../lib/capability/reintroduction');");
-    expect(HOME).toContain('const rampMuscles = rampMusclesFromPlannedRows(planned);');
-    expect(HOME).toMatch(/reintroductionRampLine\(rampMuscles\.map\(\(m\) => MUSCLE_DISPLAY_NAMES\[m\] \|\| m\)\)/);
+  test('the line is derived from the current block week\'s planned rows via the reintroduction helpers', () => {
+    expect(INJURY_LINES).toContain("import { rampMusclesFromPlannedRows, reintroductionRampLine } from './reintroduction';");
+    expect(INJURY_LINES).toContain('const rampMuscles = rampMusclesFromPlannedRows(planned);');
+    expect(INJURY_LINES).toMatch(/reintroductionRampLine\(rampMuscles\.map\(\(m\) => MUSCLE_DISPLAY_NAMES\[m\] \|\| m\)\)/);
+    expect(INJURY_LINES).toMatch(/getPlannedMuscleVolume\(week\.id\)/);
   });
 
-  test('the row renders with the quiet constraint-line styling and no touch handler', () => {
-    const site = HOME.indexOf('{rampLine ? (');
+  test('the line renders as quiet plain text with no touch handler', () => {
+    const site = INJURY_LINES_VIEW.indexOf('if (lines?.rampLine)');
     expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf(') : null}', site));
-    expect(block).toContain('styles.constraintLineRow');
-    expect(block).toContain('{rampLine}');
-    expect(block).not.toMatch(/TouchableOpacity|onPress/);
+    expect(INJURY_LINES_VIEW.slice(site, site + 80)).toContain("key: 'ramp'");
+    expect(INJURY_LINES_VIEW).not.toMatch(/TouchableOpacity|onPress/);
   });
 });
 
@@ -166,19 +180,15 @@ describe('T2-25: durable reintroduction line', () => {
 // guard at all, which is how 28px rows shipped on exactly the surface
 // built for users with the highest incidence of tremor and reduced
 // dexterity.
-describe('F-4: the capability rows meet the minimum touch target', () => {
-  test('constraintLineRow carries minHeight: spacing.xxxl (the scale\'s 48)', () => {
-    // Anchored inside the frozen StyleSheet, not the first textual match:
-    // buildLiveStyles now also carries a `constraintLineRow` key (the row's
-    // divider colour, so the grouped list follows a theme flip), and it sits
-    // EARLIER in the file. The layout property this test protects lives in
-    // the frozen block, so that is the one to read.
-    const sheet = HOME.indexOf('const styles = StyleSheet.create(');
-    expect(sheet).toBeGreaterThan(-1);
-    const site = HOME.indexOf('constraintLineRow: {', sheet);
-    expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf('},', site));
-    expect(block).toContain('minHeight: spacing.xxxl');
+describe('F-4: the capability lines are not touch targets on Train; the door above them is 48 dp', () => {
+  // RE-POINTED (D231, batch 2): the three quiet rows were 28 dp touch targets on
+  // Today, lifted to 48 dp (spacing.xxxl) by round 4. On Train they are plain
+  // text under the Injuries & limitations row, so there is no target to size;
+  // the row they sit under is the shared NavRow (padding.lg around a 36 dp tile,
+  // 68 dp tall), the screen's one door to that screen.
+  test('the lines are plain text and the door is a NavRow', () => {
+    expect(INJURY_LINES_VIEW).not.toMatch(/TouchableOpacity|PressableCard|onPress/);
+    expect(PLANS).toMatch(/label="Injuries & limitations"\s*\n\s*sub=\{hytSummary\.sub\}\s*\n\s*onPress=\{\(\) => navigation\.navigate\('HowYouTrain'\)\}/);
   });
 });
 
@@ -190,11 +200,14 @@ describe('F-4: the capability rows meet the minimum touch target', () => {
 // future keyless construction (driven in useAppStore.test.js); this
 // pins Home's honest per-site shape.
 describe('R13-1: the repeat-last-session fallback mints its slot ids', () => {
+  // RE-POINTED (D231, batch 2): Repeat moved from Today to Train's newest Recent
+  // session; the assembly is src/lib/repeatSession.js, unchanged.
+  const REPEAT = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'repeatSession.js'), 'utf8');
   test('the no-routine branch builds keyed rows with the previous session\'s working-set count', () => {
-    expect(HOME).toContain("routineExercise: { id: uid(), recommendedSets: setCounts[exercise.id] || 3 },");
+    expect(REPEAT).toContain("routineExercise: { id: uid(), recommendedSets: setCounts[exercise.id] || 3 },");
     // The old keyless construction shape is gone (the comment above the
     // new one may still name it as history).
-    expect(HOME).not.toContain('({ exercise, routineExercise: null, sets: [] })');
+    expect(REPEAT).not.toContain('({ exercise, routineExercise: null, sets: [] })');
   });
 });
 
@@ -207,40 +220,38 @@ describe('R13-1: the repeat-last-session fallback mints its slot ids', () => {
 // (unavailable && stale) keeps serving normally per CAP-17, exactly as
 // the tappable rows already do - the line must NOT fire on it.
 describe('R9 B4/E1: the honest could-not-check line', () => {
-  test('capabilityCheckFailed is set from the resolver\'s exact no-known-state signature (unavailable && !stale), never from restrictions alone', () => {
-    expect(HOME).toMatch(
-      /setCapabilityCheckFailed\(!!state\?\.unavailable && !state\?\.stale\);/,
-    );
+  test('the check-failed fact is set from the resolver\'s no-known-state signature through the ONE predicate (capabilityKnown), never from restrictions alone', () => {
+    expect(INJURY_LINES).toMatch(/checkFailed: !!state && !capabilityKnown\(state\),/);
+    expect(INJURY_LINES).toMatch(/import \{ capabilityKnown, loadCapabilityResolveState \} from '\.\/resolve';/);
+    // No private copy of the signature (capabilityCensus class 1).
+    expect(INJURY_LINES).not.toMatch(/unavailable\s*&&\s*![^)]*stale/);
   });
 
-  test('the effect\'s catch also sets it true (a thrown read is a failed check, not an empty one)', () => {
-    const site = HOME.indexOf('setActiveConstraint(false);');
+  test('the read\'s catch also reports a failed check (a thrown read is a failed check, not an empty one)', () => {
+    const site = INJURY_LINES.indexOf('return { activeConstraint: false, constraintSubject: null, checkFailed: true };');
     expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, site + 600);
-    expect(block).toContain('setUndecidedConstraint(false);');
-    expect(block).toContain('setCapabilityCheckFailed(true);');
+    expect(INJURY_LINES.slice(Math.max(0, site - 400), site)).toContain('} catch (_) {');
   });
 
-  test('the row renders non-tappable with the lane\'s honesty copy', () => {
-    const site = HOME.indexOf('{capabilityCheckFailed ? (');
-    expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf(') : null}', site));
-    expect(block).toContain('styles.constraintLineRow');
-    expect(block).toContain('Volyume could not check Injuries & limitations just now.');
-    expect(block).not.toMatch(/TouchableOpacity|onPress/);
+  test('the line renders non-tappable with the lane\'s honesty copy', () => {
+    expect(INJURY_LINES).toContain("'Volyume could not check Injuries & limitations just now.'");
+    expect(INJURY_LINES_VIEW).toMatch(/lines\?\.checkFailed\) rows\.push\(\{ key: 'check-failed', text: COULD_NOT_CHECK_LINE \}\)/);
+    expect(INJURY_LINES_VIEW).not.toMatch(/TouchableOpacity|onPress/);
   });
 
-  test('round 10: the effect carries a cancellation guard, so overlapping focus cycles cannot land out of order', () => {
-    // A slow failing read resolving after a fast good one left any of
-    // the five flags describing the older read; blur now cancels the
-    // in-flight application before its setters run.
+  test('round 10: the hook carries a cancellation guard, so overlapping focus cycles cannot land out of order', () => {
+    // A slow failing read resolving after a fast good one left any of the flags
+    // describing the older read; blur now cancels the in-flight application
+    // before its setters run.
+    expect(INJURY_LINES_HOOK).toContain('let cancelled = false;');
+    expect(INJURY_LINES_HOOK).toContain('if (cancelled) return;');
+    expect(INJURY_LINES_HOOK).toContain('return () => { cancelled = true; };');
+    // Today\'s own read (what the Today line still feeds on) keeps both guarded
+    // sites: after the await AND at the top of the catch.
     const site = HOME.indexOf("const { loadCapabilityResolveState } = require('../lib/capability/resolve');");
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site - 900, site + 5200);
     expect(block).toContain('let cancelled = false;');
-    // Round 11 (contradiction 5): BOTH guarded sites - after the await
-    // AND at the top of the catch - or a cancelled failing read could
-    // still clear live rows. One occurrence is not enough.
     expect(block.match(/if \(cancelled\) return;/g)).toHaveLength(2);
     expect(block).toContain('return () => { cancelled = true; };');
   });

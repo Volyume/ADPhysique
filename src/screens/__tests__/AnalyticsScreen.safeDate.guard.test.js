@@ -19,9 +19,12 @@
 import fs from 'fs';
 import path from 'path';
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+// RE-POINTED (D231, app layout rework batch 2): the session card moved from
+// AnalyticsScreen.js to components/RecentSessionCard.js (Train draws it now).
+// The guard is unchanged: the date is validated before it is formatted.
+const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'RecentSessionCard.js'), 'utf8');
 
-describe('AnalyticsScreen SessionCard date guard (EP-23/UI-11)', () => {
+describe('RecentSessionCard date guard (EP-23/UI-11; the Progress SessionCard, moved to Train under D231)', () => {
   test('imports the shared safeDate/safeFormatDate helpers', () => {
     expect(SRC).toMatch(/import \{ safeDate, safeFormatDate \} from '\.\.\/lib\/safeFormat';/);
   });

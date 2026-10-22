@@ -20,6 +20,12 @@ import fs from 'fs';
 import path from 'path';
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+// RE-POINTED (D231, app layout rework batch 2): the volume strip and the session
+// card (with its difficulty chip) moved out of this screen to components/
+// VolumeStrip.js and components/RecentSessionCard.js, which Train draws. The
+// style rules they carry are unchanged and pinned there.
+const STRIP = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'VolumeStrip.js'), 'utf8');
+const SESSION_CARD = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'RecentSessionCard.js'), 'utf8');
 
 describe('AnalyticsScreen cohesion census (R2)', () => {
   test('data numerals carry tabular figures', () => {
@@ -27,9 +33,9 @@ describe('AnalyticsScreen cohesion census (R2)', () => {
     // "8/10" difficulty readout are gone (the chip prints the person's word,
     // PR-1). The strip's line is a sentence of numbers and wears the tabular
     // role; the session meta line keeps its own.
-    expect(SRC).toMatch(/stripLine:\s*\{\s*\.\.\.type\.num\('bodySm'\)/);
-    expect(SRC).toMatch(/stripLine:\s*\{\s*\.\.\.t\.type\.num\('bodySm'\)/);
-    expect(SRC).toMatch(/sessionMeta:\s*\{\s*\.\.\.type\.num\('caption'\)/);
+    expect(STRIP).toMatch(/stripLine:\s*\{\s*\.\.\.type\.num\('bodySm'\)/);
+    expect(STRIP).toMatch(/stripLine:\s*\{\s*\.\.\.t\.type\.num\('bodySm'\)/);
+    expect(SESSION_CARD).toMatch(/sessionMeta:\s*\{\s*\.\.\.type\.num\('caption'\)/);
     // Campaign 23 (§27: "Lifetime totals panel | REHOME to Recaps/YearOfLifts
     // family"): the 3-cell lifetimeValue panel this used to pin left
     // AnalyticsScreen entirely -- it is not a like-for-like style move, the
@@ -48,11 +54,13 @@ describe('AnalyticsScreen cohesion census (R2)', () => {
   });
 
   test('the difficulty chip is a quiet pill printing the person\'s own word in ink (PR-1)', () => {
-    expect(SRC).toMatch(/diffChip:\s*\{[^}]*borderRadius: radius\.full[^}]*backgroundColor: colors\.surface2/);
-    expect(SRC).toMatch(/diffText:\s*\{\s*\.\.\.type\.captionStrong,\s*color: colors\.textSecondary/);
-    expect(SRC).toMatch(/diffText:\s*\{\s*\.\.\.t\.type\.captionStrong,\s*color: t\.colors\.textSecondary/);
+    expect(SESSION_CARD).toMatch(/diffChip:\s*\{[^}]*borderRadius: radius\.full[^}]*backgroundColor: colors\.surface2/);
+    expect(SESSION_CARD).toMatch(/diffText:\s*\{\s*\.\.\.type\.captionStrong,\s*color: colors\.textSecondary/);
+    expect(SESSION_CARD).toMatch(/diffText:\s*\{\s*\.\.\.t\.type\.captionStrong,\s*color: t\.colors\.textSecondary/);
     // No warning or error tone (the old thresholds, 6 and 8, never fire on a 1 to 5 rating).
-    expect(SRC).not.toMatch(/buildDiffChip|errorBg|warningBg/);
+    expect(SESSION_CARD).not.toMatch(/buildDiffChip|errorBg|warningBg/);
+    // And the Progress screen no longer carries the chip at all.
+    expect(SRC).not.toMatch(/diffChip|diffText/);
   });
 
   test('recapCard keeps its RECORDED radius.md ephemeral-banner exception (R9/D70)', () => {

@@ -182,3 +182,47 @@ describe('PlanWeekCard: the cells are reachable', () => {
     expect(group.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && /^Trained/.test(n.props.accessibilityLabel))).toHaveLength(0);
   });
 });
+
+// D231 (app layout rework, batch 2): Train draws the week INSIDE its plan card.
+describe('PlanWeekCard embedded (Train\'s plan card)', () => {
+  test('no Card shell of its own, the same count, words and seven cells', () => {
+    const summary = buildPlanWeekSummary({ position, sets, now: NOW });
+    const Card = require('../Card').default;
+    const plain = create(<PlanWeekCard summary={summary} />);
+    const embedded = create(<PlanWeekCard summary={summary} embedded testID="train-plan-week" />);
+    expect(plain.root.findAllByType(Card)).toHaveLength(1);
+    expect(embedded.root.findAllByType(Card)).toHaveLength(0);
+    expect(embedded.root.findAllByProps({ testID: 'train-plan-week' }).length).toBeGreaterThan(0);
+    expect(textOf(embedded, 'plan-week-number')).toBe('2 of 4');
+    expect(textOf(embedded, 'plan-week-words')).toBe('sessions');
+    expect(find(embedded, (n) => n.props?.tone === 'ink')).toHaveLength(1);
+    expect(embedded.root.findByProps({ testID: 'plan-week-summary' }).props.accessibilityLabel)
+      .toBe('2 of 4 sessions in week 2 of your plan. Upper B is next.');
+  });
+
+  test('the subline keeps only what the plan card\'s own week line does not say', () => {
+    const summary = buildPlanWeekSummary({ position, sets, now: NOW });
+    const embedded = create(<PlanWeekCard summary={summary} embedded />);
+    expect(textOf(embedded, 'plan-week-subline')).toBe('Upper B is next');
+    const done = buildPlanWeekSummary({
+      position: {
+        ...position,
+        sessions: position.sessions.map((x) => ({ ...x, state: SESSION_STATE.COMPLETED })),
+        nextSession: null,
+        weekResolved: true,
+      },
+      sets,
+      now: NOW,
+    });
+    expect(textOf(create(<PlanWeekCard summary={done} embedded />), 'plan-week-subline')).toBe('Every session done');
+    // The plain card keeps the full subline.
+    expect(textOf(create(<PlanWeekCard summary={summary} />), 'plan-week-subline')).toBe('in week 2 of your plan · Upper B is next');
+  });
+
+  test('a finished block or no plan: no subline (the plan card says it), the count still shows', () => {
+    const finished = buildPlanWeekSummary({ position, sets, now: NOW, finished: true });
+    const tree = create(<PlanWeekCard summary={finished} embedded />);
+    expect(tree.root.findAllByProps({ testID: 'plan-week-subline' })).toHaveLength(0);
+    expect(textOf(tree, 'plan-week-words')).toBe('sessions so far this week');
+  });
+});

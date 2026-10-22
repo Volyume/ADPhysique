@@ -614,7 +614,9 @@ describe('State matrix — S3: established Pro, normal day, no banner eligible',
     expect(errors).toEqual([]);
     expect(REGION.heroPlanned(tree)).toBe(true);
     expect(REGION.todayStrip(tree)).toBe(true);
-    expect(REGION.footerLastSession(tree)).toBe(true);
+    // RE-POINTED (D231, app layout rework batch 2): the last-session row left
+    // Today for Train's Recent sessions.
+    expect(REGION.footerLastSession(tree)).toBe(false);
     expect(REGION.todayLine(tree)).toBe(false);
   });
 });
@@ -899,14 +901,16 @@ describe('State matrix — S10: established user, normal day, no plan gaps', () 
     expect(errors).toEqual([]);
     expect(REGION.heroPlanned(tree)).toBe(true);
     expect(REGION.todayStrip(tree)).toBe(true);
-    expect(REGION.footerLastSession(tree)).toBe(true);
+    // RE-POINTED (D231, app layout rework batch 2): the last-session row left
+    // Today for Train's Recent sessions.
+    expect(REGION.footerLastSession(tree)).toBe(false);
     expect(REGION.todayLine(tree)).toBe(false);
   });
 });
 
 // ─── S11 — Free, no plan, has session history (3+ sessions) ───────────────
 describe('State matrix — S11: Free, no plan, session history', () => {
-  test('no-plan EmptyState + last-session row; the retired 3-way glance-card duplication never renders', async () => {
+  test('no-plan EmptyState and no last-session row (D231, batch 2: it is on Train); the retired 3-way glance-card duplication never renders', async () => {
     useAppStore.setState(FREE_USER);
     applyFixture({
       db: {
@@ -917,7 +921,7 @@ describe('State matrix — S11: Free, no plan, session history', () => {
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
     expect(REGION.heroNoPlan(tree)).toBe(true);
-    expect(REGION.footerLastSession(tree)).toBe(true);
+    expect(REGION.footerLastSession(tree)).toBe(false);
     expect(flattenText(tree)).not.toMatch(/Progress at a glance/);
   });
 });
@@ -1047,7 +1051,9 @@ describe('State matrix — S1: cold-launch skeleton (source guard, see header ra
 // hero, straight after the Community row; the hero and the footer keep their
 // order.
 describe('Presentation guard — strip renders above the hero, footer below it (real DOM order)', () => {
-  test('TodayStrip text precedes hero text precedes last-session text', async () => {
+  // RE-POINTED (D231, app layout rework batch 2): the last-session row (and its
+  // "Repeat") left Today, so the order is the strip, then the hero, and no footer.
+  test('TodayStrip text precedes hero text, and no last-session footer follows it', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: { ...withPlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
@@ -1058,10 +1064,10 @@ describe('Presentation guard — strip renders above the hero, footer below it (
     const txt = flattenText(tree);
     const heroIdx = txt.indexOf('Push Day');
     const stripIdx = txt.indexOf('Morning weight');
-    const footerIdx = txt.indexOf('Repeat');
     expect(stripIdx).toBeGreaterThan(-1);
     expect(heroIdx).toBeGreaterThan(stripIdx);
-    expect(footerIdx).toBeGreaterThan(heroIdx);
+    expect(txt).not.toContain('Repeat');
+    expect(txt).not.toMatch(/Last session/);
   });
 });
 

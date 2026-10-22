@@ -8,12 +8,11 @@
  * P7, P19, P20, P21, P40). Pins, against the REAL HomeScreen, how Home reports
  * and reuses a finished workout's logged sets:
  *
- *  - "Last session" prints its total in the unit the person trains in (the
- *    stored total and the computed fallback alike) and a distance set's metres
- *    are never kilograms: a heel walk logged in a session leaves the row's
- *    "kg lifted" unchanged (F-8 part 2, F-24);
- *  - the same basis (each set's own exercise type and load semantics, from the
- *    shared lookup) reaches the computed week stats (F-8);
+ *  - [D231, app layout rework batch 2] The Today last-session row, its "kg lifted"
+ *    total (F-8 part 2, F-24) and its Repeat (F-2) left Today for Train's Recent
+ *    sessions. The unit and total tests went with the row (Train's cards print no
+ *    total), and the Repeat tests moved to src/lib/__tests__/repeatSession.test.js
+ *    (the assembly) and PlansScreen.d231Train.test.js (the mounted flow);
  *  - the block rows credit through the unfiltered lookup, so a soft-deleted
  *    custom exercise's sets count (F-3);
  *  - the deload check is handed the exercise type of every set, so a plank
@@ -347,31 +346,6 @@ afterEach(() => {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function flattenText(tree) {
-  const out = [];
-  (function visit(node) {
-    if (node == null) return;
-    if (typeof node === 'string' || typeof node === 'number') { out.push(String(node)); return; }
-    const c = node.children;
-    if (Array.isArray(c)) c.forEach(visit); else if (c) visit(c);
-  })(tree.toJSON());
-  return out.join(' ');
-}
-
-function findByLabel(tree, label) {
-  return tree.root.findAll(
-    (n) => typeof n.type === 'string' && n.props?.accessibilityLabel === label && typeof n.props?.onPress === 'function',
-  );
-}
-
-async function settle() {
-  await TestRenderer.act(async () => {
-    for (let i = 0; i < 20; i++) await Promise.resolve();
-    await new Promise((r) => setImmediate(r));
-    for (let i = 0; i < 15; i++) await Promise.resolve();
-  });
-}
-
 const { buildExerciseLookup } = require('../../lib/exercise/lookup');
 const database = require('../../lib/database');
 const programmePositionMod = require('../../lib/programmePosition');
@@ -483,13 +457,6 @@ function spyOn(mod, name) {
   return spy;
 }
 
-function unmountCurrent() {
-  if (currentTree) {
-    try { TestRenderer.act(() => { currentTree.unmount(); }); } catch (_) { /* already unmounted */ }
-    currentTree = null;
-  }
-}
-
 afterEach(async () => {
   while (spies.length) spies.pop().mockRestore();
   restoreFixture();
@@ -533,7 +500,6 @@ function sessionSets(workoutId, { heelWalk = true } = {}) {
     setRow(workoutId, 'ex-plank', 0, 60), // seconds in the reps column
   ];
 }
-const SESSION_TONNAGE = 3000 + 1800 + 800; // 5,600
 
 function lastWorkout(extra = {}) {
   return {
@@ -546,143 +512,6 @@ beforeEach(() => {
   seq = 0;
   mockStartWorkout.mockReset();
   mockToastShow.mockClear();
-});
-
-// ─── F-24: the unit ─────────────────────────────────────────────────────────
-describe('D218 (F-24, P20): Last session names the unit the person trains in', () => {
-  test('units "lbs": the stored total reads "lbs lifted", the number untouched', async () => {
-    useAppStore.setState(userState({ units: 'lbs' }));
-    applyFixture({ db: { getAllWorkouts: async () => [lastWorkout({ setCount: 20, totalVolume: 12345 })] } });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    const text = flattenText(tree);
-    expect(text).toContain('12,345 lbs lifted');
-    expect(text).not.toContain('kg lifted');
-  });
-
-  test('units "kg": the same total reads "kg lifted"', async () => {
-    useAppStore.setState(userState({ units: 'kg' }));
-    applyFixture({ db: { getAllWorkouts: async () => [lastWorkout({ setCount: 20, totalVolume: 12345 })] } });
-    const { tree } = await mountHome({});
-    const text = flattenText(tree);
-    expect(text).toContain('12,345 kg lifted');
-    expect(text).not.toContain('lbs');
-  });
-
-  test('units "lbs": the computed fallback total is labelled the same way', async () => {
-    useAppStore.setState(userState({ units: 'lbs' }));
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout({ totalVolume: null })],
-        getWorkoutSetsSince: async () => repeated(3, () => setRow('w-last', 'ex-bench', 100, 10)),
-      },
-    });
-    const { tree } = await mountHome({});
-    expect(flattenText(tree)).toContain('3,000 lbs lifted');
-  });
-});
-
-// ─── F-8 part 2: the basis of the computed total ────────────────────────────
-describe('D218 (F-8 part 2, P20): the computed Last session total reads each set\'s own type and load semantics', () => {
-  test('per hand counts twice, a distance set and a duration set count nothing, a deleted custom exercise still counts', async () => {
-    useAppStore.setState(userState());
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout({ totalVolume: null })],
-        getWorkoutSetsSince: async () => sessionSets('w-last'),
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    expect(flattenText(tree)).toContain(`${SESSION_TONNAGE.toLocaleString('en-GB')} kg lifted`);
-  });
-
-  test('a heel walk logged in the session leaves the "kg lifted" unchanged', async () => {
-    useAppStore.setState(userState());
-    const totalWith = async (heelWalk) => {
-      applyFixture({
-        db: {
-          getAllWorkouts: async () => [lastWorkout({ totalVolume: null })],
-          getWorkoutSetsSince: async () => sessionSets('w-last', { heelWalk }),
-        },
-      });
-      const { tree } = await mountHome({});
-      const m = flattenText(tree).match(/([\d,]+) kg lifted/);
-      unmountCurrent();
-      restoreFixture();
-      return m ? m[1] : null;
-    };
-    const without = await totalWith(false);
-    const withWalk = await totalWith(true);
-    expect(without).toBe('5,600');
-    expect(withWalk).toBe(without);
-  });
-
-  test('a lookup that cannot be read falls back to plain totals (best-effort, as the library read was)', async () => {
-    useAppStore.setState(userState());
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout({ totalVolume: null })],
-        getWorkoutSetsSince: async () => repeated(3, () => setRow('w-last', 'ex-bench', 100, 10)),
-        getExerciseLookup: async () => { throw new Error('exercises unreadable'); },
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    expect(flattenText(tree)).toContain('3,000 kg lifted');
-  });
-
-  test('review of D218 (NIT 15): a stored total from before D218 (the heel walk\'s metres in it) gives way to the recomputed one', async () => {
-    useAppStore.setState(userState());
-    const storedBeforeD218 = 3000 + 900 + 400 + 400 * 90; // one hand of each pair, metres x seconds as kilograms
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout({ setCount: 10, totalVolume: storedBeforeD218 })],
-        getWorkoutSetsSince: async () => sessionSets('w-last'),
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    const text = flattenText(tree);
-    expect(text).toContain(`${SESSION_TONNAGE.toLocaleString('en-GB')} kg lifted`);
-    expect(text).not.toContain(storedBeforeD218.toLocaleString('en-GB'));
-  });
-
-  test('with the lookup unreadable a stored total stands (the plain recompute never replaces it)', async () => {
-    useAppStore.setState(userState());
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout({ setCount: 3, totalVolume: 5600 })],
-        getWorkoutSetsSince: async () => sessionSets('w-last'),
-        getExerciseLookup: async () => { throw new Error('exercises unreadable'); },
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    const text = flattenText(tree);
-    expect(text).toContain('5,600 kg lifted');
-    // The plain recompute would count the heel walk's metres and one hand of each pair.
-    expect(text).not.toContain(`${(3000 + 900 + 400 + 400 * 90).toLocaleString('en-GB')} kg lifted`);
-  });
-
-  test('a last session that began at the four-week window\'s edge reads its own sets, not the part inside the window', async () => {
-    useAppStore.setState(userState());
-    const edgeStart = Date.now() - 28 * DAY + 30 * 60 * 1000;
-    const inWindow = [setRow('w-last', 'ex-bench', 100, 10)];
-    const whole = repeated(3, () => setRow('w-last', 'ex-bench', 100, 10));
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout({ startedAt: edgeStart, endedAt: edgeStart + 3600000, totalVolume: 3000 })],
-        getWorkoutSetsSince: async () => inWindow,
-        getWorkoutSetsForWorkout: async (id) => (id === 'w-last' ? whole : []),
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    const text = flattenText(tree);
-    expect(text).toContain('3,000 kg lifted');
-    expect(text).not.toContain('1,000 kg lifted');
-  });
 });
 
 // ─── F-8: the computed week stats ───────────────────────────────────────────
@@ -744,140 +573,6 @@ describe('D218 (F-25, P40) and D224: Today runs no deload check', () => {
   });
 });
 
-// ─── F-2: Repeat last session with no routine ───────────────────────────────
-describe('D218 (F-2, P7): Repeat last session keeps what it can find and says what it cannot', () => {
-  const ONE = 'One exercise from that session is not on this device, so it was left out.';
-  const TWO = '2 exercises from that session are not on this device, so they were left out.';
-  // Review of D218, NIT 11: a read that failed is not "not on this device".
-  const ONE_UNREAD = 'One exercise from that session could not be loaded, so it was left out.';
-  const TWO_UNREAD = '2 exercises from that session could not be loaded, so they were left out.';
-
-  const warmUp = (workoutId, exerciseId) => setRow(workoutId, exerciseId, 40, 10, { setType: 'warmup' });
-  const named = (workoutId, exerciseId, exerciseName, weight, reps) => setRow(workoutId, exerciseId, weight, reps, { exerciseName });
-
-  // Bench resolves by id; the curl's id is unknown here but its snapshot name matches the library; the third is nowhere.
-  const SETS_ONE_MISSING = (id) => [
-    warmUp(id, 'ex-bench'),
-    setRow(id, 'ex-bench', 100, 8),
-    setRow(id, 'ex-bench', 100, 8),
-    named(id, 'id-from-another-device', 'Dumbbell Curl', 30, 10),
-    named(id, 'id-from-another-device', 'Dumbbell Curl', 30, 10),
-    named(id, 'id-gone', 'Mystery Move', 20, 12),
-  ];
-  const byId = async (id) => ({ 'ex-bench': BENCH }[id] ?? null);
-
-  async function pressRepeatThenSkip({ sets, getExerciseById = byId } = {}) {
-    useAppStore.setState(userState());
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout()],
-        getWorkoutSetsForWorkout: async () => sets,
-        getExerciseById,
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    const repeat = findByLabel(tree, 'Repeat last session')[0];
-    expect(repeat).toBeTruthy();
-    await TestRenderer.act(async () => { repeat.props.onPress({ stopPropagation: () => {} }); });
-    await settle();
-    const skip = findByLabel(tree, 'Skip and start without answering')[0];
-    expect(skip).toBeTruthy();
-    await TestRenderer.act(async () => { skip.props.onPress(); });
-    await settle();
-    return mockStartWorkout.mock.calls[0]?.[1] ?? null;
-  }
-
-  test('an exercise whose id this device lacks is kept through its name snapshot; the one still missing is dropped with the exact toast', async () => {
-    const started = await pressRepeatThenSkip({ sets: SETS_ONE_MISSING('w-last') });
-    expect(mockToastShow).toHaveBeenCalledTimes(1);
-    expect(mockToastShow).toHaveBeenCalledWith(ONE, expect.objectContaining({ variant: 'info' }));
-    expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench', 'ex-db-curl']);
-    // The target line stays honest: the previous session's working sets per logged exercise (a warm-up is not one).
-    expect(started.map((e) => e.routineExercise.recommendedSets)).toEqual([2, 2]);
-    expect(started.every((e) => e.sets.length === 0 && typeof e.routineExercise.id === 'string')).toBe(true);
-  });
-
-  test('two exercises still missing: the plural copy names the count', async () => {
-    const sets = [
-      setRow('w-last', 'ex-bench', 100, 8),
-      named('w-last', 'id-gone-1', 'Mystery Move', 20, 12),
-      named('w-last', 'id-gone-2', 'Another Mystery', 20, 12),
-    ];
-    const started = await pressRepeatThenSkip({ sets });
-    expect(mockToastShow).toHaveBeenCalledTimes(1);
-    expect(mockToastShow).toHaveBeenCalledWith(TWO, expect.objectContaining({ variant: 'info' }));
-    expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench']);
-  });
-
-  test('nothing missing: no toast, and the repeat carries every exercise', async () => {
-    const sets = [setRow('w-last', 'ex-bench', 100, 8), setRow('w-last', 'ex-db-curl', 30, 10)];
-    const started = await pressRepeatThenSkip({
-      sets,
-      getExerciseById: async (id) => ({ 'ex-bench': BENCH, 'ex-db-curl': DB_CURL }[id] ?? null),
-    });
-    expect(mockToastShow).not.toHaveBeenCalled();
-    expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench', 'ex-db-curl']);
-  });
-
-  test('a read that fails for one id is treated as not found: the snapshot is tried, then the toast if it still misses', async () => {
-    const sets = [
-      setRow('w-last', 'ex-bench', 100, 8),
-      named('w-last', 'id-explodes', 'Dumbbell Curl', 30, 10),
-    ];
-    const started = await pressRepeatThenSkip({
-      sets,
-      getExerciseById: async (id) => {
-        if (id === 'id-explodes') throw new Error('row unreadable');
-        return id === 'ex-bench' ? BENCH : null;
-      },
-    });
-    expect(mockToastShow).not.toHaveBeenCalled();
-    expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench', 'ex-db-curl']);
-  });
-
-  test('a read that fails and a snapshot that still misses: "could not be loaded", never "not on this device"', async () => {
-    const sets = [
-      setRow('w-last', 'ex-bench', 100, 8),
-      named('w-last', 'id-explodes', 'Mystery Move', 30, 10),
-      named('w-last', 'id-gone', 'Another Mystery', 20, 12),
-    ];
-    const started = await pressRepeatThenSkip({
-      sets,
-      getExerciseById: async (id) => {
-        if (id === 'id-explodes') throw new Error('row unreadable');
-        return id === 'ex-bench' ? BENCH : null;
-      },
-    });
-    expect(mockToastShow).toHaveBeenCalledTimes(1);
-    expect(mockToastShow).toHaveBeenCalledWith(`${ONE} ${ONE_UNREAD}`, expect.objectContaining({ variant: 'info' }));
-    expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench']);
-  });
-
-  test('with the lookup unreadable the repeat proceeds with the exercises found by id and says how many could not be loaded', async () => {
-    useAppStore.setState(userState());
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout()],
-        getWorkoutSetsForWorkout: async () => SETS_ONE_MISSING('w-last'),
-        getExerciseById: byId,
-        getExerciseLookup: async () => { throw new Error('exercises unreadable'); },
-      },
-    });
-    const { tree } = await mountHome({});
-    await TestRenderer.act(async () => { findByLabel(tree, 'Repeat last session')[0].props.onPress({ stopPropagation: () => {} }); });
-    await settle();
-    await TestRenderer.act(async () => { findByLabel(tree, 'Skip and start without answering')[0].props.onPress(); });
-    await settle();
-    const started = mockStartWorkout.mock.calls[0][1];
-    expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench']);
-    // The curl is on this device (its snapshot names it); the read failed, so
-    // neither is said to be missing.
-    expect(mockToastShow).toHaveBeenCalledWith(TWO_UNREAD, expect.objectContaining({ variant: 'info' }));
-    expect(mockToastShow).not.toHaveBeenCalledWith(TWO, expect.anything());
-  });
-});
-
 // ─── Source guards ──────────────────────────────────────────────────────────
 describe('D218: HomeScreen source guards', () => {
   const SOURCE = require('fs').readFileSync(require('path').join(__dirname, '..', 'HomeScreen.js'), 'utf8');
@@ -886,14 +581,21 @@ describe('D218: HomeScreen source guards', () => {
     expect(SOURCE).toMatch(/getExerciseLookup/);
     expect(SOURCE).not.toMatch(/getAllExercises/);
     expect(SOURCE).not.toMatch(/buildLoadSemanticsById/);
-    expect(SOURCE).toMatch(/units: s\.units/);
-    expect(SOURCE).toMatch(/units=\{units\}/);
+    // RE-POINTED (D231, batch 2): the units label belonged to the last-session
+    // row, which moved to Train; Today no longer reads the person's weight unit
+    // for it and no longer builds a session total.
+    expect(SOURCE).not.toMatch(/units: s\.units/);
+    expect(SOURCE).not.toMatch(/buildSessionReport/);
   });
 
-  test('the toast copy is exactly the ruled sentences, British English, no em dash', () => {
-    expect(SOURCE).toContain('One exercise from that session is not on this device, so it was left out.');
-    expect(SOURCE).toContain('exercises from that session are not on this device, so they were left out.');
-    expect(SOURCE).toContain('One exercise from that session could not be loaded, so it was left out.');
-    expect(SOURCE).toContain('exercises from that session could not be loaded, so they were left out.');
+  // RE-POINTED (D231, batch 2): the Repeat toast copy lives in the lib module
+  // Train's Repeat uses now; the ruled sentences are unchanged.
+  test('the repeat toast copy is exactly the ruled sentences, British English, no em dash', () => {
+    const REPEAT = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'lib', 'repeatSession.js'), 'utf8');
+    expect(REPEAT).toContain('One exercise from that session is not on this device, so it was left out.');
+    expect(REPEAT).toContain('exercises from that session are not on this device, so they were left out.');
+    expect(REPEAT).toContain('One exercise from that session could not be loaded, so it was left out.');
+    expect(REPEAT).toContain('exercises from that session could not be loaded, so they were left out.');
+    expect(REPEAT).not.toMatch(/—/);
   });
 });

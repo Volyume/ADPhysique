@@ -22,7 +22,15 @@
 const fs = require('fs');
 const path = require('path');
 
+// RE-POINTED (D231, app layout rework batch 2): the sheet moved verbatim from
+// HomeScreen to components/SessionIntentSheet.js (Train's Repeat uses it too).
+// The contract pinned is unchanged: it opts into BottomSheet's scrollable body,
+// keeps its label and dismiss semantics, and every choice is still inside it.
 const src = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'SessionIntentSheet.js'),
+  'utf8',
+);
+const home = fs.readFileSync(
   path.join(__dirname, '..', 'HomeScreen.js'),
   'utf8',
 );
@@ -32,28 +40,34 @@ function intentSheetWindow() {
   expect(start).toBeGreaterThan(-1);
   const end = src.indexOf('</BottomSheet>', start);
   expect(end).toBeGreaterThan(start);
+  // The component's own BottomSheet opening tag precedes the label by a few lines.
   return src.slice(Math.max(0, start - 400), end + '</BottomSheet>'.length);
 }
 
 describe('HomeScreen pre-workout readiness sheet scrolls within a bounded height (EP-06/UI-01)', () => {
   test('the intent BottomSheet opts into the scrollable body contract', () => {
     const win = intentSheetWindow();
-    expect(win).toMatch(/<BottomSheet[\s\S]*visible=\{showIntentPrompt\}[\s\S]*scroll[\s\S]*>/);
+    expect(win).toMatch(/<BottomSheet[\s\S]*visible=\{visible\}[\s\S]*scroll[\s\S]*>/);
+    // Home mounts it on its own flag.
+    expect(home).toMatch(/<SessionIntentSheet\s*\n\s*visible=\{showIntentPrompt\}/);
   });
 
   test('dismiss and accessibility semantics are unchanged', () => {
     const win = intentSheetWindow();
-    expect(win).toContain('onClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}');
+    expect(win).toContain('onClose={onClose}');
     expect(win).toContain('accessibilityLabel="How are you feeling today"');
+    expect(home).toContain('onClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}');
   });
 
   test('every choice is still present inside the (now scrollable) sheet: heading, readiness rows, three intent options, Skip, opt-out', () => {
     const win = intentSheetWindow();
     expect(win).toContain('How are you feeling today?');
     expect(win).toContain('Readiness (optional)');
-    expect(win).toContain("label: 'Sharp'");
-    expect(win).toContain("label: 'Average'");
-    expect(win).toContain("label: 'Below par'");
+    // The three answers are the component's INTENT_OPTIONS table, rendered inside the sheet.
+    expect(src).toContain("label: 'Sharp'");
+    expect(src).toContain("label: 'Average'");
+    expect(src).toContain("label: 'Below par'");
+    expect(win).toContain('INTENT_OPTIONS.map(');
     expect(win).toContain('accessibilityLabel="Skip and start without answering"');
     expect(win).toContain("accessibilityLabel=\"Do not ask before each session\"");
   });

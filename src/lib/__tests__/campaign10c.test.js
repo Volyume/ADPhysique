@@ -106,7 +106,10 @@ describe('in-app rest sounds are a separate control from the OS rest alert', () 
 // ─── 3. Comprehension copy ───────────────────────────────────────────────────
 
 describe('readiness copy explains the consequence and its direction', () => {
-  const home = read('screens/HomeScreen.js');
+  // RE-POINTED (D231, app layout rework batch 2): the sheet's copy moved verbatim
+  // from HomeScreen to components/SessionIntentSheet.js (Train's Repeat asks the
+  // same question).
+  const home = read('components/SessionIntentSheet.js');
 
   test('it says poor recovery can ease the session', () => {
     expect(home).toMatch(/poor sleep or heavy soreness can ease today's session/);

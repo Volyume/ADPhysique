@@ -80,7 +80,11 @@ describe('Week-boundary unification (§6/§28 IA-2)', () => {
   // week so far" (the plan's rule 2: every open-week figure says "so far").
   test('the volume strip is the one surviving "this week" construct, still Monday-anchored, now "so far"', () => {
     expect(SRC).not.toContain("This week's volume");
-    expect(SRC).toContain('buildVolumeStrip(');
+    // RE-POINTED (D231, batch 2): the strip is built in Train's hook now
+    // (hooks/useTrainWeek.js), not on this screen.
+    const TRAIN_HOOK = fs.readFileSync(path.join(__dirname, '..', '..', 'hooks', 'useTrainWeek.js'), 'utf8');
+    expect(TRAIN_HOOK).toContain('buildVolumeStrip(');
+    expect(SRC).not.toContain('buildVolumeStrip(');
     const STRIP = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'progress', 'volumeStrip.js'), 'utf8');
     expect(STRIP).toContain('This week so far');
     expect(STRIP).toMatch(/buildWindowView\(ds, 1\)/);

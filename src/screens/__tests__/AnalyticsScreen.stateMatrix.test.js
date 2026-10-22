@@ -70,6 +70,12 @@
  * "Visual" was internal vocabulary); internal hook/module names keep the
  * visual-pillar terminology.
  *
+ * D231 (app layout rework, batch 2): the plan-week card, the volume strip under
+ * it, Recent sessions and the Volume heatmap / Full history rows left this
+ * screen for Train. Their mounted tests moved with them to
+ * PlansScreen.d231Train.test.js (same fixtures, same expectations); what remains
+ * here asserts they are gone, and everything else on the screen is unchanged.
+ *
  * STATES COVERED AT THE PURE-MODULE LEVEL, WITH REASONS (never silently
  * skipped, per the build brief):
  *  - J (recent programme adjustment): AnalyticsScreen has NO code path that
@@ -631,21 +637,15 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     expect(visual.length).toBe(1);
     expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Visible change. Looks leaner across your last 4 sets of photos (moderate confidence).');
 
-    // R3 evidence trail
-    expect(flattenText(tree)).toContain('Recent sessions');
-    // RE-ANCHORED under D214 lane 3 (PR-10, plan 7.1 items 2 and 4): the one
-    // session count on the screen is the plan-week card's ("1 session so far
-    // this week" with no plan, addendum 9), not the old loose "N sessions this
-    // week" context line above Recent sessions.
-    expect(flattenText(tree)).toMatch(/\d\s+sessions?\s+so far this week/);
-    expect(findByLabel(tree, /^\d+ sessions? so far this week\./).length).toBe(1);
-    // R4 plan evidence (a set landed inside the current Monday-anchored week):
-    // the strip's line, in logged sets and "so far" (the old section title
-    // "This week's volume" is gone with the old strip).
-    // RE-PINNED under D219 lane A5 (design 5.3): the count is "below maintenance"
-    // (the one judgement's first group), no longer "under their range".
-    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 2 muscles with too few sets');
+    // D231 (batch 2): Recent sessions, the plan-week card, the volume strip and
+    // the Full history door are on Train now; this screen draws none of them.
+    expect(flattenText(tree)).not.toContain('Recent sessions');
+    expect(flattenText(tree)).not.toMatch(/sessions?\s+so far this week/);
+    expect(findByLabel(tree, /^\d+ sessions? so far this week\./).length).toBe(0);
+    expect(flattenText(tree)).not.toContain('This week so far');
     expect(flattenText(tree)).not.toContain("This week's volume");
+    expect(flattenText(tree)).not.toContain('Full history');
+    expect(flattenText(tree)).not.toContain('Volume heatmap');
     // R6 utilities. Body Metrics and Lifts were removed from this list as
     // duplicates of the Answer Block's pillar rows above (Body ->
     // BodyMetrics, Training -> LiftProgress), so Consistency now stands in
@@ -653,9 +653,7 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     expect(flattenText(tree)).toContain('Consistency');
     // The Partners tile was REMOVED from this grid with no replacement
     // (social-discovery blueprint section 1, entry point 4: "Community is
-    // not a stat"), so "Full history" is the second grid tile this state
-    // pins now.
-    expect(flattenText(tree)).toContain('Full history');
+    // not a stat").
     expect(flattenText(tree)).not.toContain('Partners');
 
     // Retired idioms never render on the landing.
@@ -887,14 +885,12 @@ describe('State matrix — H: Visual pillar leads with a new comparison status',
 
 // ─── State I — recovery week (structural): NO deload/recovery advisory ────
 describe('State matrix — I: recovery week active (isDeload true)', () => {
-  // RE-ANCHORED under D214 lane 3 (PR-14, plan 7.1 item 2): the landing used to
-  // know nothing about the block ("never renders a recovery-week statement"), so
-  // a planned light week read as "below target" everywhere. The strip now says
-  // the planned recovery week in one descriptive sentence and prints no under
-  // count; it still never renders a deload advisory or tells the athlete to
-  // train lighter (D204). This fixture has no readable programme position, so
-  // the calendar flag is the fallback that names the week.
-  test('the strip names the recovery week and prints no under count; never a deload advisory or an instruction', async () => {
+  // RE-POINTED (D231, batch 2): the strip that named the planned recovery week
+  // ("Recovery week: sets are planned lower this week", no under count) is on
+  // Train now, and its mounted test moved there. What this screen still pins:
+  // it never renders a deload advisory or tells the athlete to train lighter
+  // (D204), and it draws no strip.
+  test('never a deload advisory or an instruction; no strip on this screen', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: {
@@ -908,8 +904,8 @@ describe('State matrix — I: recovery week active (isDeload true)', () => {
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const txt = flattenText(tree);
-    expect(txt).toContain('Recovery week: sets are planned lower this week');
-    expect(txt).toContain('This week so far: 2 sets logged across 2 muscles');
+    expect(txt).not.toContain('Recovery week: sets are planned lower this week');
+    expect(txt).not.toContain('This week so far');
     expect(txt).not.toMatch(/under their range|below maintenance/i);
     expect(txt).not.toMatch(/deload/i);
     expect(txt).not.toMatch(/lighter week/i);
@@ -959,7 +955,8 @@ describe('State matrix — K: no pillar is ever shown locked, whatever the store
     // RE-ANCHORED under D214 lane 3: "exercises", never "lifts" (PR-8).
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d exercises done more than once in the last 30 days/);
     expect(flattenText(tree)).not.toMatch(/Part of Pro/);
-    expect(flattenText(tree)).toContain('Recent sessions');
+    // D231 (batch 2): Recent sessions are on Train now.
+    expect(flattenText(tree)).not.toContain('Recent sessions');
     expect(flattenText(tree)).toContain('Consistency');
   });
 });
@@ -1103,12 +1100,11 @@ describe('State matrix — P: no recent sessions, factual gap statement, no sham
     // RE-ANCHORED under D214 lane 3: "strength training", never "lifts" (PR-8).
     expect(training[0].props.accessibilityLabel).toBe('Training. No weighted exercises logged in the last 30 days. Last session 60 days ago');
     expect(training[0].props.accessibilityLabel).not.toMatch(/shame|lazy|missed|should/i);
-    // Recent sessions ARE present in useProgressData (last 3 completed
-    // workouts regardless of window) -- R3 is conditioned on
-    // recentSessions.length, not the 30-day training window, so the old
-    // session still lists; the pillar's OWN 30-day gap statement is the
-    // state under test here, not R3's visibility rule.
-    expect(flattenText(tree)).toContain('Recent sessions');
+    // D231 (batch 2): Recent sessions are on Train now (they are conditioned on
+    // the last 3 completed workouts regardless of window, and still list there);
+    // this screen draws none, and the pillar's OWN 30-day gap statement is the
+    // state under test here.
+    expect(flattenText(tree)).not.toContain('Recent sessions');
   });
 });
 
@@ -1220,105 +1216,27 @@ describe('S6-6: trainedCount === 0 evidence reads the honest "Last session ..." 
   });
 });
 
-// ─── S6-2: SessionCard tonnage excludes non-load exercise types ───────────
-describe('S6-2: SessionCard tonnage excludes a non-load (distance/duration) exercise\'s metres/seconds', () => {
-  test('a mixed weight_reps + distance workout navigates with tonnage 1000, not 1,201,000', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        getAllWorkouts: () => Promise.resolve([workout('w1', { daysAgoN: 1 })]),
-        getCompletedWorkoutSets: () => Promise.resolve([
-          completedSet({ id: 's1', workoutId: 'w1', exerciseId: 'e1', weight: 100, reps: 10, daysAgoN: 1 }),
-          completedSet({ id: 's2', workoutId: 'w1', exerciseId: 'e5', weight: 2000, reps: 600, daysAgoN: 1 }),
-        ]),
-        getAllExercises: () => Promise.resolve([
-          exercise('e1', { name: 'Bench press', primaryMuscle: 'chest', type: 'weight_reps' }),
-          exercise('e5', { name: 'Row', primaryMuscle: 'back', type: 'distance' }),
-        ]),
-      },
-    });
-    const nav = makeNav();
-    const { tree, errors } = await mountAnalytics({ navigation: nav });
-    expect(errors).toEqual([]);
-    pressByLabel(tree, 'View summary for Session w1');
-    expect(nav.navigate).toHaveBeenCalledWith('WorkoutSummary', expect.objectContaining({ tonnage: 1000 }));
-  });
-});
-
-// ─── D218 (audit F-2): Recent sessions open the SAME numbers as History ────
-//
-// The three hand-copied row builders (History, this card, "Rate your last
-// session") named exercises through the filtered library and counted raw ids;
-// the Recent sessions entry also cut the id list to four BEFORE dropping the
-// ones it could not name, so it could list fewer names than History for one
-// workout. It now navigates with the shared session report
-// (src/lib/sessionReport.js sessionSummaryParams) over the unfiltered,
-// survivor-aware exercise lookup the hook returns, so a soft-deleted custom
-// exercise, a retired id (one exercise with its survivor) and a snapshot-only
-// set are named and counted exactly as History's card and summary count them.
-describe('D218 F-2: a Recent sessions entry opens the same summary numbers as History', () => {
-  const { canonicalExerciseId } = require('../../lib/exercise/canonicalId');
-  const { sessionSummaryParams } = require('../../lib/sessionReport');
-  const RETIRED_ID = canonicalExerciseId('Lateral Raise Machine');
-  const SURVIVOR_ID = canonicalExerciseId('Machine Lateral Raise');
-
-  test('names and counts come from the lookup: deleted custom, retired id with its survivor, snapshot-only, unresolved', async () => {
-    useAppStore.setState(PRO_USER);
-    const bench = exercise('e1', { name: 'Bench press', primaryMuscle: 'chest' });
-    const survivor = exercise(SURVIVOR_ID, { name: 'Machine Lateral Raise', primaryMuscle: 'side_delts' });
-    const deletedCustom = {
-      ...exercise('ex-custom-gone', { name: 'Cable Crunch Pro', primaryMuscle: 'quads' }),
-      isCustom: 1, deletedAt: 1700000000000,
-    };
-    const lookup = buildExerciseLookup([bench, survivor, deletedCustom]);
-    // Logged order (oldest first); the database returns newest first.
-    const logged = [
-      completedSet({ id: 's1', workoutId: 'w1', exerciseId: 'ex-ghost', hourOffset: 0 }),
-      completedSet({ id: 's2', workoutId: 'w1', exerciseId: 'ex-unknown', hourOffset: 0.1 }),
-      completedSet({ id: 's3', workoutId: 'w1', exerciseId: RETIRED_ID, hourOffset: 0.2 }),
-      completedSet({ id: 's4', workoutId: 'w1', exerciseId: SURVIVOR_ID, hourOffset: 0.3 }),
-      completedSet({ id: 's5', workoutId: 'w1', exerciseId: 'ex-custom-gone', hourOffset: 0.4 }),
-      completedSet({ id: 's6', workoutId: 'w1', exerciseId: 'e1', hourOffset: 0.5, setType: 'warmup' }),
-      completedSet({ id: 's7', workoutId: 'w1', exerciseId: 'e1', hourOffset: 0.6 }),
-    ];
-    logged[1] = { ...logged[1], exerciseName: 'Landmine Press' };
-    const dbOrder = [...logged].reverse();
-    const w1 = workout('w1', { daysAgoN: 1 });
-    applyFixture({
-      db: {
-        getAllWorkouts: () => Promise.resolve([w1]),
-        getCompletedWorkoutSets: () => Promise.resolve(dbOrder),
-        // The filtered library omits the deleted custom exercise; the lookup keeps it.
-        getAllExercises: () => Promise.resolve([bench, survivor]),
-        getExerciseLookup: () => Promise.resolve(lookup),
-      },
-    });
-    const nav = makeNav();
-    const { tree, errors } = await mountAnalytics({ navigation: nav });
-    expect(errors).toEqual([]);
-    pressByLabel(tree, 'View summary for Session w1');
-
-    // The very object History's "View summary" would carry for this workout.
-    const expected = sessionSummaryParams(w1, dbOrder, lookup);
-    expect(expected.exerciseCount).toBe(5);
-    expect(expected.exerciseNames).toEqual(['Exercise', 'Landmine Press', 'Machine Lateral Raise', 'Cable Crunch Pro']);
-    expect(nav.navigate).toHaveBeenCalledWith('WorkoutSummary', expected);
-    // The route still carries the routine fields the "every route carries its routine" guard pins.
-    expect(expected).toEqual(expect.objectContaining({ routineId: null, routineName: null, readOnly: true }));
-  });
-
-  test('the Training row and the week strip read the same lookup as the session entries (review of D218)', () => {
-    // The pillar and the strip resolve through the shared resolvers, which
-    // accept the lookup or a plain map; given the plain map they could not
-    // name or credit a set whose id this install does not hold by its own
-    // name snapshot, which the session entries above do.
+// ─── S6-2 and D218 F-2 (Recent sessions) ───────────────────────────────────
+// RE-POINTED (D231, batch 2): the session cards (their tonnage, which excludes a
+// distance exercise's metres, S6-2, and the shared session report's names and
+// counts, D218 F-2) are Train's now; those two mounted tests moved to
+// PlansScreen.d231Train.test.js. The Training row and the week strip's lookup
+// pin stays, split between the two places it reads now.
+describe('D218 F-2: the Training row reads the same lookup as the session entries (review of D218)', () => {
+  test('the Training row reads the shared lookup here; the strip reads it in Train\'s hook', () => {
+    // The pillar resolves through the shared resolvers, which accept the lookup or
+    // a plain map; given the plain map it could not name or credit a set whose id
+    // this install does not hold by its own name snapshot, which the session
+    // entries do.
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
     expect(src).toContain('const exercisesForSets = exerciseLookup ?? exerciseMap;');
     expect(src).toContain('computeTrainingPillarSummary(allSets, exercisesForSets, { windowDays: 30 })');
-    expect(src).toContain('exerciseMap: exercisesForSets,');
     expect(src).not.toContain('computeTrainingPillarSummary(allSets, exerciseMap');
+    const hook = fs.readFileSync(path.join(__dirname, '..', '..', 'hooks', 'useTrainWeek.js'), 'utf8');
+    expect(hook).toContain('const exercisesForSets = exerciseLookup ?? exerciseMap;');
+    expect(hook).toContain('exerciseMap: exercisesForSets,');
   });
 });
 
@@ -1345,29 +1263,17 @@ describe('S6-7: recap banner text agrees with the deck it opens', () => {
 
 // ─── D214 LANE 3 (Progress root, plan 7.1, items 1 to 7) ──────────────────
 //
-// The blocks below pin what the elevation build added to this screen, against
-// the REAL running screen (the shared PlanWeekCard, the pure strip model, the
-// persistent doors), reusing this file's mount scaffold and fixtures:
-//   - "Your plan week" is the first object, drawn by PlanWeekCard from the
-//     programme position (null on a read failure reads as no plan);
-//   - the strip under it counts logged working sets "so far", its under count is
-//     the plan-trained one, a tap opens the Volume heatmap on "This week", and
-//     every colour is named in the shared LegendRow;
-//   - in the planned recovery week (the position's GATED state, never the
-//     calendar flag while a position is readable) no under count is printed;
-//   - the session rows title by routine and print the person's own word with
-//     "4 of 5" spoken, never "/10";
-//   - the doors are NavRows, the Volume heatmap one persistent, and Recaps is
-//     counted like the sessions milestone;
-//   - a failed load keeps the Training row's last copy and the ONE error state
-//     speaks (PR-2).
+// RE-POINTED (D231, batch 2): "Your plan week" (the shared PlanWeekCard), the
+// strip under it (the pure volumeStrip model, its recovery-week sentence and
+// legend) and the session rows (their titles, the person's own word for the
+// difficulty) moved to Train with their code; their mounted tests are in
+// PlansScreen.d231Train.test.js. What stays pinned here, against the REAL
+// running screen: the doors (NavRows, Recaps counted like the sessions
+// milestone) and a failed load (the Training row keeps its last copy and the ONE
+// error state speaks, PR-2).
 
 const programmePosition = require('../../lib/programmePosition');
-const effectiveLandmarks = require('../../lib/effectiveLandmarks');
-const { SESSION_STATE } = require('../../lib/blockProgression');
-const { RECOVERY_STATE } = require('../../lib/recoveryState');
-const { resolveTheme } = require('../../styles/theme');
-const { StyleSheet, ScrollView } = require('react-native');
+const { ScrollView } = require('react-native');
 
 // The ScrollView's refreshControl element carries the screen's pull-to-refresh handler.
 const pullToRefresh = (tree) => tree.root.findByType(ScrollView).props.refreshControl.props.onRefresh();
@@ -1382,290 +1288,56 @@ afterEach(() => {
   moduleOriginals = [];
 });
 
-const planSession = (name, order, state) => ({ routineId: `r${order}`, name, order, state });
-function planPosition(overrides = {}) {
-  const sessions = overrides.sessions ?? [
-    planSession('Upper A', 1, SESSION_STATE.COMPLETED),
-    planSession('Lower A', 2, SESSION_STATE.COMPLETED),
-    planSession('Upper B', 3, SESSION_STATE.OUTSTANDING),
-    planSession('Lower B', 4, SESSION_STATE.OUTSTANDING),
-  ];
-  const next = sessions.find((s) => s.state === SESSION_STATE.OUTSTANDING) ?? null;
-  return {
-    activeWeekIndex: 2,
-    plannedWeeks: 6,
-    sessions,
-    nextSession: next,
-    weekResolved: next == null,
-    recoveryState: { state: RECOVERY_STATE.NORMAL_ACCUMULATION },
-    ...overrides,
-  };
-}
-function withPosition(position) {
-  patchModule(programmePosition, 'resolveProgrammePosition', jest.fn(() => Promise.resolve(position)));
-}
-
 const richDb = () => ({
   getAllWorkouts: threeWorkouts,
   getCompletedWorkoutSets: improvingTrainingSets,
   getAllExercises: EXERCISES,
 });
 
-const STRIP_LABEL = /^This week so far: /;
 const hostNodes = (tree, pred) => tree.root.findAll((n) => typeof n.type === 'string' && pred(n));
-const swatchFills = (tree) => hostNodes(tree, (n) => n.props.testID === 'legend-swatch')
-  .map((n) => StyleSheet.flatten(n.props.style)?.backgroundColor)
-  .filter(Boolean);
 
-describe('D214 lane 3 — Your plan week (plan 7.1 item 2)', () => {
-  test('the plan-week card is the first object, drawn by the shared PlanWeekCard from the programme position', async () => {
+describe('D231: what left this screen for Train', () => {
+  test('no plan-week card, no strip, no Recent sessions and no read of the programme position', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({ db: richDb(), scan: null });
-    withPosition(planPosition());
-    const { tree, errors } = await mountAnalytics({});
-    expect(errors).toEqual([]);
-    const card = hostNodes(tree, (n) => n.props.testID === 'plan-week-card');
-    expect(card.length).toBe(1);
-    // RE-ANCHORED (the lead's landing fix, plan 7.1 item 2 "one Card"): the
-    // accessible group is the inner summary view, since the strip now sits
-    // inside the card under it with its own controls.
-    const group = hostNodes(tree, (n) => n.props.testID === 'plan-week-summary');
-    expect(group.length).toBe(1);
-    expect(group[0].props.accessibilityLabel).toBe('2 of 4 sessions in week 2 of your plan. Upper B is next.');
-    // Under the header, before the strip, the Your progress label and every pillar row.
-    const text = flattenText(tree);
-    const at = text.indexOf('2 of 4');
-    expect(at).toBeGreaterThan(-1);
-    expect(at).toBeLessThan(text.indexOf('This week so far'));
-    expect(at).toBeLessThan(text.indexOf('Your progress'));
-    expect(at).toBeLessThan(text.indexOf('Strength up'));
-    // The seven cells are drawn by the shared card (initials under them).
-    expect(text).toContain('M T W T F S S');
-  });
-
-  test('one session count on the screen: the plan-week card\'s, never the old "N sessions this week" line', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({ db: richDb(), scan: null });
-    withPosition(planPosition());
-    const { tree } = await mountAnalytics({});
-    expect(flattenText(tree)).not.toMatch(/\d+ sessions? this week/);
-    // Without a plan the same card reads the calendar count, so there is still exactly one.
-    restoreFixture();
-    moduleOriginals.reverse().forEach(([mod, key, orig]) => { mod[key] = orig; });
-    moduleOriginals = [];
-    applyFixture({ db: richDb(), scan: null });
-    const second = await mountAnalytics({});
-    expect(findByLabel(second.tree, /^\d+ sessions? so far this week\./).length).toBe(1);
-  });
-
-  test('a position that cannot be read fails to the no-plan reading, never a crash', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({ db: richDb(), scan: null });
-    patchModule(programmePosition, 'resolveProgrammePosition', jest.fn(() => Promise.reject(new Error('read failed'))));
-    const { tree, errors } = await mountAnalytics({});
-    expect(errors).toEqual([]);
-    expect(findByLabel(tree, /^\d+ sessions? so far this week\./).length).toBe(1);
-  });
-
-  test('the position is read on focus and again on pull-to-refresh', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({ db: richDb(), scan: null });
-    const read = jest.fn(() => Promise.resolve(planPosition()));
+    const read = jest.fn(() => Promise.resolve(null));
     patchModule(programmePosition, 'resolveProgrammePosition', read);
-    const { tree } = await mountAnalytics({});
-    const afterFocus = read.mock.calls.length;
-    expect(afterFocus).toBeGreaterThanOrEqual(1);
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    const text = flattenText(tree);
+    expect(hostNodes(tree, (n) => n.props.testID === 'plan-week-card')).toHaveLength(0);
+    expect(hostNodes(tree, (n) => n.props.testID === 'volume-strip')).toHaveLength(0);
+    expect(hostNodes(tree, (n) => n.props.testID === 'session-difficulty-chip')).toHaveLength(0);
+    expect(text).not.toContain('Your plan week');
+    expect(text).not.toContain('Recent sessions');
+    expect(text).not.toContain('All sessions');
+    expect(findByLabel(tree, /^View summary for /)).toHaveLength(0);
+    // The first object is Your progress.
+    expect(text.indexOf('Your progress')).toBeLessThan(text.indexOf('Strength up'));
+    // Pull to refresh still re-reads this screen's own data.
     await TestRenderer.act(async () => { pullToRefresh(tree); });
-    await TestRenderer.act(async () => { await new Promise(r => setImmediate(r)); });
-    expect(read.mock.calls.length).toBeGreaterThan(afterFocus);
-  });
-});
-
-describe('D214 lane 3 — the strip under it: "This week so far", logged sets, three named tones', () => {
-  test('the line counts logged sets, says so far, and a tap opens the Volume heatmap on "This week"', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({ db: richDb(), scan: null });
-    const nav = makeNav();
-    const { tree } = await mountAnalytics({ navigation: nav });
-    const label = 'This week so far: 2 sets logged across 2 muscles, 2 muscles with too few sets';
-    expect(findByLabel(tree, STRIP_LABEL).map((n) => n.props.accessibilityLabel)).toEqual([label]);
-    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 2 muscles with too few sets');
-    pressByLabel(tree, label);
-    expect(nav.navigate).toHaveBeenCalledWith('VolumeHeatmap', { windowWeeks: 1 });
-  });
-
-  test('a compound set with a secondary muscle counts once (VH-16)', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        getAllWorkouts: threeWorkouts,
-        getCompletedWorkoutSets: () => Promise.resolve([
-          completedSet({ id: 'p1', workoutId: 'w3', exerciseId: 'ep', weight: 60, reps: 8, daysAgoN: 0 }),
-          completedSet({ id: 'p2', workoutId: 'w3', exerciseId: 'ep', weight: 60, reps: 8, daysAgoN: 0 }),
-        ]),
-        getAllExercises: () => Promise.resolve([
-          { id: 'ep', name: 'Incline press', primaryMuscle: 'chest', secondaryMuscles: ['triceps', 'front_delts'], type: 'weight_reps', exerciseType: 'weight_reps' },
-        ]),
-      },
-      scan: null,
-    });
-    const { tree } = await mountAnalytics({});
-    // Two rows credit chest 2, triceps 1 and front delts 1: four credits, two sets logged, three muscles.
-    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 3 muscles');
-    expect(flattenText(tree)).not.toContain('4 sets logged');
-  });
-
-  test('the under count is the plan-trained one: a muscle the plan programmes with no sets yet counts', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({ db: richDb(), scan: null });
-    // The plan layer's own source map: quads and chest are programmed.
-    patchModule(effectiveLandmarks, 'getPlanLandmarks', jest.fn(() => Promise.resolve({
-      table: {}, source: { quads: 'plan', chest: 'plan', hamstrings: 'profile' },
-    })));
-    const { tree } = await mountAnalytics({});
-    // chest (trained, programmed) + hamstrings (trained, not programmed) + quads (programmed, no sets) = 3.
-    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 3 muscles with too few sets');
-  });
-
-  test('every colour on the strip is named in the shared LegendRow, and the bar draws only those colours', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({ db: richDb(), scan: null });
-    const { tree } = await mountAnalytics({});
-    const text = flattenText(tree);
-    // RE-PINNED under D219 lane A5 (design 5.3): the three tones are Below
-    // maintenance, Within the studied range and Beyond the studied range; the
-    // highest is an information colour, never the error token.
-    // Item 14: the strip's legend is the figure legend's four tone words.
-    ['Low', 'Steady', 'Growing', 'Very high'].forEach((w) => expect(text).toContain(w));
-    expect(text).not.toMatch(/Enough sets|Too much|Under the range|Inside the range/);
-    const c = resolveTheme({}).colors;
-    const fills = swatchFills(tree);
-    expect(fills).toEqual([c.textMuted, c.volumeMinimum, c.success, c.volumeBeyond]);
-    const bar = hostNodes(tree, (n) => n.props.testID === 'volume-strip-bar')[0];
-    const segmentColours = bar.children.map((child) => StyleSheet.flatten(child.props.style).backgroundColor);
-    expect(segmentColours.length).toBe(2);
-    for (const colour of segmentColours) expect(fills).toContain(colour);
-  });
-
-  test('nothing logged this week: the line says so, no bar, no legend; the door stays', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        getAllWorkouts: threeWorkouts,
-        getCompletedWorkoutSets: () => Promise.resolve([
-          completedSet({ id: 'o1', workoutId: 'w1', exerciseId: 'e1', weight: 80, reps: 5, daysAgoN: 25 }),
-        ]),
-        getAllExercises: EXERCISES,
-      },
-      scan: null,
-    });
-    const { tree } = await mountAnalytics({});
-    expect(flattenText(tree)).toContain('This week so far: no sets logged');
-    expect(hostNodes(tree, (n) => n.props.testID === 'volume-strip-bar').length).toBe(0);
-    expect(swatchFills(tree)).toEqual([]);
-    expect(flattenText(tree)).toContain('Volume heatmap');
-  });
-
-  test('no sets ever: no strip at all (the empty state speaks), the plan-week card still draws', async () => {
-    useAppStore.setState(PRO_USER);
-    const { tree } = await mountAnalytics({});
-    expect(findByLabel(tree, STRIP_LABEL).length).toBe(0);
-    expect(hostNodes(tree, (n) => n.props.testID === 'plan-week-card').length).toBe(1);
-  });
-});
-
-describe('D214 lane 3 — a recovery week prints no under count (PR-14)', () => {
-  test('the position\'s GATED planned recovery week: the sentence, no under count, one neutral legend entry', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({ db: richDb(), scan: null });
-    withPosition(planPosition({ recoveryState: { state: RECOVERY_STATE.PLANNED_BLOCK_RECOVERY } }));
-    const { tree } = await mountAnalytics({});
-    const text = flattenText(tree);
-    expect(text).toContain('Recovery week: sets are planned lower this week');
-    expect(text).toContain('This week so far: 2 sets logged across 2 muscles');
-    expect(text).not.toMatch(/· \d+ muscles with too few sets/);
-    expect(text).toContain('Trained');
-    expect(text).not.toContain('Below maintenance');
-    expect(swatchFills(tree)).toEqual([resolveTheme({}).colors.surface3]);
-  });
-
-  test('the calendar flag never names the week while a position is readable (an adaptive adjustment is never a recovery week)', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: { ...richDb(), getCurrentMesocycleWeek: () => Promise.resolve({ id: 'mw1', weekIndex: 6, plannedWeeks: 6, isDeload: true }) },
-      scan: null,
-    });
-    withPosition(planPosition({ recoveryState: { state: RECOVERY_STATE.ADAPTIVE_RECOVERY_ADJUSTMENT } }));
-    const { tree } = await mountAnalytics({});
-    const text = flattenText(tree);
-    expect(text).not.toContain('Recovery week:');
-    expect(text).toMatch(/· \d+ muscles with too few sets/);
-  });
-});
-
-describe('D214 lane 3 — Recent sessions: the routine\'s name, the person\'s own word (PR-9, PR-1)', () => {
-  const sessionsDb = (rows) => ({
-    getAllWorkouts: () => Promise.resolve(rows),
-    getCompletedWorkoutSets: improvingTrainingSets,
-    getAllExercises: EXERCISES,
-  });
-
-  test('the title is the routine name, else the session\'s own name, else "Session"', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: sessionsDb([
-        { ...workout('w1', { daysAgoN: 1 }), routineName: 'Upper A', name: 'Chest & Triceps' },
-        { ...workout('w2', { daysAgoN: 2 }), routineName: null, name: 'Chest & Triceps' },
-        { ...workout('w3', { daysAgoN: 3 }), routineName: null, name: '' },
-      ]),
-      scan: null,
-    });
-    const { tree } = await mountAnalytics({});
-    const labels = findByLabel(tree, /^View summary for /).map((n) => n.props.accessibilityLabel);
-    expect(labels).toEqual([
-      'View summary for Upper A',
-      'View summary for Chest & Triceps',
-      'View summary for Session',
-    ]);
-  });
-
-  test('the chip prints "Hard" with "4 of 5" spoken, never "/10"', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: sessionsDb([
-        { ...workout('w1', { daysAgoN: 1, sessionDifficulty: 4 }), routineName: 'Upper A' },
-        { ...workout('w2', { daysAgoN: 2, sessionDifficulty: 2 }), routineName: 'Lower A' },
-        { ...workout('w3', { daysAgoN: 3 }), routineName: 'Upper B' },
-      ]),
-      scan: null,
-    });
-    const { tree } = await mountAnalytics({});
-    const text = flattenText(tree);
-    expect(text).toContain('Hard');
-    expect(text).toContain('Easy');
-    expect(text).not.toMatch(/\/10/);
-    expect(findByLabel(tree, 'View summary for Upper A, difficulty Hard, 4 of 5').length).toBe(1);
-    expect(findByLabel(tree, 'View summary for Lower A, difficulty Easy, 2 of 5').length).toBe(1);
-    // An unrated session draws no chip and keeps the plain label.
-    expect(findByLabel(tree, 'View summary for Upper B').length).toBe(1);
-    expect(hostNodes(tree, (n) => n.props.testID === 'session-difficulty-chip').length).toBe(2);
   });
 });
 
 describe('D214 lane 3 — the doors (plan 7.1 item 6)', () => {
-  test('Consistency, a PERSISTENT Volume heatmap door, Full history, Recaps, in that order, with no data at all', async () => {
+  // RE-POINTED (D231, batch 2): the persistent Volume heatmap door (PR-15) and the
+  // Full history door are Train's (the strip opens the same Volume heatmap, All
+  // sessions the same history); the list is Consistency, Recaps, Year of lifts.
+  test('Consistency then Recaps, with no data at all; no Volume heatmap and no Full history door', async () => {
     useAppStore.setState(PRO_USER);
     const nav = makeNav();
     const { tree } = await mountAnalytics({ navigation: nav });
     const text = flattenText(tree);
-    const order = ['Consistency', 'Volume heatmap', 'Full history', 'Recaps'].map((label) => text.lastIndexOf(label));
+    const order = ['Consistency', 'Recaps'].map((label) => text.lastIndexOf(label));
     for (const i of order) expect(i).toBeGreaterThan(-1);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(text).not.toContain('Volume heatmap');
+    expect(text).not.toContain('Full history');
     expect(text).not.toContain('Year of lifts');
-    pressByLabel(tree, 'Volume heatmap');
-    expect(nav.navigate).toHaveBeenCalledWith('VolumeHeatmap');
     pressByLabel(tree, 'Consistency');
     expect(nav.navigate).toHaveBeenCalledWith('Consistency');
+    expect(nav.navigate).not.toHaveBeenCalledWith('VolumeHeatmap');
+    expect(nav.navigate).not.toHaveBeenCalledWith('WorkoutHistory');
   });
 
   test('Year of lifts appears last, and only once the first session is a year old', async () => {
@@ -1704,7 +1376,7 @@ describe('D214 lane 3 — the doors (plan 7.1 item 6)', () => {
 });
 
 describe('D214 lane 3 — a failed load: the Training row keeps its last copy and the ONE error state speaks (PR-2)', () => {
-  test('a first load that fails prints no contradictory Training copy, no plan-week card, and one error state', async () => {
+  test('a first load that fails prints no contradictory Training copy, and one error state', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({ db: { getAllWorkouts: () => Promise.reject(new Error('db down')) }, scan: null });
     const { tree } = await mountAnalytics({});
@@ -1855,39 +1527,7 @@ describe('D214 addendum 9: one session count and one trained day on the Progress
     expect(flattenText(tree)).toContain('10 sessions to go');
   });
 
-  test('0.26: a recent session reads "Tue 16 Sep · 45 min", with the unit in words and a middle dot', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        getAllWorkouts: threeWorkouts,
-        getCompletedWorkoutSets: improvingTrainingSets,
-        getAllExercises: EXERCISES,
-      },
-    });
-    const { tree, errors } = await mountAnalytics({});
-    expect(errors).toEqual([]);
-    const joined = (n) => [].concat(n.props.children).flat(Infinity).filter((c) => typeof c === 'string').join('');
-    const metas = tree.root.findAll((n) => n.type === 'Text' && /· 45 min$/.test(joined(n)));
-    expect(metas.length).toBeGreaterThan(0);
-    for (const m of metas) expect(joined(m)).toMatch(/^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2} · 45 min$/);
-    expect(flattenText(tree)).not.toMatch(/ - \d+m\b/);
-  });
-
-  test('6.13: the seven cells light on the day a completed workout started, with or without sets', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        getAllWorkouts: () => Promise.resolve([workout('w1', { daysAgoN: 0 })]),
-        getCompletedWorkoutSets: () => Promise.resolve([]),
-        getAllExercises: EDGE_EXERCISES,
-      },
-    });
-    const { tree, errors } = await mountAnalytics({});
-    expect(errors).toEqual([]);
-    // No set rows at all, yet today is a day with a completed session (the grid
-    // draws it): the cells' spoken label names it. By set time they would be empty.
-    const today = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(NOW).getDay()];
-    expect(findByLabel(tree, `Trained so far this week: ${today}`).length).toBeGreaterThan(0);
-    expect(findByLabel(tree, 'Not trained yet this week').length).toBe(0);
-  });
+  // 0.26 (a recent session reads "Tue 16 Sep · 45 min") and 6.13 (the seven cells
+  // light on the day a completed workout started) moved to Train with the cards
+  // and the cells: PlansScreen.d231Train.test.js (D231, batch 2).
 });

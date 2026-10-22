@@ -6,8 +6,8 @@
  * The feature every plan is built from used to be reachable only three
  * taps deep in Settings until something was set up. It now has three
  * organic entries, pinned here so none can quietly regress:
- *  1. the FIRST row of the Train tab's Plan tools, always shown, with a
- *     live one-line status;
+ *  1. a row in the Train tab's Your setup group (D231: it was the first row
+ *     of Plan tools), always shown, with a live one-line status;
  *  2. a tier-blind row on the Coach tab, above the Pro-only Setup, so a
  *     free account sees it (CAP-19);
  *  3. a one-time Home offer for a person with nothing set up: only once
@@ -27,18 +27,30 @@ const card = read('components/HomeHowYouTrainOfferCard.js');
 const summary = read('lib/capability/summary.js');
 const settings = read('screens/SettingsScreen.js');
 
-describe('1. Train tab: first row of Plan tools, always shown', () => {
-  test('the row is the first card after the Plan tools label and carries the live line', () => {
-    const tools = plans.slice(plans.indexOf('<SectionLabel>Plan tools</SectionLabel>'));
-    const firstCard = tools.indexOf('<Card');
-    const block = tools.slice(firstCard, tools.indexOf('</Card>', firstCard));
+describe('1. Train tab: a row in Your setup, always shown', () => {
+  // RE-POINTED (D231, app layout rework batch 2): the "Plan tools" card list is
+  // two NavRow groups now. The Injuries & limitations row is in "Your setup",
+  // after Adjust training plan (which needs an active plan), still always shown,
+  // still carrying the live line, and the three always-on lines from Today sit
+  // under it. Avoided movements has no row of its own; HowYouTrain offers it.
+  test('the row sits in Your setup and carries the live line', () => {
+    const setup = plans.slice(plans.indexOf('<SectionLabel>Your setup</SectionLabel>'));
+    const rowAt = setup.indexOf('label="Injuries & limitations"');
+    expect(rowAt).toBeGreaterThan(-1);
+    const block = setup.slice(setup.lastIndexOf('<NavRow', rowAt), setup.indexOf('/>', rowAt) + 2);
     expect(block).toContain("onPress={() => navigation.navigate('HowYouTrain')}");
-    expect(block).toContain('>Injuries & limitations</Text>');
-    expect(block).toContain('{hytSummary.sub}');
-    // Always shown: no count or state condition wraps it (unlike Avoided movements, D109-3).
-    const before = tools.slice(0, firstCard);
-    expect(before).not.toMatch(/&&\s*\($/m);
+    expect(block).toContain('sub={hytSummary.sub}');
+    // Always shown: no count or state condition wraps it (unlike Adjust training plan, which needs a plan).
+    const before = setup.slice(setup.indexOf('<NavGroup>'), setup.lastIndexOf('<NavRow', rowAt));
     expect(before).not.toContain('hytSummary.empty');
+    expect(setup.slice(setup.lastIndexOf('<NavRow', rowAt) - 40, setup.lastIndexOf('<NavRow', rowAt))).not.toMatch(/&&\s*\(?\s*$/);
+    // The lines from Today follow the row inside the same group.
+    expect(setup.indexOf('<InjuryLines', rowAt)).toBeGreaterThan(rowAt);
+  });
+  test('Avoided movements has no row on Train; HowYouTrain offers it', () => {
+    expect(plans).not.toContain('avoidedMovementsCount');
+    expect(plans).not.toMatch(/label="Avoided movements|Avoided movements ·|Avoided movements, \$/);
+    expect(read('screens/HowYouTrainScreen.js')).toMatch(/label="Movements you would rather not do"[\s\S]{0,700}navigation\.navigate\('AvoidedMovements'\)/);
   });
   test('the line is refreshed on every focus from the real capability state', () => {
     expect(plans).toContain('loadHowYouTrainSummary();');
@@ -106,9 +118,12 @@ describe('the live line and the entries that stay', () => {
     const text = (summary.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) ?? []).join(' ');
     expect(text).not.toMatch(/restricted|modified|diagnos/i);
   });
-  test('the Settings row stays', () => {
-    expect(settings).toContain('label="Injuries & limitations"');
-    expect(settings).toContain("navigation.navigate('HowYouTrain')");
+  // RE-POINTED (D231, app layout rework batch 5): the Settings row left (the
+  // owner answered "Remove both"); the feature is reached from Train, Today's
+  // need-moment rows and the offer, which other assertions here pin.
+  test('the Settings row is gone', () => {
+    expect(settings).not.toContain('label="Injuries & limitations"');
+    expect(settings).not.toContain("navigation.navigate('HowYouTrain')");
   });
   test('no em dash in any of the new copy', () => {
     for (const src of [plans, coach, home, card, summary]) expect(src).not.toMatch(/—/);

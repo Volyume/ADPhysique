@@ -84,7 +84,12 @@ describe('no-plan / start-plan copy', () => {
     // change"). The underlying verb guarantee this test protects (no older
     // fallback phrasing) is unchanged; where it lives moved to the no-plan
     // EmptyState blocks, already pinned two tests above and one below.
-    expect(PLANS).toContain('<SectionLabel>Plan tools</SectionLabel>');
+    // RE-POINTED (D231, app layout rework batch 2): the one "Plan tools" label is
+    // two labels now, "Your setup" and "Plans" (NavRow groups). The verb guarantee
+    // is unchanged.
+    expect(PLANS).toContain('<SectionLabel>Your setup</SectionLabel>');
+    expect(PLANS).toContain('<SectionLabel>Plans</SectionLabel>');
+    expect(PLANS).not.toContain('<SectionLabel>Plan tools</SectionLabel>');
     expect(PLANS).not.toMatch(/<SectionLabel>\s*\{isProWithPlan \? 'Switch your plan' : 'Start with a plan'\}/);
     expect(PLANS).not.toContain('Start or build a plan');
   });

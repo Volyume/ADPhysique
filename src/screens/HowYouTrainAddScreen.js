@@ -889,7 +889,7 @@ function footerFor({ step, draft, plan, busy, showLines, t, onNext, onSave, onAg
         <>
           <Button variant="emphatic" title="Agree and save" onPress={onAgreeAndSave} loading={busy} />
           <Button title="Leave it for now" variant="secondary" onPress={onLeave} />
-          {hint('Leaving means your answers here are not kept. You can still avoid specific exercises from Plan tools without this.')}
+          {hint('Leaving means your answers here are not kept. You can still avoid specific exercises from Injuries & limitations without this.')}
         </>
       );
     case ADD_STEP.PLAN:

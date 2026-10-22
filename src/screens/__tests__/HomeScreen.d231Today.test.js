@@ -30,6 +30,10 @@
  *     old welcome-dismissed flag).
  *  5. Gone from Today: the Welcome card, the Community header button (the header
  *     keeps no right slot: the default brand mark), the challenge row.
+ *  6. Batch 2 (Train): the last-session row (and its Repeat) and the Injuries &
+ *     limitations group (the works-around line, the reintroduction line, the
+ *     could-not-check line) are gone from Today; they live on Train
+ *     (PlansScreen.d231Train.test.js pins them there with their conditions).
  */
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));
@@ -299,9 +303,10 @@ jest.mock('../../lib/planRebuild', () => {
 // replaced by that flag so the test needs no date arithmetic).
 let mockCapRestrictions = [];
 let mockCapNothingSetUp = false;
+let mockCapUnavailable = false;
 jest.mock('../../lib/capability/resolve', () => ({
   ...jest.requireActual('../../lib/capability/resolve'),
-  loadCapabilityResolveState: jest.fn(async () => ({ restrictions: mockCapRestrictions, unavailable: false, stale: false })),
+  loadCapabilityResolveState: jest.fn(async () => ({ restrictions: mockCapRestrictions, unavailable: mockCapUnavailable, stale: false })),
 }));
 jest.mock('../../lib/capability/store', () => ({
   ...jest.requireActual('../../lib/capability/store'),
@@ -603,6 +608,7 @@ beforeEach(() => {
   mockPlanNote = null;
   mockCapRestrictions = [];
   mockCapNothingSetUp = false;
+  mockCapUnavailable = false;
   mockDismissChoice.mockClear();
   mockDismissNote.mockClear();
   mockUseCommunityMe.mockClear();
@@ -781,13 +787,18 @@ describe('D231: a limitation waiting for a decision is a Today line occupant', (
     expect(count(flattenText(tree), 'A change to your limitations is waiting for your decision.')).toBe(1);
   });
 
-  test('an applied rule with nothing to decide: no occupant, but the quiet works-around row stays in its group until batch 2', async () => {
+  // RE-POINTED (D231, batch 2): batch 1 left the quiet works-around row in its
+  // group "until batch 2". Batch 2 moved it to Train (under the Injuries &
+  // limitations row), so an applied rule with nothing to decide now leaves Today
+  // with no occupant and no row at all.
+  test('an applied rule with nothing to decide: no occupant and no works-around row (it is on Train)', async () => {
     useAppStore.setState(PRO_USER);
     mockCapRestrictions = [LIMITATION_ROW({ __awaiting: false })];
     established();
     const { tree } = await mountHome({});
     expect(REGION.todayLine(tree)).toBe(false);
-    expect(findByLabel(tree, /Open Injuries & limitations$/).length).toBe(1);
+    expect(findByLabel(tree, /Open Injuries & limitations$/).length).toBe(0);
+    expect(flattenText(tree)).not.toContain('Training leaves your shoulder out at the moment.');
   });
 });
 
@@ -983,7 +994,9 @@ describe('D231: one offer at a time, directly under the main card', () => {
     expect(shown(tree)).toEqual([]);
   });
 
-  test('the offer sits directly under the main card: after the hero, before the last-session row', async () => {
+  // RE-POINTED (D231, batch 2): the last-session row left Today, so the offer
+  // sits after the hero and nothing called Repeat follows it.
+  test('the offer sits directly under the main card: after the hero, with no last-session row after it', async () => {
     useAppStore.setState({ ...PRO_USER, ...NEW_ACCOUNT });
     mockCapNothingSetUp = true;
     established();
@@ -991,10 +1004,10 @@ describe('D231: one offer at a time, directly under the main card', () => {
     const txt = flattenText(tree);
     const hero = txt.indexOf('Push Day');
     const offer = txt.indexOf('Anything Volyume should build your training around?');
-    const lastSession = txt.indexOf('Repeat');
     expect(hero).toBeGreaterThan(-1);
     expect(offer).toBeGreaterThan(hero);
-    expect(lastSession).toBeGreaterThan(offer);
+    expect(txt).not.toContain('Repeat');
+    expect(txt).not.toMatch(/Last session/);
   });
 
   test('the quiet "Coaching isn\'t set up yet" row is not an offer: it shows alongside the next offer', async () => {
@@ -1109,5 +1122,62 @@ describe('D231: what left Today', () => {
     expect(txt).not.toContain('Updating it needs a choice from you');
     expect(txt).not.toContain('Your sessions and your exercises are as they were.');
     expect(txt).not.toContain('Still need it?');
+  });
+
+  // ── Batch 2 (Train): the last-session row and the Injuries & limitations group ──
+  test('no last-session row, however much history there is: no "Last session", no Repeat, no door to History', async () => {
+    useAppStore.setState(PRO_USER);
+    established({
+      getAllWorkouts: async () => [completedWorkout('w1', 1), completedWorkout('w2', 3), completedWorkout('w3', 8)],
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    const txt = flattenText(tree);
+    expect(REGION.footerLastSession(tree)).toBe(false);
+    expect(findByLabel(tree, 'Repeat last session')).toHaveLength(0);
+    expect(txt).not.toMatch(/Last session/);
+    expect(txt).not.toContain('Repeat');
+    // The rest of Today is still there.
+    expect(REGION.heroPlanned(tree)).toBe(true);
+  });
+
+  test('no Injuries & limitations group: the works-around line is not on Today', async () => {
+    useAppStore.setState(PRO_USER);
+    mockCapRestrictions = [LIMITATION_ROW({ __awaiting: false })];
+    established();
+    const { tree } = await mountHome({});
+    expect(flattenText(tree)).not.toContain('Training leaves your shoulder out at the moment.');
+    expect(flattenText(tree)).not.toMatch(/Injuries & limitations/);
+    expect(findByLabel(tree, /Open Injuries & limitations/)).toHaveLength(0);
+  });
+
+  test('no Injuries & limitations group: the reintroduction line is not on Today, whatever the week\'s rows carry', async () => {
+    useAppStore.setState(PRO_USER);
+    established({
+      getCurrentMesocycleWeek: async () => ({ id: 'w1', weekIndex: 2, plannedWeeks: 6, isDeload: false, blockStartMs: Date.now() - 7 * 86400000 }),
+      getPlannedMuscleVolume: async () => [{ muscle: 'quads', source: 'reintroduction' }],
+    });
+    const { tree } = await mountHome({});
+    expect(flattenText(tree)).not.toContain('builds back up to your plan from here');
+  });
+
+  test('no Injuries & limitations group: the could-not-check line is not on Today, even when the capability read failed', async () => {
+    useAppStore.setState(PRO_USER);
+    mockCapUnavailable = true;
+    established();
+    const { tree } = await mountHome({});
+    expect(flattenText(tree)).not.toContain('could not check Injuries & limitations');
+    expect(flattenText(tree)).not.toMatch(/Injuries & limitations/);
+  });
+
+  test('what stays: the limitation decision is still a Today line occupant, and still opens Injuries & limitations', async () => {
+    useAppStore.setState(PRO_USER);
+    mockCapRestrictions = [LIMITATION_ROW()];
+    established();
+    const nav = makeNav();
+    const { tree } = await mountHome({ navigation: nav });
+    expect(REGION.todayLineText(tree)).toBe('You thought you would be back to your shoulder by about now. Still need it?');
+    await press(todayLineNode(tree));
+    expect(nav.navigate).toHaveBeenCalledWith('HowYouTrain');
   });
 });

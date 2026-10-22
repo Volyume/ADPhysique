@@ -12,6 +12,12 @@ import path from 'path';
 
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8');
 const HOME = read('screens/HomeScreen.js');
+// RE-POINTED (D231, app layout rework batch 2): the sheet (readiness rows, the
+// three answers, Skip, the standing opt-out) moved verbatim from HomeScreen to
+// components/SessionIntentSheet.js so Train's Repeat asks the same question the
+// same way. What it pins is unchanged: the opt-out persists the flag and then
+// starts exactly as Skip (null intent, all-null readiness).
+const SHEET = read('components/SessionIntentSheet.js');
 const SETTINGS = read('screens/SettingsCoachingScreen.js');
 
 describe('D2: readiness ask opt-out never fabricates coaching input', () => {
@@ -27,14 +33,19 @@ describe('D2: readiness ask opt-out never fabricates coaching input', () => {
   });
 
   test('the modal opt-out persists the flag and starts as Skip in the same handler', () => {
-    const site = HOME.indexOf('Do not ask before each session');
+    const site = SHEET.indexOf('Do not ask before each session');
     expect(site).toBeGreaterThan(-1);
-    const window = HOME.slice(Math.max(0, site - 800), site + 400);
+    const window = SHEET.slice(Math.max(0, site - 1300), site + 400);
     // C14 job 2 re-anchor: the same write, through the one path that also
     // stamps the edit and pushes it. What this pins is unchanged - the
     // modal opt-out persists the flag before starting as Skip.
-    expect(window).toMatch(/setUserPref\(user\?\.id, '@volyume_intent_prompt_off', 'true'\)/);
-    expect(window).toMatch(/confirmStart\(null,/);
+    expect(window).toMatch(/setUserPref\(userId, '@volyume_intent_prompt_off', 'true'\)/);
+    expect(window).toMatch(/onConfirm\(null, NO_READINESS\)/);
+    // The Skip path the opt-out mirrors passes the same all-null answers, and
+    // that constant is all null.
+    expect(SHEET).toMatch(/const NO_READINESS = \{ soreness24hBefore: null, sleepQuality: null, energyScore: null \};/);
+    // Home hands the sheet its own start handler.
+    expect(HOME).toMatch(/<SessionIntentSheet[\s\S]*onConfirm=\{confirmStart\}/);
   });
 
   // C14 job 2 re-anchor. The toggle still drives the same one key both

@@ -4,6 +4,14 @@
  * 00-AUDIT-AND-PLAN.md section 7.1, items 1 to 7; register D214 and its
  * addenda 1 and 3; D204).
  *
+ * D231 (app layout rework, batch 2) RE-POINTING: the plan-week card, the volume
+ * strip and Recent sessions moved from this screen to Train. Their rules are
+ * unchanged, so sections 1, 2 and 5 below now read the moved code (the hook
+ * src/hooks/useTrainWeek.js, PlansScreen.js, components/VolumeStrip.js,
+ * components/RecentSessionCard.js); the Progress doors (section 4) lose the
+ * Volume heatmap and Full history rows, which duplicated the strip and Recent
+ * sessions. Sections 3, 6 and 7 still read this screen.
+ *
  * What this suite pins and why (each case fails if the build is undone):
  *  1. "Your plan week" is the first object and is the SHARED PlanWeekCard fed
  *     by the one view-model, the programme position read on focus and on
@@ -31,6 +39,11 @@ import path from 'path';
 
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
 const SCREEN = read('../AnalyticsScreen.js');
+// D231 batch 2: where the moved parts live now.
+const TRAIN_HOOK = read('../../hooks/useTrainWeek.js');
+const PLANS = read('../PlansScreen.js');
+const STRIP_VIEW = read('../../components/VolumeStrip.js');
+const SESSION_CARD = read('../../components/RecentSessionCard.js');
 const STRIP = read('../../lib/progress/volumeStrip.js');
 const PILLARS = read('../../lib/progress/pillars.js');
 
@@ -46,37 +59,40 @@ function functionSource(src, name) {
   return src.slice(start, end + 3);
 }
 
-describe('1. Your plan week: the shared card, first, from the one view-model', () => {
-  test('PlanWeekCard is imported and consumed with the view-model; the strip sits under it', () => {
-    expect(SCREEN).toContain("import PlanWeekCard from '../components/PlanWeekCard';");
-    expect(SCREEN).toContain("import { buildPlanWeekSummary } from '../lib/progress/planWeek';");
+describe('1. Your plan week: the shared card, from the one view-model (moved to Train, D231)', () => {
+  const HOOK_CODE = CODE_OF(TRAIN_HOOK);
+  test('PlanWeekCard is consumed with the view-model on Train, inside the active plan card, before the start buttons', () => {
+    expect(TRAIN_HOOK).toContain("import { buildPlanWeekSummary } from '../lib/progress/planWeek';");
     // RE-ANCHORED D214 addendum 6 (lane 4 review S2): the finished flag rides along.
     // RE-ANCHORED addendum 9 (census 6.13): so do the grid's own days
     // (`completedDays`, calValues' dates), which the seven cells light on.
-    expect(SCREEN).toMatch(/buildPlanWeekSummary\(\{ position: planContext\.position, sets: allSets, completedDays, finished: !!currentMesoWeek\?\.awaitingDecision \}\)/);
-    expect(SCREEN).toContain('const completedDays = useMemo(() => calValues.map((v) => v.date), [calValues]);');
-    // RE-ANCHORED (the lead's landing fix, plan 7.1 item 2 "one Card"): the
-    // strip is the card's child, so the tag opens rather than self-closes.
-    const card = SCREEN.indexOf('<PlanWeekCard summary={planWeekSummary}>');
-    const stripAt = SCREEN.indexOf('<VolumeStrip', card);
-    const pillars = SCREEN.indexOf('<Card padding="none" surface="surfaceElevated"');
-    expect(card).toBeGreaterThan(SCREEN.indexOf('Header (R1)'));
-    expect(stripAt).toBeGreaterThan(card);
-    expect(pillars).toBeGreaterThan(stripAt);
+    expect(TRAIN_HOOK).toMatch(/buildPlanWeekSummary\(\{ position: planContext\.position, sets: allSets, completedDays, finished: !!currentMesoWeek\?\.awaitingDecision \}\)/);
+    expect(TRAIN_HOOK).toContain('const completedDays = useMemo(() => calValues.map((v) => v.date), [calValues]);');
+    const card = PLANS.indexOf('<PlanWeekCard summary={trainWeek.planWeekSummary} embedded');
+    const start = PLANS.indexOf("title={weekComplete ? 'Do another session' : 'Start next workout'}");
+    const weekLine = PLANS.indexOf('<InfoTooltip text={BLOCK_DEFINITION}');
+    expect(weekLine).toBeGreaterThan(-1);
+    expect(card).toBeGreaterThan(weekLine);
+    expect(start).toBeGreaterThan(card);
   });
 
-  test('no second implementation: the screen builds no count, no cell and no DayDots of its own', () => {
-    expect(CODE).not.toMatch(/headlineNumber|headlineWords|trainedDayKeys|sessionsThisWeek|weekdayKey/);
-    expect(CODE).not.toMatch(/community\/DayDots|<DayDots/);
-    expect(CODE).not.toMatch(/function PlanWeek/);
-    expect(CODE).not.toMatch(/localWeekStartMs/);
+  test('no second implementation: neither the hook nor Train builds a count, a cell or a DayDots of its own', () => {
+    for (const src of [HOOK_CODE, CODE_OF(PLANS)]) {
+      expect(src).not.toMatch(/headlineNumber|headlineWords|trainedDayKeys|sessionsThisWeek|weekdayKey/);
+      expect(src).not.toMatch(/community\/DayDots|<DayDots/);
+      expect(src).not.toMatch(/function PlanWeek/);
+      expect(src).not.toMatch(/localWeekStartMs/);
+    }
+    // And the Progress screen draws none of it any more.
+    expect(CODE).not.toMatch(/PlanWeekCard|buildPlanWeekSummary|planWeekSummary|planContext/);
   });
 
   test('the programme position is read on focus and on pull-to-refresh, failing to the no-plan reading', () => {
-    expect(SCREEN).toContain("import { resolveProgrammePosition } from '../lib/programmePosition';");
-    expect(SCREEN).toMatch(/useFocusEffect\(\s*useCallback\(\(\) => \{ loadPlanContext\(\); \}, \[loadPlanContext\]\),\s*\);/);
-    expect(SCREEN).toMatch(/const onRefresh = \(\) => \{ loadPlanContext\(\); handleRefresh\(\); \};/);
-    expect(SCREEN).toContain('resolveProgrammePosition(user.id).catch(() => null)');
+    expect(TRAIN_HOOK).toContain("import { resolveProgrammePosition } from '../lib/programmePosition';");
+    expect(TRAIN_HOOK).toMatch(/useFocusEffect\(\s*useCallback\(\(\) => \{ loadPlanContext\(\); \}, \[loadPlanContext\]\),\s*\);/);
+    expect(TRAIN_HOOK).toMatch(/const refresh = useCallback\(\(\) => \{ loadPlanContext\(\); return handleRefresh\(\); \}, \[loadPlanContext, handleRefresh\]\);/);
+    expect(TRAIN_HOOK).toContain('resolveProgrammePosition(user.id).catch(() => null)');
+    expect(PLANS).toMatch(/await Promise\.all\(\[loadData\(\), trainWeek\.refresh\(\)\]\)/);
   });
 
   test('the old "N sessions this week" context line is gone: one session count on the screen', () => {
@@ -84,24 +100,29 @@ describe('1. Your plan week: the shared card, first, from the one view-model', (
   });
 });
 
-describe('2. The strip: the pure model, one tap target, one legend', () => {
-  test('the strip is built by the pure model and the screen recounts nothing', () => {
-    expect(SCREEN).toMatch(/buildVolumeStrip\(\{/);
-    expect(SCREEN).toContain("import { planTrainedMuscles } from '../lib/volumeLogged';");
-    expect(CODE).not.toMatch(/calculateWeeklyVolume|getVolumeStatus|VOLUME_LANDMARKS|weeklyVolume|\.workingSets\b|VolumeSummaryStrip/);
+describe('2. The strip: the pure model, one tap target, one legend (moved to Train, D231)', () => {
+  const HOOK_CODE = CODE_OF(TRAIN_HOOK);
+  const STRIP_VIEW_CODE = CODE_OF(STRIP_VIEW);
+  test('the strip is built by the pure model and nothing recounts', () => {
+    expect(TRAIN_HOOK).toMatch(/buildVolumeStrip\(\{/);
+    expect(TRAIN_HOOK).toContain("import { planTrainedMuscles } from '../lib/volumeLogged';");
+    for (const src of [HOOK_CODE, STRIP_VIEW_CODE, CODE_OF(PLANS)]) {
+      expect(src).not.toMatch(/calculateWeeklyVolume|getVolumeStatus|VOLUME_LANDMARKS|weeklyVolume|\.workingSets\b|VolumeSummaryStrip/);
+    }
   });
 
   test('a tap opens the Volume heatmap on "This week"', () => {
-    expect(SCREEN).toContain("navigation.navigate('VolumeHeatmap', { windowWeeks: 1 })");
+    expect(PLANS).toContain("navigation.navigate('VolumeHeatmap', { windowWeeks: 1 })");
+    expect(PLANS).toMatch(/<VolumeStrip\s+strip=\{trainWeek\.strip\}\s+legendItems=\{trainWeek\.legendItems\}/);
   });
 
   test('every colour is named through the shared LegendRow, built from the strip\'s one tone table', () => {
-    expect(SCREEN).toContain("import LegendRow from '../components/LegendRow';");
-    expect(SCREEN).toMatch(/<LegendRow\s+items=\{legendItems\}/);
-    expect(SCREEN).toMatch(/stripLegendItems\(\{ colors: t\.colors, recoveryWeek \}\)/);
-    expect(SCREEN).toMatch(/stripToneColors\(t\.colors\)/);
+    expect(STRIP_VIEW).toContain("import LegendRow from './LegendRow';");
+    expect(STRIP_VIEW).toMatch(/<LegendRow\s+items=\{legendItems\}/);
+    expect(TRAIN_HOOK).toMatch(/stripLegendItems\(\{ colors: t\.colors, recoveryWeek \}\)/);
+    expect(STRIP_VIEW).toMatch(/stripToneColors\(t\.colors\)/);
     // No hand-rolled swatch or flag legend survives.
-    expect(CODE).not.toMatch(/volLegendDot|volLegendItem|volSummaryFlags|below target|over max|All in range/);
+    expect(STRIP_VIEW_CODE).not.toMatch(/volLegendDot|volLegendItem|volSummaryFlags|below target|over max|All in range/);
     // The three tones' words live with the model. RE-PINNED under D219 lane A5
     // (design 5.3): the strip reads the one judgement, so its tones are Below
     // maintenance, Within the studied range and Beyond the studied range; the old
@@ -113,7 +134,7 @@ describe('2. The strip: the pure model, one tap target, one legend', () => {
   });
 
   test('the recovery week is the position\'s GATED state, the calendar flag only the fallback', () => {
-    expect(SCREEN).toContain('isStripRecoveryWeek({ position: planContext?.position ?? null, currentMesoWeek })');
+    expect(TRAIN_HOOK).toContain('isStripRecoveryWeek({ position: planContext?.position ?? null, currentMesoWeek })');
     expect(STRIP).toContain('position.recoveryState?.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY');
     expect(STRIP).not.toMatch(/isLighterTrainingState/);
   });
@@ -121,11 +142,13 @@ describe('2. The strip: the pure model, one tap target, one legend', () => {
   // RE-PINNED under D219 lane A5: the strip judges by each muscle's role in the
   // active plan (getPlanRoles), no longer by the resolved landmark table.
   test('the plan roles and the plan-trained set are re-read on every focus, not once per user (PR-16)', () => {
-    expect(SCREEN).toContain("import { getPlanLandmarks, getPlanRoles } from '../lib/effectiveLandmarks';");
-    expect(SCREEN).toContain('getPlanRoles(user.id)');
-    expect(SCREEN).toContain('planTrained: planTrainedMuscles(planLayer)');
-    expect(CODE).not.toMatch(/\[user\?\.id, tier\]/);
-    expect(CODE).not.toMatch(/landmarkResolution/);
+    expect(TRAIN_HOOK).toContain("import { getPlanLandmarks, getPlanRoles } from '../lib/effectiveLandmarks';");
+    expect(TRAIN_HOOK).toContain('getPlanRoles(user.id)');
+    expect(TRAIN_HOOK).toContain('planTrained: planTrainedMuscles(planLayer)');
+    expect(HOOK_CODE).not.toMatch(/\[user\?\.id, tier\]/);
+    expect(HOOK_CODE).not.toMatch(/landmarkResolution/);
+    // And the Progress screen reads no plan context at all.
+    expect(CODE).not.toMatch(/getPlanRoles|getPlanLandmarks|planTrainedMuscles|buildVolumeStrip/);
   });
 });
 
@@ -151,20 +174,25 @@ describe('3. Ink icons (PR-17) and the untouched Body row', () => {
   });
 });
 
-describe('4. The doors: NavRows in one NavGroup, in the plan\'s order, the Volume heatmap persistent (PR-15)', () => {
-  test('Consistency, Volume heatmap, Full history, Recaps, Year of lifts, in that order', () => {
+describe('4. The doors: NavRows in one NavGroup, in the plan\'s order', () => {
+  // RE-POINTED (D231, batch 2): the Volume heatmap door (PR-15) and the Full
+  // history door duplicated the strip and Recent sessions' "All sessions", which
+  // moved to Train (the strip opens the same Volume heatmap there, "All sessions"
+  // the same history). Each screen has one door to each place.
+  test('Consistency, Recaps, Year of lifts, in that order', () => {
     const at = (label) => SCREEN.indexOf(`label="${label}"`);
-    const order = ['Consistency', 'Volume heatmap', 'Full history', 'Recaps', 'Year of lifts'].map(at);
+    const order = ['Consistency', 'Recaps', 'Year of lifts'].map(at);
     for (const i of order) expect(i).toBeGreaterThan(-1);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(SCREEN).toContain("import { NavRow, NavGroup } from '../components/NavRow';");
     expect(CODE).not.toMatch(/NavTile|navTile/);
   });
 
-  test('the Volume heatmap door is never conditional on data', () => {
-    const group = SCREEN.slice(SCREEN.indexOf('<NavGroup>'), SCREEN.indexOf('label="Volume heatmap"'));
-    expect(group).not.toMatch(/&&|\?\s*\(|\?\s*<|hasData|hasVolume/);
-    expect(SCREEN).toMatch(/<NavRow icon="body-outline" label="Volume heatmap" onPress=\{\(\) => navigation\.navigate\('VolumeHeatmap'\)\} \/>/);
+  test('the Volume heatmap and Full history rows are gone from Progress; Train carries both doors', () => {
+    expect(CODE).not.toMatch(/label="Volume heatmap"|label="Full history"/);
+    expect(CODE).not.toMatch(/navigate\('VolumeHeatmap'|navigate\('WorkoutHistory'/);
+    expect(PLANS).toContain("navigation.navigate('VolumeHeatmap', { windowWeeks: 1 })");
+    expect(PLANS).toContain("navigation.navigate('WorkoutHistory')");
     // Year of lifts is the only conditional door, as before.
     expect(SCREEN).toMatch(/yearOfLiftsUnlocked \? \(\s*<NavRow icon="calendar-outline" label="Year of lifts"/);
   });
@@ -177,18 +205,21 @@ describe('4. The doors: NavRows in one NavGroup, in the plan\'s order, the Volum
   });
 });
 
-describe('5. Recent sessions: the routine\'s name, the person\'s own word (PR-9, PR-1)', () => {
-  test('the title is the routine name, else name, else "Session", as Home reads it', () => {
-    expect(SCREEN).toContain("const title = workout.routineName || workout.name || 'Session';");
-    expect(read('../../components/HomeLastSessionCard.js')).toContain("lastSession.routineName || lastSession.name || 'Session'");
+describe('5. Recent sessions: the routine\'s name, the person\'s own word (PR-9, PR-1) (moved to Train, D231)', () => {
+  test('the title is the routine name, else name, else "Session", as Home read it', () => {
+    expect(SESSION_CARD).toContain("const title = workout.routineName || workout.name || 'Session';");
   });
 
   test('the chip prints the word with "of 5" spoken, never "/10"', () => {
-    expect(CODE).not.toMatch(/\/10/);
-    expect(SCREEN).toContain("const DIFFICULTY_WORDS = ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'];");
-    expect(SCREEN).toContain('difficulty ${diffWord}, ${diff} of 5');
+    expect(CODE_OF(SESSION_CARD)).not.toMatch(/\/10/);
+    expect(SESSION_CARD).toContain("const DIFFICULTY_WORDS = ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'];");
+    expect(SESSION_CARD).toContain('difficulty ${diffWord}, ${diff} of 5');
     // The words are the Workout Summary's own rating words.
     expect(read('../WorkoutSummaryScreen.js')).toContain("sessionDifficulty: ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal']");
+  });
+
+  test('Progress carries no Recent sessions section any more', () => {
+    expect(CODE).not.toMatch(/Recent sessions|SessionCard|recentSessions/);
   });
 });
 
@@ -230,6 +261,8 @@ describe('7. D204: nothing here tells the athlete what to do', () => {
   test.each([
     ['AnalyticsScreen.js', SCREEN],
     ['volumeStrip.js', STRIP],
+    ['VolumeStrip.js (D231: moved to Train)', STRIP_VIEW],
+    ['RecentSessionCard.js (D231: moved to Train)', SESSION_CARD],
   ])('%s prints no instruction verb', (_name, src) => {
     const offenders = printedStrings(src).filter((s) => INSTRUCTION.test(s));
     expect(offenders).toEqual([]);
@@ -261,7 +294,7 @@ describe('D214 addendum 6: wiring pins', () => {
     expect(SRC).not.toMatch(/windowDays: (?!30)\d+/);
   });
   test('the plan roles flow into the strip (PR-16, D219 lane A5)', () => {
-    expect(SRC).toMatch(/roles: planContext\?\.roles/);
+    expect(TRAIN_HOOK).toMatch(/roles: planContext\?\.roles/);
   });
   test('the Recaps gate text waits for the session read and is withheld on a failed load', () => {
     expect(SRC).toMatch(/const sessionsRead = !loading && !loadError;/);
@@ -269,6 +302,6 @@ describe('D214 addendum 6: wiring pins', () => {
     expect(SRC).toMatch(/sub=\{recapUnlocked \|\| !sessionsRead \? null/);
   });
   test('a finished block claims no live plan week on the first card', () => {
-    expect(SRC).toMatch(/finished: !!currentMesoWeek\?\.awaitingDecision/);
+    expect(TRAIN_HOOK).toMatch(/finished: !!currentMesoWeek\?\.awaitingDecision/);
   });
 });

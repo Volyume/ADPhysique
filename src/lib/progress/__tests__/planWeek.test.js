@@ -293,8 +293,10 @@ describe('the seven cells read the days a completed workout started (6.13)', () 
     expect(sessionDayKeysThisWeek(['2026-03-23', '2026-03-29', '2026-03-30'], springNow)).toEqual(['mon', 'sun']);
   });
 
-  test('the screens hand the grid\'s own days to the card: AnalyticsScreen passes calValues\' dates', () => {
-    const src = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'screens', 'AnalyticsScreen.js'), 'utf8');
+  // RE-POINTED (D231, app layout rework batch 2): the card moved from Progress to
+  // Train, and the screen's assembly moved with it into hooks/useTrainWeek.js.
+  test('the screens hand the grid\'s own days to the card: Train\'s hook passes calValues\' dates', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'hooks', 'useTrainWeek.js'), 'utf8');
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     expect(code).toMatch(/calValues\.map\(\(v\) => v\.date\)/);
     expect(code).toMatch(/buildPlanWeekSummary\(\{[^}]*completedDays/);

@@ -130,24 +130,19 @@ describe('"For You" retirement covers useProgressData.js as well as the screen',
 // counts as one"): the landing's bordered-container SLOTS are counted at
 // the source level (not per-render, since several are mutually exclusive
 // or count-capped by construction) —
-//   1 plan-week card (PlanWeekCard, always once loaded)
-//     (the volume strip, D214 lane 3's line 3 and bar, sits INSIDE the
-//     plan-week card under a hairline, as the plan's mockup draws it:
-//     PlanWeekCard takes children since the lead's landing fix, so the strip
-//     is no container of its own)
-// + 1 Answer Block (always)
-// + 3 SessionCard slots MAX (R3, capped by useProgressData's own
-//     `.slice(0, 3)` on recentSessions — verified below, not assumed)
+//   1 Answer Block (always)
 // + 1 Moment card MAX (R5: recap only since 2026-08-17; a single
 //     conditional — verified below)
 // + 1 doors list (R6, one NavGroup = one container, regardless of how many
 //     NavRows it holds)
-// = 7. RE-ANCHORED under D214 lane 3 (plan 7.1) and the lead's landing fix:
-// the plan-week object is new and comes first with the strip inside it, the
-// old conditional VolumeSummaryStrip card is gone, and the NavTile grid is now
-// one NavGroup, so the ceiling the spec's §24 stated (7) holds.
+// = 3. RE-ANCHORED under D231 (app layout rework, batch 2): the plan-week card
+// (with the volume strip inside it) and the three Recent-session cards (the old
+// ceiling was 1 + 1 + 3 + 1 + 1 = 7) moved to Train, so the Progress landing's
+// ceiling is 3 and the Answer Block is the first object after the header.
 describe('§24 density budget: primary evidence container ceiling, source-counted', () => {
-  test('recentSessions is capped at 3 by useProgressData (the R3 evidence-trail ceiling)', () => {
+  // RE-POINTED (D231, batch 2): the cap still lives in the hook; the three cards
+  // it bounds are Train's Recent sessions now.
+  test('recentSessions is capped at 3 by useProgressData (the Recent sessions ceiling, now on Train)', () => {
     expect(USE_PROGRESS_DATA_SRC).toMatch(/\.slice\(0, 3\)/);
   });
 
@@ -177,58 +172,39 @@ describe('§24 density budget: primary evidence container ceiling, source-counte
     expect(ANALYTICS_SRC).not.toMatch(/NavTile|navGrid/);
   });
 
-  test('the ceiling arithmetic: 1 + 0 + 1 + 3 + 1 + 1 = 7 (the strip inside the plan-week card, D214)', () => {
-    const planWeekCard = 1;
-    const volumeStrip = 0; // inside the plan-week card: PlanWeekCard takes children
+  test('the ceiling arithmetic: 1 + 1 + 1 = 3 (the plan-week card, its strip and the sessions moved to Train, D231)', () => {
     const answerBlock = 1;
-    const sessionCardsMax = 3;
     const momentMax = 1; // recap only (milestone retired 2026-08-17)
     const doorsList = 1; // counts as one, per the recorded interpretation
-    expect(planWeekCard + volumeStrip + answerBlock + sessionCardsMax + momentMax + doorsList).toBe(7);
+    expect(answerBlock + momentMax + doorsList).toBe(3);
   });
 
-  test('the strip is a plain View inside the plan-week card; the screen draws exactly two card-shaped containers of its own besides the sessions', () => {
-    // The plan-week card is PlanWeekCard's own Card; this file's own: the
-    // Answer Block and (per session) the SessionCard. The strip is a View the
-    // PlanWeekCard renders as its child.
-    expect((ANALYTICS_SRC.match(/<Card\b/g) || []).length).toBe(2);
-    expect(ANALYTICS_SRC).toMatch(/<View testID="volume-strip"/);
-    expect(ANALYTICS_SRC).not.toMatch(/<Card testID="volume-strip"/);
-    expect(ANALYTICS_SRC).toMatch(/<PlanWeekCard summary=\{planWeekSummary\}>\s*\{hasData \? \(\s*<VolumeStrip/);
+  test('the screen draws exactly one card-shaped container of its own: the Answer Block; no plan-week card, strip or session card', () => {
+    expect((ANALYTICS_SRC.match(/<Card\b/g) || []).length).toBe(1);
     expect(ANALYTICS_SRC).toMatch(/<Card padding="none" surface="surfaceElevated"/);
+    expect(ANALYTICS_SRC).not.toMatch(/volume-strip|PlanWeekCard|<VolumeStrip|<SessionCard|RecentSessionCard/);
   });
 
-  // RE-ANCHORED under D214 lane 3 (plan 7.1): "Your plan week" is now the first
-  // object, so the pair above the fold is the plan-week card (with its strip)
-  // and then the Answer Block; the Answer Block is no longer first.
-  test('above-the-fold ceiling: the plan-week card is the first container, immediately after the header; the Answer Block is the next object', () => {
-    const headerIdx = ANALYTICS_SRC.indexOf('Header (R1)');
-    const planWeekIdx = ANALYTICS_SRC.indexOf('<PlanWeekCard summary={planWeekSummary}>');
-    expect(planWeekIdx).toBeGreaterThan(headerIdx);
-    // No Card-shaped container between the header and the plan-week card.
-    expect(ANALYTICS_SRC.slice(headerIdx, planWeekIdx)).not.toMatch(/<Card\b/);
-    // The Answer Block follows it (the strip sits between, under the card).
-    const answerAfterPlan = ANALYTICS_SRC.search(/<Card [^>]*style=\{styles\.answerBlock\}>/);
-    expect(answerAfterPlan).toBeGreaterThan(planWeekIdx);
-  });
-
-  test('above-the-fold ceiling: after the plan-week object the Answer Block is the first container before the evidence trail', () => {
+  // RE-ANCHORED under D231 (batch 2): "Your plan week" left, so the Answer Block
+  // is the first container, immediately after the header, as it was before D214.
+  test('above-the-fold ceiling: the Answer Block is the first container, immediately after the header', () => {
     const headerIdx = ANALYTICS_SRC.indexOf('Header (R1)');
     // Anchored on styles.answerBlock, the stable identifier, rather than on
-    // the full opening tag: the tag gained surface="surfaceElevated" (D3, the
-    // hero is the screen's only elevated object) and a literal locator broke
-    // on a prop change that does not touch the ordering rule this test pins.
+    // the full opening tag (the tag gained surface="surfaceElevated", D3).
     const answerBlockMatch = ANALYTICS_SRC.match(/<Card [^>]*style=\{styles\.answerBlock\}>/);
     const answerBlockIdx = answerBlockMatch ? answerBlockMatch.index : -1;
-    const evidenceTrailIdx = ANALYTICS_SRC.indexOf('Evidence trail (R3');
     expect(headerIdx).toBeGreaterThan(-1);
     expect(answerBlockIdx).toBeGreaterThan(headerIdx);
-    expect(evidenceTrailIdx).toBeGreaterThan(answerBlockIdx);
-    // No second Card-shaped container between the header and the Answer
-    // Block, and none between the Answer Block and the evidence trail
-    // section (SessionCard is the first evidence card, matching the
-    // spec's "answer block + first evidence card" above-the-fold pair).
-    const between = ANALYTICS_SRC.slice(answerBlockIdx + 1, evidenceTrailIdx);
-    expect(between).not.toMatch(/<Card\b/);
+    // No Card-shaped container between the header and the Answer Block.
+    expect(ANALYTICS_SRC.slice(headerIdx, answerBlockIdx)).not.toMatch(/<Card\b/);
+  });
+
+  test('after the Answer Block no second Card-shaped container precedes the Moment and the doors', () => {
+    const answerBlockMatch = ANALYTICS_SRC.match(/<Card [^>]*style=\{styles\.answerBlock\}>/);
+    const answerBlockIdx = answerBlockMatch ? answerBlockMatch.index : -1;
+    const momentsIdx = ANALYTICS_SRC.indexOf('Moments (R5');
+    expect(momentsIdx).toBeGreaterThan(answerBlockIdx);
+    expect(ANALYTICS_SRC.slice(answerBlockIdx + 1, momentsIdx)).not.toMatch(/<Card\b/);
+    expect(ANALYTICS_SRC).not.toContain('Evidence trail (R3');
   });
 });
