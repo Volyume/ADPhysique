@@ -1118,7 +1118,9 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
   // components/coach/CoachProgress.js, drawn by the Coach screen.
   test('the Progress empty state promises the same, real destinations to every account (C5-P35-01 superseded)', () => {
     const src = read('components/coach/CoachProgress.js');
-    expect(src).toContain('Training charts appear here once sessions are logged. Weigh-ins, photos and scans are in the rows above.');
+    // D231 lead review: the page empty state left Coach (no chart appears
+    // there); the Training row's own empty line speaks to every account alike.
+    expect(src).not.toContain('Training charts appear here');
     expect(src).not.toContain('still available below');
     expect(src).not.toContain('Your consistency, lifts and full history are still available below.');
   });

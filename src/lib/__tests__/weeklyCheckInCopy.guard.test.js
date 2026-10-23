@@ -41,7 +41,10 @@ describe('weekly check-in copy stays aligned with the gate rules', () => {
     expect(COACH_HUB).toMatch(/`First check-in \$\{formatShortDate\(readiness\.unlockDateMs\)\}`/);
     expect(COACH_HUB).toMatch(/day: 'numeric', month: 'long'/);
     expect(COACH_HUB).not.toMatch(/First check-in: /);
-    expect(COACH_HUB).toMatch(/const cardTitle = thisWeekDecision \? THIS_WEEK_DECISION_TITLE : pendingCoachCopy\.title;/);
+    // D231 lead review: a person past their first check-in reads the old row's
+    // established line, never "First check-in", until the check-in is open.
+    expect(COACH_HUB).toMatch(/: \(pastDecision && pendingCoachCopy\.open !== true \? ESTABLISHED_CHECKIN_TITLE : pendingCoachCopy\.title\);/);
+    expect(COACH_HUB).toMatch(/const ESTABLISHED_CHECKIN_TITLE = 'Answer a few questions so your coach knows how your week went\.';/);
     expect(COACH_HUB).not.toMatch(/\$\{pendingCoachCopy\.title\}\. \$\{pendingCoachCopy\.body\}/);
     // D231: "Weekly check-in is open" is shown as "Check-in is open".
     expect(COACH_HUB).toMatch(/title: 'Check-in is open'/);
