@@ -31,7 +31,8 @@ const MIGRATED = [
   // Tier c: these read the one state through the hook.
   'screens/FoodInsightsScreen.js',
   'screens/WeeklyCheckInScreen.js',
-  'screens/AthleteProfileScreen.js',
+  // D231: AthleteProfileScreen.js is retired; its weight-figure lines were the
+  // lift ratios, which Lift Progress carries (with the same withhold).
   'screens/LiftProgressScreen.js',
   'lib/coachReport.js',
   'lib/blockLedgerRunner.js',
@@ -43,7 +44,6 @@ const MIGRATED = [
 const FIGURE_SURFACES = [
   'screens/CoachOutputScreen.js',
   'screens/WeeklyCheckInScreen.js',
-  'screens/AthleteProfileScreen.js',
   'screens/LiftProgressScreen.js',
 ];
 

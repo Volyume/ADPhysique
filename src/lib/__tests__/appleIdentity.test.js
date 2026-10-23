@@ -129,7 +129,12 @@ describe('the profile header never greets an athlete by their relay token', () =
   // against, `displayName` is plain render code on the screen's main path, so
   // the only real risk is someone deleting the guard. The predicate itself is
   // unit-tested above.
-  const SCREENS = ['AthleteProfileScreen.js', 'YouScreen.js'];
+  // D231: the Athlete profile is retired; its display name (the initial inside
+  // the profile picture) is now computed on Settings > Profile.
+  // D231 (batch 4): the Coach screen's profile header is gone with the profile
+  // card, so YouScreen.js no longer computes a display name at all (pinned
+  // below); the guard's only home is Settings > Profile.
+  const SCREENS = ['SettingsProfileScreen.js'];
 
   test.each(SCREENS)('%s routes its e-mail fallback through the guard', (file) => {
     const src = fs.readFileSync(
@@ -140,6 +145,15 @@ describe('the profile header never greets an athlete by their relay token', () =
     expect(src).not.toMatch(
       /\|\|\s*user\?\.email\?\.split\('@'\)\[0\]/,
     );
+  });
+
+  test('the Coach screen shows no name at all, so there is no relay token for it to greet', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'screens', 'YouScreen.js'), 'utf8',
+    );
+    expect(src).not.toMatch(/displayName/);
+    expect(src).not.toMatch(/user\?\.email\?\.split\('@'\)/);
+    expect(src).not.toMatch(/ProfileAvatarMark/);
   });
 
   test('the fallback still applies to everyone else', () => {

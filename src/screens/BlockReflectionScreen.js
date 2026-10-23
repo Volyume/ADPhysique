@@ -196,11 +196,13 @@ export default function BlockReflectionScreen({ navigation, route }) {
         title="Block summary"
         right={data ? (
           // COMP-005: this analytic screen gains the story as its front door.
-          // RecapStory is a ProgressStack route and this screen is
-          // ProfileStack-only, so the bare navigate was silently dropped and
-          // the block recap was inert (D95, AUDIT-ROUTES 6 row 2).
+          // RecapStory used to be a ProgressStack route and this screen is
+          // ProfileStack, so the bare navigate was silently dropped and the
+          // block recap was inert (D95, AUDIT-ROUTES 6 row 2). D231 (batch 4):
+          // the Progress tab is gone and RecapStory is registered in this
+          // stack, so it is a plain in-stack push and Back returns here.
           <TouchableOpacity
-            onPress={() => { hapticSelection(); navigateCrossTab(navigation, 'ProgressTab', 'RecapStory', { variant: 'block', mesocycleId, blockName: data.meso?.name }); }}
+            onPress={() => { hapticSelection(); navigation.navigate('RecapStory', { variant: 'block', mesocycleId, blockName: data.meso?.name }); }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Play block story"

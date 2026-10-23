@@ -3,6 +3,11 @@
  * PROGRESS-UX-SPEC.md §13/§22/§24/§27) — source guards for the Progress
  * landing rebuild.
  *
+ * D231 (app layout rework, batch 4) RE-POINTING: the Progress landing's rows
+ * moved from AnalyticsScreen.js (retired) to components/coach/CoachProgress.js,
+ * drawn by the Coach screen; the guards read that file. Every rule is unchanged,
+ * including the Visual pillar's fail-closed gate.
+ *
  * What this suite pins and why:
  *  1. "For You" feed retirement (§13/§27): the landing renders NO advisory
  *     feed, no insightsEngine import, no dismiss-insight affordance.
@@ -25,7 +30,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'coach', 'CoachProgress.js'), 'utf8');
 
 describe('"For You" feed retirement (§13/§27)', () => {
   test('no insightsEngine import, no runInsightsEngine/dismissInsight call', () => {

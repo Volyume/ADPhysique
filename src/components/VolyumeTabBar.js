@@ -58,6 +58,8 @@ const PILL_H_INSET = spacing.sm; // breathing room each side of the cushion
 // glyphs at the 11 px caption, about 50 to 56 dp) would sit wider than a
 // cushion inset by 8 dp each side (44 dp). Below this cell width the inset
 // tightens to 2 dp (cushion 56 dp) so the label still sits on the cushion.
+// D231: the bar has five tabs now (72 dp a cell at 360 dp), so the wide inset
+// holds on that phone; the narrow rule still covers narrower ones.
 const NARROW_CELL = 66;
 const PILL_H_INSET_NARROW = spacing.xxs;
 const PILL_HEIGHT = 46;

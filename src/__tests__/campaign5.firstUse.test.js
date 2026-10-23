@@ -1074,8 +1074,10 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
     const coach = stripComments(read('screens/YouScreen.js'));
     expect(coach).not.toContain('Coach is available on Pro');
     expect(coach).not.toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'coach_pitch_card' \}\)/);
-    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
-    expect(coach).toContain('What your coach changed this week, what stayed the same, and why.');
+    // RE-POINTED (D231, batch 4): the "Weekly coaching decision" card and its body
+    // sentence are replaced by the one This week card, which reads "This week's
+    // decision · See why" once the decision exists.
+    expect(coach).toContain("This week's decision \\u00B7 See why");
   });
 
   test('the free column carries the tier word, never a hardcoded currency (C5-P8-01)', () => {
@@ -1112,8 +1114,10 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
   // (the Your progress card), so it pointed the wrong way. It now names the
   // weigh-ins, photos and scans as the rows above; the promise to every account
   // is unchanged.
+  // RE-POINTED (D231, batch 4): the Progress rows (and this empty state) moved to
+  // components/coach/CoachProgress.js, drawn by the Coach screen.
   test('the Progress empty state promises the same, real destinations to every account (C5-P35-01 superseded)', () => {
-    const src = read('screens/AnalyticsScreen.js');
+    const src = read('components/coach/CoachProgress.js');
     expect(src).toContain('Training charts appear here once sessions are logged. Weigh-ins, photos and scans are in the rows above.');
     expect(src).not.toContain('still available below');
     expect(src).not.toContain('Your consistency, lifts and full history are still available below.');
@@ -1754,7 +1758,10 @@ describe('CHECK-IN: no false-confidence recommendation from a week with no check
   test('the week-one ledger point survives: retirement still keys on a completed decision, not a persisted row', () => {
     const src = read('screens/YouScreen.js');
     expect(src).not.toMatch(/trialBanner/);
-    expect(src).toMatch(/const latestDecision = isCompletedCoachDecision\(latest, checkin\) \? latest : null;/);
+    // RE-POINTED (D231, batch 4): the predicate is the shared lib/coachDecision.js
+    // one, and the Coach screen keeps only the decisions that pass it.
+    expect(src).toMatch(/decisions = await completedDecisionsFrom\(history, /);
+    expect(read('lib/coachDecision.js')).toMatch(/if \(isCompletedCoachDecision\(row, checkin\)\) out\.push\(row\);/);
   });
 
   test('the engine files are untouched by this fix', () => {

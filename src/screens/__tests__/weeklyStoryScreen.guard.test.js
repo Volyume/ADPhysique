@@ -80,15 +80,22 @@ describe('Audit §15#1: WeeklyStoryScreen wiring', () => {
     expect(NAVIGATOR).not.toMatch(/GatedWeeklyStory/);
   });
 
-  test('has exactly one entry point, from the Coach tab\'s existing "This week" section', () => {
+  // RE-POINTED (D231, app layout rework batch 4): the "This week" section is the one
+  // card now, with Your week (and Past decisions) in the group under it. Still one
+  // entry point, still in that section, still a plain in-stack navigate.
+  test('has exactly one entry point, from the Coach tab\'s "This week" section', () => {
     const matches = YOU_SCREEN.match(/navigate\('WeeklyStory'\)/g) || [];
     expect(matches).toHaveLength(1);
-    // Sits in the same isPro "This week" block as the existing Coaching
-    // decision row, not a new section or a navigateCrossTab call.
+    // Sits in the "This week" section, after its label and card and before the
+    // next section, not a new section or a navigateCrossTab call.
     const site = YOU_SCREEN.indexOf("label=\"Your week\"");
     expect(site).toBeGreaterThan(-1);
-    const before = YOU_SCREEN.slice(0, site);
-    expect(before.lastIndexOf('Coaching decision')).toBeGreaterThan(before.lastIndexOf('SectionLabel>This week<'));
+    const label = YOU_SCREEN.indexOf('<SectionLabel>This week</SectionLabel>');
+    expect(label).toBeGreaterThan(-1);
+    expect(label).toBeLessThan(site);
+    expect(site).toBeLessThan(YOU_SCREEN.indexOf('<CoachProgress'));
+    // The decision card sits between the label and the row.
+    expect(YOU_SCREEN.slice(label, site)).toContain('onPress={openThisWeek}');
   });
 
   test('the new entry point does not touch navigateCrossTab / cross-tab navigation', () => {

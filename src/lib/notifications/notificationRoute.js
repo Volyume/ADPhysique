@@ -40,12 +40,16 @@ export function routeForNotificationType(type, data = {}) {
     case 'weekly_checkin':
       return { tab: 'ProfileTab', screen: 'WeeklyCheckIn' };
     case 'year_of_lifts_unlock':
-      return { tab: 'ProgressTab', screen: 'YearOfLifts' };
+      // D231 (app layout rework, batch 4): the Progress tab is gone; YearOfLifts is
+      // registered in the Coach stack, which now carries its rows.
+      return { tab: 'ProfileTab', screen: 'YearOfLifts' };
     case 'monthly_recap':
-      // COMP-005: lands on Progress, where the ephemeral recap card and the
-      // Recaps tile open the story. The month window is dynamic, so it is not
-      // carried on the static notification route.
-      return { tab: 'ProgressTab', screen: 'Analytics' };
+      // COMP-005: lands on the Coach tab root, where the Recaps row carries the
+      // recap invitation and opens the story (D231: Progress's rows moved to
+      // Coach; the invitation became the Recaps row's own line). The month
+      // window is dynamic, so it is not carried on the static notification
+      // route.
+      return { tab: 'ProfileTab', screen: 'You' };
     case 'cascade_gate':
     case 'winback':
     case 'trial_day3':
@@ -154,10 +158,10 @@ export function routeForNotificationType(type, data = {}) {
       // OPP-C03 ghost prevention. The same-evening nudge lands on the
       // check-in wizard (it is still the user's check-in day); the +48h
       // value follow-up promises the weekly trend, so it lands on the
-      // Progress trend view rather than dead-ending on the check-in
-      // screen's wrong-day gate.
+      // trend rows (Your progress, with Body: the Coach tab root since D231)
+      // rather than dead-ending on the check-in screen's wrong-day gate.
       return data?.slot === 'followup'
-        ? { tab: 'ProgressTab', screen: 'Analytics' }
+        ? { tab: 'ProfileTab', screen: 'You' }
         : { tab: 'ProfileTab', screen: 'WeeklyCheckIn' };
     case 'planned_meal_confirm':
       // F3: tap lands on the Diary, where the "Mark as eaten" banner and the

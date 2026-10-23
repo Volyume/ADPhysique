@@ -30,8 +30,9 @@ describe('the coach brief never tells users to override their plan (ruling 1)', 
 });
 
 describe('cardio logging is not a Progress surface (ruling 2), and is now retired everywhere (D95)', () => {
-  test('AnalyticsScreen renders no cardio card', () => {
-    const ANALYTICS = read('screens/AnalyticsScreen.js');
+  test('the Progress rows (Coach tab) render no cardio card', () => {
+    // RE-POINTED (D231, batch 4): AnalyticsScreen is retired; its rows are components/coach/CoachProgress.js.
+    const ANALYTICS = read('components/coach/CoachProgress.js');
     expect(ANALYTICS).not.toContain('CardioPlanCard');
     expect(ANALYTICS).not.toContain("navigate('LogCardio')");
   });

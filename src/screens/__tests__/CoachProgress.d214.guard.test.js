@@ -1,8 +1,14 @@
 /**
- * AnalyticsScreen: D214 lane 3 source guards (Progress root, plan
+ * CoachProgress (was AnalyticsScreen): D214 lane 3 source guards (Progress root, plan
  * docs/audit/progress-recovery-consistency-audit-2026-10-01/
  * 00-AUDIT-AND-PLAN.md section 7.1, items 1 to 7; register D214 and its
  * addenda 1 and 3; D204).
+ *
+ * D231 (app layout rework, batch 4) RE-POINTING: the Progress tab is gone and
+ * its rows live on Coach (components/coach/CoachProgress.js, drawn by
+ * YouScreen), so every "SCREEN" read below is that component's source. The
+ * recap banner became the Recaps row's sub line, and the load-error and empty
+ * states, the pillar rows and the doors are unchanged.
  *
  * D231 (app layout rework, batch 2) RE-POINTING: the plan-week card, the volume
  * strip and Recent sessions moved from this screen to Train. Their rules are
@@ -38,7 +44,7 @@ import fs from 'fs';
 import path from 'path';
 
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
-const SCREEN = read('../AnalyticsScreen.js');
+const SCREEN = read('../../components/coach/CoachProgress.js');
 // D231 batch 2: where the moved parts live now.
 const TRAIN_HOOK = read('../../hooks/useTrainWeek.js');
 const PLANS = read('../PlansScreen.js');
@@ -184,7 +190,7 @@ describe('4. The doors: NavRows in one NavGroup, in the plan\'s order', () => {
     const order = ['Consistency', 'Recaps', 'Year of lifts'].map(at);
     for (const i of order) expect(i).toBeGreaterThan(-1);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(SCREEN).toContain("import { NavRow, NavGroup } from '../components/NavRow';");
+    expect(SCREEN).toContain("import { NavRow, NavGroup } from '../NavRow';");
     expect(CODE).not.toMatch(/NavTile|navTile/);
   });
 
@@ -197,7 +203,7 @@ describe('4. The doors: NavRows in one NavGroup, in the plan\'s order', () => {
     expect(SCREEN).toMatch(/yearOfLiftsUnlocked \? \(\s*<NavRow icon="calendar-outline" label="Year of lifts"/);
   });
 
-  test('Recaps\' gate text and its banner read the sessions milestone\'s count (PR-12)', () => {
+  test('Recaps\' gate text and its invitation read the sessions milestone\'s count (PR-12)', () => {
     expect(SCREEN).toContain('const loggedSessionCount = sessionCount;');
     expect(SCREEN).toContain('loggedSessionCount >= RECAP_GATE');
     expect(SCREEN).toContain('loggedSessionCount < RECAP_GATE');
@@ -225,8 +231,9 @@ describe('5. Recent sessions: the routine\'s name, the person\'s own word (PR-9,
 
 describe('6. The empty state', () => {
   test('says where the weigh-ins, photos and scans are: the rows above', () => {
-    expect(SCREEN).toContain('title="No training trends yet"');
-    expect(SCREEN).toContain('text="Training charts appear here once sessions are logged. Weigh-ins, photos and scans are in the rows above."');
+    // D231 lead review: the empty state left Coach; the Training row says it.
+    expect(SCREEN).not.toContain('title="No training trends yet"');
+    expect(SCREEN).not.toContain('Training charts appear here');
     expect(CODE).not.toMatch(/still available below/);
   });
 
@@ -259,7 +266,7 @@ describe('7. D204: nothing here tells the athlete what to do', () => {
   }
 
   test.each([
-    ['AnalyticsScreen.js', SCREEN],
+    ['CoachProgress.js (D231: the Progress rows, now on Coach)', SCREEN],
     ['volumeStrip.js', STRIP],
     ['VolumeStrip.js (D231: moved to Train)', STRIP_VIEW],
     ['RecentSessionCard.js (D231: moved to Train)', SESSION_CARD],
@@ -288,7 +295,7 @@ describe('7. D204: nothing here tells the athlete what to do', () => {
 // D214 addendum 6 (lane 3 review 2 and 5): wiring that no mounted pin could
 // fail is pinned at the source.
 describe('D214 addendum 6: wiring pins', () => {
-  const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+  const SRC = SCREEN;
   test('the Training window is a rolling 30 days, as the row says', () => {
     expect(SRC).toMatch(/windowDays: 30/);
     expect(SRC).not.toMatch(/windowDays: (?!30)\d+/);
@@ -299,7 +306,8 @@ describe('D214 addendum 6: wiring pins', () => {
   test('the Recaps gate text waits for the session read and is withheld on a failed load', () => {
     expect(SRC).toMatch(/const sessionsRead = !loading && !loadError;/);
     expect(SRC).toMatch(/const recapUnlocked = sessionsRead && loggedSessionCount >= RECAP_GATE;/);
-    expect(SRC).toMatch(/sub=\{recapUnlocked \|\| !sessionsRead \? null/);
+    // D231: the sub line is the recap invitation in the window, else the gate text.
+    expect(SRC).toMatch(/\?\? \(recapUnlocked \|\| !sessionsRead \? null/);
   });
   test('a finished block claims no live plan week on the first card', () => {
     expect(TRAIN_HOOK).toMatch(/finished: !!currentMesoWeek\?\.awaitingDecision/);

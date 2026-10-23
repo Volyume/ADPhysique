@@ -104,12 +104,16 @@ describe('the Coach tab no longer carries a "Volume targets" row', () => {
     expect(YOU).not.toMatch(/navigateCrossTab\(navigation, 'ProgressTab'/);
   });
 
-  test('the Setup group keeps its other rows, and the cross-tab helper is still used for Community', () => {
-    for (const label of ['label="Update goal and phase"', 'label="Nutrition targets"', 'label="Coaching reminders"']) {
+  // RE-POINTED (D231, batch 4): the group is "Your coaching setup" now, with Goal
+  // and phase and Nutrition targets; Coaching reminders left for Settings and the
+  // Community row left Coach, so the screen no longer needs the cross-tab helper.
+  test('the coaching setup group keeps its rows (Goal and phase, Nutrition targets); no Community row or cross-tab helper is left', () => {
+    for (const label of ['label="Goal and phase"', 'label="Nutrition targets"']) {
       expect(YOU).toContain(label);
     }
-    expect(YOU).toContain("navigateCrossTab(navigation, 'CommunityTab')");
-    expect(YOU).toMatch(/import \{ navigateCrossTab \} from '\.\.\/navigation\/navigateCrossTab';/);
+    expect(YOU).not.toContain('label="Coaching reminders"');
+    expect(YOU).not.toContain('label="Community"');
+    expect(YOU).not.toContain('navigateCrossTab');
   });
 });
 

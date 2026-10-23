@@ -110,13 +110,13 @@ export const GLOSSARY = {
   // progressScanResultsContract.js's MEANING_MOMENT_BODY) is shown once ever
   // and never reachable again, so a persistent InfoTooltip with the same
   // framing is needed on every surface that renders the score. Reused
-  // verbatim across ProgressPhotosScreen's score grid, AthleteProfileScreen's
-  // score tile and ProgressScanTrend's marker legend so the explanation can
-  // never diverge. Body-image-adjacent: no praise/shame language, no
-  // targets. The marker-shape clause matches ProgressScanTrend.js's real
-  // encoding (markerShapeForTier in progressScanTrendViewModel.js): solid
-  // for high/moderate confidence, hollow for low, dashed when there was not
-  // enough to score.
+  // verbatim across ProgressPhotosScreen's score grid (the retired Athlete
+  // profile's score tile moved there, D231) and ProgressScanTrend's marker
+  // legend so the explanation can never diverge. Body-image-adjacent: no
+  // praise/shame language, no targets. The marker-shape clause matches
+  // ProgressScanTrend.js's real encoding (markerShapeForTier in
+  // progressScanTrendViewModel.js): solid for high/moderate confidence,
+  // hollow for low, dashed when there was not enough to score.
   volyumeScore:
     'The Volyume Score is worked out from your own photos to show your progress. It allows for pose and lighting, so scores from different photo sets can be compared. The band shows your current range. The confidence tag shows how reliable this score is. On the trend view, a filled marker means high or moderate confidence, a hollow one means low confidence, and a dashed one means there was not enough to score. It is not a body fat measurement, a medical assessment, or a comparison with anyone else.',
   // O22 (comprehension-and-trust audit 2026-08-06): BlockReflectionScreen's

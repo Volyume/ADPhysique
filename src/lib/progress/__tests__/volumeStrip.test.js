@@ -54,7 +54,8 @@ const SOURCE = read('../volumeStrip.js');
 // read this module and the shared one, and recount nothing themselves.
 const SCREEN_SOURCE = read('../../../hooks/useTrainWeek.js');
 const STRIP_VIEW_SOURCE = read('../../../components/VolumeStrip.js');
-const PROGRESS_SOURCE = read('../../../screens/AnalyticsScreen.js');
+// D231 (batch 4): the Progress rows are components/coach/CoachProgress.js now.
+const PROGRESS_SOURCE = read('../../../components/coach/CoachProgress.js');
 
 // A plain Wednesday, 12:00 local: its Monday is 8 June 2026, so 7 June is last week.
 const NOW = new Date(2026, 5, 10, 12, 0, 0).getTime();

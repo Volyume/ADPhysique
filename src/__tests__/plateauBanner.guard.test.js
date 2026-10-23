@@ -16,8 +16,8 @@
  *  - its priority rank in BANNER_PRIORITY: below coach, trial, deload and
  *    phase (recovery and targets still outrank a lift plateau), above the
  *    free/differential attention slot;
- *  - the cross-stack navigation form (ExerciseDetail lives in the Progress
- *    stack; a bare navigate from Home is the F4/NAV-1 silent no-op);
+ *  - the cross-stack navigation form (ExerciseDetail lives in the Coach
+ *    stack since D231 retired the Progress tab; a bare navigate from Home is the F4/NAV-1 silent no-op);
  *  - per-plateau dismissal keyed by exercise + local week;
  *  - the loader's input being training data only (workout sets), so the
  *    banner stays outside COMP-004's weight/food suppression scope;
@@ -75,11 +75,13 @@ describe('B3 plateau banner navigation (F4/NAV-1 bug class)', () => {
     expect(HOME).not.toMatch(/navigation\.navigate\(\s*['"]ExerciseDetail['"]/);
   });
 
-  test('routes via the parent tab navigator into the Progress stack', () => {
+  // RE-POINTED (D231, batch 4): the Progress tab is gone; ExerciseDetail is
+  // registered in the Coach stack (ProfileTab).
+  test('routes via the parent tab navigator into the Coach stack', () => {
     // T3: the parent-tab idiom (including the F6b initial: false rule) lives
     // in navigateCrossTab; the banner must route through it.
     expect(HOME).toMatch(
-      /navigateCrossTab\(navigation,\s*'ProgressTab',\s*'ExerciseDetail',\s*\{\s*exerciseId:\s*plateauBanner\.exerciseId\s*\}\)/,
+      /navigateCrossTab\(navigation,\s*'ProfileTab',\s*'ExerciseDetail',\s*\{\s*exerciseId:\s*plateauBanner\.exerciseId\s*\}\)/,
     );
   });
 });

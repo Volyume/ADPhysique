@@ -1,4 +1,15 @@
 /**
+ * D231 (app layout rework, batch 4) RE-POINTING: the Progress tab is gone and
+ * AnalyticsScreen.js is retired. This suite now mounts components/coach/
+ * CoachProgress.js, the component the Coach screen draws for "Your progress" and
+ * "Looking back" (the same code, moved unchanged), with the same fixtures and the
+ * same expectations. Pull-to-refresh is not part of Coach (the rows re-read on
+ * every focus), so the two failed-load cases drive their second load by a focus
+ * instead; the recap banner is now the Recaps row's own line, pinned at the end
+ * together with the safety rules of the rows and the Body-row scroll target.
+ *
+ * (Original header follows.)
+ *
  * AnalyticsScreen (Progress landing) — Campaign 23 Phase 2, Stage 3: the
  * state-matrix suite (PROGRESS-UX-SPEC.md §23, states A-P; §22 region
  * contract; §29 preservation contract; §31 test plan "state-matrix mounted
@@ -394,12 +405,12 @@ async function mountAnalytics(props = {}) {
     if (/wrap.*act|environment has been torn down|Cannot log after tests|Each child in a list|Function components cannot be given refs|forwardRef|inside StrictMode|react-test-renderer is deprecated/i.test(text)) return;
     errors.push(text);
   };
-  const AnalyticsScreen = require('../AnalyticsScreen').default;
+  const CoachProgress = require('../../components/coach/CoachProgress').default;
   let tree = null;
   try {
     await TestRenderer.act(async () => {
       tree = TestRenderer.create(
-        React.createElement(AnalyticsScreen, { navigation: makeNav(), route: { params: {}, name: 'Test' }, ...props }),
+        React.createElement(CoachProgress, { navigation: makeNav(), ...props }),
       );
     });
     await TestRenderer.act(async () => {
@@ -427,6 +438,8 @@ function flattenText(tree) {
   const out = [];
   (function visit(node) {
     if (node == null) return;
+    // D231: CoachProgress renders two sections as a fragment, so the JSON root is a list.
+    if (Array.isArray(node)) { node.forEach(visit); return; }
     if (typeof node === 'string' || typeof node === 'number') { out.push(String(node)); return; }
     const c = node.children;
     if (Array.isArray(c)) c.forEach(visit); else if (c) visit(c);
@@ -819,11 +832,10 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     expect(body[0].props.accessibilityLabel).toContain('No weigh-ins logged yet');
     const visual = pillarRow(tree, 'Progress photos');
     expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Your photo comparison starts with your first set of progress photos.');
-    // Deliberately BOTH render (lead ruling, §23 state F):
-    expect(flattenText(tree)).toContain('No training trends yet');
-    // RE-ANCHORED under D214 (PR-11): the destinations are the rows ABOVE, not
-    // "still available below".
-    expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Weigh-ins, photos and scans are in the rows above.');
+    // D231 lead review (supersedes the §23 state F "both render" ruling): on
+    // Coach the Training row alone says there are no sessions yet.
+    expect(flattenText(tree)).not.toContain('No training trends yet');
+    expect(flattenText(tree)).not.toContain('Training charts appear here');
   });
 
   // FOUNDER DECISION (fully free, no tier split): the Free-tier EmptyState
@@ -836,7 +848,8 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     const training = pillarRow(tree, 'Training');
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Your training history starts with your first session.');
-    expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Weigh-ins, photos and scans are in the rows above.');
+    // D231 lead review: the page empty state left Coach; the row says it.
+    expect(flattenText(tree)).not.toContain('Training charts appear here');
     expect(flattenText(tree)).not.toMatch(/welcome/i);
     expect(flattenText(tree)).not.toMatch(/get started/i);
   });
@@ -915,10 +928,10 @@ describe('State matrix — I: recovery week active (isDeload true)', () => {
 
 // ─── State J — recent programme adjustment (pure/source-level; see header) ─
 describe('State matrix — J: recent programme adjustment (source guard — see file header rationale)', () => {
-  test('AnalyticsScreen reads no coach-decision/adjustment data for landing display', () => {
+  test('the Progress rows (CoachProgress.js) read no coach-decision/adjustment data for display', () => {
     const fs = require('fs');
     const path = require('path');
-    const src = fs.readFileSync(path.resolve(__dirname, '../AnalyticsScreen.js'), 'utf8');
+    const src = fs.readFileSync(path.resolve(__dirname, '../../components/coach/CoachProgress.js'), 'utf8');
     expect(src).not.toMatch(/getLatestCoachOutput/);
     expect(src).not.toMatch(/coachDecision/i);
     expect(src).not.toMatch(/adjustments\./);
@@ -1230,7 +1243,7 @@ describe('D218 F-2: the Training row reads the same lookup as the session entrie
     // entries do.
     const fs = require('fs');
     const path = require('path');
-    const src = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'coach', 'CoachProgress.js'), 'utf8');
     expect(src).toContain('const exercisesForSets = exerciseLookup ?? exerciseMap;');
     expect(src).toContain('computeTrainingPillarSummary(allSets, exercisesForSets, { windowDays: 30 })');
     expect(src).not.toContain('computeTrainingPillarSummary(allSets, exerciseMap');
@@ -1251,12 +1264,12 @@ describe('D218 F-2: the Training row reads the same lookup as the session entrie
 // the whole mount pipeline.
 describe('S6-7: recap banner text agrees with the deck it opens', () => {
   test('a "so far" label renders "Your recap of <Month> so far is ready"', () => {
-    const { recapBannerText } = require('../AnalyticsScreen');
+    const { recapBannerText } = require('../../components/coach/CoachProgress');
     expect(recapBannerText('September so far')).toBe('Your recap of September so far is ready - 45 seconds');
   });
 
   test('a completed-month label renders "Your <Month> recap is ready" (byte-identical to before the fix)', () => {
-    const { recapBannerText } = require('../AnalyticsScreen');
+    const { recapBannerText } = require('../../components/coach/CoachProgress');
     expect(recapBannerText('August')).toBe('Your August recap is ready - 45 seconds');
   });
 });
@@ -1273,10 +1286,14 @@ describe('S6-7: recap banner text agrees with the deck it opens', () => {
 // error state speaks, PR-2).
 
 const programmePosition = require('../../lib/programmePosition');
-const { ScrollView } = require('react-native');
 
-// The ScrollView's refreshControl element carries the screen's pull-to-refresh handler.
-const pullToRefresh = (tree) => tree.root.findByType(ScrollView).props.refreshControl.props.onRefresh();
+// RE-POINTED (D231, batch 4): the Progress screen's pull-to-refresh is not part of
+// Coach, whose rows re-read on every focus (useProgressData's useFocusEffect).
+// The focus effect fires again when the account id it depends on changes, so a
+// second load is driven by switching to another signed-in account in the store.
+const reload = async () => {
+  await TestRenderer.act(async () => { useAppStore.setState({ user: { ...PRO_USER.user, id: 'u2' } }); });
+};
 
 let moduleOriginals = [];
 function patchModule(mod, key, fn) {
@@ -1314,8 +1331,6 @@ describe('D231: what left this screen for Train', () => {
     expect(findByLabel(tree, /^View summary for /)).toHaveLength(0);
     // The first object is Your progress.
     expect(text.indexOf('Your progress')).toBeLessThan(text.indexOf('Strength up'));
-    // Pull to refresh still re-reads this screen's own data.
-    await TestRenderer.act(async () => { pullToRefresh(tree); });
   });
 });
 
@@ -1397,7 +1412,7 @@ describe('D214 lane 3 — a failed load: the Training row keeps its last copy an
     const good = 'Training. Strength up on 2 of 3 exercises done more than once in the last 30 days. Bench press 85 kg for 5 reps, a new personal best.';
     expect(pillarRow(tree, 'Training')[0].props.accessibilityLabel).toBe(good);
     database.getCompletedWorkoutSets = () => Promise.reject(new Error('db down'));
-    await TestRenderer.act(async () => { pullToRefresh(tree); });
+    await reload();
     await TestRenderer.act(async () => {
       for (let i = 0; i < 25; i++) await Promise.resolve();
       await new Promise(r => setImmediate(r));
@@ -1418,7 +1433,7 @@ describe('D214 lane 3 — a failed load: the Training row keeps its last copy an
 // own punctuation. Pinned directly and on the mounted rows (Training, Body,
 // Progress photos, Recovery all go through the same join).
 describe('D214 addendum 4 (BM-15): a pillar row\'s spoken label joins with a single full stop', () => {
-  const { spokenRowLabel } = require('../AnalyticsScreen');
+  const { spokenRowLabel } = require('../../components/coach/CoachProgress');
 
   test('a headline that already ends in a full stop is not given a second', () => {
     expect(spokenRowLabel('Body', 'Trending down over the last 2 weeks.', '80.7 kg, -1.8 kg/week'))
@@ -1530,4 +1545,220 @@ describe('D214 addendum 9: one session count and one trained day on the Progress
   // 0.26 (a recent session reads "Tue 16 Sep · 45 min") and 6.13 (the seven cells
   // light on the day a completed workout started) moved to Train with the cards
   // and the cells: PlansScreen.d231Train.test.js (D231, batch 2).
+});
+
+// ─── D231 (app layout rework, batch 4): the rows keep their safety rules on Coach ─
+//
+// "Every row keeps its own condition and safety gate when it moves": the
+// Progress photos row stays HIDDEN while its pillar is suppressed (calm mode, an
+// open ED flag, or a failed read of either: usePhotoSuppression fails closed),
+// and the Body row keeps WITHHOLDING its figures (useWeightTrend's `pillarFigure`,
+// the same three triggers) while its headline stays. These mount the component
+// the Coach screen draws, against the real hooks, with a scan and a moving
+// weight fixture that WOULD show a photo row and a figure if nothing suppressed.
+describe('D231: Your progress keeps its safety rules on the Coach tab', () => {
+  const fixture = (extraDb = {}) => applyFixture({
+    db: {
+      getAllWorkouts: threeWorkouts,
+      getCompletedWorkoutSets: improvingTrainingSets,
+      getAllExercises: EXERCISES,
+      getMorningWeights: () => Promise.resolve(morningWeights(85, 80)),
+      ...extraDb,
+    },
+    scan: scanSummary({ trendDirection: 'down', confidence: 'moderate', comparableCount: 4 }),
+  });
+  const figure = /\d+(\.\d+)?\s?kg/;
+
+  test('control: nothing suppresses, so the photos row shows and the Body row carries its figures', async () => {
+    useAppStore.setState(PRO_USER);
+    fixture();
+    const { tree } = await mountAnalytics({});
+    expect(pillarRow(tree, 'Progress photos')).toHaveLength(1);
+    expect(pillarRow(tree, 'Body')[0].props.accessibilityLabel).toMatch(figure);
+  });
+
+  const suppressions = [
+    ['calm mode', async () => { await AsyncStorage.setItem('@volyume_wellbeing_mode', 'calm'); return {}; }],
+    ['an open ED flag', async () => ({ getOpenEdPatternFlag: () => Promise.resolve({ id: 'f1', userId: 'u1' }) })],
+    ['a failed read of the ED flag (fails closed)', async () => ({ getOpenEdPatternFlag: () => Promise.reject(new Error('db down')) })],
+  ];
+
+  test.each(suppressions)('under %s the Progress photos row is hidden entirely and the Body row withholds its figures', async (_name, arrange) => {
+    useAppStore.setState(PRO_USER);
+    const extraDb = await arrange();
+    fixture(extraDb);
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    // Hidden: no row, no label, no copy, no door to the screen.
+    expect(pillarRow(tree, 'Progress photos')).toHaveLength(0);
+    expect(findByLabel(tree, /Progress photos/)).toHaveLength(0);
+    expect(flattenText(tree)).not.toContain('Progress photos');
+    expect(flattenText(tree)).not.toContain('Looks leaner');
+    // Withheld: the row and its door stay, the figures go.
+    const body = pillarRow(tree, 'Body');
+    expect(body).toHaveLength(1);
+    expect(body[0].props.accessibilityLabel).not.toMatch(figure);
+    expect(body[0].props.accessibilityLabel).not.toMatch(/\d/);
+    // The other rows are untouched by the suppression.
+    expect(pillarRow(tree, 'Training')).toHaveLength(1);
+    expect(pillarRow(tree, 'Recovery')).toHaveLength(1);
+  });
+
+  test('the four rows still open the same destinations', async () => {
+    useAppStore.setState(PRO_USER);
+    fixture();
+    const nav = makeNav();
+    const { tree } = await mountAnalytics({ navigation: nav });
+    for (const [label, route] of [['Training', 'LiftProgress'], ['Body', 'BodyMetrics'], ['Progress photos', 'ProgressPhotos'], ['Recovery', 'Recovery']]) {
+      pressByLabel(tree, pillarRow(tree, label)[0].props.accessibilityLabel);
+      expect(nav.navigate).toHaveBeenLastCalledWith(route);
+    }
+  });
+});
+
+// ─── D231: the monthly recap invitation is the Recaps row's own line ───────
+//
+// "During the monthly recap window (first days of the month, enough sessions,
+// not dismissed) the Recaps row's sub line carries the banner's invitation
+// instead of a separate banner; there is no banner." The clock is fixed (only
+// Date, so timers and microtasks run normally) because the window is the first
+// seven days of a month.
+describe('D231: the Recaps row carries the monthly recap invitation (no banner)', () => {
+  const ONLY_DATE = [
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+    'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval',
+    'setTimeout', 'clearTimeout',
+  ];
+  const clockAt = (y, m, d) => jest.useFakeTimers({ now: new Date(y, m, d, 12).getTime(), doNotFake: ONLY_DATE });
+  afterEach(() => { jest.useRealTimers(); });
+
+  // Completed workouts that count as logged sessions (a cached set count above zero).
+  const sessions = (n, firstStart) => Array.from({ length: n }, (_, i) => ({
+    id: `r${i}`, userId: 'u1', name: `Session ${i}`,
+    startedAt: firstStart + i * 3600000, endedAt: firstStart + i * 3600000 + 2700000,
+    isCompleted: true, setCount: 4, durationMinutes: 45,
+  }));
+  const fixture = (workouts) => applyFixture({
+    db: {
+      getAllWorkouts: () => Promise.resolve(workouts),
+      getCompletedWorkoutSets: () => Promise.resolve([]),
+      getAllExercises: EXERCISES,
+    },
+    scan: null,
+  });
+  const INVITE = 'Your September recap is ready - 45 seconds';
+
+  test('in the first days of the month, with enough sessions: the sub line is the invitation, and there is no banner', async () => {
+    clockAt(2026, 9, 3); // 3 October 2026; training began in August, so the recap is September's
+    useAppStore.setState(PRO_USER);
+    fixture(sessions(10, new Date(2026, 7, 1, 9).getTime()));
+    const { tree } = await mountAnalytics({});
+    expect(findByLabel(tree, `Recaps. ${INVITE}`)).toHaveLength(1);
+    expect(flattenText(tree)).toContain(INVITE);
+    // The banner and its dismiss control are gone.
+    expect(findByLabel(tree, 'Open your monthly recap, about 45 seconds')).toHaveLength(0);
+    expect(findByLabel(tree, 'Dismiss')).toHaveLength(0);
+    expect(flattenText(tree)).not.toContain('sessions to go');
+  });
+
+  test('a first-month user is invited to the month so far, the same wording the deck carries', async () => {
+    clockAt(2026, 9, 6);
+    useAppStore.setState(PRO_USER);
+    fixture(sessions(10, new Date(2026, 9, 1, 9).getTime()));
+    const { tree } = await mountAnalytics({});
+    expect(flattenText(tree)).toContain('Your recap of October so far is ready - 45 seconds');
+  });
+
+  test('opening the recap from the row opens it, and retires the invitation for the month', async () => {
+    clockAt(2026, 9, 3);
+    useAppStore.setState(PRO_USER);
+    fixture(sessions(10, new Date(2026, 7, 1, 9).getTime()));
+    const nav = makeNav();
+    const { tree } = await mountAnalytics({ navigation: nav });
+    pressByLabel(tree, `Recaps. ${INVITE}`);
+    expect(nav.navigate).toHaveBeenCalledWith('RecapStory', expect.objectContaining({ variant: 'month', monthLabel: 'September' }));
+    expect(await AsyncStorage.getItem('@volyume_recap_card_2026-10')).toBe('dismissed');
+    // The row stays (Recaps is a door all year); only the invitation is spent.
+    await TestRenderer.act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
+    expect(findByLabel(tree, 'Recaps')).toHaveLength(1);
+    expect(flattenText(tree)).not.toContain(INVITE);
+  });
+
+  test('an invitation already opened this month does not come back', async () => {
+    clockAt(2026, 9, 3);
+    useAppStore.setState(PRO_USER);
+    await AsyncStorage.setItem('@volyume_recap_card_2026-10', 'dismissed');
+    fixture(sessions(10, new Date(2026, 7, 1, 9).getTime()));
+    const { tree } = await mountAnalytics({});
+    expect(findByLabel(tree, 'Recaps')).toHaveLength(1);
+    expect(flattenText(tree)).not.toContain('recap is ready');
+  });
+
+  test('after the first seven days of the month there is no invitation', async () => {
+    clockAt(2026, 9, 20);
+    useAppStore.setState(PRO_USER);
+    fixture(sessions(10, new Date(2026, 7, 1, 9).getTime()));
+    const { tree } = await mountAnalytics({});
+    expect(findByLabel(tree, 'Recaps')).toHaveLength(1);
+    expect(flattenText(tree)).not.toContain('recap is ready');
+  });
+
+  test('before recaps unlock the row keeps its "N sessions to go" lock, in the window too', async () => {
+    clockAt(2026, 9, 3);
+    useAppStore.setState(PRO_USER);
+    fixture(sessions(4, new Date(2026, 7, 1, 9).getTime()));
+    const { tree } = await mountAnalytics({});
+    expect(findByLabel(tree, 'Recaps. 6 sessions to go')).toHaveLength(1);
+    expect(flattenText(tree)).not.toContain('recap is ready');
+  });
+});
+
+// ─── D231: the Body row is the scroll target of the focusWeightTrend arrival ─
+describe('D231: arriving with focusBody scrolls the Coach screen to the Body row', () => {
+  const wait = (ms) => TestRenderer.act(async () => { await new Promise((r) => setTimeout(r, ms)); });
+
+  async function mountFocused({ focusBody, scrollRef }) {
+    useAppStore.setState(PRO_USER);
+    applyFixture({ db: { getAllWorkouts: threeWorkouts, getCompletedWorkoutSets: improvingTrainingSets, getAllExercises: EXERCISES }, scan: null });
+    const measured = jest.fn((_inner, ok) => ok(0, 640));
+    const done = jest.fn();
+    const CoachProgress = require('../../components/coach/CoachProgress').default;
+    let tree = null;
+    await TestRenderer.act(async () => {
+      tree = TestRenderer.create(
+        React.createElement(CoachProgress, { navigation: makeNav(), scrollRef, focusBody, onFocusBodyDone: done }),
+        { createNodeMock: () => ({ measureLayout: measured }) },
+      );
+    });
+    currentTree = tree;
+    return { tree, measured, done };
+  }
+
+  test('the Body row is measured against the scroll content, the screen scrolls to just above it, and the arrival is spent', async () => {
+    const scrollTo = jest.fn();
+    const inner = { inner: true };
+    const scrollRef = { current: { getInnerViewRef: jest.fn(() => inner), scrollTo } };
+    const { measured, done } = await mountFocused({ focusBody: true, scrollRef });
+    expect(scrollTo).not.toHaveBeenCalled(); // waits for the rows to lay out
+    await wait(500);
+    expect(measured).toHaveBeenCalledTimes(1);
+    expect(measured.mock.calls[0][0]).toBe(inner);
+    expect(scrollTo).toHaveBeenCalledWith({ y: 628, animated: true });
+    expect(done).toHaveBeenCalledTimes(1);
+  });
+
+  test('without the arrival nothing scrolls', async () => {
+    const scrollTo = jest.fn();
+    const scrollRef = { current: { getInnerViewRef: () => ({}), scrollTo } };
+    const { done } = await mountFocused({ focusBody: false, scrollRef });
+    await wait(500);
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(done).not.toHaveBeenCalled();
+  });
+
+  test('a scroll view that cannot be measured leaves the screen where it is and still spends the arrival', async () => {
+    const { done } = await mountFocused({ focusBody: true, scrollRef: { current: null } });
+    await wait(500);
+    expect(done).toHaveBeenCalledTimes(1);
+  });
 });

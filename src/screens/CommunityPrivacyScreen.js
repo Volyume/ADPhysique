@@ -54,6 +54,16 @@ import {
 } from '../lib/community';
 import { saveBandToggle } from '../lib/community/bandShare';
 import { saveShareSessions, SHARE_OFF_TITLE, SHARE_OFF_BODY } from '../lib/community/shareSessions';
+import { navigateInStackOrCrossTab } from '../navigation/navigateCrossTab';
+
+// D231 (app layout rework, batch 4): Settings' Community row opens this screen in
+// the Coach stack as well as the Community stack. Every screen it opens is a
+// Community-stack screen, so it opens in place from the Community copy and
+// through the Community tab from the Coach copy (a plain navigate would be a
+// silent no-op there).
+const goCommunity = (navigation, screen, params) => (
+  navigateInStackOrCrossTab(navigation, 'CommunityTab', screen, params)
+);
 
 const CONNECT_FROM_OPTIONS = Object.entries(CONNECT_FROM_VALUES)
   .map(([value, label]) => ({ label, value }));
@@ -123,7 +133,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
       setShowTraining(await saveShowTrainingNow(uid, next));
     } catch (e) {
       setShowTraining(previous);
-      if (e?.code === 'rules_outdated') navigation.navigate('CommunityRules', { mustAccept: true });
+      if (e?.code === 'rules_outdated') goCommunity(navigation, 'CommunityRules', { mustAccept: true });
       else toast.show(presenceFailureLine(e?.code), { variant: 'error' });
     }
   }
@@ -135,7 +145,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
     try {
       const out = await saveBandToggle(uid, prev, key, next);
       setShare(out.settings);
-      if (out.status === 'rules_outdated') navigation.navigate('CommunityRules', { mustAccept: true });
+      if (out.status === 'rules_outdated') goCommunity(navigation, 'CommunityRules', { mustAccept: true });
       else if (out.status === 'queued') toast.show('Saved on this device. It will share when you are back online.');
     } catch (_e) {
       setShare(prev);
@@ -151,7 +161,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
       const out = await saveShareSessions(uid, prev, next, { removeShared, isMinor });
       setShare(out.settings);
       if (out.status === 'rules_outdated') {
-        navigation.navigate('CommunityRules', { mustAccept: true });
+        goCommunity(navigation, 'CommunityRules', { mustAccept: true });
       } else if (out.status === 'queued') {
         toast.show(out.settings.share_sessions
           ? 'Saved on this device. It will share when you are back online.'
@@ -236,7 +246,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
       // (product review 2026-09-06 finding 4): sent to the rules screen
       // rather than told, wrongly, to try again.
       if (e?.code === 'rules_outdated') {
-        navigation.navigate('CommunityRules', { mustAccept: true });
+        goCommunity(navigation, 'CommunityRules', { mustAccept: true });
       } else {
         toast.show('Could not change that just now.', { variant: 'error' });
       }
@@ -252,7 +262,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
     } catch (e) {
       setShowGymLocal(previous);
       if (e?.code === 'rules_outdated') {
-        navigation.navigate('CommunityRules', { mustAccept: true });
+        goCommunity(navigation, 'CommunityRules', { mustAccept: true });
       } else {
         toast.show('Could not change that just now.', { variant: 'error' });
       }
@@ -268,7 +278,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
     } catch (e) {
       setShowPlaceLocal(previous);
       if (e?.code === 'rules_outdated') {
-        navigation.navigate('CommunityRules', { mustAccept: true });
+        goCommunity(navigation, 'CommunityRules', { mustAccept: true });
       } else {
         toast.show('Could not change that just now.', { variant: 'error' });
       }
@@ -323,7 +333,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
             title="You are not in Community yet"
             text="Nothing about you is shared until you create a profile."
             actionLabel="Open Community"
-            onAction={() => navigation.navigate('Community')}
+            onAction={() => goCommunity(navigation, 'Community')}
             actionAccessibilityLabel="Open Community"
           />
         ) : (
@@ -460,7 +470,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
                 title="Training profile"
                 subtitle="The bands worked out from your training, and what you share of them."
                 accessibilityLabel="Training profile"
-                onPress={() => navigation.navigate('CommunityTrainingProfile')}
+                onPress={() => goCommunity(navigation, 'CommunityTrainingProfile')}
               />
             </Band>
             <BandGap />
@@ -531,33 +541,33 @@ export default function CommunityPrivacyScreen({ navigation }) {
               <EntryRow
                 icon="create-outline"
                 title="Edit profile"
-                onPress={() => navigation.navigate('CommunityEditProfile')}
+                onPress={() => goCommunity(navigation, 'CommunityEditProfile')}
                 accessibilityLabel="Edit my Community profile"
               />
               <EntryRow
                 icon="people-outline"
                 title="Followers"
-                onPress={() => navigation.navigate('CommunityFollowers')}
+                onPress={() => goCommunity(navigation, 'CommunityFollowers')}
                 accessibilityLabel="See and manage your followers"
               />
               <EntryRow
                 icon="link-outline"
                 title="Connections"
-                onPress={() => navigation.navigate('CommunityConnections')}
+                onPress={() => goCommunity(navigation, 'CommunityConnections')}
                 accessibilityLabel="See and manage your connections"
               />
               {me?.is_moderator ? (
                 <EntryRow
                   icon="shield-outline"
                   title="Moderation queue"
-                  onPress={() => navigation.navigate('CommunityModeration')}
+                  onPress={() => goCommunity(navigation, 'CommunityModeration')}
                   accessibilityLabel="Open the moderation queue"
                 />
               ) : null}
               <EntryRow
                 icon="document-text-outline"
                 title="Community rules"
-                onPress={() => navigation.navigate('CommunityRules')}
+                onPress={() => goCommunity(navigation, 'CommunityRules')}
                 accessibilityLabel="Read the Community rules"
               />
               <EntryRow

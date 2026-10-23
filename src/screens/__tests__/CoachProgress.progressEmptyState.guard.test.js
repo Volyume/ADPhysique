@@ -1,15 +1,19 @@
 import fs from 'fs';
 import path from 'path';
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+// D231 (app layout rework, batch 4): the rows and their empty states moved from
+// AnalyticsScreen.js (retired) to components/coach/CoachProgress.js, unchanged.
+const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'coach', 'CoachProgress.js'), 'utf8');
 
-describe('AnalyticsScreen Progress empty state', () => {
+describe('CoachProgress empty state', () => {
   // RE-ANCHORED under D214 (PR-11, plan 7.1 item 7): the second sentence used to
   // say body metrics, progress photos and scans were "still available below"
   // while those rows are the card ABOVE the empty state.
   test('does not send users from Progress to the Train entry point', () => {
-    expect(SRC).toMatch(/title="No training trends yet"/);
-    expect(SRC).toMatch(/Training charts appear here once sessions are logged\. Weigh-ins, photos and scans are in the rows above\./);
+    // D231 lead review: the empty state left Coach (no chart ever appears
+    // there; the Training row says there are no sessions yet).
+    expect(SRC).not.toMatch(/title="No training trends yet"/);
+    expect(SRC).not.toMatch(/Training charts appear here/);
     expect(SRC).not.toMatch(/still available below/);
     expect(SRC).not.toMatch(/title="Your progress starts here"/);
     expect(SRC).not.toMatch(/actionLabel="Start a workout"/);
@@ -17,7 +21,7 @@ describe('AnalyticsScreen Progress empty state', () => {
   });
 });
 
-// EP-09/P-06 (Codex end-user-polish audit): before this fix, AnalyticsScreen
+// EP-09/P-06 (Codex end-user-polish audit): before this fix, the Progress screen
 // destructured useProgressData() without `loadError` (useProgressData.js
 // already exposed it, ~:172-178,502-510), so a genuine read failure fell
 // straight through to the plain `allSets.length === 0` branch and rendered
@@ -25,17 +29,18 @@ describe('AnalyticsScreen Progress empty state', () => {
 // no sessions logged. This suite pins that loadError is now consumed and
 // drives its OWN distinct, retryable render branch ahead of the real empty
 // state.
-describe('AnalyticsScreen Progress load-failure state', () => {
+describe('CoachProgress load-failure state', () => {
   test('destructures loadError from useProgressData', () => {
-    expect(SRC).toMatch(/const \{\s*\n\s*loading, refreshing, loadError,/);
+    // D231: no pull-to-refresh on Coach, so `refreshing` is no longer read.
+    expect(SRC).toMatch(/const \{\s*\n\s*loading, loadError,/);
   });
 
   test('a load failure renders its own retryable error, distinct from and ahead of the real empty state', () => {
     const idxError = SRC.indexOf('!loading && loadError && allSets.length === 0 && (');
-    const idxEmpty = SRC.indexOf('!loading && !loadError && allSets.length === 0 && (');
+    // D231 lead review: the plain empty state that followed it is gone, so
+    // the error block runs to the end of its own JSX.
     expect(idxError).toBeGreaterThan(-1);
-    expect(idxEmpty).toBeGreaterThan(idxError);
-    const errorBlock = SRC.slice(idxError, idxEmpty);
+    const errorBlock = SRC.slice(idxError, SRC.indexOf(')}', idxError));
     expect(errorBlock).toMatch(/title="Couldn't load your training trends"/);
     expect(errorBlock).toMatch(/actionLabel="Retry"/);
     expect(errorBlock).toMatch(/onAction=\{handleRefresh\}/);

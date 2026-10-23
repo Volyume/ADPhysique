@@ -2,10 +2,13 @@ import fs from 'fs';
 import path from 'path';
 
 const read = (name) => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
+// RE-POINTED (D231, app layout rework batch 4): AnalyticsScreen.js is retired; the
+// Progress rows are components/coach/CoachProgress.js (drawn by the Coach screen).
+const readProgressRows = () => fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'coach', 'CoachProgress.js'), 'utf8');
 
 describe('share copy polish', () => {
   test('share CTAs say what happens instead of using card jargon', () => {
-    const analytics = read('AnalyticsScreen.js');
+    const analytics = readProgressRows();
     const bodyMetrics = read('BodyMetricsScreen.js');
     const yearOfLifts = read('YearOfLiftsScreen.js');
     const subscriptionPolicy = read('SubscriptionPolicyScreen.js');
@@ -27,8 +30,8 @@ describe('share copy polish', () => {
     expect(combined).not.toContain('Share session card');
   });
 
-  test('Analytics share CTAs are contained controls, not loose amber text links', () => {
-    const analytics = read('AnalyticsScreen.js');
+  test('Progress-row share CTAs are contained controls, not loose amber text links', () => {
+    const analytics = readProgressRows();
     // R9 (D70), 2026-07-11: the hand-rolled milestoneCtaButton TouchableOpacity
     // + text pair was replaced by the shared Button primitive (variant=
     // "outline"), so the old style-pair pin no longer matches. The pin's

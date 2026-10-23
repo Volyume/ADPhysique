@@ -17,25 +17,35 @@ describe('weekly check-in copy stays aligned with the gate rules', () => {
     expect(CHECKIN).not.toMatch(/first check-in lands on \{nextDayLabel\}/);
   });
 
+  // RE-POINTED (D231, app layout rework batch 4): the "Weekly check-in" row and the
+  // "Coaching decision" row are replaced by the one This week card. Until this
+  // week's decision exists it carries the Weekly check-in row's own title, with
+  // the same wording rules (the countdown and its neutral variants under calm
+  // mode and an open ED flag are buildPendingCoachCopy's, unchanged); once it
+  // exists it reads "This week's decision" and opens CoachOutput. The input
+  // check-in and the output decision are still separate destinations.
   test('Coach hub separates the input check-in from the output coaching decision', () => {
-    expect(COACH_HUB).toMatch(/label="Weekly check-in"/);
-    expect(COACH_HUB).toMatch(/label="Coaching decision"/);
     expect(COACH_HUB).toMatch(/buildPendingCoachCopy/);
+    expect(COACH_HUB).toMatch(/navigation\.navigate\('WeeklyCheckIn'\)/);
+    expect(COACH_HUB).toMatch(/navigation\.navigate\('CoachOutput', thisWeekDecision\?\.weekStart/);
+    expect(COACH_HUB).not.toMatch(/label="Weekly check-in"/);
+    expect(COACH_HUB).not.toMatch(/label="Coaching decision"/);
     // D13.1 (2026-07-09): shortened from "First check-in opens on <long date>"
     // (wrapped to a second line) to a short date.
-    // R2-7 (remediation 2026-07-11, founder device walk build 2684): the row
-    // subtitle is now ONE calm line - the readiness title only, with the date
-    // as a calm British day-and-month fact ("First check-in 19 July"), no
-    // colon, no numeric DD/MM/YYYY. The explanatory sentence
-    // (pendingCoachCopy.body) is no longer concatenated into the row; it lives
-    // on WeeklyCheckInScreen. Pin the new one-line title shape and that the
-    // body is not appended.
+    // R2-7 (remediation 2026-07-11, founder device walk build 2684): the card's
+    // line is ONE calm line - the readiness title only, with the date as a calm
+    // British day-and-month fact ("First check-in 19 July"), no colon, no
+    // numeric DD/MM/YYYY. The explanatory sentence (pendingCoachCopy.body) is
+    // not shown there; it lives on WeeklyCheckInScreen. Pin the one-line title
+    // shape and that the body is not appended.
     expect(COACH_HUB).toMatch(/`First check-in \$\{formatShortDate\(readiness\.unlockDateMs\)\}`/);
     expect(COACH_HUB).toMatch(/day: 'numeric', month: 'long'/);
     expect(COACH_HUB).not.toMatch(/First check-in: /);
-    expect(COACH_HUB).toMatch(/sub=\{latestReview[\s\S]*?: pendingCoachCopy\.title\}/);
+    expect(COACH_HUB).toMatch(/const cardTitle = thisWeekDecision \? THIS_WEEK_DECISION_TITLE : pendingCoachCopy\.title;/);
     expect(COACH_HUB).not.toMatch(/\$\{pendingCoachCopy\.title\}\. \$\{pendingCoachCopy\.body\}/);
-    expect(COACH_HUB).toMatch(/Weekly check-in is open/);
+    // D231: "Weekly check-in is open" is shown as "Check-in is open".
+    expect(COACH_HUB).toMatch(/title: 'Check-in is open'/);
+    expect(COACH_HUB).not.toMatch(/title: 'Weekly check-in is open'/);
     expect(COACH_HUB).toMatch(/First check-in starts after your first morning weight/);
     expect(COACH_HUB).not.toMatch(/label="This week's review"/);
     expect(COACH_HUB).not.toMatch(/Ready for your first weekly review/);

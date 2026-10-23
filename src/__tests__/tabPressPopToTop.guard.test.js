@@ -20,8 +20,9 @@ describe('tab press pops to root only when the tab is already focused (NAV-5)', 
   const src = read('src/navigation/RootNavigator.js');
   const blocks = src.split("addListener('tabPress'").slice(1);
 
-  test('all six tab stacks register a tabPress listener', () => {
-    expect(blocks).toHaveLength(6);
+  // D231 (batch 4): five tab stacks now (the Progress stack is retired).
+  test('all five tab stacks register a tabPress listener', () => {
+    expect(blocks).toHaveLength(5);
   });
 
   test('every tabPress listener guards popToTop on navigation.isFocused()', () => {

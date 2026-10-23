@@ -29,7 +29,8 @@ const NON_PROFILE_SCREENS = [
   'src/screens/HomeScreen.js',
   'src/screens/DiaryScreen.js',
   'src/screens/MealPlanScreen.js',
-  'src/screens/AnalyticsScreen.js',
+  // D231 (batch 4): AnalyticsScreen.js is retired; its rows are the Coach
+  // screen's (ProfileStack), where these routes are plain in-stack navigates.
   'src/screens/PlansScreen.js',
   'src/screens/BodyMetricsScreen.js',
 ];
@@ -67,8 +68,9 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
     expect(meso).toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'BlockReflection'/);
     expect(meso).not.toMatch(/navigation\.navigate\(\s*['"]BlockReflection['"]/);
 
-    // Rows 2-4: BlockReflection (ProfileStack) -> RecapStory (ProgressStack)
-    // and the Train tab (PlansStack), twice.
+    // Rows 2-4: BlockReflection (ProfileStack) -> RecapStory (ProgressStack,
+    // since D231 batch 4 retired that tab: ProfileStack too) and the Train tab
+    // (PlansStack), twice.
     //
     // Re-anchored under FB-18 (D96): both of BlockReflection's outbound
     // block CTAs used to target MesocycleBuilder, which is READ-ONLY -- its
@@ -80,8 +82,12 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
     // hops use the cross-tab form, never a bare in-stack navigate that
     // resolves against ProfileStack and dies -- is unchanged.
     const reflection = read('src/screens/BlockReflectionScreen.js');
-    expect(reflection).toMatch(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'RecapStory'/);
-    expect(reflection).not.toMatch(/navigation\.navigate\(\s*['"]RecapStory['"]/);
+    // RE-POINTED (D231, batch 4): RecapStory is registered in the SAME stack now
+    // (ProfileStack), so the hop is a plain in-stack push (Back returns to the
+    // block summary) and the Progress tab no longer exists to cross into. The
+    // Train hops stay cross-tab.
+    expect(reflection).toMatch(/navigation\.navigate\(\s*'RecapStory'/);
+    expect(reflection).not.toMatch(/navigateCrossTab\(navigation,\s*'ProgressTab'/);
     expect(reflection.match(/navigateCrossTab\(navigation,\s*'PlansTab',\s*'Plans'\)/g) ?? [])
       .toHaveLength(2);
     expect(reflection).not.toMatch(/navigation\.navigate\(\s*['"]MesocycleBuilder['"]/);
@@ -98,10 +104,12 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
   // in Home AND Progress, but ProgressPhotos/RecapStory live in ProgressStack
   // only - so the post-workout photo prompt and both "Watch your block story"
   // controls were inert on the Today-tab path, the app's main workout flow.
+  // RE-POINTED (D231, batch 4): the Progress tab is gone; those routes live in
+  // the Coach stack (ProfileTab), so the cross-tab form targets it.
   test('the post-workout photo prompt and block-story links use the cross-tab form', () => {
     const summary = read('src/screens/WorkoutSummaryScreen.js');
-    expect(summary).toMatch(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'ProgressPhotos'\)/);
-    expect(summary.match(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'RecapStory'/g) ?? [])
+    expect(summary).toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'ProgressPhotos'\)/);
+    expect(summary.match(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'RecapStory'/g) ?? [])
       .toHaveLength(2);
     expect(summary).not.toMatch(/navigation\.navigate\(\s*['"](ProgressPhotos|RecapStory)['"]/);
   });
@@ -146,7 +154,8 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
     // (src/screens/ProUpgradeScreen.js), re-registered only by a deliberate
     // future monetisation decision.
     const nav = read('src/navigation/RootNavigator.js');
-    for (const stack of ['DiaryStack', 'HomeStack', 'PlansStack', 'ProgressStack', 'ProfileStack']) {
+    // D231 (batch 4): ProgressStack no longer exists.
+    for (const stack of ['DiaryStack', 'HomeStack', 'PlansStack', 'ProfileStack']) {
       const start = nav.indexOf(`function ${stack}(`);
       expect(start).toBeGreaterThan(-1);
       const end = nav.indexOf('\nfunction ', start + 1);

@@ -33,6 +33,6 @@ test('"Not now" writes the same stored dismissal the card did, for the plan the 
 });
 
 test('PlanUpdate is a Plans stack screen, which is why the jump is cross-tab', () => {
-  const plansStack = NAV.slice(NAV.indexOf('function PlansStack'), NAV.indexOf('function ProgressStack'));
+  const plansStack = NAV.slice(NAV.indexOf('function PlansStack'), NAV.indexOf('function ProfileStack'));
   expect(plansStack).toContain('name="PlanUpdate"');
 });

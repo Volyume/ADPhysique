@@ -1,17 +1,24 @@
 /**
- * AnalyticsScreen (Progress landing) — Campaign 23 Phase 2, Stage 3:
- * presentation guards (PROGRESS-UX-SPEC.md §22 region contract, §24 density
- * budget, §6/§28 IA-2 week-boundary unification, §13/§27 "For You"
- * retirement, §9 share budget). Source-level where mounting is overkill, per
- * the build brief. These EXTEND Stage 2's own guard suite
- * (AnalyticsScreen.campaign23.guard.test.js) and useVisualPillar's own hook
+ * CoachProgress (the Progress landing's rows, now on the Coach tab) — Campaign
+ * 23 Phase 2, Stage 3: presentation guards (PROGRESS-UX-SPEC.md §22 region
+ * contract, §24 density budget, §6/§28 IA-2 week-boundary unification, §13/§27
+ * "For You" retirement, §9 share budget). Source-level where mounting is
+ * overkill, per the build brief. These EXTEND Stage 2's own guard suite
+ * (CoachProgress.campaign23.guard.test.js) and useVisualPillar's own hook
  * suite (useVisualPillar.test.js) only where a hole was found after reading
  * both first — they do not re-pin what those suites already cover.
+ *
+ * D231 (app layout rework, batch 4) RE-POINTING: AnalyticsScreen.js is retired
+ * and its rows (Your progress, Looking back) moved unchanged into
+ * components/coach/CoachProgress.js, which the Coach screen draws; the guards
+ * read that file now. The Visual pillar's suppression gate (a safety rule) is
+ * pinned exactly as before, at its new home. The monthly recap banner (the
+ * Moment card) is gone, so its two density pins are re-anchored below.
  */
 import fs from 'fs';
 import path from 'path';
 
-const ANALYTICS_SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+const ANALYTICS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'coach', 'CoachProgress.js'), 'utf8');
 const USE_PROGRESS_DATA_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'hooks', 'useProgressData.js'), 'utf8');
 
 // ─── Visual pillar suppression (JSX shape, not just presence) ─────────────
@@ -37,7 +44,11 @@ describe('Visual pillar suppression: the suppression check is the sole gate arou
     // PillarRow call is nested inside it (i.e. every one of these tokens
     // appears strictly AFTER the opening marker and BEFORE the block's own
     // closing, never before).
-    const closeIdx = ANALYTICS_SRC.indexOf('</>\n              )}', markerIdx);
+    // D231: the fragment's closing is found whatever the indentation (the
+    // block moved one level deeper with the component).
+    const closeMatch = /<\/>\s*\)\}/.exec(ANALYTICS_SRC.slice(markerIdx));
+    expect(closeMatch).not.toBeNull();
+    const closeIdx = markerIdx + closeMatch.index;
     expect(closeIdx).toBeGreaterThan(markerIdx);
     const block = ANALYTICS_SRC.slice(markerIdx, closeIdx);
 
@@ -116,7 +127,7 @@ describe('"For You" retirement covers useProgressData.js as well as the screen',
     expect(USE_PROGRESS_DATA_SRC).not.toMatch(/insight/i);
   });
 
-  test('AnalyticsScreen.js re-verified clean (Stage 2 already pins this; re-checked here alongside the hook)', () => {
+  test('CoachProgress.js re-verified clean (Stage 2 already pins this; re-checked here alongside the hook)', () => {
     expect(ANALYTICS_SRC).not.toMatch(/insightsEngine/i);
     expect(ANALYTICS_SRC).not.toMatch(/runInsightsEngine/);
     expect(ANALYTICS_SRC).not.toMatch(/dismissInsight/);
@@ -127,18 +138,17 @@ describe('"For You" retirement covers useProgressData.js as well as the screen',
 // ─── §24 density budget: primary evidence containers, source-counted ──────
 //
 // Per the recorded interpretation ("primary evidence cards, the doors list
-// counts as one"): the landing's bordered-container SLOTS are counted at
-// the source level (not per-render, since several are mutually exclusive
-// or count-capped by construction) —
+// counts as one"): the rows' bordered-container SLOTS are counted at the source
+// level —
 //   1 Answer Block (always)
-// + 1 Moment card MAX (R5: recap only since 2026-08-17; a single
-//     conditional — verified below)
 // + 1 doors list (R6, one NavGroup = one container, regardless of how many
 //     NavRows it holds)
-// = 3. RE-ANCHORED under D231 (app layout rework, batch 2): the plan-week card
-// (with the volume strip inside it) and the three Recent-session cards (the old
-// ceiling was 1 + 1 + 3 + 1 + 1 = 7) moved to Train, so the Progress landing's
-// ceiling is 3 and the Answer Block is the first object after the header.
+// = 2. RE-ANCHORED under D231 (app layout rework, batches 2 and 4): the
+// plan-week card (with the volume strip inside it) and the three Recent-session
+// cards moved to Train, and the monthly recap banner (the one Moment card) is
+// gone: its invitation is the Recaps row's own sub line now. The old ceilings
+// were 1 + 1 + 3 + 1 + 1 = 7 (before batch 2) and 1 + 1 + 1 = 3 (before
+// batch 4).
 describe('§24 density budget: primary evidence container ceiling, source-counted', () => {
   // RE-POINTED (D231, batch 2): the cap still lives in the hook; the three cards
   // it bounds are Train's Recent sessions now.
@@ -146,21 +156,18 @@ describe('§24 density budget: primary evidence container ceiling, source-counte
     expect(USE_PROGRESS_DATA_SRC).toMatch(/\.slice\(0, 3\)/);
   });
 
-  test('R5 Moments is recap-only: a single conditional, no milestone branch (founder device order 2026-08-17)', () => {
-    // Was `recap XOR milestone` via one ternary chain; the tonnage-milestone
-    // Moment is retired, so the slot is `{!recapCardHidden ? (<recap...>) :
-    // null}` — still a single conditional expression, so "at most one
-    // Moment renders" remains a JS-semantics guarantee.
-    const momentsIdx = ANALYTICS_SRC.indexOf('Moments (R5');
-    expect(momentsIdx).toBeGreaterThan(-1);
-    const nextSectionIdx = ANALYTICS_SRC.indexOf('Utilities (R6', momentsIdx);
-    expect(nextSectionIdx).toBeGreaterThan(momentsIdx);
-    const momentsBlock = ANALYTICS_SRC.slice(momentsIdx, nextSectionIdx);
-    expect(momentsBlock).toMatch(/\{!recapCardHidden \? \(/);
-    expect(momentsBlock).not.toMatch(/tonnageLandmark/);
-    expect(momentsBlock).toMatch(/\) : null\}/);
-    // Exactly one conditional in this block.
-    expect((momentsBlock.match(/\{!recapCardHidden \?/g) || []).length).toBe(1);
+  // RE-POINTED (D231, batch 4): the Moments slot was recap-only, a single
+  // conditional banner. The spec turns the banner into the Recaps row's sub
+  // line, so there is no Moment card and no dismiss control any more; the
+  // invitation is a string on the row, gated by the same window and the same
+  // stored "opened" marker.
+  test('the monthly recap invitation is the Recaps row\'s own sub line: no banner, no Moment card, no tonnage branch', () => {
+    expect(ANALYTICS_SRC).not.toMatch(/Moments \(R5/);
+    expect(ANALYTICS_SRC).not.toMatch(/recapCard\b|recapCardText|newspaper-outline"\s+size/);
+    expect(ANALYTICS_SRC).not.toMatch(/tonnageLandmark/);
+    expect(ANALYTICS_SRC).toMatch(/const recapInvite = recapUnlocked && !recapCardHidden\s*\? recapBannerText\(/);
+    expect(ANALYTICS_SRC).toMatch(/sub=\{recapSub\}/);
+    expect(ANALYTICS_SRC).toMatch(/const recapSub = recapInvite\s*\?\? /);
   });
 
   // RE-ANCHORED under D214 lane 3 (plan 7.1 item 6): the NavTile grid is
@@ -172,39 +179,31 @@ describe('§24 density budget: primary evidence container ceiling, source-counte
     expect(ANALYTICS_SRC).not.toMatch(/NavTile|navGrid/);
   });
 
-  test('the ceiling arithmetic: 1 + 1 + 1 = 3 (the plan-week card, its strip and the sessions moved to Train, D231)', () => {
+  test('the ceiling arithmetic: 1 + 1 = 2 (the plan-week card, its strip and the sessions moved to Train, the recap banner became a row line)', () => {
     const answerBlock = 1;
-    const momentMax = 1; // recap only (milestone retired 2026-08-17)
     const doorsList = 1; // counts as one, per the recorded interpretation
-    expect(answerBlock + momentMax + doorsList).toBe(3);
+    expect(answerBlock + doorsList).toBe(2);
   });
 
-  test('the screen draws exactly one card-shaped container of its own: the Answer Block; no plan-week card, strip or session card', () => {
+  test('the component draws exactly one card-shaped container of its own: the Answer Block; no plan-week card, strip or session card', () => {
     expect((ANALYTICS_SRC.match(/<Card\b/g) || []).length).toBe(1);
     expect(ANALYTICS_SRC).toMatch(/<Card padding="none" surface="surfaceElevated"/);
     expect(ANALYTICS_SRC).not.toMatch(/volume-strip|PlanWeekCard|<VolumeStrip|<SessionCard|RecentSessionCard/);
   });
 
-  // RE-ANCHORED under D231 (batch 2): "Your plan week" left, so the Answer Block
-  // is the first container, immediately after the header, as it was before D214.
-  test('above-the-fold ceiling: the Answer Block is the first container, immediately after the header', () => {
-    const headerIdx = ANALYTICS_SRC.indexOf('Header (R1)');
-    // Anchored on styles.answerBlock, the stable identifier, rather than on
-    // the full opening tag (the tag gained surface="surfaceElevated", D3).
+  // RE-ANCHORED under D231 (batch 4): the section opens with its label and the
+  // Answer Block is the first container, the doors list the second and last.
+  test('the Answer Block is the first container after the "Your progress" label, and the doors list follows it', () => {
+    const labelIdx = ANALYTICS_SRC.indexOf('<SectionLabel>Your progress</SectionLabel>');
     const answerBlockMatch = ANALYTICS_SRC.match(/<Card [^>]*style=\{styles\.answerBlock\}>/);
     const answerBlockIdx = answerBlockMatch ? answerBlockMatch.index : -1;
-    expect(headerIdx).toBeGreaterThan(-1);
-    expect(answerBlockIdx).toBeGreaterThan(headerIdx);
-    // No Card-shaped container between the header and the Answer Block.
-    expect(ANALYTICS_SRC.slice(headerIdx, answerBlockIdx)).not.toMatch(/<Card\b/);
-  });
-
-  test('after the Answer Block no second Card-shaped container precedes the Moment and the doors', () => {
-    const answerBlockMatch = ANALYTICS_SRC.match(/<Card [^>]*style=\{styles\.answerBlock\}>/);
-    const answerBlockIdx = answerBlockMatch ? answerBlockMatch.index : -1;
-    const momentsIdx = ANALYTICS_SRC.indexOf('Moments (R5');
-    expect(momentsIdx).toBeGreaterThan(answerBlockIdx);
-    expect(ANALYTICS_SRC.slice(answerBlockIdx + 1, momentsIdx)).not.toMatch(/<Card\b/);
+    const doorsLabelIdx = ANALYTICS_SRC.indexOf('<SectionLabel>Looking back</SectionLabel>');
+    expect(labelIdx).toBeGreaterThan(-1);
+    expect(answerBlockIdx).toBeGreaterThan(labelIdx);
+    expect(doorsLabelIdx).toBeGreaterThan(answerBlockIdx);
+    // No Card-shaped container between the label and the Answer Block, or between the Answer Block and the doors.
+    expect(ANALYTICS_SRC.slice(labelIdx, answerBlockIdx)).not.toMatch(/<Card\b/);
+    expect(ANALYTICS_SRC.slice(answerBlockIdx + 1, doorsLabelIdx)).not.toMatch(/<Card\b/);
     expect(ANALYTICS_SRC).not.toContain('Evidence trail (R3');
   });
 });

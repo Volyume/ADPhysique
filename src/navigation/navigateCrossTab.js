@@ -8,7 +8,7 @@
  * cross-tab jump must go through the tab navigator:
  *
  *   navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets');
- *   navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId });
+ *   navigateCrossTab(navigation, 'ProfileTab', 'ExerciseDetail', { exerciseId });
  *   navigateCrossTab(navigation, 'PlansTab'); // tab root
  *
  * `initial: false` matters: without it the tab opens on its initial route
@@ -48,4 +48,28 @@ export function navigateCrossTab(navigation, tab, screen, params) {
   } else {
     parent.navigate?.(tab);
   }
+}
+
+/**
+ * navigateInStackOrCrossTab (D231, app layout rework, batch 4)
+ *
+ * For a screen that is registered in more than one tab's stack and opens
+ * screens of its OWN tab: CommunityPrivacy is in the Community stack and, since
+ * Settings' Community row opens it in place, in the Coach stack too. A plain
+ * navigate() from the Coach copy to CommunityRules, CommunityEditProfile and the
+ * rest would be silently dropped (the F4 dead-tap class: those routes are not
+ * registered there), so the target is opened in place when this stack registers
+ * it and through the destination tab otherwise. Where the navigator's state
+ * cannot be read (a test double) it is a plain navigate, the in-stack case.
+ *
+ *   navigateInStackOrCrossTab(navigation, 'CommunityTab', 'CommunityRules', { mustAccept: true });
+ */
+export function navigateInStackOrCrossTab(navigation, tab, screen, params) {
+  const names = navigation?.getState?.()?.routeNames;
+  if (!Array.isArray(names) || names.includes(screen)) {
+    if (params === undefined) navigation.navigate(screen);
+    else navigation.navigate(screen, params);
+    return;
+  }
+  navigateCrossTab(navigation, tab, screen, params);
 }

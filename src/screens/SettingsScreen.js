@@ -1,6 +1,5 @@
 import { View, Platform } from 'react-native';
 import { appAlert } from '../components/AppAlert';
-import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -110,17 +109,18 @@ export default function SettingsScreen({ navigation }) {
           sub="Consent, data sharing and policy"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsPrivacy'); }}
         />
-        {/* Community: a cross-tab jump (founder order 2026-09-22, item 2). D231
-            (batch 5): it opens Community privacy and sharing in the Community
-            tab, not the tab's root. That screen works for someone who has not
-            joined (it shows what Community would share and a way in), so the
-            row is the same for everyone. The sub line names what the screen
-            holds. */}
+        {/* Community: opens Community privacy and sharing, not the tab's root
+            (D231, batch 5). That screen works for someone who has not joined
+            (it shows what Community would share and a way in), so the row is
+            the same for everyone. The sub line names what the screen holds.
+            D231 (batch 4): the Coach stack registers CommunityPrivacy, so the
+            row opens it in place and Back returns to Settings (it was a
+            cross-tab jump into the Community tab). */}
         <SettingRow
           icon="people-outline"
           label="Community"
           sub="Who can follow you, what you share, and who you have blocked or muted"
-          onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab', 'CommunityPrivacy'); }}
+          onPress={() => { haptics.selection(); navigation.navigate('CommunityPrivacy'); }}
         />
       </View>
       <SectionHeader title="Account & help" />

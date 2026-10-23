@@ -98,7 +98,6 @@ const BuildWorkoutScreen = lazyScreen(() => require('../screens/BuildWorkoutScre
 const WorkoutHistoryScreen = lazyScreen(() => require('../screens/WorkoutHistoryScreen').default);
 const WorkoutSummaryScreen = lazyScreen(() => require('../screens/WorkoutSummaryScreen').default);
 const ExerciseDetailScreen = lazyScreen(() => require('../screens/ExerciseDetailScreen').default);
-const AnalyticsScreen = lazyScreen(() => require('../screens/AnalyticsScreen').default);
 const VolumeHeatmapScreen = lazyScreen(() => require('../screens/VolumeHeatmapScreen').default);
 const SettingsScreen = lazyScreen(() => require('../screens/SettingsScreen').default);
 const SettingsWorkoutScreen = lazyScreen(() => require('../screens/SettingsWorkoutScreen').default);
@@ -126,7 +125,6 @@ const ConsistencyScreen = lazyScreen(() => require('../screens/ConsistencyScreen
 // D208: the Recovery section's own screen, opened from the Recovery row on Progress.
 const RecoveryScreen = lazyScreen(() => require('../screens/RecoveryScreen').default);
 const YouScreen = lazyScreen(() => require('../screens/YouScreen').default);
-const AthleteProfileScreen = lazyScreen(() => require('../screens/AthleteProfileScreen').default);
 const PlansScreen = lazyScreen(() => require('../screens/PlansScreen').default);
 const PlanDetailScreen = lazyScreen(() => require('../screens/PlanDetailScreen').default);
 const RoutineDetailScreen = lazyScreen(() => require('../screens/RoutineDetailScreen').default);
@@ -542,9 +540,9 @@ function CommunityStack({ navigation }) {
       screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}
     >
       {/* Community (blueprint section 1). The Community tab (D221). Reached from
-          the tab bar, the Today pill, the Today intro card, the You screen
-          row and the deep links below; every screen is pushed and draws its
-          own BackHeader. */}
+          the tab bar, the Today intro card and the deep links below (the Today
+          pill and the Coach row are gone, D231); every screen is pushed and
+          draws its own BackHeader. */}
       <Stack.Screen name="Community" component={CommunityHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityJoin" component={CommunityJoinScreen} options={{ headerShown: false }} />
       {/* Gym challenge (SPEC section 2): the join screen for an onboarded
@@ -610,10 +608,11 @@ function PlansStack({ navigation }) {
       {/* D231 (app layout rework, batch 2): Train carries Recent sessions (each card
           opens WorkoutSummary), its All sessions door (WorkoutHistory) and the
           one-week volume strip (VolumeHeatmap), moved from Progress, so each is
-          registered here as well (deliberate duplicate registrations, same options
-          as ProgressStack) and Back returns to Train. ShareCard and ClipCamera ride
-          along as WorkoutSummary's own outbound targets (transitive closure, as in
-          ProgressStack): a summary opened from Train must still share. */}
+          registered here as well (deliberate duplicate registrations, the options
+          they had in the Progress stack, which batch 4 retired; Coach registers them
+          the same way) and Back returns to Train. ShareCard and ClipCamera ride
+          along as WorkoutSummary's own outbound targets (transitive closure): a
+          summary opened from Train must still share. */}
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
@@ -641,60 +640,6 @@ function PlansStack({ navigation }) {
   );
 }
 
-function ProgressStack({ navigation }) {
-  useEffect(() => {
-    // NAV-5: pop to the tab's root only when re-pressing the tab that is
-    // already focused (the standard re-tap-to-root pattern). Switching tabs
-    // must NOT pop, so the user's place in a stack survives a tab round-trip.
-    return navigation.addListener('tabPress', () => {
-      if (!navigation.isFocused()) return;
-      navigation.dispatch(StackActions.popToTop());
-    });
-  }, [navigation]);
-  return (
-    <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
-      <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
-      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Recovery" component={RecoveryScreen} options={{ headerShown: false }} />
-      {/* D228 item 6: the Recovery screen's "Weekly volume review" row opens
-          CoachReview, registered here (as well as in HomeStack) so Back
-          returns to Recovery rather than crossing tabs. */}
-      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
-      <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
-      {/* D229: the clip camera. No swipe-back: a slip of the thumb must not end a recording. */}
-      <Stack.Screen name="ClipCamera" component={ClipCameraScreen} options={{ headerShown: false, gestureEnabled: false }} />
-      {/* CC33 W3 (audit T2-07): WorkoutSummary's post-workout "How you
-          train" link must work on HISTORY reopens too, and this stack
-          mounts WorkoutSummary for exactly those. TrainingConsiderations
-          rides along as HowYouTrain's own outbound target (transitive
-          closure). Swept by navigation/__tests__/
-          capabilityRoutesReachable.test.js, which caught this gap. */}
-      <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="HowYouTrainAdd" component={HowYouTrainAddScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
-      {/* CC33 T1-20: HowYouTrain's preference cross-reference row links to
-          AvoidedMovements, so it rides along here too (its own only
-          outbound link is HowYouTrain, already above - closure ends). */}
-      <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
-      {/* SettingsWorkout is HowYouTrain's other outbound target (the
-          session-length row) - one more hop of the same transitive
-          closure the sweep enforces. */}
-      <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
-      {/* ProUpgrade removed -- dormant billing surface, see the comment near
-          the lazyScreen declarations above. */}
-    </Stack.Navigator>
-  );
-}
-
 function ProfileStack({ navigation }) {
   useEffect(() => {
     // NAV-5: pop to the tab's root only when re-pressing the tab that is
@@ -708,8 +653,11 @@ function ProfileStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="You" component={YouScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="AthleteProfile" component={AthleteProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
+      {/* D231 (app layout rework, batch 4): Settings' Community row opens Community
+          privacy and sharing in place (Back returns to Settings), the options it has
+          in CommunityStack. A deliberate duplicate registration. */}
+      <Stack.Screen name="CommunityPrivacy" component={CommunityPrivacyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
       {/* SettingsScreen's "Injuries & limitations" row links here, and the 1.3.0
           release note sends users to it by name, so this stack has to carry the
@@ -740,6 +688,25 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />
+      {/* D231 (app layout rework, batch 4): the Progress tab is gone and Coach carries
+          its rows (Your progress, Looking back), so every screen that was only in
+          the Progress stack is registered here with the options it had there
+          (deliberate duplicate registrations, as other screens already have), and
+          Back returns to Coach. The Recovery screen's "Weekly volume review" row
+          opens CoachReview (D228 item 6). WorkoutSummary's own targets ride along:
+          ShareCard and ClipCamera are registered further down, HowYouTrain and its
+          closure above (transitive closure, swept by
+          navigation/__tests__/coachStackBatch4.test.js). */}
+      <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Recovery" component={RecoveryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
+      <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WeeklyCheckIn" component={WeeklyCheckInScreen} options={{ headerShown: false }} />
       {/* Coaching-first onboarding (founder brief 2026-10-19): the streamlined
           setup a quick-start person reaches from any coach-owned surface's
@@ -824,9 +791,8 @@ function MainTabs() {
             HomeTab: focused ? 'today' : 'today-outline',
             PlansTab: focused ? 'barbell' : 'barbell-outline',
             DiaryTab: focused ? 'nutrition' : 'nutrition-outline',
-            ProgressTab: focused ? 'stats-chart' : 'stats-chart-outline',
-            CommunityTab: focused ? 'people' : 'people-outline',
             ProfileTab: focused ? 'pulse' : 'pulse-outline',
+            CommunityTab: focused ? 'people' : 'people-outline',
           };
           return <Ionicons name={icons[route.name] || 'ellipse'} size={22} color={color} />;
         },
@@ -834,13 +800,13 @@ function MainTabs() {
     >
       {/* Internal tab route ids are kept stable for deep links, push routing and
           cross-tab helper calls. The visible IA is Today / Train / Nutrition /
-          Progress / Community / Coach. */}
+          Coach / Community (D231: the Progress tab is gone; its rows live on
+          Coach, so the former ProgressTab routes now open in ProfileTab). */}
       <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Today' }} />
       <Tab.Screen name="PlansTab" component={PlansStack} options={{ title: 'Train' }} />
       <Tab.Screen name="DiaryTab" component={DiaryStack} options={{ title: 'Nutrition' }} />
-      <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
-      <Tab.Screen name="CommunityTab" component={CommunityStack} options={{ title: 'Community' }} />
       <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Coach' }} />
+      <Tab.Screen name="CommunityTab" component={CommunityStack} options={{ title: 'Community' }} />
     </Tab.Navigator>
   );
 }
@@ -991,13 +957,13 @@ function ProOnboardingStack() {
 // is a SEPARATE mechanism and is untouched by this config.
 // The legacy partner invite path (volyume://partner/<CODE> and
 // https://volyume.app/partner/<CODE>, minted by the retired Partners feature and
-// already sitting in people's share messages) now lands on Community, which
-// shows the "Partner invites have moved" card (blueprint section 1).
+// already sitting in people's share messages) lands on the Community tab.
 //
 // It is a rewrite rather than a second config entry because React Navigation
 // 6 allows a screen exactly one path pattern, and `Community` already owns
-// `community`. The rewrite hands the code over as a query param, so the
-// route arrives with { legacyPartnerCode }, and still goes through
+// `community`. D231 (batch 5 retired the "Partner invites have moved" notice,
+// which was the only reader of the code), so the code is no longer carried:
+// the link opens Community and nothing more. It still goes through
 // safeGetStateFromPath -- the bounds and validation that module exists for
 // are not bypassed.
 const LEGACY_PARTNER_PATH = /^\/?partner(?:\/([^/?#]*))?\/?$/;
@@ -1007,8 +973,7 @@ export function rewriteLegacyCommunityPath(path) {
   const [base] = path.split('?');
   const match = LEGACY_PARTNER_PATH.exec(base);
   if (!match) return path;
-  const code = match[1] ? decodeURIComponent(match[1]) : '';
-  return code ? `community?legacyPartnerCode=${encodeURIComponent(code)}` : 'community';
+  return 'community';
 }
 
 // A challenge link also keeps its code on the device. A link opened before
@@ -1113,21 +1078,16 @@ const linking = {
           PlanDetail: 'routine/:planId',
         },
       },
-      ProgressTab: {
-        screens: {
-          // volyume://progress → Progress tab root (Analytics screen).
-          Analytics: 'progress',
-          // The partner invite path is no longer registered here: partner
-          // links now land on Community (blueprint section 1). See
-          // rewriteLegacyCommunityPath above for how the old URLs, which are
-          // already out in the world in share messages, get there.
-        },
-      },
       // §15 item 8: coach output + weekly check-in, the two most-requested
       // notification re-engagement targets (Scout 1's "only 4 deep-link
       // paths" gap).
       ProfileTab: {
         screens: {
+          // volyume://progress → Coach tab root (the You screen). D231 (app layout
+          // rework, batch 4): the Progress tab is gone and its rows (Your progress,
+          // Looking back) live on Coach, so the link every share message and
+          // notification already carries opens them there.
+          You: 'progress',
           // volyume://coach → Coach tab → latest coaching decision.
           // CoachOutputScreen defaults route.params.weekStart to the
           // current week when absent, so this always opens the LATEST

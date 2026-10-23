@@ -106,7 +106,9 @@ describe('row-fill dependents keep flex: 1 (founder photo, build 2608)', () => {
   // WorkoutBottomBar test above; this is an absence guard so the pattern is
   // not silently reintroduced without flex.
   test('Progress spark cards do not exist to regress (SparkCard retired, §27)', () => {
-    const analytics = read('screens/AnalyticsScreen.js');
+    // RE-POINTED (D231, app layout rework batch 4): the Progress rows moved from
+    // AnalyticsScreen.js (retired) to components/coach/CoachProgress.js.
+    const analytics = read('components/coach/CoachProgress.js');
     expect(analytics).not.toMatch(/function SparkCard/);
     expect(analytics).not.toMatch(/sparkCard:\s*\{/);
   });

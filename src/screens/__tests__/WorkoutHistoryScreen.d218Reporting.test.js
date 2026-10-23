@@ -347,7 +347,8 @@ describe('F-2: the expanded card names every row, never "Unknown", and each row 
       opened.push(navigateCrossTab.mock.calls[0][3].exerciseId);
     }
     expect(opened).toEqual(['ex-bench', 'ex-custom-gone', SURVIVOR_ID, 'ex-unknown', 'ex-ghost']);
-    expect(navigateCrossTab.mock.calls[0].slice(1, 3)).toEqual(['ProgressTab', 'ExerciseDetail']);
+    // D231 (batch 4): the Progress tab is gone; Exercise Detail opens in the Coach stack.
+    expect(navigateCrossTab.mock.calls[0].slice(1, 3)).toEqual(['ProfileTab', 'ExerciseDetail']);
   });
 
   test('the expanded read goes through the lookup, not the filtered library', async () => {

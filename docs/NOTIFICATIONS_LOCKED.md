@@ -183,8 +183,11 @@ Body:  Have a look at what's changed for you this week, and the thinking
 ```
 Title: A whole year of lifts
 Body:  What a year. Your wrap-up is ready, swipe through it on the
-       Progress tab.
+       Coach tab.
 ```
+(AMENDED 2026-10-22, D231 app layout rework batch 4: "Progress tab" became
+"Coach tab" because the Progress tab was removed and its rows live on Coach.
+The tap still opens Year of lifts directly.)
 
 ## Implementation
 

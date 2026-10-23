@@ -2080,7 +2080,9 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
       identifier: 'volyume_year_of_lifts_unlock',
       content: {
         title: 'A whole year of lifts',
-        body: 'What a year. Your wrap-up is ready, swipe through it on the Progress tab.',
+        // D231 (app layout rework, batch 4): the Progress tab is gone; Year of lifts is
+        // one of Coach's Looking back rows and the tap opens it directly.
+        body: 'What a year. Your wrap-up is ready, swipe through it on the Coach tab.',
         data: { type: 'year_of_lifts_unlock' },
         sound: true,
       },

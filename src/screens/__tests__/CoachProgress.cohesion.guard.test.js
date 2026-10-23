@@ -1,6 +1,12 @@
 /**
  * Source guard for the Progress-tab cohesion sweep (R2, 2026-07-11), scoring
- * AnalyticsScreen against docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md.
+ * the Progress rows against docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md.
+ *
+ * D231 (app layout rework, batch 4) RE-POINTING: the rows moved from
+ * AnalyticsScreen.js (retired) to components/coach/CoachProgress.js, so the
+ * census reads that file. The monthly recap banner is gone (its invitation is
+ * the Recaps row's sub line), so the recapCard radius exception it pinned is
+ * retired with it.
  *
  * The bulk of this screen's cohesion (CTAs -> shared Button, cards ->
  * radius.lg, blocking alert -> toast) already landed under R9 (D70). This
@@ -19,7 +25,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'coach', 'CoachProgress.js'), 'utf8');
 // RE-POINTED (D231, app layout rework batch 2): the volume strip and the session
 // card (with its difficulty chip) moved out of this screen to components/
 // VolumeStrip.js and components/RecentSessionCard.js, which Train draws. The
@@ -27,7 +33,7 @@ const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'u
 const STRIP = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'VolumeStrip.js'), 'utf8');
 const SESSION_CARD = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'RecentSessionCard.js'), 'utf8');
 
-describe('AnalyticsScreen cohesion census (R2)', () => {
+describe('CoachProgress cohesion census (R2)', () => {
   test('data numerals carry tabular figures', () => {
     // RE-ANCHORED under D214 lane 3: the old volSummaryCount numeral and the
     // "8/10" difficulty readout are gone (the chip prints the person's word,
@@ -48,7 +54,7 @@ describe('AnalyticsScreen cohesion census (R2)', () => {
   // (a hand-rolled card with the bright border) are replaced by the shared
   // NavRow inside one NavGroup, which owns its own label role and card radius.
   test('the doors are the shared NavRow inside one NavGroup; no hand-rolled tile, label pair or tile card remains', () => {
-    expect(SRC).toMatch(/import \{ NavRow, NavGroup \} from '\.\.\/components\/NavRow';/);
+    expect(SRC).toMatch(/import \{ NavRow, NavGroup \} from '\.\.\/NavRow';/);
     expect(SRC).not.toMatch(/NavTile|navTile/);
     expect(SRC).not.toMatch(/fontWeight: fontWeight\.semibold[^}]*navTile/);
   });
@@ -63,8 +69,12 @@ describe('AnalyticsScreen cohesion census (R2)', () => {
     expect(SRC).not.toMatch(/diffChip|diffText/);
   });
 
-  test('recapCard keeps its RECORDED radius.md ephemeral-banner exception (R9/D70)', () => {
-    expect(SRC).toMatch(/recapCard:\s*\{[\s\S]{0,160}?borderRadius: radius\.md/);
+  // RE-POINTED (D231, batch 4): the recap banner and its radius.md
+  // ephemeral-banner exception (R9/D70) are retired; the invitation is text on
+  // the Recaps row, so the component carries no banner surface of its own.
+  test('the recap invitation is a row line: no banner style, no radius exception', () => {
+    expect(SRC).not.toMatch(/recapCard\s*:/);
+    expect(SRC).not.toMatch(/borderRadius: radius\.md/);
   });
 
   test('no hand-rolled raw <Modal> on the screen', () => {

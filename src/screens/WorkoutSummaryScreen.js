@@ -1371,10 +1371,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // single exercise is what the volume verdict is about.
   function handleSeeProgress() {
     if (firstPrWithExercise) {
-      navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: firstPrWithExercise.exerciseId });
+      navigateCrossTab(navigation, 'ProfileTab', 'ExerciseDetail', { exerciseId: firstPrWithExercise.exerciseId });
       return;
     }
-    navigateCrossTab(navigation, 'ProgressTab', 'LiftProgress');
+    navigateCrossTab(navigation, 'ProfileTab', 'LiftProgress');
   }
 
   // D2 (decision 4b: share artefacts are FREE): a 2-tap share of the early-win
@@ -2085,7 +2085,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1400}>
             <ProgressPhotoPrompt
               milestoneId={photoPromptMilestoneId}
-              onAddPhoto={() => navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')}
+              onAddPhoto={() => navigateCrossTab(navigation, 'ProfileTab', 'ProgressPhotos')}
             />
           </RevealSection>
         ) : null}
@@ -2214,7 +2214,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.blockRecapRow, live.blockRecapRow]}
               activeOpacity={0.85}
-              onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
+              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
               accessibilityRole="button"
               accessibilityLabel="Watch your block story"
             >
@@ -2257,7 +2257,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   icon="sparkles"
                   variant="tertiary"
                   size="sm"
-                  onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
+                  onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
                   style={[styles.phaseActionBtn, live.phaseActionBtn, { backgroundColor: 'transparent' }]}
                   textStyle={[styles.phaseActionText, live.phaseActionText]}
                   accessibilityLabel="Watch your block story"

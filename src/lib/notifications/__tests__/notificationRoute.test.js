@@ -16,9 +16,11 @@ describe('routeForNotificationType', () => {
     });
   });
 
-  test('year_of_lifts_unlock opens Year of Lifts in the Progress tab', () => {
+  // RE-POINTED (D231, batch 4): the Progress tab is gone; Year of lifts is
+  // registered in the Coach stack, which carries its row.
+  test('year_of_lifts_unlock opens Year of Lifts in the Coach tab', () => {
     expect(routeForNotificationType('year_of_lifts_unlock')).toEqual({
-      tab: 'ProgressTab', screen: 'YearOfLifts',
+      tab: 'ProfileTab', screen: 'YearOfLifts',
     });
   });
 
@@ -153,9 +155,11 @@ describe('routeForNotificationType', () => {
     });
   });
 
-  test('OPP-C03: the +48h value follow-up lands on the Progress trend view', () => {
+  // RE-POINTED (D231, batch 4): the trend rows (Your progress) are on the Coach
+  // tab root now, not a Progress tab.
+  test('OPP-C03: the +48h value follow-up lands on the trend rows (the Coach tab root)', () => {
     expect(routeForNotificationType('checkin_missed', { slot: 'followup' })).toEqual({
-      tab: 'ProgressTab', screen: 'Analytics',
+      tab: 'ProfileTab', screen: 'You',
     });
   });
 

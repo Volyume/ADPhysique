@@ -1,10 +1,11 @@
 /**
- * D221 / build spec 2.1 and 2.5: Community is the sixth bottom tab.
+ * D221 / build spec 2.1 and 2.5: Community is a bottom tab (the sixth, until D231
+ * removed the Progress tab: it is the fifth and last now).
  *
  * Pins, from source: every Community* screen except the two deliberate
  * HomeStack duplicates (CommunityCompose, CommunityPost) is registered in
  * CommunityStack; HomeTab stays the initial tab; no Community deep link or
- * notification route names HomeTab; the tab bar and navigator carry six
+ * notification route names HomeTab; the tab bar and navigator carry the
  * tabs; the tab-bar dot reads only the `community.unseen` slice, and the
  * unseen module never reads the ED flag or the tier.
  */
@@ -42,13 +43,15 @@ describe('CommunityStack registration', () => {
     expect(home).not.toContain('Community');
   });
 
-  test('the tab is registered between Progress and Coach, Today stays initial', () => {
+  // RE-POINTED (D231, batch 4): the Progress tab is gone and Coach comes before
+  // Community: Today, Train, Nutrition, Coach, Community.
+  test('the tab is registered right after Coach, last of five, Today stays initial', () => {
     expect(NAV).toMatch(
-      /name="ProgressTab"[^\n]*\n\s*<Tab\.Screen name="CommunityTab" component=\{CommunityStack\} options=\{\{ title: 'Community' \}\} \/>\s*\n\s*<Tab\.Screen name="ProfileTab"/,
+      /<Tab\.Screen name="ProfileTab" component=\{ProfileStack\} options=\{\{ title: 'Coach' \}\} \/>\s*\n\s*<Tab\.Screen name="CommunityTab" component=\{CommunityStack\} options=\{\{ title: 'Community' \}\} \/>\s*\n\s*<\/Tab\.Navigator>/,
     );
     expect(NAV).toMatch(/postSetupLanding \|\| 'HomeTab'/);
     expect(NAV).toMatch(/CommunityTab: focused \? 'people' : 'people-outline'/);
-    expect([...NAV.matchAll(/<Tab\.Screen\s+name="/g)]).toHaveLength(6);
+    expect([...NAV.matchAll(/<Tab\.Screen\s+name="/g)]).toHaveLength(5);
   });
 
   test('the Community tab re-tap pops to the hub (NAV-5 listener)', () => {

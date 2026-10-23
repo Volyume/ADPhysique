@@ -2447,7 +2447,7 @@ export default function HomeScreen({ navigation, route }) {
             // OB-8: the weekly check-in's "Log my weight first" CTA deep-links
             // here with a fresh timestamp; the strip opens its weight input.
             openWeightSignal={route?.params?.openWeightLog ?? null}
-            onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
+            onOpenTrend={() => navigateCrossTab(navigation, 'ProfileTab', 'You', { focusWeightTrend: true })}
             everLogged={hasEverLoggedWeight}
           />
         )}
@@ -2957,13 +2957,13 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* ── B3 lift plateau banner. Training-only content; taps through to
             the existing plateau protocol on ExerciseDetail. ExerciseDetail is
-            registered in the Progress stack, not this one, so route via the
-            parent tab navigator (F4 / NAV-1 bug class). D231: it stays at the
-            bottom on its own. ── */}
+            registered in the Coach stack (D231: the Progress tab is gone), not
+            this one, so route via the parent tab navigator (F4 / NAV-1 bug
+            class). D231: it stays at the bottom on its own. ── */}
         {showPlateauBanner && (
           <TouchableOpacity
             style={[styles.plateauBanner, live.plateauBanner]}
-            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
+            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={plateauBanner.line}

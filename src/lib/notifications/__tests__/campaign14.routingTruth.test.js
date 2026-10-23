@@ -168,13 +168,16 @@ const DECISIONS = {
   trial_day3: { tab: null, screen: null },
   winback: { tab: null, screen: null },
   subscription_payment_failure: { tab: null, screen: null },
+  // RE-POINTED (D231, batch 4): the Progress tab is gone; its rows are on Coach.
   year_of_lifts_unlock: {
-    tab: 'ProgressTab', screen: 'YearOfLifts',
+    tab: 'ProfileTab', screen: 'YearOfLifts',
     file: 'src/screens/YearOfLiftsScreen.js', marker: /[Yy]ear of [Ll]ifts/,
   },
+  // The Coach tab root draws the recap invitation (the Recaps row's own line
+  // in the first days of the month), in components/coach/CoachProgress.js.
   monthly_recap: {
-    tab: 'ProgressTab', screen: 'Analytics',
-    file: 'src/screens/AnalyticsScreen.js', marker: /recap/,
+    tab: 'ProfileTab', screen: 'You',
+    file: 'src/components/coach/CoachProgress.js', marker: /recap/,
   },
   // Partners was retired on 2026-09-06 (SD-03). partner_cheer is still a
   // LIVE type because the partner-cheer Edge Function stays deployed, so an
@@ -322,9 +325,10 @@ describe('(19) every routed live type reaches a route a navigator registers', ()
 
   test('checkin_missed follow-up lands on the trend view it promises, not the wrong-day check-in gate', () => {
     const target = routeForNotificationType('checkin_missed', { slot: 'followup' });
-    expect(target).toEqual({ tab: 'ProgressTab', screen: 'Analytics' });
-    expect([...screensIn(TAB_TO_STACK.ProgressTab)]).toContain('Analytics');
-    expect(read('src/screens/AnalyticsScreen.js')).toMatch(/[Tt]rend/);
+    // RE-POINTED (D231, batch 4): the trend rows are the Coach tab root's now.
+    expect(target).toEqual({ tab: 'ProfileTab', screen: 'You' });
+    expect([...screensIn(TAB_TO_STACK.ProfileTab)]).toContain('You');
+    expect(read('src/components/coach/CoachProgress.js')).toMatch(/[Tt]rend/);
   });
 
   test('every live type still resolves a telemetry category (no live type can lose its open event)', () => {

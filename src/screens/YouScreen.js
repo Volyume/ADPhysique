@@ -4,56 +4,66 @@
  * Historical file/route name kept as YouScreen/You for navigation stability,
  * but the visible tab is now Coach. This is the coaching hub: every
  * destination is a clear Volyume flow with its own guardrails.
+ *
+ * D231 (app layout rework, batch 4): the Progress tab is gone and its rows live
+ * here, top to bottom: This week (one card that changes through the week, with
+ * Your week and Past decisions under it), Your progress and Looking back (the
+ * Progress tab's rows, components/coach/CoachProgress.js), Your coaching setup,
+ * Safety checks. The profile card (and the Athlete profile screen it opened),
+ * the Injuries row (home: Train), the Community row and the Coaching reminders
+ * row (home: Settings) left this screen.
  */
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import Text from '../components/Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from '@react-navigation/native';
-// D134 (founder 2026-09-03): the tier-blind Injuries & limitations row's live line.
-import { loadCapabilityState } from '../lib/capability/store';
-import { howYouTrainSummary } from '../lib/capability/summary';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import CoachingSetupCard from '../components/CoachingSetupCard';
+import CoachProgress from '../components/coach/CoachProgress';
 import useCoachingSetUp from '../hooks/useCoachingSetUp';
 import { resolveCoachingCardMode, snoozeCoachingCard } from '../lib/coachingSetup';
 import { NavRow, NavGroup } from '../components/NavRow';
-import { Skeleton } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
-import ProfileAvatarMark from '../components/ProfileAvatarMark';
+import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   getAllWorkouts,
   getCoachOutputHistory,
   getLatestCheckin,
-  getLatestCoachOutput,
   getMorningWeightsLast14Days,
   getOpenEdPatternFlag,
-  getAllExercises,
 } from '../lib/database';
-import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { buildCoachLedger } from '../lib/coachLedger';
+import { completedDecisionsFrom, splitCoachDecisions } from '../lib/coachDecision';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { WELLBEING_KEY } from '../lib/wellbeing';
-import { isApplePrivateRelayEmail } from '../lib/appleIdentity';
 import { deriveSafetyState } from '../lib/safetyState';
 
-function formatDate(ms) {
-  if (!ms) return null;
-  try {
-    return new Date(Number(ms)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  } catch (_) {
-    return null;
-  }
-}
+// D231: how many of the latest coach outputs are read to find this week's
+// decision and the most recent past one (completed ones only).
+const DECISION_HISTORY_LIMIT = 8;
+
+// D231: the slot the This week card holds while the first read settles (the
+// card is 40 dp of icon inside 16 dp of padding each side, about 74 dp).
+const CARD_SKELETON_HEIGHT = 74;
+
+// D231: the This week card's line once this week's decision exists.
+const THIS_WEEK_DECISION_TITLE = "This week's decision \u00B7 See why";
+
+// D231 lead review: a person with an earlier completed decision is past their
+// first check-in, so the card never says "First check-in" to them. Until this
+// week's check-in is open they read the line the old Weekly check-in row gave
+// them (`latestReview` branch), which is neutral under calm mode and an ED flag.
+const ESTABLISHED_CHECKIN_TITLE = 'Answer a few questions so your coach knows how your week went.';
 
 // UK short date (DD/MM/YYYY) for the pending-coach-decision title, which sits
 // in a narrow card and wrapped to a second line with the long-form date
@@ -83,11 +93,6 @@ function profileFocusLine(profile = {}) {
     goal && goal !== 'Not competing' ? goal : null,
     Number.isFinite(days) && days > 0 ? `${days} days/week` : null,
   ].filter(Boolean).join(' - ');
-}
-
-function isCompletedCoachDecision(output, checkin) {
-  if (!output?.weekStart || output.hasEnoughData === false) return false;
-  return Number(checkin?.weekStart) === Number(output.weekStart) && checkin?.energyScore != null;
 }
 
 function parseCheckinDay(rawPrefs) {
@@ -133,7 +138,10 @@ function buildPendingCoachCopy(readiness) {
     && readiness.unlockDateMs <= localMidnightMs();
   if (unlockIsTodayOrPast && weighInsReady && daysReady) {
     return {
-      title: 'Weekly check-in is open',
+      // D231: the This week card reads "Check-in is open" (it was the Weekly
+      // check-in row's "Weekly check-in is open").
+      title: 'Check-in is open',
+      open: true,
       body: "Answer the weekly check-in and your coach will make this week's decision. Until then, your targets stay the same.",
     };
   }
@@ -151,7 +159,7 @@ function buildPendingCoachCopy(readiness) {
   };
 }
 
-export default function YouScreen({ navigation }) {
+export default function YouScreen({ navigation, route }) {
   // Founder brief 2026-10-19 (coaching-first onboarding with an optional quick
   // start): the setup card sits at the top until coaching is set up; the rest
   // of the tab stays available (non-blocking).
@@ -164,15 +172,17 @@ export default function YouScreen({ navigation }) {
     user: s.user,
     userProfile: s.userProfile,
   })));
-  const [sessions, setSessions] = useState(null);
-  const [latestReview, setLatestReview] = useState(null);
-  const [hasCoachHistory, setHasCoachHistory] = useState(false);
+  // D231: this week's completed decision (null until one exists for the week)
+  // and the most recent completed decision from an earlier week.
+  const [thisWeekDecision, setThisWeekDecision] = useState(null);
+  const [pastDecision, setPastDecision] = useState(null);
   const [coachReadiness, setCoachReadiness] = useState(null);
+  // False until the first read settles (success or failure), so the This week
+  // card never flashes a state ("First check-in not open yet") that the read is
+  // about to replace with this week's decision.
+  const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  // D134: the live Injuries & limitations line, tier-blind, refreshed on focus. Its
-  // own small loader so the tab's main load stays exactly as it was.
-  const [hytSummary, setHytSummary] = useState(() => howYouTrainSummary(null));
   // The permanent way into coaching setup: full unless "Not now" applies
   // (src/lib/coachingSetup.js). null until the read resolves, so no flash.
   const [coachingCardMode, setCoachingCardMode] = useState(null);
@@ -183,22 +193,19 @@ export default function YouScreen({ navigation }) {
     resolveCoachingCardMode(user.id, 'coach_home').then((next) => { if (alive) setCoachingCardMode(next); });
     return () => { alive = false; };
   }, [user?.id, coachingSetUp]));
-  useFocusEffect(useCallback(() => {
-    let alive = true;
-    (async () => {
-      if (!user?.id) return;
-      try {
-        const [state, library] = await Promise.all([loadCapabilityState(user.id), getAllExercises().catch(() => [])]);
-        if (alive) setHytSummary(howYouTrainSummary(state, { nameOf: (id) => library.find((e) => e.id === id)?.name ?? null }));
-      } catch (_) {
-        if (alive) setHytSummary(howYouTrainSummary({ baseline: [], episodes: [], history: [], unavailable: true }));
-      }
-    })();
-    return () => { alive = false; };
-  }, [user?.id]));
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+
+  // D231: the screen scrolls to the top on a re-tap of the tab (it was the
+  // Progress tab's), and carries the `focusWeightTrend` arrival (the Today
+  // weigh-in strip's trend door) to the Body row of Your progress.
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
+  const focusWeightTrend = !!route?.params?.focusWeightTrend;
+  const clearFocusWeightTrend = useCallback(() => {
+    navigation.setParams?.({ focusWeightTrend: undefined });
+  }, [navigation]);
 
   useFocusEffect(useCallback(() => {
     let alive = true;
@@ -211,8 +218,6 @@ export default function YouScreen({ navigation }) {
       try {
         const [
           workoutsResult,
-          latestResult,
-          checkinResult,
           historyResult,
           weightsResult,
           prefsResult,
@@ -220,13 +225,9 @@ export default function YouScreen({ navigation }) {
           wellbeingResult,
         ] = await Promise.allSettled([
           getAllWorkouts(user.id),
-          getLatestCoachOutput(user.id),
-          getLatestCheckin(user.id),
-          // R8 (D68): history now loads for Pro too (limit 1) - it decides
-          // whether the "Coaching decision" archive row shows while there is
-          // no completed decision for the current week (e.g. Monday's new
-          // output before this week's check-in is answered).
-          getCoachOutputHistory(user.id, 1),
+          // D231: the latest outputs; the COMPLETED ones decide this week's
+          // card and the Past decisions row (lib/coachDecision.js).
+          getCoachOutputHistory(user.id, DECISION_HISTORY_LIMIT),
           // FOUNDER DECISION (fully free, no tier split): these four used to
           // read Free as an empty/absent placeholder; they run unconditionally
           // now, for everyone.
@@ -236,21 +237,31 @@ export default function YouScreen({ navigation }) {
           AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified'),
         ]);
         if (!alive) return;
-        const failed = [workoutsResult, latestResult, checkinResult, historyResult].some((r) => r.status === 'rejected');
+        const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
+        // An output is a decision only once the check-in it was built from
+        // exists for the same week (coachDecision.js, PM-06). A failed
+        // check-in read is a failed load, never a quiet "no decision".
+        let decisions = [];
+        let decisionsFailed = false;
+        if (historyResult.status === 'fulfilled') {
+          try {
+            decisions = await completedDecisionsFrom(history, (weekStart) => getLatestCheckin(user.id, weekStart));
+          } catch (e) {
+            decisionsFailed = true;
+            logError('YouScreen.decisions', e, { userId: user?.id, reloadKey });
+          }
+        }
+        if (!alive) return;
+        const failed = [workoutsResult, historyResult].some((r) => r.status === 'rejected') || decisionsFailed;
         if (failed) {
           logError('YouScreen.load', new Error('coach_hub_partial_load_failed'), {
             reloadKey,
             workouts: workoutsResult.status,
-            latest: latestResult.status,
-            checkin: checkinResult.status,
             history: historyResult.status,
+            decisions: decisionsFailed ? 'rejected' : 'fulfilled',
           });
         }
         const workouts = workoutsResult.status === 'fulfilled' ? workoutsResult.value : [];
-        const latest = latestResult.status === 'fulfilled' ? latestResult.value : null;
-        const checkin = checkinResult.status === 'fulfilled' ? checkinResult.value : null;
-        const latestDecision = isCompletedCoachDecision(latest, checkin) ? latest : null;
-        const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
         const weights = weightsResult.status === 'fulfilled' ? weightsResult.value : [];
         const checkinDay = parseCheckinDay(prefsResult.status === 'fulfilled' ? prefsResult.value : null);
         const wellbeing = wellbeingResult.status === 'fulfilled' ? (wellbeingResult.value || 'unspecified') : 'read_failed';
@@ -282,9 +293,11 @@ export default function YouScreen({ navigation }) {
           checkinDay,
           edFlagOpen: edSuppressed,
         });
-        if (workoutsResult.status === 'fulfilled') setSessions(completed.length);
-        if (latestResult.status === 'fulfilled' && checkinResult.status === 'fulfilled') setLatestReview(latestDecision);
-        if (historyResult.status === 'fulfilled') setHasCoachHistory((history || []).length > 0);
+        if (historyResult.status === 'fulfilled' && !decisionsFailed) {
+          const split = splitCoachDecisions(decisions);
+          setThisWeekDecision(split.thisWeek);
+          setPastDecision(split.past);
+        }
         setCoachReadiness({
           ledger,
           unlockLabel: ledger.unlockLabel,
@@ -294,10 +307,12 @@ export default function YouScreen({ navigation }) {
         });
 
         setLoadError(failed);
+        setLoaded(true);
       } catch (e) {
         if (alive) {
           logError('YouScreen.load', e, { userId: user?.id, reloadKey });
           setLoadError(true);
+          setLoaded(true);
         }
       }
     }
@@ -305,34 +320,29 @@ export default function YouScreen({ navigation }) {
     return () => { alive = false; };
   }, [user?.id, reloadKey, userProfile]));
 
-  // The e-mail fallback is a nicety for people whose address carries their
-  // name. Apple's Hide My Email gives a random token instead, so that fallback
-  // rendered a profile header reading "ab  cd  ef"; skip it and say Athlete.
-  const displayName = userProfile?.firstName
-    || (isApplePrivateRelayEmail(user?.email)
-      ? null
-      : user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim())
-    || 'Athlete';
-  const avatarUri = userProfile?.avatarUri || null;
-  const reviewDate = latestReview ? formatDate(latestReview.weekStart) : null;
   const profileFocus = profileFocusLine(userProfile);
   const pendingCoachCopy = buildPendingCoachCopy(coachReadiness);
-
-  // Community (blueprint section 1, entry point 2): opens Community.
-  // Founder-authored sub line, 2026-09-08, after two attempts of my own at
-  // a one-liner each wrongly picked a single mechanism (following/
-  // messaging/matching/boards/groups) and presented it as the headline.
-  // Partners itself was retired on 2026-09-06 (SD-03).
-  const openCommunity = useCallback(() => {
-    navigateCrossTab(navigation, 'CommunityTab');
-  }, [navigation]);
+  // The one This week card: this week's decision once it exists, else the
+  // check-in state (the countdown, then "Check-in is open"), in the Weekly
+  // check-in row's own wording and with its neutral variants under calm mode
+  // and an open ED flag (buildPendingCoachCopy owns that rule, unchanged).
+  const cardEmphasised = !!thisWeekDecision || pendingCoachCopy.open === true;
+  const cardTitle = thisWeekDecision
+    ? THIS_WEEK_DECISION_TITLE
+    : (pastDecision && pendingCoachCopy.open !== true ? ESTABLISHED_CHECKIN_TITLE : pendingCoachCopy.title);
+  const openThisWeek = () => {
+    if (thisWeekDecision) {
+      navigation.navigate('CoachOutput', thisWeekDecision?.weekStart ? { weekStart: thisWeekDecision.weekStart } : undefined);
+    } else {
+      navigation.navigate('WeeklyCheckIn');
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-      <ScrollView contentContainerStyle={[styles.content, live.content]}>
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, live.content]}>
         <ScreenHeader
           title="Coach"
-          subtitle="Weekly coaching based on what you log."
           right={(
             <Pressable
               onPress={() => navigation.navigate('Settings')}
@@ -356,16 +366,15 @@ export default function YouScreen({ navigation }) {
         ) : null}
 
         {/* DD113 (design-consistency-audit-2026-08-06): documented exception,
-            not bespoke drift. Unlike AnalyticsScreen's blocking EmptyState
-            (the whole screen's content), this is a slim degrade-in-place
-            banner that sits ABOVE the rest of the screen, which keeps
-            rendering as normal underneath it (profile card, nav sections) --
-            a load failure here never blocks the athlete profile or coaching
-            nav the user still needs. Converting it to EmptyState would force
-            it to take over the screen, breaking that in-place-degrade
-            contract, so it stays a compact Card. Visual language (icon +
-            title + body, warning tone) still matches the app's other
-            failure states as closely as the inline layout allows. */}
+            not bespoke drift. This is a slim degrade-in-place banner that sits
+            ABOVE the rest of the screen, which keeps rendering as normal
+            underneath it (the cards and nav sections) -- a load failure here
+            never blocks the coaching nav the user still needs. Converting it
+            to EmptyState would force it to take over the screen, breaking that
+            in-place-degrade contract, so it stays a compact Card. Visual
+            language (icon + title + body, warning tone) still matches the
+            app's other failure states as closely as the inline layout
+            allows. */}
         {loadError ? (
           <Card
             style={[styles.loadErrorCard, live.loadErrorCard]}
@@ -383,170 +392,84 @@ export default function YouScreen({ navigation }) {
           </Card>
         ) : null}
 
-        {/* Founder direct order (2026-07-09, resume session): "move User (Pro)
-            profile above the Coach box." This supersedes the 2026-07-08 audit
-            reorder and D13.3 (2026-07-09 earlier same day), both of which put
-            the coach status card first as the screen's hero and the profile
-            card directly beneath it. The founder's later instruction reverses
-            that: the profile card is now the first thing seen, the coach
-            status card follows it, ahead of every nav section. */}
-        <Card
-          style={styles.profileCard}
-          onPress={() => navigation.navigate('AthleteProfile')}
-          accessibilityLabel="Open athlete profile"
-        >
-          <ProfileAvatarMark
-            avatarUri={avatarUri}
-            presetKey={userProfile?.avatarPreset}
-            displayName={displayName}
-            size={56}
-          />
-          <View style={styles.profileInfo}>
-            <View style={styles.profileNameRow}>
-              <Text style={[styles.profileName, live.profileName]} numberOfLines={1}>{displayName}</Text>
-            </View>
-            {sessions != null ? (
-              <Text style={[styles.profileStat, live.profileStat]}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
-            ) : user?.id ? (
-              <Skeleton width={110} height={12} />
-            ) : null}
-            {profileFocus ? <Text style={[styles.profileFocus, live.profileFocus]} numberOfLines={2}>{profileFocus}</Text> : null}
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </Card>
-
-        {/* FOUNDER DECISION (fully free, no tier split): the everyday trial
-            value card (AttentionCard variant="trial") is retired along with
-            the trial itself. */}
-
-        {/* R8 (D68, founder: "cobbled together mess with duplication"):
-            the status card is no longer a third voice restating what the
-            rows below already say. It is TAPPABLE - it IS the thing it
-            describes - and renders only once a completed decision exists:
-            the weekly update hero, opening CoachOutput directly (the old
-            card said "Open it" but was not pressable; the duplicate
-            "Coaching decision" NavRow did the opening one card down).
-            With no completed decision it renders NO status card at all:
-            "Getting to know you" said nothing (founder verdict) and its
-            body just pointed at the check-in row, which already carries
-            the full, specific readiness status (pendingCoachCopy).
-            FOUNDER DECISION (fully free, no tier split): the Free pitch
-            branch (opening ProUpgrade) is retired -- there is nothing left
-            to pitch. */}
-        {latestReview ? (
-          <Card
-            style={styles.statusCard}
-            tone="primary"
-            onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
-            accessibilityLabel={`Open your weekly coach update${reviewDate ? ` from ${reviewDate}` : ''}`}
-          >
-            <View style={styles.statusTop}>
-              <View style={[styles.statusIcon, live.statusIcon]}>
-                <Ionicons name="git-branch-outline" size={20} color={t.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                {/* The "COACH" kicker that sat here is gone. It restated the
-                    heading directly below it ("Weekly coaching decision")
-                    beside an icon that already says the same thing -- the
-                    category was marked three times over. The heading carries
-                    its own weight. */}
-                <Text style={[styles.statusTitle, live.statusTitle]}>
-                  {`Weekly coaching decision${reviewDate ? `: ${reviewDate}` : ''}`}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-            </View>
-            <Text style={[styles.statusBody, live.statusBody]}>
-              What your coach changed this week, what stayed the same, and why.
-            </Text>
-          </Card>
-        ) : null}
-
-        {/* D134 (founder 2026-09-03): tier-blind, above Setup. The first
-            thing the coach builds from is free by law (CAP-19), so every
-            account sees it here, with its live line. */}
-        <View style={styles.section}>
-          <SectionLabel>Your body</SectionLabel>
-          <NavGroup>
-            <NavRow
-              icon="body-outline"
-              label="Injuries & limitations"
-              sub={hytSummary.sub}
-              onPress={() => navigation.navigate('HowYouTrain')}
-            />
-          </NavGroup>
-        </View>
-
-        {/* FOUNDER DECISION (fully free, no tier split): "This week" is the
-            only version of this section now -- the Free "Coach"/"Coaching
-            history" branch is retired. */}
+        {/* D231 (batch 4): ONE card changes through the week. It replaces the
+            "Weekly coaching decision" card and the three "This week" rows.
+            Until this week's decision exists it is the check-in state, in the
+            Weekly check-in row's own titles (the countdown such as "First
+            check-in 19 July", then "Check-in is open"; R2-7: the title only,
+            the explanatory sentence lives on WeeklyCheckInScreen) and opens the
+            check-in; once it exists it reads "This week's decision · See why"
+            and opens that week's CoachOutput. Under it: Your week, and Past
+            decisions while a completed decision from an earlier week exists. */}
         <View style={styles.section}>
           <SectionLabel>This week</SectionLabel>
+          {user?.id && !loaded ? (
+            <SkeletonCard height={CARD_SKELETON_HEIGHT} />
+          ) : (
+            <Card
+              style={styles.statusCard}
+              tone={cardEmphasised ? 'primary' : undefined}
+              onPress={openThisWeek}
+              accessibilityLabel={thisWeekDecision ? "Open this week's coaching decision" : `Weekly check-in. ${cardTitle}`}
+            >
+              <View style={styles.statusTop}>
+                <View style={[styles.statusIcon, cardEmphasised ? live.statusIcon : live.statusIconQuiet]}>
+                  <Ionicons
+                    name={thisWeekDecision ? 'git-branch-outline' : 'clipboard-outline'}
+                    size={20}
+                    color={cardEmphasised ? t.colors.primary : t.colors.textSecondary}
+                  />
+                </View>
+                <View style={styles.statusText}>
+                  <Text style={[styles.statusTitle, live.statusTitle]}>{cardTitle}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+              </View>
+            </Card>
+          )}
           <NavGroup>
-          {/* R2-7 (remediation 2026-07-11, founder device walk build 2684):
-              the subtitle is ONE calm line - the readiness title only (a
-              short date fact like "First check-in 19 July", or the open/
-              needs-more one-liner). The explanatory sentence
-              (pendingCoachCopy.body) is NOT concatenated here; it is already
-              conveyed in full on WeeklyCheckInScreen (the row's destination),
-              so this row sits level with its one-line siblings instead of
-              wrapping to a four-line paragraph. */}
-          <NavRow
-            icon="clipboard-outline"
-            label="Weekly check-in"
-            sub={latestReview
-              ? 'Answer a few questions so your coach knows how your week went.'
-              : pendingCoachCopy.title}
-            onPress={() => navigation.navigate('WeeklyCheckIn')}
-          />
-          {/* R8 (D68): when a completed decision exists the tappable hero
-              card above IS the decision surface, so this row would be a
-              duplicate. It renders only as the archive path: no completed
-              decision for the current week, but past decisions exist
-              (e.g. a new Monday output before the check-in is answered). */}
-          {!latestReview && hasCoachHistory ? (
             <NavRow
-              icon="pulse-outline"
-              label="Coaching decision"
-              sub="Your latest coaching decision, kept here to look back on."
-              onPress={() => navigation.navigate('CoachOutput')}
+              icon="book-outline"
+              label="Your week"
+              sub="Your training, eating, weigh-ins and your coach's decision, in one place."
+              onPress={() => navigation.navigate('WeeklyStory')}
             />
-          ) : null}
-          <NavRow
-            icon="book-outline"
-            label="Your week"
-            sub="Your training, eating, weigh-ins and your coach's decision, in one place."
-            onPress={() => navigation.navigate('WeeklyStory')}
-          />
+            {pastDecision ? (
+              <NavRow
+                icon="pulse-outline"
+                label="Past decisions"
+                onPress={() => navigation.navigate('CoachOutput', { weekStart: pastDecision.weekStart })}
+              />
+            ) : null}
           </NavGroup>
         </View>
 
-        {/* Founder device order 2026-09-08: Community is the social feature,
-            not account "Support" - it never belonged under that heading,
-            and it sits above Setup now rather than below it. */}
-        <View style={styles.section}>
-          <NavGroup>
-          <NavRow
-            icon="people-outline"
-            label="Community"
-            sub="Connect with other lifters and share your training progress."
-            onPress={openCommunity}
-          />
-          </NavGroup>
-        </View>
+        {/* D231 (batch 4): "Your progress" (Training, Body, Progress photos,
+            Recovery) and "Looking back" (Consistency, Recaps, Year of lifts),
+            the Progress tab's rows, moved unchanged. The Body row is the
+            scroll target of `focusWeightTrend`. */}
+        <CoachProgress
+          navigation={navigation}
+          scrollRef={scrollRef}
+          focusBody={focusWeightTrend}
+          onFocusBodyDone={clearFocusWeightTrend}
+        />
 
-        {/* FOUNDER DECISION (fully free, no tier split): Setup renders for
-            everyone now. */}
-        {/* Coaching-first onboarding (founder brief 2026-10-19): the Setup rows
-            are coaching; until it is set up the card at the top is the way in. */}
+        {/* FOUNDER DECISION (fully free, no tier split): the coaching setup
+            renders for everyone now. */}
+        {/* Coaching-first onboarding (founder brief 2026-10-19): the setup rows
+            are coaching; until it is set up the card at the top is the way in.
+            D231: "Goal and phase" carries the focus line (phase, goal, days a
+            week) the profile card used to show, built by the same code;
+            Coaching reminders left for Settings. */}
         {coachingSetUp ? (
         <View style={styles.section}>
-          <SectionLabel>Setup</SectionLabel>
+          <SectionLabel>Your coaching setup</SectionLabel>
           <NavGroup>
           <NavRow
             icon="flag-outline"
-            label="Update goal and phase"
-            sub="Change your goal, phase, protein target or show date."
+            label="Goal and phase"
+            sub={profileFocus || null}
             onPress={() => navigation.navigate('ProGoalSetup')}
           />
           <NavRow
@@ -554,12 +477,6 @@ export default function YouScreen({ navigation }) {
             label="Nutrition targets"
             sub="Your daily calories, protein, carbs and fat, and why they are set where they are."
             onPress={() => navigation.navigate('NutritionTargets')}
-          />
-          <NavRow
-            icon="notifications-outline"
-            label="Coaching reminders"
-            sub="Reminders for your weigh-ins, weekly check-in, missed check-ins and planned meals."
-            onPress={() => navigation.navigate('CoachingReminders')}
           />
           </NavGroup>
         </View>
@@ -617,16 +534,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface2,
   },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  profileInfo: { flex: 1, gap: spacing.xxs },
-  profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  profileName: { ...type.h3, color: colors.textPrimary, flexShrink: 1 },
-  profileStat: { ...type.num('caption'), color: colors.textSecondary },
-  profileFocus: { ...type.captionTight, color: colors.textMuted },
   loadErrorCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -646,6 +553,7 @@ const styles = StyleSheet.create({
   loadErrorBody: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   statusCard: { gap: spacing.md },
   statusTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  statusText: { flex: 1 },
   statusIcon: {
     width: 40,
     height: 40,
@@ -656,9 +564,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.edge),
   },
+  // The countdown state is a fact, not an action: ink, not amber (D214 rule 3).
+  statusIconQuiet: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   // B-5: statusEyebrow's typography now comes from SectionLabel (tone="primary").
   statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  statusBody: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },
   about: { alignItems: 'center', paddingTop: spacing.md, gap: spacing.xs },
   aboutName: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textMuted },
@@ -677,16 +593,13 @@ function buildLiveStyles(t) {
     content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     settingsGear: { backgroundColor: t.colors.surface2 },
-    profileName: { ...t.type.h3, color: t.colors.textPrimary },
-    profileStat: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    profileFocus: { ...t.type.captionTight, color: t.colors.textMuted },
     loadErrorCard: { borderColor: t.colors.warning },
     loadErrorIcon: { backgroundColor: t.colors.warningBg },
     loadErrorTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     loadErrorBody: { ...t.type.caption, color: t.colors.textSecondary },
     statusIcon: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    statusIconQuiet: { backgroundColor: t.colors.surface2 },
     statusTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    statusBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     aboutName: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     aboutVersion: { ...t.type.caption, color: t.colors.textMuted },
   };

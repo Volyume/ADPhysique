@@ -84,7 +84,10 @@ describe('D152 / F-01: the lane is called "Injuries & limitations" everywhere a 
     const read = (rel) => fs.readFileSync(path.join(SRC_ROOT, rel), 'utf8');
     const NAME = 'Injuries & limitations';
     // 1. Coach tab row, 2. Train tab row, 3. Settings row.
-    expect(read('screens/YouScreen.js')).toContain(`label="${NAME}"`);
+    // RE-POINTED (D231, app layout rework batch 4): the Coach tab no longer has an
+    // "Injuries & limitations" row (its home is Train); the name is on Train and on
+    // the feature's own page.
+    expect(read('screens/YouScreen.js')).not.toContain(`label="${NAME}"`);
     // RE-POINTED (D231, app layout rework batch 2): the Train row is a NavRow in
     // Your setup now (it was a hand-built Card with a Text child).
     expect(read('screens/PlansScreen.js')).toContain(`label="${NAME}"`);

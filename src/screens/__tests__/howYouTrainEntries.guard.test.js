@@ -59,25 +59,27 @@ describe('1. Train tab: a row in Your setup, always shown', () => {
   });
 });
 
-describe('2. Coach tab: a tier-blind row above the Pro-only Setup', () => {
-  test('the row sits outside every isPro branch and before "This week"', () => {
-    const rowIdx = coach.indexOf('label="Injuries & limitations"');
-    expect(rowIdx).toBeGreaterThan(-1);
-    expect(rowIdx).toBeLessThan(coach.indexOf('<SectionLabel>This week</SectionLabel>'));
-    // The nearest preceding tier branch must be CLOSED before the row.
-    const before = coach.slice(0, rowIdx);
-    const lastOpen = before.lastIndexOf('{isPro ? (');
-    const lastClose = before.lastIndexOf(') : null}');
-    expect(lastClose).toBeGreaterThan(lastOpen);
-    expect(coach.slice(rowIdx - 400, rowIdx)).toContain('<SectionLabel>Your body</SectionLabel>');
+// RE-POINTED (D231, app layout rework batch 4): "Injuries & limitations" leaves
+// the Coach tab (its home is Train, section 1 above; Settings lost its row in
+// batch 5). The Coach screen carries no row for it, no door to HowYouTrain and no
+// read of the capability summary; HowYouTrain stays registered in the Coach stack
+// because screens that open it from there (Settings) and the capability sweep
+// need it.
+describe('2. Coach tab: no Injuries & limitations row (home: Train)', () => {
+  test('the Coach screen has no Injuries & limitations row, no "Your body" group and no door to HowYouTrain', () => {
+    expect(coach).not.toContain('label="Injuries & limitations"');
+    expect(coach).not.toContain('<SectionLabel>Your body</SectionLabel>');
+    expect(coach).not.toContain("navigate('HowYouTrain')");
+    expect(coach).not.toContain('hytSummary');
+    expect(coach).not.toContain('howYouTrainSummary');
   });
-  test('the row navigates to the feature and carries the live line', () => {
-    const row = coach.slice(coach.indexOf('label="Injuries & limitations"'), coach.indexOf('label="Injuries & limitations"') + 200);
-    expect(row).toContain('sub={hytSummary.sub}');
-    expect(row).toContain("navigation.navigate('HowYouTrain')");
-    expect(row).not.toContain('pro={');
+  test('HowYouTrain is still registered in the Coach stack', () => {
+    const nav = read('navigation/RootNavigator.js');
+    const stack = nav.slice(nav.indexOf('function ProfileStack('), nav.indexOf('\nfunction MainTabs'));
+    expect(stack).toContain('<Stack.Screen name="HowYouTrain"');
   });
 });
+
 
 describe('3. Home: one calm, one-time offer', () => {
   test('gated on nothing set up, the first session logged (or the old welcome flag), and an empty offer slot', () => {

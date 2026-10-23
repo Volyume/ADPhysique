@@ -612,9 +612,11 @@ describe('Pro screens mount without error', () => {
 // Skipped screens are ones that need props we can't easily mock (e.g.
 // WorkoutSummaryScreen reads route.params populated by the finish flow).
 
+// D231 (app layout rework, batch 4): AnalyticsScreen is retired. Its rows live in
+// components/coach/CoachProgress.js, which YouScreen (swept below) draws, so the
+// Coach screen's sweep entries and the targeted Progress tests further down cover
+// them.
 const SCREENS_TO_SWEEP = [
-  'AnalyticsScreen',
-  'AthleteProfileScreen',
   'BlockReflectionScreen',
   'BodyMetricsScreen',
   'BuildWorkoutScreen',
@@ -1169,7 +1171,7 @@ describe('Edge: empty arrays in expected-populated state', () => {
     }
   });
 
-  test('AnalyticsScreen with workouts but empty sets', async () => {
+  test('Coach (Your progress) with workouts but empty sets', async () => {
     const database = require('../lib/database');
     const orig = {
       getAllWorkouts: database.getAllWorkouts,
@@ -1182,7 +1184,7 @@ describe('Edge: empty arrays in expected-populated state', () => {
     database.getCompletedWorkoutSets = () => Promise.resolve([]);
     try {
       useAppStore.setState(STATE_VARIANTS[0].state);
-      const Screen = require('../screens/AnalyticsScreen').default;
+      const Screen = require('../screens/YouScreen').default;
       let tree = null;
       try {
         const { tree: t, errors } = await mountScreen(Screen);
@@ -1198,7 +1200,7 @@ describe('Edge: empty arrays in expected-populated state', () => {
     }
   });
 
-  test('AnalyticsScreen zero-data empty state stays on Progress without a Train CTA (A4)', async () => {
+  test('Coach zero-data empty state (Your progress) has no Train CTA (A4)', async () => {
     // True day-0: no workouts, no sets — the empty state must render with a
     // way forward, and tapping it must not throw (cross-tab getParent nav).
     //
@@ -1222,7 +1224,7 @@ describe('Edge: empty arrays in expected-populated state', () => {
     useFocusEffect.mockImplementation(cb => { React.useEffect(cb, [cb]); });
     try {
       useAppStore.setState(STATE_VARIANTS[0].state);
-      const Screen = require('../screens/AnalyticsScreen').default;
+      const Screen = require('../screens/YouScreen').default;
       let tree = null;
       try {
         const { tree: t, errors } = await mountScreen(Screen);
@@ -1230,13 +1232,14 @@ describe('Edge: empty arrays in expected-populated state', () => {
         expect(tree).not.toBeNull();
         expect(errors).toEqual([]);
         // Collected from Text nodes: toJSON() chokes on the circular
-        // refreshControl element AnalyticsScreen passes to its ScrollView.
+        // refreshControl element Progress passed to its ScrollView (kept: Text nodes only).
         const text = tree.root.findAll(n => n.type === 'Text')
           .map(n => (Array.isArray(n.props.children) ? n.props.children.join('') : n.props.children))
           .filter(c => typeof c === 'string')
           .join(' ');
-        expect(text).toContain('No training trends yet');
-        expect(text).toContain('Training charts appear here once sessions are logged.');
+        // D231 lead review: the Training row carries the empty state on Coach.
+        expect(text).toContain('No sessions logged yet');
+        expect(text).not.toContain('No training trends yet');
         expect(text).not.toContain('Start a workout');
         const { failures } = await bashTappables(tree);
         const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
@@ -1386,7 +1389,7 @@ describe('Workout lifecycle: start → log → finish', () => {
 // ─── Scale stress: large data shapes ─────────────────────────────────────
 
 describe('Scale stress: large data does not break render or interaction', () => {
-  test('Analytics with 200 workouts, 1500 sets', async () => {
+  test('Coach (Your progress) with 200 workouts, 1500 sets', async () => {
     const database = require('../lib/database');
     const orig = {
       getAllWorkouts: database.getAllWorkouts,
@@ -1416,7 +1419,7 @@ describe('Scale stress: large data does not break render or interaction', () => 
     );
     try {
       useAppStore.setState(STATE_VARIANTS[0].state);
-      const Screen = require('../screens/AnalyticsScreen').default;
+      const Screen = require('../screens/YouScreen').default;
       let tree = null;
       try {
         const { tree: t, errors } = await mountScreen(Screen);
@@ -1636,7 +1639,7 @@ describe('Stress: screens render against corrupted DB shapes', () => {
     }
   });
 
-  test('AnalyticsScreen: empty data set renders without crashing', async () => {
+  test('Coach (Your progress): empty data set renders without crashing', async () => {
     const database = require('../lib/database');
     const orig = {
       getAllWorkouts: database.getAllWorkouts,
@@ -1645,7 +1648,7 @@ describe('Stress: screens render against corrupted DB shapes', () => {
     database.getAllWorkouts = () => Promise.resolve([]);
     database.getCompletedWorkoutSets = () => Promise.resolve([]);
     try {
-      const Screen = require('../screens/AnalyticsScreen').default;
+      const Screen = require('../screens/YouScreen').default;
       const { tree, errors } = await mountScreen(Screen);
       expect(tree).not.toBeNull();
       expect(errors).toEqual([]);
@@ -1654,7 +1657,7 @@ describe('Stress: screens render against corrupted DB shapes', () => {
     }
   });
 
-  test('AnalyticsScreen: dataset with one workout and one set', async () => {
+  test('Coach (Your progress): dataset with one workout and one set', async () => {
     const database = require('../lib/database');
     const orig = {
       getAllWorkouts: database.getAllWorkouts,
@@ -1670,7 +1673,7 @@ describe('Stress: screens render against corrupted DB shapes', () => {
       setNumber: 1, setType: 'straight', actualReps: 10, weight: 60,
     }]);
     try {
-      const Screen = require('../screens/AnalyticsScreen').default;
+      const Screen = require('../screens/YouScreen').default;
       const { tree, errors } = await mountScreen(Screen);
       expect(tree).not.toBeNull();
       expect(errors).toEqual([]);

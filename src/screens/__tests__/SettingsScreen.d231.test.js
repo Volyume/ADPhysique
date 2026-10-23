@@ -7,10 +7,11 @@
  *     (the owner answered "Remove both"); the six headings stay, and Nutrition
  *     keeps "Dietary needs";
  *   - the "Community" row, under Privacy & data, opens Community privacy and
- *     sharing (CommunityPrivacy) inside the Community tab through
- *     `navigateCrossTab` (never a bare `navigation.navigate`, which no-ops
- *     across stacks), not the tab's root, and its sub line says what that
- *     screen holds;
+ *     sharing (CommunityPrivacy), not the tab's root, and its sub line says what
+ *     that screen holds. Batch 5 opened it inside the Community tab through
+ *     `navigateCrossTab`; batch 4 (the Progress tab's removal) registers the
+ *     screen in the Coach stack too, so the row opens it IN PLACE with a plain
+ *     `navigation.navigate('CommunityPrivacy')` and Back returns to Settings;
  *   - that screen is reachable by someone who has not joined Community (it
  *     answers "what would Community share" and offers a way in), which is why
  *     the row needs no non-member branch.
@@ -100,15 +101,15 @@ describe('D231: Settings loses two rows', () => {
 });
 
 describe('D231: the Community row opens Community privacy and sharing', () => {
-  test('it jumps into the Community tab\'s stack at CommunityPrivacy, not at the tab root', () => {
+  // RE-POINTED (D231, batch 4): in place, so Back returns to Settings.
+  test('it opens CommunityPrivacy in place (the Coach stack registers it), not the tab root and not across tabs', () => {
     const { tree, navigation } = mount();
     const row = rowNamed(tree, 'Community');
     expect(row).toBeTruthy();
     act(() => { row.props.onPress(); });
-    expect(navigateCrossTab).toHaveBeenCalledTimes(1);
-    expect(navigateCrossTab).toHaveBeenCalledWith(navigation, 'CommunityTab', 'CommunityPrivacy');
-    // A bare navigate from the Coach tab's stack would be a silent no-op.
-    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityPrivacy');
+    expect(navigateCrossTab).not.toHaveBeenCalled();
   });
 
   test('its sub line says what Community privacy and sharing holds, from the screen itself', () => {
@@ -125,10 +126,13 @@ describe('D231: the Community row opens Community privacy and sharing', () => {
     expect(privacy).toContain('title="Share what I did"');
   });
 
-  test('the destination is registered in the Community tab\'s stack', () => {
+  test('the destination is registered in the Coach stack (so the row opens it in place) and still in the Community tab\'s stack, with the same options', () => {
     const nav = read('navigation/RootNavigator.js');
-    const stack = nav.slice(nav.indexOf('function CommunityStack('), nav.indexOf('\nfunction ', nav.indexOf('function CommunityStack(') + 1));
-    expect(stack).toContain('<Stack.Screen name="CommunityPrivacy" component={CommunityPrivacyScreen}');
+    const body = (name) => nav.slice(nav.indexOf(`function ${name}(`), nav.indexOf('\nfunction ', nav.indexOf(`function ${name}(`) + 1));
+    const reg = (src) => (src.match(/<Stack\.Screen name="CommunityPrivacy"[^>]*\/>/) || [''])[0].replace(/\s+/g, ' ');
+    expect(reg(body('CommunityStack'))).toContain('component={CommunityPrivacyScreen}');
+    expect(reg(body('ProfileStack'))).toBe(reg(body('CommunityStack')));
+    expect(reg(body('ProfileStack'))).not.toBe('');
   });
 
   // Why the row has no non-member branch: the screen is built to be opened by
@@ -142,11 +146,11 @@ describe('D231: the Community row opens Community privacy and sharing', () => {
     expect(privacy).toMatch(/if \(!joined\) \{ setLoading\(false\); return; \}/);
   });
 
-  test('the source pins the same: one cross-tab call, no bare navigation to the Community tab or its root', () => {
+  test('the source pins the same: one in-place navigate to CommunityPrivacy, no cross-tab call and no navigation to the Community tab or its root', () => {
     const src = read('screens/SettingsScreen.js').replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(src).toContain("navigateCrossTab(navigation, 'CommunityTab', 'CommunityPrivacy')");
-    expect(src).not.toMatch(/navigateCrossTab\(navigation, 'CommunityTab'\)/);
-    expect(src).not.toMatch(/navigation\.navigate\('Community/);
+    expect(src).toContain("navigation.navigate('CommunityPrivacy')");
+    expect(src).not.toContain('navigateCrossTab');
+    expect(src).not.toMatch(/navigation\.navigate\('Community(?!Privacy)/);
     expect(src).not.toContain('HowYouTrain');
     expect(src).not.toContain('NutritionTargets');
   });

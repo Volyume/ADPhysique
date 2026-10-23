@@ -88,7 +88,8 @@ import {
 import { calculate1RM } from '../../lib/algorithms';
 import { getWeeklyLoadWindow, DEFAULT_LOAD_WEEKS } from '../../lib/progressSeries';
 import { deriveSafetyState, SAFETY_STATE_UNKNOWN } from '../../lib/safetyState';
-import LiftProgressScreen from '../LiftProgressScreen';
+import { getStrengthLevel } from '../../lib/strengthStandards';
+import LiftProgressScreen, { strengthRowSub } from '../LiftProgressScreen';
 
 const LIFT_PROGRESS_SOURCE = require('fs').readFileSync(
   require('path').resolve(__dirname, '../LiftProgressScreen.js'),
@@ -810,5 +811,107 @@ describe('LiftProgressScreen -- relative strength under the safety state (D228 i
     expect(text).toContain('Barbell Bench Press'); // the lift row stays
     expect(text).toMatch(/(Beginner|Novice|Intermediate|Advanced|Elite)/); // with its level word
     expect(text).toContain('overall across 1 main lift'); // the standing summary is a level, not a ratio
+  });
+});
+
+// D231 (app layout rework, 2026-10-22): the Athlete profile is retired and its
+// strength level "goes to Training" (owner answer, verbatim: "Retire it, move
+// its parts (Recommended)"). Lifts already carried the overall level, the
+// count of main lifts, each lift's level word and ratio, and the B3 prompts
+// for a missing body weight or no matching lift (pinned above). What it did
+// not carry was the profile's per-lift line "distance to the next level".
+// That moved here with its rule from D228 tier c: under an open flag, a failed
+// read or the unknown state the ratio goes and the distance (a figure in the
+// lift's own unit) stays; calm alone changes nothing. Each test is written to
+// fail against the screen without the line.
+describe('LiftProgressScreen -- the distance to the next level on each lift (D231)', () => {
+  const STATES = {
+    normal: deriveSafetyState({ mode: 'normal', edFlag: null }),
+    calm: deriveSafetyState({ mode: 'calm', edFlag: null }),
+    flag: deriveSafetyState({ mode: 'normal', edFlag: { id: 'f1' } }),
+    flagReadFailed: deriveSafetyState({ mode: 'normal', edFlag: 'read_failed' }),
+    wellbeingReadFailed: deriveSafetyState({ mode: 'read_failed', edFlag: null }),
+    unknown: SAFETY_STATE_UNKNOWN,
+  };
+
+  // Bench at 80 kg body weight: 90 x 5 is Advanced with Elite 15 kg away;
+  // 140 x 5 is already Elite, so there is no next level to name.
+  async function headerFor({ weight }) {
+    getLatestBodyWeight.mockResolvedValue({ weightKg: 80 });
+    getCompletedWorkoutSets.mockResolvedValue([
+      set({ exerciseId: 'bench', workoutId: 'w1', weight, reps: 5, at: 1000 }),
+    ]);
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+    const row = capturedListProps.data.find((r) => r.name === 'Barbell Bench Press');
+    const level = getStrengthLevel('Barbell Bench Press', row.bestE1rm, 80);
+    return { text: renderedText(capturedListProps.ListHeaderComponent), row, level };
+  }
+
+  test('not calm and not flagged: the ratio, then the distance to the next level, on the lift\'s own line', async () => {
+    const { text, row, level } = await headerFor({ weight: 90 });
+    const distance = `${(level.nextTarget - row.bestE1rm).toFixed(1)} kg to ${level.nextLabel}`;
+    expect(level.nextLabel).toBe('Elite');
+    expect(text).toContain(`${level.ratio.toFixed(2)}x your body weight - ${distance}`);
+  });
+
+  test('calm alone: nothing differs', async () => {
+    mockSafety.current = STATES.calm;
+    const { text, row, level } = await headerFor({ weight: 90 });
+    const distance = `${(level.nextTarget - row.bestE1rm).toFixed(1)} kg to ${level.nextLabel}`;
+    expect(text).toContain(`${level.ratio.toFixed(2)}x your body weight - ${distance}`);
+  });
+
+  test.each([
+    ['an open flag', 'flag'],
+    ['a failed flag read', 'flagReadFailed'],
+    ['a failed wellbeing read', 'wellbeingReadFailed'],
+    ['the unknown state', 'unknown'],
+  ])('%s: the ratio goes, the distance stays, the level word stays', async (_l, key) => {
+    mockSafety.current = STATES[key];
+    const { text, row, level } = await headerFor({ weight: 90 });
+    const distance = `${(level.nextTarget - row.bestE1rm).toFixed(1)} kg to ${level.nextLabel}`;
+    expect(text).toContain(distance);
+    expect(text).not.toMatch(/x your body weight|% of your body weight/);
+    expect(text).not.toMatch(/Based on \d/);
+    expect(text).toContain('Barbell Bench Press');
+    expect(text).toContain(level.label);
+  });
+
+  test('already at the top level there is no distance: the ratio alone, and under a flag no second line at all', async () => {
+    const normal = await headerFor({ weight: 140 });
+    expect(normal.level.nextLabel).toBeNull();
+    expect(normal.text).toMatch(/\d\.\d\dx your body weight/);
+    expect(normal.text).not.toMatch(/kg to /);
+    jest.clearAllMocks();
+    capturedListProps = null;
+    mockSafety.current = STATES.flag;
+    const flagged = await headerFor({ weight: 140 });
+    expect(flagged.text).not.toMatch(/x your body weight|% of your body weight|kg to /);
+    expect(flagged.text).toContain('Elite');
+  });
+});
+
+describe('strengthRowSub (pure; the rule the profile\'s liftBaselineSub carried, D228 tier c)', () => {
+  const level = { ratio: 1.45, label: 'Intermediate', nextLabel: 'Advanced', nextTarget: 140 };
+
+  test('not withheld: the ratio then the distance, "x" at one and above, a percentage below', () => {
+    expect(strengthRowSub({ level, bestE1rm: 120, units: 'kg', withheld: false }))
+      .toBe('1.45x your body weight - 20.0 kg to Advanced');
+    expect(strengthRowSub({ level: { ...level, ratio: 0.8 }, bestE1rm: 120, units: 'kg', withheld: false }))
+      .toBe('80% of your body weight - 20.0 kg to Advanced');
+    expect(strengthRowSub({ level: { ...level, nextLabel: null, nextTarget: null }, bestE1rm: 120, units: 'kg', withheld: false }))
+      .toBe('1.45x your body weight');
+  });
+
+  test('withheld: the ratio goes and the distance stays, in the lift\'s unit; none left is no line', () => {
+    expect(strengthRowSub({ level, bestE1rm: 120, units: 'lbs', withheld: true })).toBe('20.0 lbs to Advanced');
+    expect(strengthRowSub({ level: { ...level, nextLabel: null, nextTarget: null }, bestE1rm: 120, units: 'kg', withheld: true }))
+      .toBeNull();
+  });
+
+  test('a distance never goes negative and an unknown best e1RM names no distance', () => {
+    expect(strengthRowSub({ level, bestE1rm: 150, units: 'kg', withheld: true })).toBe('0.0 kg to Advanced');
+    expect(strengthRowSub({ level, bestE1rm: null, units: 'kg', withheld: true })).toBeNull();
   });
 });

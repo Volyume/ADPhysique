@@ -57,7 +57,9 @@ describe('RootNavigator: the ClipCamera route', () => {
     // RE-POINTED (D231, app layout rework batch 2): Train opens WorkoutSummary
     // (Recent sessions), so PlansStack registers it and ShareCard, and therefore
     // ClipCamera, like ProgressStack does.
-    expect(needing.map(([n]) => n).sort()).toEqual(['HomeStack', 'PlansStack', 'ProfileStack', 'ProgressStack']);
+    // RE-POINTED (D231, batch 4): the Progress stack is retired; the Coach stack
+    // (ProfileStack) carries WorkoutSummary and ShareCard, so three stacks need it.
+    expect(needing.map(([n]) => n).sort()).toEqual(['HomeStack', 'PlansStack', 'ProfileStack']);
     for (const [name, body] of needing) {
       expect({ name, registered: body.includes('name="ClipCamera"') }).toEqual({ name, registered: true });
     }
@@ -65,7 +67,7 @@ describe('RootNavigator: the ClipCamera route', () => {
 
   test('full screen, and no swipe-back that could end a recording by accident', () => {
     const registrations = NAV.match(/<Stack\.Screen name="ClipCamera"[^>]*\/>/g) || [];
-    expect(registrations).toHaveLength(4);
+    expect(registrations).toHaveLength(3); // D231 (batch 4): was 4 with the Progress stack
     for (const r of registrations) {
       expect(r).toContain('headerShown: false');
       expect(r).toContain('gestureEnabled: false');

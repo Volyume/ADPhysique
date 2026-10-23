@@ -43,7 +43,10 @@ function registrations(body) {
 }
 
 const plans = registrations(stackBody('PlansStack'));
-const progress = registrations(stackBody('ProgressStack'));
+// RE-POINTED (D231, batch 4): the Progress stack is retired; the Coach stack
+// (ProfileStack) registers these screens with the options the Progress stack
+// had, so the Coach registrations are the reference Train's must equal.
+const progress = registrations(stackBody('ProfileStack'));
 
 describe('D231 batch 2: Train opens WorkoutSummary, WorkoutHistory and VolumeHeatmap inside its own stack', () => {
   test.each(['WorkoutSummary', 'WorkoutHistory', 'VolumeHeatmap'])('%s is registered in PlansStack with the options it has in ProgressStack', (name) => {
