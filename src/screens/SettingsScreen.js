@@ -134,7 +134,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="person-outline"
           label="Profile"
-          sub="Name, sex, height, date of birth and diet preference"
+          sub="Picture, name, sex, height, age and diet preference"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsProfile'); }}
         />
         <SettingRow

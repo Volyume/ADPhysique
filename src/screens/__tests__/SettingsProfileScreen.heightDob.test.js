@@ -119,7 +119,9 @@ describe('CP-8: SettingsProfileScreen is free-tier reachable, unlike the Pro Nut
     // If a tier gate appears at all before this row, a sibling row opened
     // after it (proving the gate closed before reaching Profile).
     expect(lastTierGateBeforeProfile < lastRowBeforeProfile || lastTierGateBeforeProfile === -1).toBe(true);
-    expect(SETTINGS_ROOT).toMatch(/sub="Name, sex, height, date of birth and diet preference"/);
+    // D231 (batch 4b): the profile picture lives here now, and the field asks
+    // for an age (there is no date picker), so the row's line says both.
+    expect(SETTINGS_ROOT).toMatch(/sub="Picture, name, sex, height, age and diet preference"/);
   });
 });
 
