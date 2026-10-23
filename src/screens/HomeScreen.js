@@ -7,12 +7,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
-import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
-import CommunityHeaderAction from '../components/community/CommunityHeaderAction';
 import HomeCommunityIntroCard from '../components/HomeCommunityIntroCard';
 import HomeCommunityTodayRow from '../components/HomeCommunityTodayRow';
 import { readCachedMe, hasProfile } from '../lib/community/profile';
@@ -48,22 +46,23 @@ import { useToast } from '../components/Toast';
 // its content as one quiet line inline. buildBriefIconColor is still the
 // shared tone-colour source for the readiness chip below and stays imported.
 import { buildBriefIconColor } from '../components/CoachBriefCard';
-import HomeWelcomeCard from '../components/HomeWelcomeCard';
 import HomeHowYouTrainOfferCard from '../components/HomeHowYouTrainOfferCard';
 // D219 lane C1b: a plan the new planner did not build is rebuilt once at the first
 // open (before anything below reads it), with a one-time note of what changed.
-import PlanRebuildNote from '../components/PlanRebuildNote';
-import PlanRebuildChoiceCard from '../components/PlanRebuildChoiceCard';
+// D231 (app layout rework, batch 1): the note and the "Your plan can be
+// updated" choice are occupants of the Today line now, not cards in the scroll;
+// the note opens in PlanRebuildNoteSheet.
+import PlanRebuildNoteSheet from '../components/home/PlanRebuildNoteSheet';
 import { ensureActivePlanRebuilt } from '../lib/planRebuild';
-import HomeLastSessionCard from '../components/HomeLastSessionCard';
-import HomeChallengeCard from '../components/HomeChallengeCard';
-import { myChallenges } from '../lib/challenges/api';
+import {
+  getPlanRebuildNote, dismissPlanRebuildNote, getPlanRebuildChoice, dismissPlanRebuildChoice,
+} from '../lib/planRebuild';
 import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
 import HomeChangeWorkoutSheet from '../components/HomeChangeWorkoutSheet';
 import BottomSheet from '../components/BottomSheet';
-import Chip from '../components/Chip';
+import SessionIntentSheet from '../components/SessionIntentSheet';
 import * as haptics from '../lib/haptics';
-import { buildCoachBrief, constraintLineText } from '../lib/homeCoachBrief';
+import { buildCoachBrief } from '../lib/homeCoachBrief';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
 import { resolveHasUnseenCoachChange, COACH_OUTPUT_VIEWED_KEY_FOR } from '../lib/home/unseenCoachChange';
 import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
@@ -74,7 +73,7 @@ import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   recordSessionResolution,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
-  getWorkoutSetsForWorkout, getExerciseById, uid,
+  getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getExerciseLookup,
   getMorningWeightToday, getMorningWeights, logMorningWeight,
   getLatestCoachOutput,
@@ -102,6 +101,10 @@ import { WELLBEING_KEY } from '../lib/wellbeing';
 // the single unified P1 "Today line" and its pure priority arbiter.
 import TodayLine from '../components/home/TodayLine';
 import { resolveTodayLine } from '../lib/home/todayLineArbiter';
+// D231 (app layout rework, batch 1): one offer at a time under the main card.
+import { resolveOfferSlot } from '../lib/home/offerSlot';
+// D231: keeps the Community tab's dot published now Today's header button is gone.
+import CommunityUnseenSync from '../components/home/CommunityUnseenSync';
 // Final pass D-P2-2 (certification 2026-09-05): a circuit day names itself
 // on Today instead of reading as a generic "N exercises".
 import { summariseCircuitGroups, formatCircuitPreviewLine } from '../lib/circuitRound';
@@ -123,12 +126,7 @@ import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan'
 import { prepareStartWithPlanOption, saveChosenProfile } from '../lib/startWithPlan';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { logError, logWarn } from '../lib/errorLog';
-import { calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-// D218 (founder order 2026-10-03, "ensure all exercises are logged and reported
-// correct after the workout ends"): a finished session's total is read on one
-// basis everywhere, each set's own exercise type and load semantics through the
-// shared lookup (src/lib/sessionReport.js).
-import { buildSessionReport } from '../lib/sessionReport';
+import { calculateWeeklyVolume } from '../lib/algorithms';
 import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
@@ -152,39 +150,6 @@ import useScreenReady from '../lib/telemetry/useScreenReady';
 // founder device order of 2026-08-17: it pushed the content down and added
 // nothing the header's title does not already say. Do not re-add a greeting
 // line without a founder order.
-
-// COMP-008: the three pre-workout readiness rows shown beneath the intent
-// options. Each is an optional low/middle/high chip. Stored values match the
-// scales the workout row + its readers expect: soreness on the existing 1-3
-// (Fresh/Mild/Sore) scale the adaptive engine + computeRecoveryEMAs read;
-// sleep + energy on the 1-5 domain (chips offer 2/3/4) so the weekly
-// sleep_quality write and CoachReview's <2.5 thresholds stay valid.
-// R2-10 (founder decision "Reorder", 2026-07-11): the rows render ABOVE the
-// intent options now, compacted to one line each (`short` is the inline
-// label; `label` stays the full accessible phrasing). The old layout put
-// them BELOW the three buttons that start the session, so they were
-// unreachable the moment the user answered - the founder rightly called
-// them pointless as laid out.
-const READINESS_ROWS = [
-  {
-    key: 'soreness24hBefore',
-    label: 'Soreness coming in',
-    short: 'Soreness',
-    chips: [{ label: 'Fresh', value: 1 }, { label: 'Mild', value: 2 }, { label: 'Sore', value: 3 }],
-  },
-  {
-    key: 'sleepQuality',
-    label: 'Sleep last night',
-    short: 'Sleep',
-    chips: [{ label: 'Poor', value: 2 }, { label: 'OK', value: 3 }, { label: 'Good', value: 4 }],
-  },
-  {
-    key: 'energyScore',
-    label: 'Energy today',
-    short: 'Energy',
-    chips: [{ label: 'Low', value: 2 }, { label: 'OK', value: 3 }, { label: 'High', value: 4 }],
-  },
-];
 
 // D112 R5 (closes audit T1-12): after a successful generation, the count of
 // slots the capability lane blocked (PlanUpdateScreen's dry-run preview is
@@ -225,8 +190,8 @@ export default function HomeScreen({ navigation, route }) {
   // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
   // here -- every branch that used to fork on it now runs the single
   // full-access behaviour for everyone (see proGate.js FULL_ACCESS_FOR_ALL).
-  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, units, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, units: s.units, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
+  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
@@ -252,32 +217,12 @@ export default function HomeScreen({ navigation, route }) {
     // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): the "Progress at a glance"
     // card is removed (3-way duplication fix); its live styles go with it.
     coachBriefLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    // D112 R5 (closes audit T1-14/T2-31, T1-15/T2-24): standalone
-    // constraint / AWAITING rows, same live-theme shape as the brief line.
-    constraintGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
-    constraintLineRow: { borderBottomColor: t.colors.borderSubtle },
-    constraintLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
     coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     coachingNudgeLeft: { backgroundColor: t.colors.primaryBg },
     coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
     coachingNudgeBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     coachingNudgeScanSubline: { ...t.type.captionTight, color: t.colors.textMuted },
-    intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
-    intentOptionIcon: { backgroundColor: t.colors.primaryBg },
-    readinessGroupLabel: { ...t.type.overline, color: t.colors.textMuted },
-    intentOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    intentOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
-    readinessLabel: { ...t.type.caption, color: t.colors.textSecondary },
-    readinessChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 ?? t.colors.background },
-    readinessChipActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
-    readinessChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    readinessChipTextActive: { color: t.colors.primary },
-    intentSkipText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     skipSessionText: { ...t.type.caption, color: t.colors.textMuted },
-    intentOptOutText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    intentOptOutSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     coachBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     coachBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
     coachBannerBody: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -406,14 +351,7 @@ export default function HomeScreen({ navigation, route }) {
   const [showChangeWorkout, setShowChangeWorkout] = useState(false);
   const [isStartingWorkout, setIsStartingWorkout] = useState(false);
   const [lastSession, setLastSession] = useState(null);
-  const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
   const [blockProgress, setBlockProgress] = useState([]);
-  // CC33 D112 R5 (closes audit T2-25's copy half): the durable
-  // reintroduction line for the plan view - non-null while this week's
-  // planned volume carries rows stamped source 'reintroduction' (the §23
-  // ramp wrote them), so the build-back is visible every week it is
-  // happening, not only in the one toast at episode end.
-  const [rampLine, setRampLine] = useState(null);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
   // Stage 8: block-start seed lines for the block sheet (written-plan truth).
   const [blockSeedLines, setBlockSeedLines] = useState([]);
@@ -445,9 +383,12 @@ export default function HomeScreen({ navigation, route }) {
   // tutorial sentence -- defaults true so the line never flashes for an
   // established user while this loads.
   const [hasEverLoggedWeight, setHasEverLoggedWeight] = useState(true);
-  // First-launch welcome guide. Defaults to hidden so it never flashes before the
-  // saved flag is read; the loader reveals it for a brand-new user (no sessions
-  // logged) who hasn't dismissed it. Auto-clears once totalSessions > 0.
+  // The old welcome-card flag. D231 (app layout rework, batch 1): the Welcome
+  // card is gone (the main card already says "Start your first workout"), but
+  // the stored flag is still read, because the injuries question keeps its
+  // timing: it waits until the first session is logged, or the old
+  // welcome-dismissed flag is set (an existing user who retired the card).
+  // Defaults to true so the question never flashes before the flag is read.
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
   // D134 (founder 2026-09-03): the one-time Injuries & limitations offer. Defaults
   // dismissed so it never flashes before the stored flag is read; shown only
@@ -457,9 +398,14 @@ export default function HomeScreen({ navigation, route }) {
   // dismissed so it never flashes before the stored flag and the cached
   // profile are read; never shown to someone who already has a profile.
   const [communityIntroDismissed, setCommunityIntroDismissed] = useState(true);
-  // Gym challenge (SPEC section 2): the person's active or just-ended challenge
-  // from gym_challenge_mine, or null. Hidden until the read answers.
-  const [homeChallenge, setHomeChallenge] = useState(null);
+  // D231 (app layout rework, batch 1): the plan-rebuild facts the Today line
+  // reads. planChoiceProgrammeId is the active plan's id while the structure
+  // engine needs a choice from the person to rebuild it (and they have not set
+  // it aside), else null; planRebuildNote is the one-time "what changed" note
+  // the rebuild wrote, else null; showPlanRebuildNote is the sheet that opens it.
+  const [planChoiceProgrammeId, setPlanChoiceProgrammeId] = useState(null);
+  const [planRebuildNote, setPlanRebuildNote] = useState(null);
+  const [showPlanRebuildNote, setShowPlanRebuildNote] = useState(false);
   // Founder order 2026-09-22 item 2 x 4a: the Today live Community row.
   // Defaults hidden (never a flash of the wrong state) until the loader
   // below confirms membership from the CACHED profile and the ED/calm
@@ -474,10 +420,10 @@ export default function HomeScreen({ navigation, route }) {
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
-  // R2-1: single-flight guard across every start surface (start button,
-  // repeat-last-session). Synchronous ref, so a double-tap or a second
-  // surface can never queue a second intent-sheet open that would resolve
-  // after the workout has already begun.
+  // R2-1: single-flight guard across every start surface (the start button
+  // here; Repeat starts from Train since D231). Synchronous ref, so a
+  // double-tap or a second surface can never queue a second intent-sheet open
+  // that would resolve after the workout has already begun.
   // The merged "Start with a plan" action (D137) generates the whole plan
   // from the empty state; a second tap while the first run is still awaiting
   // preflight or the generator would start a second generation.
@@ -495,16 +441,9 @@ export default function HomeScreen({ navigation, route }) {
   // state cannot provide by itself.
   const [preparingPlan, setPreparingPlan] = useState(false);
   const startFlowRef = useRef(false);
-  // COMP-008: the three "walked-in-with" readiness facts, captured on the
-  // pre-workout prompt where they are accurate rather than recalled after the
-  // session. All optional, reset each time the prompt opens. Stored on the
-  // scales the workout row + its readers expect (soreness 1-3; sleep/energy on
-  // the 1-5 domain, the chips offering 2/3/4).
-  const [readiness, setReadiness] = useState({
-    soreness24hBefore: null,
-    sleepQuality: null,
-    energyScore: null,
-  });
+  // COMP-008: the three "walked-in-with" readiness facts are captured by the
+  // pre-workout prompt (SessionIntentSheet, D231: shared with Train's Repeat),
+  // which hands them to confirmStart with the intent.
   // C18 recovery visibility. NOT a dismissal: the card only collapses once the
   // athlete has opened the explanation, and it never disappears while the
   // state is true. Keyed by block AND state, so a later adaptive reduction, or
@@ -627,19 +566,47 @@ export default function HomeScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // The gym challenge card: one best-effort read, never awaited by loadData so
-  // a slow connection cannot hold Home's first paint. Any failure hides it.
-  function loadHomeChallenge() {
-    if (!user?.id) { setHomeChallenge(null); return; }
-    myChallenges()
-      .then((rows) => {
-        const row = rows.find((r) => r?.status === 'active' || r?.status === 'ended') ?? null;
-        setHomeChallenge(row);
-      })
-      .catch(() => {
-        // best-effort: no card is shown when the read fails.
-        setHomeChallenge(null);
-      });
+  // D231 (app layout rework, batch 1): the two plan-rebuild facts the Today line
+  // reads, from the same local records the two cards they replace read
+  // (planRebuild.js: getPlanRebuildChoice, getPlanRebuildNote). Run inside
+  // loadData's Promise.all, which starts after ensureActivePlanRebuilt has
+  // settled, so a note written by a rebuild during this load is read. Both
+  // reads are local and never throw; a failure shows nothing (the safe answer).
+  async function loadPlanRebuildFacts() {
+    try {
+      if (!user?.id) { setPlanChoiceProgrammeId(null); setPlanRebuildNote(null); return; }
+      const plan = await getActivePlan(user.id).catch(() => null);
+      const [choiceDue, note] = await Promise.all([
+        plan?.id ? getPlanRebuildChoice(user.id, plan.id) : false,
+        getPlanRebuildNote(user.id),
+      ]);
+      setPlanChoiceProgrammeId(choiceDue === true ? plan.id : null);
+      setPlanRebuildNote(note ?? null);
+    } catch (e) {
+      logWarn('HomeScreen.loadPlanRebuildFacts', e?.message);
+      setPlanChoiceProgrammeId(null);
+      setPlanRebuildNote(null);
+    }
+  }
+
+  // "Not now" on the plan update choice: the same stored dismissal the card's
+  // "Not now" wrote, so the plan is untouched and the line is not shown again.
+  function dismissPlanChoice() {
+    const programmeId = planChoiceProgrammeId;
+    setPlanChoiceProgrammeId(null);
+    dismissPlanRebuildChoice(user?.id, programmeId).catch(() => {
+      // best-effort: hidden for this view either way
+    });
+  }
+
+  // "Got it" on the plan-rebuilt note: retires it exactly as the card's "Got it"
+  // did (the note is kept, marked dismissed, so it is never written again).
+  function dismissPlanNote() {
+    setShowPlanRebuildNote(false);
+    setPlanRebuildNote(null);
+    dismissPlanRebuildNote(user?.id).catch(() => {
+      // best-effort: the note is gone for this view either way
+    });
   }
 
   async function loadData() {
@@ -649,7 +616,6 @@ export default function HomeScreen({ navigation, route }) {
     // throw and would otherwise skip setInitialLoading(false).
     const reqId = ++loadReqRef.current;
     const loadedForDay = todayLocalKey();
-    loadHomeChallenge();
     try {
       // D219 lane C1b (founder Q1 = A): the first open of an active plan whose facts
       // are not version 2 rebuilds it by its kind, so every loader below reads the
@@ -669,6 +635,7 @@ export default function HomeScreen({ navigation, route }) {
         loadCommunityIntro(),
         loadCommunityFriendsRow(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
+        loadPlanRebuildFacts(), // D231: the plan update choice and the plan-rebuilt note
         loadTodayWeight(reqId),
         loadLatestCoachOutput(),
         loadFirstReviewFacts(reqId),
@@ -958,19 +925,13 @@ export default function HomeScreen({ navigation, route }) {
     if (!welcomeKey) return;
     try {
       const v = await AsyncStorage.getItem(welcomeKey);
-      // Absent flag (a brand-new user) -> show; 'true' -> already dismissed.
+      // Absent flag (a brand-new user) -> not dismissed; 'true' -> an existing
+      // user already retired the old welcome card.
       setWelcomeDismissed(v === 'true');
     } catch (_) {
       setWelcomeDismissed(true);
     }
   }
-
-  // useCallback: HomeWelcomeCard is memoised (React.memo), so a stable
-  // handler identity actually stops it re-rendering on every Home tick.
-  const dismissWelcome = useCallback(() => {
-    setWelcomeDismissed(true);
-    if (welcomeKey) AsyncStorage.setItem(welcomeKey, 'true').catch(() => {});
-  }, [welcomeKey]);
 
   async function loadPhaseBanner() {
     try {
@@ -1223,20 +1184,10 @@ export default function HomeScreen({ navigation, route }) {
 
   async function loadWeekStats() {
     try {
-      const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
-      // LB-7: this card needs at most the last four weeks of sets, not every
-      // set ever logged. Load that bounded slice once; the workout list is
-      // rows, not sets.
-      const [allWorkouts, recentSets, lookup] = await Promise.all([
-        getAllWorkouts(user.id),
-        getWorkoutSetsSince(user.id, fourWeeksAgo),
-        // D218 (audit F-8 part 2): the shared exercise lookup (unfiltered,
-        // survivor-aware) says each logged set's exercise type and load
-        // semantics for the last session's total below. Best-effort:
-        // it only refines them, so a failed read reads as null and the totals
-        // fall back to plain weight x reps, as the old library read did.
-        getExerciseLookup().catch(() => null),
-      ]);
+      // The workout list is rows, not sets: the session count and the newest
+      // finished session are all this reads (the last-session row and its
+      // totals moved to Train, D231).
+      const allWorkouts = await getAllWorkouts(user.id);
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
       setTotalSessions(completed.length);
@@ -1286,45 +1237,8 @@ export default function HomeScreen({ navigation, route }) {
 
 
 
-      // Compute tonnage for last session. Usually inside the four-week
-      // window already loaded; if the last session is older than that
-      // (a returning user), fetch just that one workout's sets. A session
-      // that started within a day of the window's edge reads its own sets
-      // too: the window is cut by each set's time, so it could hold only part
-      // of that session, and the recomputed total now wins over the stored
-      // one (verification pass on the D218 review fixes, NIT 5).
-      if (completed[0]) {
-        const lastId = completed[0].id;
-        const lastStart = Number(completed[0].startedAt) || 0;
-        let lastSets = lastStart >= fourWeeksAgo + 24 * 60 * 60 * 1000
-          ? recentSets.filter(s => s.workoutId === lastId)
-          : [];
-        if (lastSets.length === 0) {
-          lastSets = await getWorkoutSetsForWorkout(lastId);
-        }
-        // D107-2 and D218 (audit F-8 part 2, P20): per-hand sets count x2,
-        // assistance is excluded, and a distance or duration set (metres or
-        // seconds in the weight column) is not kilograms, each by the set's own
-        // exercise, so this row reads the basis the Summary hero reads. The
-        // lookup was read above; a failed read falls back to unmapped totals.
-        // Review of D218 (NIT 15): with the lookup and the sets read, this
-        // recomputed total is the one History and the summary print, so it
-        // wins over the stored workouts.total_volume, which a session finished
-        // before D218 counted with distance metres and one hand of a per-hand
-        // pair (0 included: a session with nothing loaded shows no total).
-        // Without the sets the stored figure stands; without the lookup the
-        // plain total is shown only when nothing is stored.
-        const report = lastSets.length > 0 ? buildSessionReport(lastSets, lookup) : null;
-        if (report && lookup) {
-          setLastSessionTonnage(report.tonnage);
-        } else if (report && !(completed[0].totalVolume > 0) && report.tonnage > 0) {
-          setLastSessionTonnage(report.tonnage);
-        } else {
-          setLastSessionTonnage(null);
-        }
-      } else {
-        setLastSessionTonnage(null);
-      }
+      // D231 (app layout rework, batch 2): the last-session row left Today for
+      // Train, and with it the "kg lifted" total it computed here.
 
       // D224: Today runs no deload check; the fatigue-based recovery-week
       // suggestion is a recovery reading and lives on Progress.
@@ -1492,16 +1406,9 @@ export default function HomeScreen({ navigation, route }) {
       // muscle. Same mapper either way, so the two cards can never disagree
       // about what "planned"/"actual"/"label" mean for a shared muscle.
       setBlockProgress(buildBlockProgressRows(planned, actual, { limit: 8 }));
-      // T2-25: this week's rows already in hand - read the ramp stamp
-      // off them rather than fetching anything new.
-      try {
-        // eslint-disable-next-line global-require
-        const { rampMusclesFromPlannedRows, reintroductionRampLine } = require('../lib/capability/reintroduction');
-        const rampMuscles = rampMusclesFromPlannedRows(planned);
-        setRampLine(rampMuscles.length
-          ? reintroductionRampLine(rampMuscles.map((m) => MUSCLE_DISPLAY_NAMES[m] || m))
-          : null);
-      } catch (_e) { setRampLine(null); }
+      // D231 (app layout rework, batch 2): the reintroduction line that was read
+      // off this week's planned rows here moved to Train with the rest of the
+      // Injuries & limitations lines (src/lib/capability/injuryLines.js).
     } catch (_e) {}
   }
 
@@ -1847,9 +1754,8 @@ export default function HomeScreen({ navigation, route }) {
         confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
         return;
       }
-      // Clear any readiness from a previously-cancelled prompt so each session
-      // starts from blank chips and no remembered intent.
-      setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
+      // The sheet clears any readiness from a previously-cancelled prompt each
+      // time it opens, so each session starts from blank chips.
       setShowIntentPrompt(true);
     } catch (e) {
       setIsStartingWorkout(false);
@@ -1861,9 +1767,9 @@ export default function HomeScreen({ navigation, route }) {
   }
 
   // COMP-008: an intent tap carries whatever readiness chips were set; Skip
-  // passes intent null and no readiness (see the intent sheet). The values flow
-  // straight into createWorkout, which writes them to the workout row.
-  async function confirmStart(intent, readinessOverride = readiness) {
+  // passes intent null and no readiness (see SessionIntentSheet). The values
+  // flow straight into createWorkout, which writes them to the workout row.
+  async function confirmStart(intent, readinessOverride) {
     setShowIntentPrompt(false);
     const pending = pendingStartRef.current;
     if (!pending) return;
@@ -1917,133 +1823,9 @@ export default function HomeScreen({ navigation, route }) {
     }
   }
 
-  // useCallback: HomeLastSessionCard is memoised (React.memo), so a stable
-  // handler identity actually stops it re-rendering on every Home tick.
-  const handleRepeatLastSession = useCallback(async () => {
-    if (!lastSession) return;
-    // R2-1: same single-flight guard as handleStartNextWorkout - this is the
-    // other surface that opens the intent sheet, and the two must never race.
-    if (startFlowRef.current || showIntentPrompt || isStartingWorkout) return;
-    startFlowRef.current = true;
-    const routineId = lastSession.routineId || lastSession.routine_id || null;
-
-    try {
-      let initialExercises;
-      if (routineId) {
-        // Load the FULL routine, not just what was done last time
-        const withExercises = await getRoutineExercisesWithDetails(routineId);
-        initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-          exercise, routineExercise, sets: [],
-          supersetGroupId: routineExercise?.supersetGroupId ?? null,
-          // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
-          // hydrate the circuit stamp + round rest alongside the superset id.
-          groupKind: routineExercise?.groupKind ?? null,
-          roundRestSeconds: routineExercise?.roundRestSeconds ?? null,
-        }));
-      } else {
-        // No routine linked, fall back to exercises from the session's sets
-        const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
-        const seenIds = [];
-        const orderedExerciseIds = [];
-        const setCounts = {};
-        for (const s of prevSets) {
-          if (!s.exerciseId) continue;
-          if (!seenIds.includes(s.exerciseId)) {
-            seenIds.push(s.exerciseId);
-            orderedExerciseIds.push(s.exerciseId);
-          }
-          if ((s.setType ?? s.set_type ?? 'straight') !== 'warmup') {
-            setCounts[s.exerciseId] = (setCounts[s.exerciseId] || 0) + 1;
-          }
-        }
-        // Round 13 (R13-1): this was the FOURTH keyless slot construction
-        // - the session effects record keys per slot (rowId =
-        // routineExercise.id), and rounds 11-12 minted ids at the other
-        // three ad-hoc entry points while Home's own repeat card built
-        // routineExercise: null, so the whole per-slot machinery
-        // (conversion on removal included) silently degraded on exactly
-        // these sessions. Adapted from WorkoutHistoryScreen's
-        // repeat-as-is shape (minted id + the previous session's
-        // working-set count, so the target line stays honest) - the one
-        // deliberate difference: an all-warm-up previous session falls
-        // to 3 here rather than the warm-up count.
-        //
-        // D218 (founder order 2026-10-03, audit F-2, P7): an exercise whose id
-        // getExerciseById cannot find (an id never seeded here, another
-        // device's custom exercise before its pull) is no longer dropped in
-        // silence. It is tried against the shared lookup by its own logged
-        // name snapshot first, and when one is still left out the person is
-        // told, calmly, how many. The repeat proceeds either way. Review of
-        // D218 (NIT 11): "not on this device" is said only when both reads
-        // worked and neither found it; when a read failed, the exercise
-        // "could not be loaded", which is what happened.
-        const READ_FAILED = Symbol('readFailed');
-        const foundById = await Promise.all(
-          orderedExerciseIds.map(id => getExerciseById(id).catch(() => READ_FAILED)),
-        );
-        let lookup;
-        const repeatable = [];
-        const repeatedIds = new Set();
-        let leftOut = 0;
-        let leftOutUnread = 0;
-        for (let i = 0; i < orderedExerciseIds.length; i += 1) {
-          const loggedId = orderedExerciseIds[i];
-          const byIdFailed = foundById[i] === READ_FAILED;
-          let exercise = byIdFailed ? null : foundById[i];
-          if (!exercise) {
-            if (lookup === undefined) lookup = await getExerciseLookup().catch(() => null);
-            exercise = lookup?.resolve(prevSets.find(s => s.exerciseId === loggedId)) ?? null;
-            if (!exercise && (byIdFailed || lookup == null)) leftOutUnread += 1;
-          }
-          // Two logged ids that are one exercise (a retired id and the
-          // exercise it became) are repeated once.
-          if (exercise && repeatedIds.has(exercise.id)) continue;
-          if (exercise) {
-            repeatedIds.add(exercise.id);
-            // The target count follows the exercise: one found under another
-            // id (a name match, a survivor) carries the working-set count of
-            // the id its sets were logged under.
-            if (setCounts[exercise.id] === undefined && setCounts[loggedId] !== undefined) {
-              setCounts[exercise.id] = setCounts[loggedId];
-            }
-            repeatable.push(exercise);
-          } else {
-            leftOut += 1;
-          }
-        }
-        initialExercises = repeatable.map(exercise => ({
-          exercise,
-          routineExercise: { id: uid(), recommendedSets: setCounts[exercise.id] || 3 },
-          sets: [],
-        }));
-        const leftOutMissing = leftOut - leftOutUnread;
-        const leftOutLines = [];
-        if (leftOutMissing > 0) {
-          leftOutLines.push(leftOutMissing === 1
-            ? 'One exercise from that session is not on this device, so it was left out.'
-            : `${leftOutMissing} exercises from that session are not on this device, so they were left out.`);
-        }
-        if (leftOutUnread > 0) {
-          leftOutLines.push(leftOutUnread === 1
-            ? 'One exercise from that session could not be loaded, so it was left out.'
-            : `${leftOutUnread} exercises from that session could not be loaded, so they were left out.`);
-        }
-        if (leftOutLines.length > 0) {
-          toast.show(leftOutLines.join(' '), { variant: 'info', duration: 5000 });
-        }
-      }
-
-      pendingStartRef.current = { routineId, initialExercises };
-      setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
-      setShowIntentPrompt(true);
-    } catch (e) {
-      logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
-      toast.show('Could not load your last session. Please try again.', { variant: 'error' });
-    } finally {
-      startFlowRef.current = false;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastSession, user?.id, toast]);
+  // D231 (app layout rework, batch 2): "Repeat" left the Today last-session row
+  // for the newest card in Train's Recent sessions. What it assembles lives in
+  // src/lib/repeatSession.js; the readiness ask is SessionIntentSheet, shared.
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   // D219: the session the hero shows and starts is the person's own pick from
@@ -2087,6 +1869,9 @@ export default function HomeScreen({ navigation, route }) {
   // deliberate choice to train anyway, so it drops states 2 and 3 to state 4
   // and the athlete gets the ordinary Start action for what they chose.
   const blockAwaitingDecision = !!currentMesoWeek?.awaitingDecision && !selectedWorkoutOverride;
+  // D231 (dedupe): true while the main card reads "Block complete" (the resume
+  // card outranks it, and the arbiter is silent under a live workout anyway).
+  const mainCardShowsBlockComplete = !hasActiveWorkout && blockAwaitingDecision;
   const weekComplete = !blockAwaitingDecision
     && isWeekComplete(programmePosition) && !selectedWorkoutOverride;
   // Founder device order 2026-09-08: the eyebrow overflowed even at two
@@ -2128,36 +1913,21 @@ export default function HomeScreen({ navigation, route }) {
   // Compute pre-workout coaching brief (shown only when plan active + not trained today + not dismissed)
   const showCoachBrief = !!activePlan && !hasActiveWorkout && lastWorkoutDaysAgo !== 0 && !briefDismissed;
 
-  // CC31 (section BD-D8): detect active episode-role capability constraint.
-  // Best-effort: error → false. Try to use composed intentState if available,
-  // otherwise lazy-load the resolve state.
-  // D112 R5 (closes audit T1-14/T2-31): "applied" narrowed to match the
-  // gate serve-time substitution itself uses (sessionEffective.js) -- an
-  // episode rule that is only declared, not yet Applied, is not actually
-  // changing what the logger serves, so the line must not claim it is.
-  const [activeConstraint, setActiveConstraint] = useState(false);
-  // Natural coach-language order (2026-08-21): the short honest name for
-  // what the temporary change covers, or null for the generic brief line.
-  const [constraintSubject, setConstraintSubject] = useState(null);
+  // D231 (app layout rework, batch 2): the works-around line, the reintroduction
+  // line and the could-not-check line moved to Train (src/lib/capability/
+  // injuryLines.js, read by useInjuryLines). What this read still feeds is the
+  // Today line's limitation decision and the injuries question's offer.
   // D112 R5 (closes audit T1-15/T2-24): the one episode group (if any)
   // sitting in AWAITING_CONFIRMATION -- past its planned end, still
   // applying (fail-safe), not yet answered. null when none is awaiting.
   const [awaitingConstraint, setAwaitingConstraint] = useState(null);
   // CC33 adversarial review (E1): a rule that ARRIVED undecided - synced
   // from another device, or left unanswered across a relaunch - was
-  // invisible here (the works-around line needs 'applied'), so the only
-  // surface that could offer the decision was HowYouTrain itself. One
-  // quiet ask-class row closes that; tapping through lands on the screen
-  // whose own focus detector (T1-06) proposes immediately.
+  // invisible here, so the only surface that could offer the decision was
+  // HowYouTrain itself. The Today line's limitation decision closes that;
+  // tapping through lands on the screen whose own focus detector (T1-06)
+  // proposes immediately.
   const [undecidedConstraint, setUndecidedConstraint] = useState(false);
-  // CC33 round 9 (B4/E1): when the capability read fails with NO known
-  // state this session, the resolver synthesises an EMPTY state
-  // (unavailable: true, stale: false - resolve.js section 9.6), every row
-  // above simply vanishes, and "could not check" was indistinguishable
-  // from "nothing going on". One quiet non-tappable line says so honestly.
-  // Stale-but-KNOWN state (unavailable && stale) keeps serving normally
-  // per CAP-17, exactly as the tappable rows already do.
-  const [capabilityCheckFailed, setCapabilityCheckFailed] = useState(false);
   // T2-30 (D112 R6, verified at W4 build 2026-08-28): this read only ever
   // re-ran on [user?.id], so a rule that arrived by sync while Home sat in
   // the background (or a rule ended/changed on another screen) never
@@ -2171,7 +1941,7 @@ export default function HomeScreen({ navigation, route }) {
       // Round 10 (B4): the cancellation guard the effect's setters never
       // had - two overlapping focus cycles resolving out of order (a
       // slow failing read landing after a fast good one) could leave any
-      // of the five flags describing the older read. Blur cancels the
+      // of the flags describing the older read. Blur cancels the
       // in-flight application; only the current focus's read writes.
       let cancelled = false;
       (async () => {
@@ -2189,18 +1959,6 @@ export default function HomeScreen({ navigation, route }) {
             const full = await loadCapabilityState(user.id);
             if (!cancelled) setHytNothingSetUp(!full.unavailable && !full.baseline.length && !full.episodes.length && !full.history.length);
           } catch (_) { if (!cancelled) setHytNothingSetUp(false); }
-          const episodeRows = Array.isArray(state?.restrictions)
-            // Lead tighten (W3 review, D112 R8): a HELD episode must not
-            // drive the "works around" line - the serve layer holds it, so
-            // the claim would be false. Applied-and-not-held only, matching
-            // the serve gate plus the hold filter it gained.
-            ? state.restrictions.filter(r => r.role === 'episode' && r.effectiveChoice === 'applied' && r.adaptationMode !== 'hold') : [];
-          setActiveConstraint(episodeRows.length > 0);
-          try {
-            // eslint-disable-next-line global-require
-            const { subjectPhrase } = require('../lib/capability/phrase');
-            setConstraintSubject(subjectPhrase(episodeRows, {}));
-          } catch (_) { setConstraintSubject(null); }
           // T1-15/T2-24: grouped the same way the settings store groups
           // episodes (capability/store.js's loadCapabilityState), from the
           // rows this effect already has in hand -- no second DB read.
@@ -2215,11 +1973,14 @@ export default function HomeScreen({ navigation, route }) {
               if (!groups.has(r.episodeGroupId)) groups.set(r.episodeGroupId, []);
               groups.get(r.episodeGroupId).push(r);
             }
+            // D231: the Today line names the one pending prompt only when
+            // exactly one is waiting, so every awaiting group is counted
+            // (the subject is the first group's; see limitationDecisionText).
             let awaiting = null;
             for (const rows of groups.values()) {
               if (episodeStatus(rows, Date.now()) === 'awaiting_confirmation') {
-                awaiting = { subject: subjectPhrase(rows, {}) };
-                break;
+                if (awaiting) awaiting.count += 1;
+                else awaiting = { subject: subjectPhrase(rows, {}), count: 1 };
               }
             }
             setAwaitingConstraint(awaiting);
@@ -2230,18 +1991,10 @@ export default function HomeScreen({ navigation, route }) {
           setUndecidedConstraint((state?.restrictions ?? []).some(
             (r) => r.role === 'episode' && r.effectiveChoice == null && r.adaptationMode !== 'hold',
           ));
-          // B4/E1: unavailable && !stale is exactly the resolver's
-          // no-known-state failure branch (the synthesised empty state).
-          setCapabilityCheckFailed(!!state?.unavailable && !state?.stale);
         } catch (_) {
           if (cancelled) return;
-          setActiveConstraint(false);
-          setConstraintSubject(null);
           setAwaitingConstraint(null);
           setUndecidedConstraint(false);
-          // B4/E1: this catch is also a failed check (the require or the
-          // read path itself threw) - say so rather than showing nothing.
-          setCapabilityCheckFailed(true);
         }
       })();
       return () => { cancelled = true; };
@@ -2295,26 +2048,6 @@ export default function HomeScreen({ navigation, route }) {
     ? rawCoachBrief
     : null;
 
-  // D112 R5 (closes audit T1-15/T2-24): the AWAITING prompt's line text.
-  // Matches HowYouTrainScreen.js's own episodeSub wording for the same
-  // state exactly (never invented new phrasing for the same state).
-  const awaitingConstraintLine = awaitingConstraint
-    ? (awaitingConstraint.subject
-      ? `You thought you would be back to ${awaitingConstraint.subject} by about now. Still need it?`
-      : 'You thought this would be done by about now. Still need it?')
-    : null;
-
-  // Premium UI pass: does the capability lane have anything to say on Home?
-  // Mirrors the render conditions of the five rows in the grouped list below
-  // exactly, so the heading and its container never render around nothing.
-  const hasConstraintRows = Boolean(
-    (activeConstraint && activePlan)
-    || awaitingConstraintLine
-    || (undecidedConstraint && !awaitingConstraintLine)
-    || rampLine
-    || capabilityCheckFailed,
-  );
-
   // S15#7: one calm line for the block chip. D224: block facts only (the
   // planned recovery week, a first session, the default block line); no
   // recovery reading.
@@ -2327,12 +2060,15 @@ export default function HomeScreen({ navigation, route }) {
   // until the user chooses.
   // B-1 (F-18): on a resolved week the default read below ("On track for
   // this block.") spoke as though a session were still pending. The
-  // week-complete state gets its own honest line; the block-finished line
-  // above is unchanged.
+  // week-complete state gets its own honest line.
+  // D231 (app layout rework, batch 1, dedupe): the block-finished chip keeps
+  // only its NEW part. "Block finished." was said by the main card ("Block
+  // complete") and by the Today line already; what the chip alone says is that
+  // sets stay light until the person chooses what comes next.
   const readinessSummary = currentMesoWeek?.awaitingDecision
-    ? { tone: 'go', line: 'Block finished. Sets stay as light as a recovery week until you choose what comes next.' }
+    ? { tone: 'go', line: BLOCK_FINISHED_CHIP_LINE }
     : weekComplete
-    ? { tone: 'go', line: 'Every session done for this week.' }
+    ? { tone: 'go', line: WEEK_COMPLETE_CHIP_LINE }
     : buildReadinessSummary({
       currentMesoWeek,
       // Campaign 22 Phase 2 Stage 1 (spec §8, the measured copy
@@ -2444,32 +2180,49 @@ export default function HomeScreen({ navigation, route }) {
   // B3 lift plateau banner: below deload and phase, recovery and targets
   // outrank a single lift's stall, dismissible per exercise + week.
   const plateauBannerEligible = !!plateauBanner && !plateauBannerDismissed;
-  // S6 activation nudge: below the coaching/recovery banners but ABOVE the
-  // free-tier upsell lines (founder call: retention over monetisation for a
-  // barely-active new user). Tier-blind. The cold-start stage is deliberately
-  // NOT shown here, welcomeCard already owns the 0-session in-app moment; only
-  // the two stall stages render a banner. Per-stage dismissible.
+  // S6 activation nudge (the getting-started nudge). Tier-blind. The
+  // cold-start stage is deliberately NOT shown here, the main card ("Start
+  // your first workout") already owns the 0-session in-app moment; only the two
+  // stall stages render a banner. Per-stage dismissible. D231 (app layout
+  // rework, batch 1): it is the last of the four offers that compete for the
+  // one offer slot under the main card (resolveOfferSlot, below); it no longer
+  // shares a banner slot with the plateau note.
   const activationBannerEligible = !!activationNudge && activationNudge.stage !== NUDGE_STAGE.COLD_START
     && !activationNudgeDismissed;
 
-  // Campaign 22 Phase 2 Stage 1: coach/trial/deload/phase moved OUT of this
-  // array onto the Today line (arbiter ranks 2-3, 5, 7-8 below) -- leaving
-  // them in here would wrongly let them keep suppressing plateau/activation
-  // whenever eligible, even though nothing renders their old JSX any more.
+  // Campaign 22 Phase 2 Stage 1: coach/trial/deload/phase moved OUT of the old
+  // banner cap onto the Today line (arbiter ranks, below).
   // FOUNDER DECISION (fully free, no tier split): the free-tier weekly line
-  // and the differential paywall badge are retired, so the lowest-priority
-  // "attention" slot they shared is gone; plateau and activation are the
-  // only two banners left to arbitrate.
-  const BANNER_PRIORITY = [
-    { key: 'plateau', eligible: plateauBannerEligible },
-    { key: 'activation', eligible: activationBannerEligible },
-  ].filter(b => b.eligible);
-  // The single decision point for the cap: whichever eligible banner ranks
-  // highest takes the one visible slot; everything else waits its turn.
-  const shownBannerKey = BANNER_PRIORITY[0]?.key ?? null;
+  // and the differential paywall badge are retired.
+  // D231 (app layout rework, batch 1): the activation banner left the shared
+  // banner slot for the offer slot under the main card, so the plateau note is
+  // the only thing left in the old slot: it stays at the bottom of Today on its
+  // own, and no longer holds the injuries question or the Community
+  // introduction back.
+  const showPlateauBanner = plateauBannerEligible;
 
-  const showPlateauBanner = shownBannerKey === 'plateau';
-  const showActivationBanner = shownBannerKey === 'activation';
+  // D231 (app layout rework, batch 1): the ONE offer under the main card, at
+  // most one shown, in this priority: the full "Set up coaching" card (its
+  // once-a-day rule is coachingSetup.js's; the quiet one-line row is not an
+  // offer and keeps its own place below), the injuries question, "See who is
+  // training", the getting-started nudge. Each offer's own conditions and
+  // safety gate are unchanged and evaluated right here; only the choice of
+  // which one shows is new (src/lib/home/offerSlot.js).
+  const coachingSetupCardShown = !!user?.id && !coachingSetUp && !!coachingCardModeState;
+  const shownOfferKey = resolveOfferSlot({
+    coachingSetup: coachingSetupCardShown && coachingCardModeState === 'full',
+    // D134: nothing set up under Injuries & limitations, not dismissed. It
+    // waits for the first logged session (or the old welcome-dismissed flag,
+    // for an existing user), the moment the Welcome card used to retire.
+    howYouTrain: !initialLoading && hytNothingSetUp && !hytOfferDismissed
+      && (totalSessions > 0 || welcomeDismissed),
+    // Blueprint section 14: after a completed session, no Community profile in
+    // the cache, not dismissed (the re-offer rule is introReoffer.js's).
+    communityIntro: !initialLoading && !!user?.id && totalSessions > 0 && !communityIntroDismissed,
+    // S6: a stall stage, not dismissed; the loader's ED/calm fail-closed gate
+    // (loadActivationNudge) has already nulled the nudge where it applies.
+    activation: activationBannerEligible,
+  });
 
   // ── Campaign 22 Phase 2 Stage 1: the single P1 occupant (spec §13) ──────
   // Facts only: every occupant's action/dismissal below reuses the exact
@@ -2513,8 +2266,20 @@ export default function HomeScreen({ navigation, route }) {
     // each fact's own loader below) -- see todayLineArbiter.js's header.
     safety: null,
     blockComplete: {
-      eligible: !!currentMesoWeek?.awaitingDecision,
+      // D231 (dedupe): while the main card says "Block complete" the line does
+      // not say "Block finished" again. It still speaks when the block is
+      // finished but the person has picked another session from the options
+      // sheet, so the main card is the training hero and says nothing of it.
+      eligible: !!currentMesoWeek?.awaitingDecision && !mainCardShowsBlockComplete,
       onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'Plans'); },
+    },
+    // D231: the old "Your plan can be updated" card. Same condition (the
+    // structure engine needs a choice and the person has not set it aside),
+    // same tap (the Plan update flow), same dismissal ("Not now").
+    planChoice: {
+      eligible: planChoiceProgrammeId != null,
+      onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanUpdate'); },
+      onDismiss: dismissPlanChoice,
     },
     coachDecision: {
       eligible: showCoachBanner,
@@ -2542,6 +2307,17 @@ export default function HomeScreen({ navigation, route }) {
     // 26): the evidence pane below the hero is the readiness home on every
     // day now, logged or not, so there is no conflict day left to resolve.
     // resolveFirstReview in the arbiter handles the absent fact as null.
+    // D231: the two "Still need it?" and "waiting for your decision" rows that
+    // were in the Injuries & limitations group. Same facts, same tap (opens
+    // Injuries & limitations); the sentence is todayLineArbiter's. No safety
+    // check existed for them and none is added: they report the person's own
+    // limitation rules.
+    limitation: {
+      awaitingCount: awaitingConstraint?.count ?? 0,
+      awaitingSubject: awaitingConstraint?.subject ?? null,
+      undecided: undecidedConstraint,
+      onPress: () => { haptics.selection(); navigation.navigate('HowYouTrain'); },
+    },
     // D224: the planned recovery week only; the fatigue-based recovery-week
     // suggestion is a recovery reading and stays on Progress.
     recovery: {
@@ -2552,6 +2328,12 @@ export default function HomeScreen({ navigation, route }) {
       eligible: reEntryDue,
       onPress: () => { haptics.selection(); handleReEntryPress(); },
     },
+    // D231: the old plan-rebuilt note card. Tap opens its lines in a sheet;
+    // its "Got it" retires it.
+    planNote: {
+      eligible: planRebuildNote != null,
+      onPress: () => { haptics.selection(); setShowPlanRebuildNote(true); },
+    },
     phaseMismatch: {
       eligible: phaseBannerEligible,
       savedPhaseLabel: phaseMismatch?.savedPhaseLabel,
@@ -2560,10 +2342,6 @@ export default function HomeScreen({ navigation, route }) {
     },
     hasActiveWorkout,
   });
-
-  // Pre-formatted for HomeLastSessionCard (memoised): keeps the component a
-  // pure renderer of already-derived data rather than importing the helper.
-  const lastSessionRelativeDay = lastSession ? getRelativeDay(lastSession.startedAt) : null;
 
   // Stable handler identities for the memoised (React.memo) extracted
   // components below, so passing them as props doesn't defeat the memo.
@@ -2596,7 +2374,6 @@ export default function HomeScreen({ navigation, route }) {
     </TouchableOpacity>
   ) : null;
 
-  const goToWorkoutHistory = useCallback(() => navigation.navigate('WorkoutHistory'), [navigation]);
   const closeBlockShape = useCallback(() => setShowBlockShape(false), []);
   const closeChangeWorkout = useCallback(() => setShowChangeWorkout(false), []);
 
@@ -2624,36 +2401,13 @@ export default function HomeScreen({ navigation, route }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
         {/* ── Branded header ── */}
-        {/* Community (blueprint section 1, entry point 1; lead visual review
-            ruling in section 13): the header's right slot carries ONLY the
-            Community action. It replaces the brand mark on this screen, and
-            the brand mark is not shown beside it. */}
-        <ScreenHeader title="Today" right={<CommunityHeaderAction />} />
-
-        {/* Founder order 2026-09-22 item 2 x 4a (audit A-03/A-04/Q1/Q5):
-            the one live Community row on Today, members only. Membership
-            + the ED/calm gate are decided in loadCommunityFriendsRow; a
-            non-member or a gated reader gets nothing here, never an
-            empty placeholder. */}
-        {!initialLoading && communityRowVisible && (
-          <HomeCommunityTodayRow
-            count={communityFriendsCount}
-            followingNone={communityFollowingNone}
-            onFindPeople={() => {
-              haptics.selection();
-              navigateCrossTab(navigation, 'CommunityTab', 'Community', { segment: 'people' });
-            }}
-            gymLabel={communityInviteProfile?.gymLabel}
-            onOpen={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab'); }}
-            onInvite={() => {
-              haptics.selection();
-              shareCommunityMessage(inviteMessage({
-                handle: communityInviteProfile?.handle,
-                gymLabel: communityInviteProfile?.gymLabel,
-              }));
-            }}
-          />
-        )}
+        {/* D231 (app layout rework, batch 1): the Community pill that used to
+            replace the brand mark here is gone (the Community tab has its own
+            dot); Today's header carries the default brand mark like Train. */}
+        <ScreenHeader title="Today" />
+        {/* Renders nothing: keeps the Community tab's dot published (see the
+            component's header). */}
+        <CommunityUnseenSync />
 
         {/* ── The weigh-in strip. Founder device order 2026-09-26, with a
             Today screenshot: "Can we have the logging of weight box that
@@ -2661,7 +2415,9 @@ export default function HomeScreen({ navigation, route }) {
             you follow....' box? At the moment it's further down and looks
             out of place. Keep the other things where they are (the since
             you last checked in bit etc)". It moved here from below the hero
-            and nothing else moved. It still renders ONLY while today's
+            and nothing else moved. D231 (app layout rework, batch 1): it is
+            the first thing on Today now; the Community row moved below the
+            main card. It still renders ONLY while today's
             weight is an ACTION (not yet logged); once logged it is gone and
             the weight is one quiet line in the since-check-in pane below.
             Held until the first load settles: at the top of the screen a
@@ -2691,7 +2447,7 @@ export default function HomeScreen({ navigation, route }) {
             // OB-8: the weekly check-in's "Log my weight first" CTA deep-links
             // here with a fresh timestamp; the strip opens its weight input.
             openWeightSignal={route?.params?.openWeightLog ?? null}
-            onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
+            onOpenTrend={() => navigateCrossTab(navigation, 'ProfileTab', 'You', { focusWeightTrend: true })}
             everLogged={hasEverLoggedWeight}
           />
         )}
@@ -2702,7 +2458,9 @@ export default function HomeScreen({ navigation, route }) {
             coach decision banner, the deload/recovery-state announcement,
             the nutrition-phase banner, the bottom check-in nudge, the
             block-complete decision entry, the re-entry question entry and
-            trial-ENDING (never the everyday trial card). ── */}
+            trial-ENDING (never the everyday trial card). D231 (app layout
+            rework, batch 1): it also takes over the plan update choice, the
+            plan-rebuilt note and a limitation waiting for a decision. ── */}
         <TodayLine item={todayLineItem} testID="today-line" />
 
         {/* The training-schedule context line was REMOVED on founder ruling
@@ -2733,12 +2491,11 @@ export default function HomeScreen({ navigation, route }) {
             PHASE2 R3). */}
 
         {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §17 region R5,
-            context footer): the plateau banner, activation nudge and the
-            free/differential attention slot RE-SITE to the footer, below
-            last-session and the Pro teaser -- P3 content, never above the
-            hero. The one-slot cap mechanics (BANNER_PRIORITY, shownBannerKey)
-            are UNCHANGED; only the render location moved. See the footer
-            block near the end of this ScrollView. */}
+            context footer): the plateau banner re-sites to the footer, never
+            above the hero. D231 (app layout rework, batch 1): the activation
+            nudge left the old shared banner slot for the one offer slot under
+            the main card (shownOfferKey); the plateau note stays at the bottom
+            on its own. See the blocks after the main card. */}
 
         {/* Skeleton placeholders shown during initial cold-load. As
             soon as loadData completes, this block disappears and the
@@ -2769,41 +2526,11 @@ export default function HomeScreen({ navigation, route }) {
             re-slotted; see the Evidence Row block after the hero/no-plan
             section below. */}
 
-        {/* First-launch orientation (founder 2026-06-30): a calm welcome for a
-            brand-new user, shown only until the first session is logged
-            (totalSessions === 0) and dismissible. The two steps are INSTRUCTION
-            that points at the start action below, never duplicate buttons, so it
-            orients without competing with the hero / starter cards. Research:
-            docs competitive-mastery (Cronometer drip-one-pointer) + NN/G empty
-            states. No weight/calorie line here (ED-safety).
-            FOUNDER DECISION (fully free, no tier split): the card's second
-            step promises a coach to every user now, so the isPro prop it
-            used to fork on is gone.
-            Lead activation ruling (this brief): dropped the `activePlan &&
-            nextWorkout` gate. A zero-session user with no plan at all got NO
-            orientation whatsoever (this card was the only one), left staring
-            at the no-plan EmptyState below with no welcome above it. The
-            card's own copy already covers this ("Begin from your plan... or
-            just log freely"), so no new copy variant is needed. */}
-        {!initialLoading && totalSessions === 0 && !welcomeDismissed && (
-          <HomeWelcomeCard onDismiss={dismissWelcome} />
-        )}
-
-        {/* D219 lane C1b: the one-time note of what changed after the plan was
-            rebuilt at its first open. Renders nothing when there is none, and
-            nothing after the person dismisses it. */}
-        {!initialLoading && <PlanRebuildNote userId={user?.id} reloadKey={activePlan?.id ?? null} />}
-
-        {/* D222 phase 8 (R94): when the structure engine would need a choice to
-            rebuild this plan, one calm card offers "Update your plan". Nothing
-            is changed; renders nothing otherwise (and never with the switch off). */}
-        {!initialLoading && (
-          <PlanRebuildChoiceCard
-            userId={user?.id}
-            programmeId={activePlan?.id ?? null}
-            onUpdate={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanUpdate'); }}
-          />
-        )}
+        {/* D231 (app layout rework, batch 1): the Welcome card is gone (the main
+            card already says "Start your first workout"), and the plan-rebuilt
+            note and the "Your plan can be updated" choice are no longer cards
+            here: they are occupants of the Today line above (todayLineArbiter
+            ranks), the note opening in the sheet at the end of this screen. */}
 
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
@@ -2895,7 +2622,10 @@ export default function HomeScreen({ navigation, route }) {
             <Text style={[styles.heroBody, live.heroBody]}>
               {weekCompleteLine(planAllWorkouts[0]?.name)}
             </Text>
-            {readinessChipEl}
+            {/* D231 (dedupe): the chip's line on a complete week is "Every
+                session done for this week.", which repeats this card's own
+                title, so it is not shown here. */}
+            {readinessSummary?.line !== WEEK_COMPLETE_CHIP_LINE ? readinessChipEl : null}
             <TouchableOpacity
               onPress={() => { haptics.selection(); setShowChangeWorkout(true); }}
               style={styles.skipSessionRow}
@@ -3095,117 +2825,49 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* D134 (founder 2026-09-03): one calm, one-time offer for a person
-            with nothing set up, once the welcome card has retired, and only
-            when no ranked banner holds the attention slot (D14's cap). An
-            offer in the person's words, never a question about the person.
-            Either button dismisses it forever; it also retires by itself
-            the moment anything is set up. Stage 2 item 8 (owner answer): it sits
-            directly under the main card, not above it. */}
-        {!initialLoading && hytNothingSetUp && !hytOfferDismissed && (totalSessions > 0 || welcomeDismissed) && shownBannerKey == null && (
-          <HomeHowYouTrainOfferCard
-            onSetUp={() => { haptics.selection(); dismissHytOffer(); navigation.navigate('HowYouTrainAdd'); }}
-            onDismiss={() => { haptics.selection(); dismissHytOffer(); }}
-          />
-        )}
-
-        {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
-            evidence region. The pane restores the since-check-in runway the
-            C22 FirstReviewLine link had flattened: title, days to the next
-            check-in, weigh-in and session evidence - honouring the Today
-            truth-repair ruling with real counts (progress "N of 3" only
-            while short, the ACTUAL count once met, never a clamp). Once
-            today's weight is logged it is one quiet line in this pane. The
-            weigh-in strip itself moved up under the Community row (founder
-            order 2026-09-26, see there). ── */}
-        {user?.id && !coachingSetUp && coachingCardModeState ? (
+        {/* ── D231 (app layout rework, batch 1): the ONE offer slot, directly
+            under the main card. At most one of the four shows, chosen by
+            resolveOfferSlot (shownOfferKey, above) in this order: the full
+            "Set up coaching" card, the injuries question, "See who is
+            training", the getting-started nudge. Each keeps the conditions and
+            safety gate it always had (they are evaluated in shownOfferKey's
+            facts and the loaders); the ones that wait are not marked as seen. ── */}
+        {shownOfferKey === 'coachingSetup' ? (
           <CoachingSetupCard surface="home"
-            mode={coachingCardModeState}
+            mode="full"
             onPress={() => openCoachingSetup(navigation)}
             onNotNow={() => { snoozeCoachingCard(user.id); setCoachingCardModeState('compact'); }}
           />
         ) : null}
-        {user?.id && coachingSetUp && evidencePanelItem && (
-          <EvidencePanel
-            panel={evidencePanelItem}
-            onPress={openFirstReviewSurface}
-            testID="evidence-panel"
-          />
-        )}
 
-        {/* ── Campaign 22 Phase 2 Stage 2: the context footer (region R5,
-            §17). Last-session slim row first (absorbs the glance card),
-            then the P3 attention stack -- plateau and activation, re-sited
-            here from above the hero. FOUNDER DECISION (fully free, no tier
-            split): the Pro teaser and the free/differential attention slot
-            are retired. Same one-slot cap (BANNER_PRIORITY, shownBannerKey),
-            same per-banner handlers, only the location moved. ── */}
-        {lastSession && (
-          <HomeLastSessionCard
-            lastSession={lastSession}
-            lastSessionTonnage={lastSessionTonnage}
-            units={units}
-            relativeDay={lastSessionRelativeDay}
-            onOpenHistory={goToWorkoutHistory}
-            onRepeat={handleRepeatLastSession}
+        {/* D134 (founder 2026-09-03): one calm, one-time offer for a person
+            with nothing set up. An offer in the person's words, never a
+            question about the person. Either button dismisses it forever; it
+            also retires by itself the moment anything is set up. D231: it
+            keeps its timing (it waits for the first logged session, or the old
+            welcome-dismissed flag for an existing user) now the Welcome card
+            is gone. */}
+        {shownOfferKey === 'howYouTrain' ? (
+          <HomeHowYouTrainOfferCard
+            onSetUp={() => { haptics.selection(); dismissHytOffer(); navigation.navigate('HowYouTrainAdd'); }}
+            onDismiss={() => { haptics.selection(); dismissHytOffer(); }}
           />
-        )}
+        ) : null}
 
-        {/* ── Gym challenge (SPEC section 2): a slim row under the last
-            session, secondary to today's training. Entrants only; the read
-            returns nothing for anyone else. ── */}
-        {!initialLoading && homeChallenge && (
-          <HomeChallengeCard
-            challenge={homeChallenge}
-            onOpen={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab', 'Challenge', { id: homeChallenge.id }); }}
-          />
-        )}
-
-        {/* ── Blueprint section 14: the one-time Community introduction.
-            Training first: it sits under the hero, the evidence and the
-            last session. Shown once a person has completed a session, has
-            no Community profile in the cache, has not dismissed it, and
-            no ranked banner holds the slot. Either action retires it. ── */}
-        {!initialLoading && user?.id && totalSessions > 0 && !communityIntroDismissed && shownBannerKey == null && (
+        {/* ── Blueprint section 14: the one-time Community introduction. Shown
+            once a person has completed a session, has no Community profile in
+            the cache and has not dismissed it. Either action retires it. ── */}
+        {shownOfferKey === 'communityIntro' ? (
           <HomeCommunityIntroCard
             onOpen={() => { haptics.selection(); dismissCommunityIntro(); navigateCrossTab(navigation, 'CommunityTab'); }}
             onDismiss={() => { haptics.selection(); dismissCommunityIntro(); }}
           />
-        )}
+        ) : null}
 
-        {/* ── B3 lift plateau banner. Training-only content; taps through to
-            the existing plateau protocol on ExerciseDetail. ExerciseDetail is
-            registered in the Progress stack, not this one, so route via the
-            parent tab navigator (F4 / NAV-1 bug class). ── */}
-        {showPlateauBanner && (
-          <TouchableOpacity
-            style={[styles.plateauBanner, live.plateauBanner]}
-            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel={plateauBanner.line}
-          >
-            <View style={styles.plateauBannerLeft}>
-              <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
-              {/* Campaign 27 Pillar A (D104): sentence-length copy never carries
-                  a line clamp - it wraps, and the row grows. */}
-              <Text style={[styles.plateauBannerText, live.plateauBannerText]}>{plateauBanner.line}</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
-            </View>
-            <TouchableOpacity
-              onPress={dismissPlateauBanner}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss plateau banner"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
-
-        {/* ── S6 activation nudge banner (stall stages only; cold-start is
-            welcomeCard's). Taps through to start the next session. ── */}
-        {showActivationBanner && (
+        {/* ── S6 activation nudge banner (the getting-started nudge; stall
+            stages only, cold-start is the main card's). Taps through to start
+            the next session. ── */}
+        {shownOfferKey === 'activation' && (
           <TouchableOpacity
             style={[styles.activationBanner, live.activationBanner]}
             onPress={() => { haptics.selection(); handleStartNextWorkout(false); }}
@@ -3237,6 +2899,93 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
+        {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
+            evidence region. The pane restores the since-check-in runway the
+            C22 FirstReviewLine link had flattened: title, days to the next
+            check-in, weigh-in and session evidence - honouring the Today
+            truth-repair ruling with real counts (progress "N of 3" only
+            while short, the ACTUAL count once met, never a clamp). Once
+            today's weight is logged it is one quiet line in this pane.
+            D231: the quiet one-line "Coaching isn't set up yet" row is NOT an
+            offer (the full card is, above), so it stays here where the card
+            sat, and takes the pane's place while coaching is not set up. ── */}
+        {coachingSetupCardShown && coachingCardModeState === 'compact' ? (
+          <CoachingSetupCard surface="home"
+            mode="compact"
+            onPress={() => openCoachingSetup(navigation)}
+          />
+        ) : null}
+        {user?.id && coachingSetUp && evidencePanelItem && (
+          <EvidencePanel
+            panel={evidencePanelItem}
+            onPress={openFirstReviewSurface}
+            testID="evidence-panel"
+          />
+        )}
+
+        {/* D231 (app layout rework, batch 2): the last-session slim row (and its
+            Repeat) moved to Train: the newest card in Recent sessions. */}
+
+        {/* Founder order 2026-09-22 item 2 x 4a (audit A-03/A-04/Q1/Q5):
+            the one live Community row on Today, members only. Membership
+            + the ED/calm gate are decided in loadCommunityFriendsRow; a
+            non-member or a gated reader gets nothing here, never an
+            empty placeholder. D231 (app layout rework, batch 1): it sits
+            below the main card, the offer and the since-check-in pane now
+            (it was the first thing on Today); its gate is unchanged. The
+            gym challenge row that sat under the last session is gone
+            (Community is its home). */}
+        {!initialLoading && communityRowVisible && (
+          <HomeCommunityTodayRow
+            count={communityFriendsCount}
+            followingNone={communityFollowingNone}
+            onFindPeople={() => {
+              haptics.selection();
+              navigateCrossTab(navigation, 'CommunityTab', 'Community', { segment: 'people' });
+            }}
+            gymLabel={communityInviteProfile?.gymLabel}
+            onOpen={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab'); }}
+            onInvite={() => {
+              haptics.selection();
+              shareCommunityMessage(inviteMessage({
+                handle: communityInviteProfile?.handle,
+                gymLabel: communityInviteProfile?.gymLabel,
+              }));
+            }}
+          />
+        )}
+
+        {/* ── B3 lift plateau banner. Training-only content; taps through to
+            the existing plateau protocol on ExerciseDetail. ExerciseDetail is
+            registered in the Coach stack (D231: the Progress tab is gone), not
+            this one, so route via the parent tab navigator (F4 / NAV-1 bug
+            class). D231: it stays at the bottom on its own. ── */}
+        {showPlateauBanner && (
+          <TouchableOpacity
+            style={[styles.plateauBanner, live.plateauBanner]}
+            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={plateauBanner.line}
+          >
+            <View style={styles.plateauBannerLeft}>
+              <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
+              {/* Campaign 27 Pillar A (D104): sentence-length copy never carries
+                  a line clamp - it wraps, and the row grows. */}
+              <Text style={[styles.plateauBannerText, live.plateauBannerText]}>{plateauBanner.line}</Text>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
+            </View>
+            <TouchableOpacity
+              onPress={dismissPlateauBanner}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss plateau banner"
+            >
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
         {/* FOUNDER DECISION (fully free, no tier split): the "worth your
             attention" card (free-tier weekly line / differential paywall
             badge, AttentionCard) is retired entirely -- there is no upsell
@@ -3262,111 +3011,11 @@ export default function HomeScreen({ navigation, route }) {
         {/* History / Lifts / Volume quick links removed from Train (founder
             2026-06-03): they are Progress items and live on the Progress tab. */}
 
-        {/* Founder order 2026-09-05: the "Injuries & limitations" group is the LAST
-            item on Today. It reports how training is being worked around;
-            it is not the day's action, so it sits below every action and
-            evidence card rather than above them. */}
-        {/* CC33 D112 R5 (closes audit T1-14/T2-31): the pre-workout quiet
-            constraint line, standalone now -- it renders whenever the
-            capability state has an active APPLIED episode rule and an
-            active plan exists, independent of which brief headline fired
-            (or none) and of whether the brief itself was dismissed. Same
-            quiet styling as the former in-brief line; now tappable
-            through to Injuries & limitations. */}
-        {/* Premium UI pass. These rows are the capability lane's presence on
-            Home, and they were five loose sentences floating on the
-            background between two cards: no container, no heading, nothing
-            grouping them, so the squint test resolved no group here at all
-            and the one surface a user with an injury looks for read as
-            stray text. They are now one grouped list under its own heading,
-            the same shape Settings and the Coach tab use. The rows keep
-            their quiet 13px voice, their targets and their behaviour; only
-            the grouping is new. */}
-        {hasConstraintRows ? (
-        <View style={styles.constraintSection}>
-          <SectionLabel tone="muted">Injuries & limitations</SectionLabel>
-          <View style={[styles.constraintGroup, live.constraintGroup]}>
-        {activeConstraint && activePlan ? (
-          <TouchableOpacity
-            style={[styles.constraintLineRow, live.constraintLineRow]}
-            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-            accessibilityRole="button"
-            accessibilityLabel={`${constraintLineText(constraintSubject)} Open Injuries & limitations`}
-          >
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              {constraintLineText(constraintSubject)}
-            </Text>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
-        {/* CC33 D112 R5 (closes audit T1-15/T2-24): the §22 AWAITING
-            prompt, previously reachable only from HowYouTrain and the
-            weekly check-in. Quiet row, tappable through to Injuries & limitations
-            to answer it there. */}
-        {awaitingConstraintLine ? (
-          <TouchableOpacity
-            style={[styles.constraintLineRow, live.constraintLineRow]}
-            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-            accessibilityRole="button"
-            accessibilityLabel={`${awaitingConstraintLine} Open Injuries & limitations`}
-          >
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              {awaitingConstraintLine}
-            </Text>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
-        {/* CC33 adversarial review E1: the undecided-rule ask. Shares the
-            AWAITING slot (one ask-class row at a time, J4); the works-
-            around statement line above may still coexist, exactly as it
-            does with AWAITING. */}
-        {undecidedConstraint && !awaitingConstraintLine ? (
-          <TouchableOpacity
-            style={[styles.constraintLineRow, live.constraintLineRow]}
-            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-            accessibilityRole="button"
-            accessibilityLabel="A change to your limitations is waiting for your decision. Open Injuries & limitations"
-          >
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              A change to your limitations is waiting for your decision.
-            </Text>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
-        {/* CC33 D112 R5 (closes audit T2-25's copy half): the durable
-            reintroduction line. Same quiet styling as the rows above but
-            NOT tappable - it asks nothing and reports the plan's own
-            trajectory while any of this week's planned rows carry the
-            §23 ramp's source stamp. Meaning is in the text alone (J3). */}
-        {rampLine ? (
-          <View style={[styles.constraintLineRow, live.constraintLineRow]}>
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              {rampLine}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* CC33 round 9 (B4/E1): the honest could-not-check line. When the
-            capability read fails with no last-known state, every row above
-            vanishes silently and Home reads as "nothing going on" - this
-            quiet line (rampLine's non-tappable pattern) says the truth
-            instead, in the lane's established honesty vocabulary
-            (RoutineDetail and ActiveWorkout say the same at their swap
-            surfaces). Not tappable: it asks nothing, and Injuries & limitations
-            would face the same failed read. */}
-        {capabilityCheckFailed ? (
-          <View style={[styles.constraintLineRow, live.constraintLineRow]}>
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              Volyume could not check Injuries & limitations just now.
-            </Text>
-          </View>
-        ) : null}
-          </View>
-        </View>
-        ) : null}
+        {/* D231 (app layout rework, batch 2): the "Injuries & limitations" group
+            that was the last thing on Today is gone. Its works-around line, its
+            reintroduction line and its could-not-check line are on Train, under
+            the Injuries & limitations row; its two decision rows have been
+            Today-line occupants since batch 1. */}
 
       </ScrollView>
 
@@ -3425,139 +3074,27 @@ export default function HomeScreen({ navigation, route }) {
         />
       </BottomSheet>
 
+      {/* D231 (app layout rework, batch 1): the plan-rebuilt note's lines, opened
+          from the Today line. "Got it" retires the note for good; closing the
+          sheet any other way leaves it for next time. */}
+      <PlanRebuildNoteSheet
+        visible={showPlanRebuildNote}
+        note={planRebuildNote}
+        onClose={() => setShowPlanRebuildNote(false)}
+        onGotIt={dismissPlanNote}
+      />
+
       {/* ── Pre-workout intent prompt ── */}
-      {/* R9 (D70): the pre-workout intent prompt moves off its hand-rolled
-          raw Modal onto the shared BottomSheet (scrim, drag handle,
-          swipe/backdrop/back dismiss, reduce-motion handling all owned
-          there), the readiness pickers onto the shared Chip, and every tap
-          gains the house selection() beat. Skip and the standing opt-out
-          stay deliberately quiet text controls: they are de-emphasised
-          escape hatches under the fold, not competing CTAs. */}
-      {/* EP-06/UI-01 (end-user-polish audit, 2026-07-12): the readiness rows
-          + three intent options + Skip + opt-out no longer fit a 320x640/
-          360x640 viewport. `scroll` puts the body in BottomSheetScrollView
-          bounded by BottomSheet's own maxDynamicContentSize (~92% of window
-          height), so the heading and every choice stay reachable by
-          scrolling instead of being pushed off-screen with no way back.
-          Selection semantics/behaviour are unchanged. */}
-      <BottomSheet
+      {/* D231 (app layout rework, batch 2): the sheet itself (readiness rows,
+          the three answers, Skip, the standing opt-out; R9/D70 BottomSheet,
+          EP-06/UI-01 `scroll`) moved verbatim to SessionIntentSheet so Train's
+          Repeat asks the same question the same way. What a choice does stays
+          here: confirmStart. */}
+      <SessionIntentSheet
         visible={showIntentPrompt}
         onClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
-        accessibilityLabel="How are you feeling today"
-        scroll
-      >
-        <Text style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
-        {/* C10C: the old line said the answers "shape how your sessions are
-            read" without ever saying WHICH WAY. The direction is the part
-            that matters to a user deciding whether to answer honestly: a
-            rough night can ease the session, and a good one never adds to
-            it. "Can" and "when coaching is active" keep it truthful - not
-            every answer changes something, and the easing only happens
-            where coaching is actually available.
-            FOUNDER DECISION (fully free, no tier split): that easing is the
-            coaching adjustment every user now gets, so this is the one
-            sentence for everyone; the free alternative sentence is retired. */}
-        <Text style={[styles.intentSub, live.intentSub]}>
-          Takes a second. When coaching is active, poor sleep or heavy soreness can ease today's session. Answering well never makes it harder than planned.
-        </Text>
-        {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
-            readiness rows sit ABOVE the intent options, compacted to one
-            aligned line each, because the intent tap below starts the
-            session instantly - anything beneath that trigger is unreachable
-            (the original flaw). Zero added taps: ignoring the rows costs
-            nothing, setting one is a single tap on the way down, and the
-            intent tap carries whatever is set. */}
-        <Text style={[styles.readinessGroupLabel, live.readinessGroupLabel]}>
-          Readiness (optional)
-        </Text>
-        {READINESS_ROWS.map(row => (
-          <View key={row.key} style={styles.readinessRow}>
-            <Text style={[styles.readinessLabel, live.readinessLabel]}>{row.short}</Text>
-            <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
-              {row.chips.map(chip => {
-                const selected = readiness[row.key] === chip.value;
-                return (
-                  <Chip
-                    key={chip.value}
-                    label={chip.label}
-                    selected={selected}
-                    style={styles.readinessChipThird}
-                    accessibilityRole="radio"
-                    accessibilityLabel={`${row.label}: ${chip.label}`}
-                    onPress={() => {
-                      haptics.selection();
-                      setReadiness(r => ({
-                        // Tapping the selected chip again clears it, so the
-                        // row stays genuinely optional.
-                        ...r,
-                        [row.key]: selected ? null : chip.value,
-                      }));
-                    }}
-                  />
-                );
-              })}
-            </View>
-          </View>
-        ))}
-
-        {/* The three answers: one tap starts the session instantly, carrying
-            whatever readiness is set above. */}
-        {[
-          { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
-          { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
-          { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
-        ].map((opt, i) => (
-          <PressableCard
-            key={opt.key}
-            style={[styles.intentOption, live.intentOption, i === 0 && styles.intentOptionFirst]}
-            onPress={() => { haptics.selection(); confirmStart(opt.key); }}
-            accessibilityLabel={`${opt.label}. ${opt.sub}. Starts the workout.`}
-          >
-            <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
-              <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
-              <Text style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </PressableCard>
-        ))}
-
-        <TouchableOpacity
-          style={styles.intentSkip}
-          accessibilityRole="button"
-          accessibilityLabel="Skip and start without answering"
-          onPress={() => { haptics.selection(); confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null }); }}
-        >
-          <Text style={[styles.intentSkipText, live.intentSkipText]}>Skip</Text>
-        </TouchableOpacity>
-
-        {/* D2 (Option A): the standing opt-out. Persists, then starts this
-            session exactly as Skip would, null intent, no readiness, no
-            fabricated input. Reversible in Settings, Coaching. */}
-        <TouchableOpacity
-          style={styles.intentOptOut}
-          onPress={() => {
-            haptics.selection();
-            // C14 job 2: the same one write path Settings uses, so this
-            // opt-out is stamped and pushed rather than sitting locally
-            // until something else happens to sync. The key is guarded now
-            // (its "off" state is a delete), and an unstamped write there
-            // is what lets a stale device's copy win a conflict.
-            // eslint-disable-next-line global-require
-            require('../lib/sync').setUserPref(user?.id, '@volyume_intent_prompt_off', 'true').catch(() => {});
-            confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Do not ask before each session"
-        >
-          <Text style={[styles.intentOptOutText, live.intentOptOutText]}>Do not ask before each session</Text>
-          <Text style={[styles.intentOptOutSub, live.intentOptOutSub]}>
-            Without it, sessions are not adjusted to how you are feeling, and your next block's set targets stay where they are rather than moving based on what this block showed. Turn it back on any time in Settings, Coaching.
-          </Text>
-        </TouchableOpacity>
-      </BottomSheet>
+        onConfirm={confirmStart}
+      />
       {/* Sharpener: one dismissible what's-new sheet per update. */}
       {/* D139: the first plan is previewed before it is built. The sheet
           shows the prospective week, what a block is, and what happens to
@@ -3588,22 +3125,6 @@ export default function HomeScreen({ navigation, route }) {
 // buildCoachBrief moved to src/lib/homeCoachBrief.js (behaviour-preserving
 // decomposition); imported at the top of this file, unchanged.
 
-function getRelativeDay(ts) {
-  // Compare LOCAL calendar dates rather than epoch-ms deltas so a
-  // session logged at 23:50 doesn't read as "Yesterday" when the user
-  // opens the app at 00:10 (or vice versa across DST). The previous
-  // floor-based math also broke across DST jumps and for users
-  // outside UTC.
-  const now = new Date();
-  const then = new Date(ts);
-  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const dayDiff = Math.round((startOfDay(now) - startOfDay(then)) / (24 * 60 * 60 * 1000));
-  if (dayDiff <= 0) return 'Today';
-  if (dayDiff === 1) return 'Yesterday';
-  if (dayDiff < 7) return `${dayDiff} days ago`;
-  return format(then, 'd MMM');
-}
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 // CoachBriefCard moved to src/components/CoachBriefCard.js (behaviour-
 // preserving decomposition), imported at the top of this file. BRIEF_ICON_COLOR
@@ -3615,6 +3136,13 @@ function getRelativeDay(ts) {
 // (BRIEF_ICON_COLOR, imported above) so the chip and the coaching brief card
 // read as one family.
 const READINESS_ICON = { go: 'trending-up-outline', caution: 'alert-circle-outline', recover: 'bed-outline' };
+
+// D231 (app layout rework, batch 1, dedupe): the two fixed readiness-chip lines.
+// The block-finished chip drops its "Block finished." opening (the main card and
+// the Today line say it); the week-complete chip is not shown on the "Week
+// complete" main card at all, because its text repeats that card's own title.
+const BLOCK_FINISHED_CHIP_LINE = 'Sets stay as light as a recovery week until you choose what comes next.';
+const WEEK_COMPLETE_CHIP_LINE = 'Every session done for this week.';
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -3717,46 +3245,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // D112 R5 (closes audit T1-14/T2-31, T1-15/T2-24): the standalone
-  // constraint / AWAITING quiet rows, direct children of the scroll
-  // content container (styles.content already supplies the horizontal
-  // inset and the inter-row gap - no padding duplicated here). Same
-  // weight as coachBriefLineRow/Text above; a trailing chevron and
-  // full-row tap target since these navigate (the coach brief line
-  // never did).
-  // The capability lane's grouped list on Home. Same shape as Settings'
-  // section and the Coach tab's NavGroup: one container, hairline-divided
-  // rows, heading outside the box.
-  constraintSection: { gap: spacing.md },
-  constraintGroup: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    overflow: 'hidden',
-  },
-  constraintLineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-    paddingVertical: spacing.xs,
-    // Round 4 (F-4, J2): these quiet rows measured ~28px - below the
-    // WCAG 44pt minimum - on exactly the surface built so a disabled
-    // user can reach their capability state from Home. The text stays
-    // quiet; the target does not. xxxl is the scale's 48 (the same
-    // token Choice's minimum uses).
-    minHeight: spacing.xxxl,
-  },
-  constraintLineText: {
-    ...type.bodySm,
-    flex: 1,
-    color: colors.textSecondary,
-  },
-
   // Block progress card
   // Pro coaching discovery nudge
   coachingNudge: {
@@ -3787,124 +3275,6 @@ const styles = StyleSheet.create({
   // only the layout margin survives.
   coachingNudgeBtn: {
     marginTop: spacing.xs,
-  },
-
-  // R9 (D70): intentOverlay/intentSheet deleted - the shared BottomSheet
-  // owns the scrim, panel chrome, insets and child gap now.
-  intentTitle: {
-    ...type.h3,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  intentSub: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  intentOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface2 ?? colors.background,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  intentOptionIcon: {
-    width: 40, height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  intentOptionLabel: {
-    ...type.bodyStrong,
-    color: colors.textPrimary,
-  },
-  intentOptionSub: {
-    ...type.caption,
-    color: colors.textSecondary,
-    marginTop: spacing.xxs,
-  },
-  // R2-10 ("Reorder"): the readiness block above the intent options. A quiet
-  // overline heads it; each row is ONE line - fixed label column so the three
-  // rows align, then three equal-width chips filling the rest.
-  readinessGroupLabel: {
-    ...type.overline,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-  readinessRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  readinessLabel: {
-    ...type.caption,
-    color: colors.textSecondary,
-    width: 76,
-  },
-  readinessChips: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  // Equal thirds: overrides Chip's own alignSelf so the three chips share
-  // the row evenly and every row's columns line up.
-  readinessChipThird: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  // Breathing room between the optional block and the primary answers.
-  intentOptionFirst: {
-    marginTop: spacing.md,
-  },
-  readinessChip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2 ?? colors.background,
-  },
-  readinessChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
-  },
-  readinessChipText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  readinessChipTextActive: {
-    color: colors.primary,
-    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-  },
-  intentSkip: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  intentSkipText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-  },
-  intentOptOut: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  intentOptOutText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  intentOptOutSub: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.xxs,
-    lineHeight: 16,
   },
 
   // Fresh coach review banner. D3 (design audit 03): banners are one slim

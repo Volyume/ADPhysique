@@ -1,6 +1,5 @@
 import { View, Platform } from 'react-native';
 import { appAlert } from '../components/AppAlert';
-import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -27,14 +26,11 @@ export default function SettingsScreen({ navigation }) {
     <SettingsPage title="Settings">
       {/* Stage 2 item 11 (owner answer): six headings, rows exactly as the
           owner's table. Row mapping old -> new is in J2.md. */}
+      {/* D231 (app layout rework, batch 5; amends item 11): "Injuries &
+          limitations" (home: Train) and "Nutrition targets" (home: Coach and
+          the Nutrition tab) no longer have a row here. */}
       <SectionHeader title="Training" />
       <View style={[styles.section, live.section]}>
-        <SettingRow
-          icon="body"
-          label="Injuries & limitations"
-          sub="Injuries, pain, long-term conditions or disabilities that affect your training."
-          onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-        />
         <SettingRow
           icon="barbell-outline"
           label="Coaching"
@@ -50,12 +46,6 @@ export default function SettingsScreen({ navigation }) {
       </View>
       <SectionHeader title="Nutrition" />
       <View style={[styles.section, live.section]}>
-        <SettingRow
-          icon="nutrition-outline"
-          label="Nutrition targets"
-          sub="Your calorie and macro targets"
-          onPress={() => { haptics.selection(); navigation.navigate('NutritionTargets'); }}
-        />
         <SettingRow
           icon="leaf-outline"
           label="Dietary needs"
@@ -119,12 +109,18 @@ export default function SettingsScreen({ navigation }) {
           sub="Consent, data sharing and policy"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsPrivacy'); }}
         />
-        {/* Community: cross-tab jump, unchanged (founder order 2026-09-22, item 2). */}
+        {/* Community: opens Community privacy and sharing, not the tab's root
+            (D231, batch 5). That screen works for someone who has not joined
+            (it shows what Community would share and a way in), so the row is
+            the same for everyone. The sub line names what the screen holds.
+            D231 (batch 4): the Coach stack registers CommunityPrivacy, so the
+            row opens it in place and Back returns to Settings (it was a
+            cross-tab jump into the Community tab). */}
         <SettingRow
           icon="people-outline"
           label="Community"
-          sub="Your feed, people, groups and privacy"
-          onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab'); }}
+          sub="Who can follow you, what you share, and who you have blocked or muted"
+          onPress={() => { haptics.selection(); navigation.navigate('CommunityPrivacy'); }}
         />
       </View>
       <SectionHeader title="Account & help" />

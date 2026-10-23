@@ -6,7 +6,7 @@ jest.mock('@shopify/react-native-skia', () => ({
   Skia: { Path: { Make: () => ({ moveTo() {}, lineTo() {}, close() {} }) } },
 }));
 
-import { create } from 'react-test-renderer';
+import { create, act } from 'react-test-renderer';
 import MacroRings, { bandColour, buildBandColour } from '../MacroRings';
 import { colors, resolveTheme } from '../../../styles/theme';
 
@@ -301,5 +301,102 @@ describe('totalsOnly (diary before coaching is set up)', () => {
   test('default (not totalsOnly) still draws the ring', () => {
     const tree = create(<MacroRings rollup={rollup} targets={null} />);
     expect(tree.root.findAll((n) => n.type === 'Canvas').length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D231 (app layout rework, batch 3): the card's target is a button of its own,
+// and the card has a footer slot (the Diary's "Targets updated. See why"
+// chip).
+//
+// What this block pins, and why each pin is written to fail:
+//  - With `onTargetPress`, "of N kcal" is a pressable button (testID
+//    macro-target) with a spoken label and a 48 dp height, and pressing it
+//    calls only its own handler: the card's own tap (the by-meal breakdown) is
+//    a different element (macro-summary) with its own handler. Against the old
+//    card, which was one accessible touchable around everything, "of N kcal"
+//    was plain text.
+//  - It is not drawn with no handler, in totals-only mode, or with no target.
+//  - A parent that is an accessibility element swallows its children for a
+//    screen reader (iOS reads it as one element), so the target and the footer
+//    must NOT sit inside the summary or inside any group hidden from a screen
+//    reader; the decorative groups (ring, figures, bars) ARE hidden, so the
+//    card still speaks once.
+// ---------------------------------------------------------------------------
+describe('MacroRings: target button and footer slot (D231)', () => {
+  const rollup = { kcal_total: 1840, protein_g: 120, carbs_g: 180, fat_g: 60 };
+  const targets = { targetKcal: 2100, proteinG: 160, carbsG: 220, fatG: 70 };
+  const { Pressable } = require('react-native');
+
+  const ancestors = (node) => {
+    const out = [];
+    for (let n = node.parent; n; n = n.parent) out.push(n);
+    return out;
+  };
+  const hiddenAbove = (node) => ancestors(node).some(
+    (a) => a.props?.importantForAccessibility === 'no-hide-descendants' || a.props?.accessibilityElementsHidden === true,
+  );
+
+  test('with a handler the target is a labelled 48 dp button that calls only its own handler', () => {
+    const onTargetPress = jest.fn();
+    const onPress = jest.fn();
+    const tree = create(<MacroRings rollup={rollup} targets={targets} onPress={onPress} onTargetPress={onTargetPress} />);
+    const target = tree.root.findByProps({ testID: 'macro-target' });
+    expect(target.props.accessibilityRole).toBe('button');
+    expect(target.props.accessibilityLabel).toBe('Target 2,100 calories. Open nutrition targets.');
+    const s = [].concat(target.props.style).flat();
+    expect(Object.assign({}, ...s.filter(Boolean)).minHeight).toBeGreaterThanOrEqual(48);
+    act(() => { target.props.onPress(); });
+    expect(onTargetPress).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
+    // The card's own tap is a different element with the other handler.
+    const summary = tree.root.findByProps({ testID: 'macro-summary' });
+    expect(summary).not.toBe(target);
+    act(() => { summary.props.onPress(); });
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onTargetPress).toHaveBeenCalledTimes(1);
+    // The words on screen are still "of 2,100 kcal".
+    const texts = tree.root.findAll((n) => n.type === 'Text').map((n) => [].concat(n.props.children ?? []).join(''));
+    expect(texts).toContain('of 2,100 kcal');
+  });
+
+  test('no handler, no button; no target, no button; totals-only, no button', () => {
+    expect(create(<MacroRings rollup={rollup} targets={targets} />).root.findAllByProps({ testID: 'macro-target' })).toHaveLength(0);
+    expect(create(<MacroRings rollup={rollup} targets={null} onTargetPress={() => {}} />).root.findAllByProps({ testID: 'macro-target' })).toHaveLength(0);
+    expect(create(<MacroRings rollup={rollup} targets={null} totalsOnly onTargetPress={() => {}} />).root.findAllByProps({ testID: 'macro-target' })).toHaveLength(0);
+  });
+
+  test('the target and the footer are reachable by a screen reader; the decorative groups are not', () => {
+    const tree = create(
+      <MacroRings
+        rollup={rollup}
+        targets={targets}
+        onPress={() => {}}
+        onTargetPress={() => {}}
+        footer={<Pressable testID="foot-chip" accessibilityRole="button" accessibilityLabel="Footer chip" />}
+      />,
+    );
+    const target = tree.root.findByProps({ testID: 'macro-target' });
+    const foot = tree.root.findByProps({ testID: 'foot-chip' });
+    const summary = tree.root.findByProps({ testID: 'macro-summary' });
+    expect(hiddenAbove(target)).toBe(false);
+    expect(hiddenAbove(foot)).toBe(false);
+    // Neither stands inside the summary (an accessibility element swallows its children).
+    expect(ancestors(target)).not.toContain(summary);
+    expect(ancestors(foot)).not.toContain(summary);
+    // The bars and the ring ARE hidden, so the one spoken summary is not read twice.
+    const bar = tree.root.findAll((n) => n.type === 'Text' && [].concat(n.props.children ?? []).join('') === 'Protein')[0];
+    expect(hiddenAbove(bar)).toBe(true);
+  });
+
+  test('the footer slot renders inside the card, after the figures', () => {
+    const tree = create(
+      <MacroRings rollup={rollup} targets={targets} footer={<Pressable testID="foot-chip" accessibilityLabel="Footer chip" />} />,
+    );
+    const foot = tree.root.findByProps({ testID: 'foot-chip' });
+    const card = tree.root.findAll((n) => n.type === 'View' && n.props?.style && JSON.stringify(n.props.style).includes('borderRadius'))[0];
+    expect(card).toBeTruthy();
+    expect(ancestors(foot)).toContain(card);
+    expect(create(<MacroRings rollup={rollup} targets={targets} />).root.findAllByProps({ testID: 'foot-chip' })).toHaveLength(0);
   });
 });

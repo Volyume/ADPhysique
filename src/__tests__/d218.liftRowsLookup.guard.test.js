@@ -17,7 +17,8 @@ const read = (name) => fs.readFileSync(path.join(__dirname, '..', 'screens', nam
 
 describe.each([
   ['LiftProgressScreen.js'],
-  ['AthleteProfileScreen.js'],
+  // D231: the athlete profile (and its strength baselines) is retired; the
+  // strength level it showed is Lift Progress's, which is still listed here.
   ['BodyMetricsScreen.js'],
 ])('%s: lift rows read the shared exercise lookup', (file) => {
   const src = read(file);

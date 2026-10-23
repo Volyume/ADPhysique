@@ -52,8 +52,13 @@
  *                 that reads as the screen's result (Q6 recommendation,
  *                 founder order 2026-09-22 item 8) -- the Hub's You row
  *                 only; every other caller leaves the default.
+ *   title         optional text for the name line in place of the person's
+ *                 name (D231: the Hub's "My profile" row). The avatar still
+ *                 takes its initial from the person's own name.
+ *   subtitle      optional line under the name that stays whatever the
+ *                 days or caption do (D231: the "@username" of "My profile")
  *   days          string[] of trained day keys ('mon'..'sun'); when
- *                 given (non-empty) the second line is `DayDots` instead
+ *                 given (non-empty) the last line is `DayDots` instead
  *                 of `person.caption`
  *   trainedToday  boolean, shows the ring dot on the avatar
  *   rank          number|string, shown at the row's left edge; omit to
@@ -88,10 +93,12 @@ const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export default function PersonRow({
   person, metric, metricRole, days, trainedToday, rank, onPress, onPressWithLayout, trailing, inBand = false,
+  title, subtitle,
 }) {
   const t = useTheme();
   if (!person) return null;
   const name = person.display_name || person.handle || 'Athlete';
+  const heading = title || name;
   const isOwn = !!person.isYou;
   // Founder defect 2026-09-14 (stepped left edges): the row carries NO
   // gutter of its own. Its page already pads by `spacing.lg`, so a row
@@ -104,7 +111,8 @@ export default function PersonRow({
   const hasDays = Array.isArray(days) && days.length > 0;
   const caption = !hasDays && person.caption ? person.caption : null;
 
-  const a11yParts = [name];
+  const a11yParts = [heading];
+  if (subtitle) a11yParts.push(subtitle);
   if (rank != null) a11yParts.push(`Rank ${rank}`);
   if (hasDays) a11yParts.push(`Trained ${daysLabel(DAY_ORDER.filter((k) => days.includes(k)))}`);
   else if (caption) a11yParts.push(caption);
@@ -148,8 +156,15 @@ export default function PersonRow({
         </View>
         <View style={styles.body}>
           <Text style={[styles.name, { color: t.colors.textPrimary }]} numberOfLines={2}>
-            {name}
+            {heading}
           </Text>
+          {subtitle ? (
+            // Not truncated: a username is read whole at any text size (as the
+            // "My profile" row's EntryRow subtitle always was).
+            <Text style={[styles.caption, { color: t.colors.textSecondary }]}>
+              {subtitle}
+            </Text>
+          ) : null}
           {hasDays ? (
             <DayDots days={days} todayKey={currentDayKey()} />
           ) : caption ? (

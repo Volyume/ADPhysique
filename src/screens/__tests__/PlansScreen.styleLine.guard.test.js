@@ -4,7 +4,8 @@
  * The label comes from planTrainingStyleLabel (unit-tested against engine and
  * authored facts in trainingArchetypes.test.js), fed by ONE read of the active
  * plan's facts, with the library style lock passed so authored and library
- * plans show nothing. Tapping opens Adjust training at the style section.
+ * plans show nothing. D231 (batch 2): it is a plain line now; it no longer opens
+ * Adjust training at the style section (the PlanUpdate focus param stays).
  * Source-level guard: the screen pulls the whole SQLite/sync graph.
  */
 import fs from 'fs';
@@ -18,17 +19,18 @@ describe('PlansScreen training style line', () => {
     expect(plans).toMatch(/getProgrammePlanFacts\(active\.id\)/);
     expect(plans).toMatch(/planTrainingStyleLabel\(styleFacts, \{ styleLocked: !!styleLockFromTags\(active\?\.tags\) \}\)/);
   });
-  test('renders only when a label exists, directly after the workouts meta line', () => {
+  // RE-POINTED (D231, app layout rework batch 2; owner decision 2026-10-20 keeps
+  // the rules above): the line is plain text now, no longer its own tappable row
+  // (rule 3, one door per screen: Adjust training plan below is the door). It
+  // renders only when a label exists, directly after the workouts meta line.
+  test('renders only when a label exists, directly after the workouts meta line, as plain text', () => {
     const i = plans.indexOf('{activePlanStyle ? (');
     expect(i).toBeGreaterThan(plans.indexOf("workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}") - 1);
-    const block = plans.slice(i, i + 1200);
-    expect(block).toMatch(/testID="active-plan-style"/);
-    expect(block).toMatch(/accessibilityRole="button"/);
-    expect(block).toMatch(/accessibilityLabel=\{`Training style, \$\{activePlanStyle\}\. Change in Adjust training`\}/);
-    expect(block).toMatch(/navigate\('PlanUpdate', \{ focus: 'style' \}\)/);
+    const block = plans.slice(i, i + 400);
+    expect(block).toMatch(/<Text testID="active-plan-style"/);
     expect(block).toMatch(/Training style: \{activePlanStyle\}/);
-    expect(block).toMatch(/chevron-forward/);
-    expect(plans).toMatch(/minHeight: touchTarget\.minimum/);
+    expect(block).not.toMatch(/accessibilityRole="button"|onPress|TouchableOpacity|chevron-forward|navigate\(/);
+    expect(plans).not.toMatch(/activePlanStyleRow/);
   });
 });
 

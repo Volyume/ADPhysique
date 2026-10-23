@@ -91,15 +91,16 @@ describe('CO-3: training-only copy, no weight/body/intake references', () => {
 });
 
 describe('CO-3: navigation targets are pinned to the correct destinations', () => {
+  // D231 (batch 4): the Progress tab is gone; ExerciseDetail and LiftProgress are in the Coach stack (ProfileTab).
   test('a PR routes to that exercise\'s own trend (ExerciseDetail), matching the existing PR deep-link pattern', () => {
     expect(SOURCE).toContain('function handleSeeProgress() {');
     const site = SOURCE.indexOf('function handleSeeProgress() {');
     const body = SOURCE.slice(site, site + 400);
     expect(body).toContain("if (firstPrWithExercise) {");
     expect(body).toContain(
-      "navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: firstPrWithExercise.exerciseId });"
+      "navigateCrossTab(navigation, 'ProfileTab', 'ExerciseDetail', { exerciseId: firstPrWithExercise.exerciseId });"
     );
-    expect(body).toContain("navigateCrossTab(navigation, 'ProgressTab', 'LiftProgress');");
+    expect(body).toContain("navigateCrossTab(navigation, 'ProfileTab', 'LiftProgress');");
   });
 
   test('the Progress link calls handleSeeProgress, not a hand-rolled navigate', () => {

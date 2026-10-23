@@ -172,15 +172,21 @@ describe('DiaryScreen diary tools', () => {
   // the day pager, never a generic alert. The sheet's old intro line is now
   // carried by each row's own sub line, and "Trends and export" reads
   // "Trends", one name for the screen everywhere (D230 R15).
-  test('copy and insights live in a clear tools sheet, not a generic alert', () => {
+  // RE-POINTED (D231, app layout rework batch 3): Day tools keeps only "Copy
+  // from another day" and "Meals". Trends (the header door stays) and
+  // Nutrition targets (the calorie card's target) leave it, so a screen has
+  // one door to a place. The sheet is still one clear tools sheet opened from
+  // the day pager, never a generic alert.
+  test('copy lives in a clear tools sheet, not a generic alert, and Trends is not repeated in it', () => {
     expect(SRC).toMatch(/accessibilityLabel="Open diary tools"/);
     expect(SRC).toMatch(/<DayToolsSheet\s+visible=\{diaryToolsOpen\}/);
     expect(DAY_TOOLS_SRC).toMatch(/accessibilityLabel="Diary tools"/);
     expect(DAY_TOOLS_SRC).toMatch(/<SectionLabel heading style=\{styles\.title\}>Day tools<\/SectionLabel>/);
     expect(DAY_TOOLS_SRC).toMatch(/<NavRow\s+icon="copy-outline"\s+label="Copy from another day"/);
-    expect(DAY_TOOLS_SRC).toMatch(/<NavRow\s+icon="analytics-outline"\s+label="Trends"/);
-    expect(DAY_TOOLS_SRC).toMatch(/Choose a recent logged day and copy its foods into this one\./);
-    expect(DAY_TOOLS_SRC).toMatch(/Calorie, macro and consistency trends, and your diary export\./);
+    expect(DAY_TOOLS_SRC).toMatch(/<NavRow\s+icon="restaurant-outline"\s+label="Meals"/);
+    expect(DAY_TOOLS_SRC).not.toMatch(/label="Trends"/);
+    expect(DAY_TOOLS_SRC).not.toMatch(/label="Nutrition targets"/);
+    expect(SRC).not.toMatch(/onTrends=|onNutritionTargets=/);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
 });
@@ -223,13 +229,13 @@ describe('DiaryScreen meal-planning entry point', () => {
     // style. Same pins, new shape; the frozen definitions below are untouched.
     expect(SRC).toMatch(/style=\{\[styles\.offCardButton, live\.offCardButton, styles\.offCardButtonMuted, live\.offCardButtonMuted\]\}/);
     expect(SRC).toMatch(/style=\{\[styles\.offCardButton, live\.offCardButton\]\}/);
-    expect(SRC).toMatch(/style=\{\[styles\.plannedBtnGhostButton, live\.plannedBtnGhostButton\]\}/);
     expect(SRC).toMatch(/offCardButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(SRC).toMatch(/plannedBtnGhostButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SRC).toContain('offCardCta: { ...type.label, color: colors.textPrimary }');
-    expect(SRC).toContain('plannedBtnGhost: { ...type.label, color: colors.textPrimary }');
     expect(SRC).toMatch(/offCardRow: \{[\s\S]*flexWrap: 'wrap'/);
-    expect(SRC).toMatch(/plannedBannerRow: \{[\s\S]*flexWrap: 'wrap'/);
+    // RE-POINTED (D231, batch 3): the planned banner's button chrome is gone
+    // with the banner; its replacement (PlannedMealsLine) wraps and draws its
+    // two actions in ink, pinned in DiaryScreen.batch3Nutrition.test.js.
+    expect(SRC).not.toMatch(/plannedBtnGhost|plannedBannerRow/);
     // RE-ANCHORED 2026-09-22/23 (founder order): the banking entry
     // (hand-rolled bankRow TouchableOpacity, then a Button, then a Chip in
     // the day-tools row) is now a FeatureRow inside styles.featureRows.
@@ -241,7 +247,6 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toMatch(/<FeatureRow\s+icon="trending-up-outline"\s+title="Higher-calorie day"/);
     expect(SRC).toMatch(/featureRows: \{[\s\S]*borderRadius: radius\.md/);
     expect(SRC).not.toMatch(/offCardCta: \{[\s\S]*color: colors\.primary/);
-    expect(SRC).not.toMatch(/plannedBtnGhost: \{[\s\S]*color: colors\.primary/);
     expect(SRC).not.toMatch(/featureRows: \{[\s\S]*color: colors\.primary/);
     expect(SRC).not.toMatch(/dayToolsRow/);
   });
@@ -251,10 +256,13 @@ describe('the feature-row list never renders as an empty box, and no chip remain
   // RE-POINTED (D230 R1, food level-up 2026-10-16): "Meal builder" is now a
   // door on every day, so it is the list's first, unconditional row and the
   // container needs no "at least one row" clause of its own: it can never be
-  // an empty box. Copy yesterday and Higher-calorie day keep their own gates.
+  // an empty box. Higher-calorie day keeps its own gate.
+  // RE-POINTED again (D231, batch 3): "Copy yesterday" is not a row any more
+  // (Day tools -> Copy from another day lists yesterday first), and the list
+  // now sits below Water.
   test('the container is gated on at least one row rendering', () => {
     expect(SRC).toMatch(/\{loaded && !selectionMode \? \(\s*<View style=\{\[styles\.featureRows, live\.featureRows\]\}>\s*<FeatureRow\s+icon="restaurant-outline"\s+title="Meal builder"/);
-    expect(SRC).toMatch(/\{showCopyYesterdayDoor \? \(\s*<FeatureRow\s+icon="copy-outline"\s+title="Copy yesterday"/);
+    expect(SRC).not.toMatch(/showCopyYesterdayDoor|title="Copy yesterday"|const copyYesterday\b/);
   });
 
   test('no Chip is rendered or imported on this screen any more', () => {

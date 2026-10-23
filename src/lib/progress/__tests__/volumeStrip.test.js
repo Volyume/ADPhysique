@@ -48,7 +48,14 @@ import { RECOVERY_STATE } from '../../recoveryState';
 
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
 const SOURCE = read('../volumeStrip.js');
-const SCREEN_SOURCE = read('../../../screens/AnalyticsScreen.js');
+// RE-POINTED (D231, app layout rework batch 2): the strip is built in Train's hook
+// (hooks/useTrainWeek.js) and drawn by components/VolumeStrip.js; the Progress
+// screen no longer reads this module. The rule pinned is unchanged: the screens
+// read this module and the shared one, and recount nothing themselves.
+const SCREEN_SOURCE = read('../../../hooks/useTrainWeek.js');
+const STRIP_VIEW_SOURCE = read('../../../components/VolumeStrip.js');
+// D231 (batch 4): the Progress rows are components/coach/CoachProgress.js now.
+const PROGRESS_SOURCE = read('../../../components/coach/CoachProgress.js');
 
 // A plain Wednesday, 12:00 local: its Monday is 8 June 2026, so 7 June is last week.
 const NOW = new Date(2026, 5, 10, 12, 0, 0).getTime();
@@ -317,9 +324,12 @@ describe('the module is pure, shares the one definition and never instructs', ()
   test('the screen reads this module and the shared one, and recounts nothing itself', () => {
     expect(SCREEN_SOURCE).toMatch(/from '\.\.\/lib\/progress\/volumeStrip';/);
     expect(SCREEN_SOURCE).toMatch(/import \{ planTrainedMuscles \} from '\.\.\/lib\/volumeLogged';/);
-    // (`\.workingSets` is the per-muscle credit read the strip must not do; the
-    // session list keeps its own local `workingSets` array of a workout's rows.)
+    expect(STRIP_VIEW_SOURCE).toMatch(/from '\.\.\/lib\/progress\/volumeStrip';/);
+    // (`\.workingSets` is the per-muscle credit read the strip must not do.)
     expect(SCREEN_SOURCE).not.toMatch(/calculateWeeklyVolume|getVolumeStatus|weeklyVolume|\.workingSets\b/);
+    expect(STRIP_VIEW_SOURCE).not.toMatch(/calculateWeeklyVolume|getVolumeStatus|weeklyVolume|\.workingSets\b/);
+    // And the Progress screen no longer builds or draws it at all.
+    expect(PROGRESS_SOURCE).not.toMatch(/progress\/volumeStrip|buildVolumeStrip|<VolumeStrip/);
   });
 
   test('the strip speaks in the four tone words, and nothing says "too much"', () => {

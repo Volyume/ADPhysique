@@ -679,7 +679,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   <TouchableOpacity
                     key={idx}
                     style={styles.exerciseBreakdownRow}
-                    onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: ex.exerciseId })}
+                    onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'ExerciseDetail', { exerciseId: ex.exerciseId })}
                     accessibilityRole="button"
                     accessibilityLabel={`See progress for ${ex.name}`}
                   >

@@ -107,7 +107,11 @@ describe('B-1 — the week-complete state', () => {
   });
 
   test('the readiness chip does not claim a session is pending', () => {
-    expect(home).toMatch(/: weekComplete\s*\n?\s*\? \{ tone: 'go', line: 'Every session done for this week\.' \}/);
+    // RE-POINTED (D231, app layout rework batch 1): the same fixed line, now
+    // held in WEEK_COMPLETE_CHIP_LINE so the "Week complete" main card can
+    // leave the chip out when its text would repeat the card's own title.
+    expect(home).toMatch(/: weekComplete\s*\n?\s*\? \{ tone: 'go', line: WEEK_COMPLETE_CHIP_LINE \}/);
+    expect(home).toContain("const WEEK_COMPLETE_CHIP_LINE = 'Every session done for this week.';");
   });
 });
 
@@ -149,8 +153,12 @@ describe('B-2 — an active plan with no sessions', () => {
 });
 
 describe('Train mirrors the week-complete state (B-1)', () => {
-  test('the row says so and its action becomes the choice, not session 1', () => {
-    expect(plans).toContain('Week complete. Your next session is on Monday.');
+  test('the week is shown by the day cells and its action becomes the choice, not session 1', () => {
+    // RE-POINTED (D231, app layout rework batch 2): the separate "Week complete.
+    // Your next session is on Monday." line is cut; the plan card's seven day
+    // cells (PlanWeekCard) show the week. The button still becomes the choice.
+    expect(plans).not.toContain('Week complete. Your next session is on Monday.');
+    expect(plans).toContain('<PlanWeekCard summary={trainWeek.planWeekSummary} embedded');
     expect(plans).toMatch(/title=\{weekComplete \? 'Do another session' : 'Start next workout'\}/);
     expect(plans).toMatch(/weekComplete\s*\n?\s*\? navigation\.navigate\('PlanDetail'/);
   });

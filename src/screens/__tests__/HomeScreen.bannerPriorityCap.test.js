@@ -34,47 +34,46 @@
  *  4. None of the two P3 triggers reads an ED flag or wellbeing/calm-mode
  *     signal directly (suppression already happens inside their own
  *     loaders, untouched by this change).
+ *
+ * RE-POINTED (D231, app layout rework batch 1, docs/app-rework-2026-10/SPEC.md
+ * "Batch 1: Today" item 3): the activation banner LEFT the shared banner slot
+ * for the one offer slot under the main card (src/lib/home/offerSlot.js:
+ * coaching setup, the injuries question, "See who is training", the
+ * getting-started nudge, one at a time). The plateau note stays at the bottom
+ * on its own. So pins 1-3 below now say that: no BANNER_PRIORITY and no
+ * shownBannerKey cap, one offer chosen by resolveOfferSlot, the plateau note
+ * shown whenever it is eligible. Pin 4 (no ED/calm read in the triggers) is
+ * kept as it was and still holds for both. The one-offer arithmetic itself is
+ * driven for real in src/lib/home/__tests__/offerSlot.test.js.
  */
 const fs = require('fs');
 const path = require('path');
 
 const HOME = fs.readFileSync(path.resolve(__dirname, '../HomeScreen.js'), 'utf8');
 
-describe('D14 + Campaign 22 Phase 2 Stage 1: the P3 banner stack is priority-ranked and capped to exactly one', () => {
-  test('BANNER_PRIORITY lists exactly the two P3 slots in order', () => {
-    const site = HOME.indexOf('const BANNER_PRIORITY = [');
-    expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf('];', site));
-    const keys = ['plateau', 'activation'];
-    const positions = keys.map((key) => block.indexOf(`key: '${key}'`));
-    expect(positions.every((i) => i > -1)).toBe(true);
-    expect(positions).toEqual([...positions].sort((a, b) => a - b));
-    // The senior ranks are gone from this array -- they compete for the
-    // Today line instead, not this cap. The free/differential "attention"
-    // slot is retired outright (FOUNDER DECISION: fully free).
-    expect(block).not.toMatch(/key: '(coach|trial|deload|phase|attention)'/);
+describe('D14 + Campaign 22 Phase 2 Stage 1 + D231: the old banner cap is gone, one offer at a time, plateau on its own', () => {
+  test('the two-slot BANNER_PRIORITY cap no longer exists', () => {
+    expect(HOME).not.toMatch(/BANNER_PRIORITY/);
+    expect(HOME).not.toMatch(/shownBannerKey/);
+    // The senior ranks and the retired attention slot are not resurrected.
+    expect(HOME).not.toMatch(/key: '(coach|trial|deload|phase|attention)'/);
   });
 
-  test('exactly one banner key is chosen: the highest-ranked eligible entry', () => {
-    expect(HOME).toMatch(
-      /const shownBannerKey = BANNER_PRIORITY\[0\]\?\.key \?\? null;/,
-    );
+  test('exactly one offer is chosen: the highest-ranked eligible entry, by resolveOfferSlot', () => {
+    expect(HOME).toMatch(/import \{ resolveOfferSlot \} from '\.\.\/lib\/home\/offerSlot';/);
+    expect(HOME).toMatch(/const shownOfferKey = resolveOfferSlot\(\{/);
     expect(HOME).not.toMatch(/bannersExpanded/);
     expect(HOME).not.toMatch(/overflowBannerKeys/);
     expect(HOME).not.toMatch(/overflowBannerCount/);
     expect(HOME).not.toMatch(/topBannerKeys/);
+    // The four offers render from a plain equality check against the one key.
+    for (const key of ['coachingSetup', 'howYouTrain', 'communityIntro', 'activation']) {
+      expect(HOME).toMatch(new RegExp(`shownOfferKey === '${key}'`));
+    }
   });
 
-  test('every one of the two show* flags renders from a plain equality check against shownBannerKey', () => {
-    const perBanner = {
-      showPlateauBanner: 'plateau',
-      showActivationBanner: 'activation',
-    };
-    for (const [flag, key] of Object.entries(perBanner)) {
-      const re = new RegExp(`const ${flag} = shownBannerKey === '${key}';`);
-      expect(HOME).toMatch(re);
-    }
-    // The free/differential "attention" slot is retired outright.
+  test('the plateau note shows whenever it is eligible, on its own', () => {
+    expect(HOME).toMatch(/const showPlateauBanner = plateauBannerEligible;/);
     expect(HOME).not.toMatch(/showAttentionSlot|showFreeCoachLine|showDifferentialBadge/);
   });
 
@@ -85,20 +84,10 @@ describe('D14 + Campaign 22 Phase 2 Stage 1: the P3 banner stack is priority-ran
   });
 
   test('the ranking arithmetic picks exactly one and leaves the rest waiting (worked example)', () => {
-    const eligible = { plateau: true, activation: true };
-    const BANNER_PRIORITY = ['plateau', 'activation']
-      .map((key) => ({ key, eligible: eligible[key] }))
-      .filter((b) => b.eligible);
-    const shownBannerKey = BANNER_PRIORITY[0]?.key ?? null;
-    expect(shownBannerKey).toBe('plateau');
-
-    const eligible2 = { plateau: false, activation: true };
-    const rank2 = ['plateau', 'activation']
-      .map((key) => ({ key, eligible: eligible2[key] }))
-      .filter((b) => b.eligible);
-    expect(rank2[0]?.key ?? null).toBe('activation');
-    expect(rank2.length).toBe(1);
-    expect(new Set([rank2[0]?.key ?? null]).size).toBe(1);
+    const { resolveOfferSlot } = require('../../lib/home/offerSlot');
+    expect(resolveOfferSlot({ howYouTrain: true, communityIntro: true, activation: true })).toBe('howYouTrain');
+    expect(resolveOfferSlot({ communityIntro: false, activation: true })).toBe('activation');
+    expect(resolveOfferSlot({})).toBeNull();
   });
 
   test('plateau and activation keep their own original tap-through and dismiss handlers untouched', () => {
@@ -136,6 +125,20 @@ describe('Campaign 22 Phase 2 Stage 1: the senior ranks moved to the Today line 
     // FOUNDER DECISION (fully free, no trial, no expiry): trialEnding is
     // retired, not merely moved.
     expect(block).not.toMatch(/trialEnding: \{/);
+  });
+
+  test('D231: the plan update choice, the limitation decision and the plan-rebuilt note are arbiter facts too, each keeping its own tap and dismissal', () => {
+    const site = HOME.indexOf('const todayLineItem = resolveTodayLine({');
+    const block = HOME.slice(site, HOME.indexOf('  });', site));
+    for (const key of ['planChoice', 'limitation', 'planNote']) {
+      expect(block).toMatch(new RegExp(`${key}: \\{`));
+    }
+    // Plan update: the Plan update flow on tap, the stored "Not now" on dismiss.
+    expect(block).toMatch(/planChoice: \{\s*\n\s*eligible: planChoiceProgrammeId != null,\s*\n\s*onPress: \(\) => \{ haptics\.selection\(\); navigateCrossTab\(navigation, 'PlansTab', 'PlanUpdate'\); \},\s*\n\s*onDismiss: dismissPlanChoice,/);
+    // Limitation decision: opens Injuries & limitations, as the two rows did.
+    expect(block).toMatch(/limitation: \{[\s\S]*?navigation\.navigate\('HowYouTrain'\)/);
+    // Plan-rebuilt note: opens the sheet; its "Got it" is the only retirement.
+    expect(block).toMatch(/planNote: \{\s*\n\s*eligible: planRebuildNote != null,\s*\n\s*onPress: \(\) => \{ haptics\.selection\(\); setShowPlanRebuildNote\(true\); \},/);
   });
 
   test('coach decision keeps its exact original tap-through, dismissal key and store mirror', () => {
@@ -183,7 +186,9 @@ describe('Campaign 22 Phase 2 Stage 1: the senior ranks moved to the Today line 
 describe('D14: no P3 trigger is ED-safety/wellbeing/calm-mode, so none is exempt from the cap', () => {
   test('neither P3 eligibility trigger reads an ED flag or wellbeing/calm-mode signal directly', () => {
     const site = HOME.indexOf('const plateauBannerEligible = !!plateauBanner');
-    const end = HOME.indexOf('const BANNER_PRIORITY = [');
+    const end = HOME.indexOf('const showPlateauBanner = plateauBannerEligible;');
+    expect(site).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(site);
     const triggerBlock = HOME.slice(site, end);
     expect(triggerBlock).not.toMatch(/edFlag|isCalm|WELLBEING_KEY|openEdPatternFlag/i);
   });
@@ -194,13 +199,15 @@ describe('D14: no P3 trigger is ED-safety/wellbeing/calm-mode, so none is exempt
     expect(activationLoader.slice(0, 1000)).toMatch(/deriveSafetyState\(\{ mode: wellbeing, edFlag \}\)\.suppressed/);
   });
 
-  test('the cap governs only the P3 stack, and no ED/wellbeing surface was funnelled into it', () => {
-    const declared = ['plateau', 'activation'];
-    const gated = HOME.match(/const show\w+ = shownBannerKey === '(\w+)';/g) || [];
+  test('the offer slot governs only the four offers, and no ED/wellbeing surface was funnelled into it', () => {
+    const declared = ['coachingSetup', 'howYouTrain', 'communityIntro', 'activation'];
+    const gated = HOME.match(/shownOfferKey === '(\w+)'/g) || [];
     expect(gated.length).toBeGreaterThan(0);
     for (const line of gated) {
       expect(declared).toContain(line.match(/=== '(\w+)'/)[1]);
     }
+    const { OFFER_SLOT_ORDER } = require('../../lib/home/offerSlot');
+    expect([...OFFER_SLOT_ORDER]).toEqual(declared);
   });
 
   test('FOUNDER DECISION (fully free, no tier split): the differential paywall loader is retired from Home', () => {

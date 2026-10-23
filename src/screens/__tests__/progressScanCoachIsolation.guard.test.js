@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const SCREEN = fs.readFileSync(path.resolve(__dirname, '../CoachOutputScreen.js'), 'utf8');
-const PROFILE_SCREEN = fs.readFileSync(path.resolve(__dirname, '../AthleteProfileScreen.js'), 'utf8');
+// D231: the Athlete profile's Volyume Score tile moved to Progress photos (the score cells on each set).
+const PHOTOS_SCREEN = fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.js'), 'utf8');
 const NUTRITION = fs.readFileSync(path.resolve(__dirname, '../../lib/nutritionEngine.js'), 'utf8');
 const DATABASE = fs.readFileSync(path.resolve(__dirname, '../../lib/database.js'), 'utf8');
 
@@ -83,8 +84,9 @@ describe('Progress Scan coach isolation guard', () => {
     expect(lineContaining(SCREEN, 'canShowProgressScanCoachContext')).toMatch(/progressScanCoachContext/);
     // Wave 4: the ad hoc `!edPatternOpen && !calmMode` composition is now
     // routed through the shared isPhotoSuppressed() OR (see
-    // hooks/usePhotoSuppression.js), the same function AthleteProfileScreen
-    // uses, so both surfaces can't silently drift apart on this policy.
+    // hooks/usePhotoSuppression.js), the same function the Progress photos
+    // screen's score cells use (D231), so both surfaces can't silently drift
+    // apart on this policy.
     expect(SCREEN).toMatch(/canShowProgressScanCoachContext = .*progressScanCoachContext.*!isPhotoSuppressed\(calmMode,\s*edPatternOpen\)/s);
     expect(SCREEN).toMatch(/resolveProgressScanCoachNote\(\{/);
     expect(SCREEN).toMatch(/suppressed:\s*isPhotoSuppressed\(calmNow,\s*resultEdPatternOpen\)/);
@@ -118,13 +120,16 @@ describe('Progress Scan coach isolation guard', () => {
   });
 
   // Guard test 8 (integration blueprint §9): suppression parity. Both
-  // scan-derived surfaces (the Coach card and the profile physique tile) must
-  // be governed by the shared fail-closed mechanism, not independent
-  // booleans that could drift.
+  // scan-derived surfaces (the Coach card and the Volyume Score cells on the
+  // Progress photos screen, where the retired profile's physique tile went,
+  // D231) must be governed by the shared fail-closed mechanism, not
+  // independent booleans that could drift.
   test('suppression parity: both scan-derived surfaces use the shared fail-closed mechanism', () => {
     expect(SCREEN).toMatch(/import\s*\{\s*isPhotoSuppressed\s*\}\s*from\s*'\.\.\/hooks\/usePhotoSuppression'/);
-    expect(PROFILE_SCREEN).toMatch(/import usePhotoSuppression from '\.\.\/hooks\/usePhotoSuppression'/);
-    expect(PROFILE_SCREEN).toMatch(/usePhotoSuppression\(user\?\.id\)/);
-    expect(PROFILE_SCREEN).toMatch(/showPhysiqueScore = !photoSuppressed && shouldShowPhysiqueScore/);
+    expect(PHOTOS_SCREEN).toMatch(/import usePhotoSuppression from '\.\.\/hooks\/usePhotoSuppression'/);
+    expect(PHOTOS_SCREEN).toMatch(/usePhotoSuppression\(userId\)/);
+    // The score cell is withheld by the hook's verdict OR the screen's own raw calm read.
+    expect(PHOTOS_SCREEN).toMatch(/const suppressed = photoSuppressed \|\| calm;/);
+    expect(PHOTOS_SCREEN).toMatch(/const scoreValue = suppressed \? 'Hidden'/);
   });
 });

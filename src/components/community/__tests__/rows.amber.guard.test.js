@@ -103,7 +103,7 @@ const AMBER_COUNTS = [
   ['Band.js', 0],
   ['EntryRow.js', 0],
   ['HeaderGlyph.js', 0],
-  ['CommunityHeaderAction.js', 3], // the header glyph's icon colour, the unread-message-count badge fill, the plain "unseen" dot fill
+  // D231 (app layout rework, batch 1): CommunityHeaderAction.js (the Today header pill, 3 amber uses) is deleted with the pill.
   ['ComposerInput.js', 0],
   ['ConnectButton.js', 0],
   ['ConnectRequestRow.js', 0],

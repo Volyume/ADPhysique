@@ -21,13 +21,16 @@ const fs = require('fs');
 const path = require('path');
 
 const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', '..', p), 'utf8');
-const PROGRESS = read('screens/AnalyticsScreen.js');
+// RE-POINTED (D231, app layout rework batch 4): the Progress tab is gone and its
+// rows (this one included) are components/coach/CoachProgress.js, drawn by the
+// Coach screen; the Recovery screen is registered in the Coach stack.
+const PROGRESS = read('components/coach/CoachProgress.js');
 const CONSISTENCY = read('screens/ConsistencyScreen.js');
 const RECOVERY = read('screens/RecoveryScreen.js');
 const NAV = read('navigation/RootNavigator.js');
 const CARDS = read('components/ReadinessCards.js');
 
-describe('the Recovery row on Progress', () => {
+describe('the Recovery row in Your progress (Coach)', () => {
   test('it sits in the top card after the rows that were already there, and opens Recovery', () => {
     const block = PROGRESS.slice(PROGRESS.indexOf('<Card padding="none" surface="surfaceElevated"'), PROGRESS.indexOf('</Card>', PROGRESS.indexOf('<Card padding="none" surface="surfaceElevated"')));
     const training = block.indexOf('label="Training"');
@@ -43,15 +46,15 @@ describe('the Recovery row on Progress', () => {
   });
 
   test('its lines come from the same estimate the Recovery screen draws', () => {
-    expect(PROGRESS).toContain("import { loadMuscleRecovery } from '../lib/recovery/load';");
+    expect(PROGRESS).toContain("import { loadMuscleRecovery } from '../../lib/recovery/load';");
     expect(PROGRESS).toContain('const recoveryCopy = useMemo(() => buildRecoveryPillarCopy(recoveryLoad), [recoveryLoad]);');
   });
 });
 
 describe('the Recovery screen', () => {
-  test('it is registered in the Progress stack', () => {
+  test('it is registered in the Coach stack', () => {
     expect(NAV).toContain("const RecoveryScreen = lazyScreen(() => require('../screens/RecoveryScreen').default);");
-    const stack = NAV.slice(NAV.indexOf('function ProgressStack('), NAV.indexOf('function', NAV.indexOf('function ProgressStack(') + 10));
+    const stack = NAV.slice(NAV.indexOf('function ProfileStack('), NAV.indexOf('function MainTabs'));
     expect(stack).toContain('<Stack.Screen name="Recovery" component={RecoveryScreen}');
   });
 

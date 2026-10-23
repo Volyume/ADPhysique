@@ -32,23 +32,19 @@ describe('S6: activation banner priority slot (D7 ranked-list mechanics)', () =>
   // this P3 stack's slot at all.
   // FOUNDER DECISION (fully free, no tier split): the free-tier/differential
   // "attention" slot activation used to rank above is retired entirely
-  // (see differentialBanner.guard.test.js), so activation's only remaining
-  // peer here is plateau.
-  test('ranks below plateau; the retired attention slot is gone', () => {
-    const site = HOME.indexOf('const BANNER_PRIORITY = [');
-    expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf('];', site));
-    const order = ['plateau', 'activation'].map((key) => block.indexOf(`key: '${key}'`));
-    expect(order.every((i) => i > -1)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(block).not.toMatch(/key: 'attention'/);
+  // (see differentialBanner.guard.test.js).
+  // RE-POINTED (D231, app layout rework batch 1): the activation banner left
+  // the shared banner slot (it no longer ranks below plateau). It is the last
+  // of the four offers that compete for the ONE offer slot under the main card.
+  test('is the last of the four offers in the one offer slot; the retired attention slot is gone', () => {
+    const { OFFER_SLOT_ORDER } = require('../lib/home/offerSlot');
+    expect(OFFER_SLOT_ORDER[OFFER_SLOT_ORDER.length - 1]).toBe('activation');
+    expect(HOME).not.toMatch(/BANNER_PRIORITY|shownBannerKey|key: 'attention'/);
   });
 
-  test('renders only when it is the single highest-priority eligible banner, and shows the stage copy, not a hardcoded string', () => {
-    expect(HOME).toMatch(
-      /const showActivationBanner = shownBannerKey === 'activation';/,
-    );
-    expect(HOME).toMatch(/\{showActivationBanner && \(/);
+  test('renders only when it is the one offer that shows, and shows the stage copy, not a hardcoded string', () => {
+    expect(HOME).toMatch(/activation: activationBannerEligible,/);
+    expect(HOME).toMatch(/\{shownOfferKey === 'activation' && \(/);
     expect(HOME).toMatch(/activationBannerLine\(activationNudge\.stage\)/);
   });
 });

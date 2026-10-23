@@ -16,8 +16,8 @@
  *  - its priority rank in BANNER_PRIORITY: below coach, trial, deload and
  *    phase (recovery and targets still outrank a lift plateau), above the
  *    free/differential attention slot;
- *  - the cross-stack navigation form (ExerciseDetail lives in the Progress
- *    stack; a bare navigate from Home is the F4/NAV-1 silent no-op);
+ *  - the cross-stack navigation form (ExerciseDetail lives in the Coach
+ *    stack since D231 retired the Progress tab; a bare navigate from Home is the F4/NAV-1 silent no-op);
  *  - per-plateau dismissal keyed by exercise + local week;
  *  - the loader's input being training data only (workout sets), so the
  *    banner stays outside COMP-004's weight/food suppression scope;
@@ -54,20 +54,18 @@ describe('B3 plateau banner priority slot (D7 ranked-list mechanics)', () => {
   // activation and attention. RE-PINNED AGAIN (D137, fully free product):
   // the 'attention' slot (AttentionCard.js, a free-tier-only surface) is
   // deleted outright, so plateau's one remaining peer is activation.
-  test('ranks above the activation slot', () => {
-    const site = HOME.indexOf('const BANNER_PRIORITY = [');
-    expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf('];', site));
-    const order = ['plateau', 'activation']
-      .map((key) => block.indexOf(`key: '${key}'`));
-    expect(order.every((i) => i > -1)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(block).not.toContain("key: 'attention'");
+  // RE-POINTED (D231, app layout rework batch 1): the activation banner left
+  // the shared banner slot for the one offer slot under the main card, so the
+  // plateau note no longer ranks against anything: it stays at the bottom of
+  // Today on its own, shown whenever it is eligible.
+  test('stands on its own: no shared banner slot, and the activation banner is not its peer any more', () => {
+    expect(HOME).not.toMatch(/BANNER_PRIORITY|shownBannerKey/);
+    expect(HOME).not.toMatch(/const showActivationBanner/);
   });
 
-  test('renders only when it is the single highest-priority eligible banner', () => {
+  test('renders whenever it is eligible', () => {
     expect(HOME).toMatch(
-      /const showPlateauBanner = shownBannerKey === 'plateau';/,
+      /const showPlateauBanner = plateauBannerEligible;/,
     );
   });
 });
@@ -77,11 +75,13 @@ describe('B3 plateau banner navigation (F4/NAV-1 bug class)', () => {
     expect(HOME).not.toMatch(/navigation\.navigate\(\s*['"]ExerciseDetail['"]/);
   });
 
-  test('routes via the parent tab navigator into the Progress stack', () => {
+  // RE-POINTED (D231, batch 4): the Progress tab is gone; ExerciseDetail is
+  // registered in the Coach stack (ProfileTab).
+  test('routes via the parent tab navigator into the Coach stack', () => {
     // T3: the parent-tab idiom (including the F6b initial: false rule) lives
     // in navigateCrossTab; the banner must route through it.
     expect(HOME).toMatch(
-      /navigateCrossTab\(navigation,\s*'ProgressTab',\s*'ExerciseDetail',\s*\{\s*exerciseId:\s*plateauBanner\.exerciseId\s*\}\)/,
+      /navigateCrossTab\(navigation,\s*'ProfileTab',\s*'ExerciseDetail',\s*\{\s*exerciseId:\s*plateauBanner\.exerciseId\s*\}\)/,
     );
   });
 });

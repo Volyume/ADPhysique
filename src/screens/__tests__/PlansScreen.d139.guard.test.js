@@ -72,10 +72,16 @@ describe('D139 item 1: "Start with a plan" previews before it generates', () => 
 });
 
 describe('D139 item 2: "Adjust training plan" only with an active plan', () => {
-  test('actionCards drops to "Create your own" only with no active plan', () => {
-    expect(source).toMatch(
-      /const actionCards = activePlan\s*\n\s*\? ACTION_CARDS_PRO_SWITCH\s*\n\s*: ACTION_CARDS_PRO_SWITCH\.filter\(\(card\) => card\.id === 'manual'\);/,
-    );
+  // RE-POINTED (D231, app layout rework batch 2): the actionCards table is gone;
+  // "Adjust training plan" and the plan library are NavRows in the Your setup and
+  // Plans groups, each rendered only with an active plan, and "Create your own"
+  // is always there. The rule pinned is unchanged: with no plan there is nothing
+  // for Adjust to adjust, and the empty state already offers "Browse plans".
+  test('Adjust training plan and the library row render only with an active plan; Create your own always', () => {
+    expect(source).toMatch(/\{activePlan \? \(\s*<NavRow\s+icon="flag-outline"\s+label="Adjust training plan"/);
+    expect(source).toMatch(/\{activePlan \? \(\s*<NavRow\s+icon="library-outline"\s+label="Pick from the plan library"/);
+    expect(source).toMatch(/<NavRow\s+icon="create-outline"\s+label="Create your own"/);
+    expect(source).not.toMatch(/ACTION_CARDS_PRO_SWITCH|const actionCards/);
   });
 });
 

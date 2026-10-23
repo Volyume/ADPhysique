@@ -51,13 +51,26 @@ describe('T2-30: the constraint-detection effect re-reads on focus', () => {
     expect(HOME.slice(bodyEnd, bodyEnd + 40)).toMatch(/\}, \[user\?\.id\]\),\s*\n\s*\);/);
   });
 
-  test('the read body itself (state read, activeConstraint/constraintSubject/awaitingConstraint) is unchanged', () => {
+  // RE-POINTED (D231, app layout rework batch 2): the works-around line moved to
+  // Train, so Today's read no longer derives activeConstraint/constraintSubject
+  // (src/lib/capability/injuryLines.js does, read by useInjuryLines, which
+  // re-reads on focus the same way: hooks/useInjuryLines.js). What Today's read
+  // still feeds is the Today line's limitation decision: awaitingConstraint and
+  // undecidedConstraint, unchanged.
+  test('the read body itself (state read, awaitingConstraint/undecidedConstraint) is unchanged', () => {
     const bodyEnd = HOME.indexOf("}, [user?.id]),", callbackSite);
     const body = HOME.slice(callbackSite, bodyEnd);
-    expect(body).toContain("state.restrictions.filter(r => r.role === 'episode' && r.effectiveChoice === 'applied' && r.adaptationMode !== 'hold')");
-    expect(body).toContain('setActiveConstraint(episodeRows.length > 0);');
     expect(body).toContain("episodeStatus(rows, Date.now()) === 'awaiting_confirmation'");
     expect(body).toContain('setAwaitingConstraint(awaiting);');
+    expect(body).toContain("(r) => r.role === 'episode' && r.effectiveChoice == null && r.adaptationMode !== 'hold'");
+    expect(body).not.toContain('setActiveConstraint');
+  });
+
+  test('Train\'s hook re-reads the works-around line on focus, inside useFocusEffect(useCallback(...))', () => {
+    const HOOK = fs.readFileSync(path.join(__dirname, '..', '..', 'hooks', 'useInjuryLines.js'), 'utf8');
+    expect(HOOK).toMatch(/useFocusEffect\(\s*\n\s*useCallback\(\(\) => \{/);
+    expect(HOOK).toContain('readInjuryLines(userId)');
+    expect(HOOK).toMatch(/\}, \[userId\]\),\s*\n\s*\);/);
   });
 
   test('no stray closing bracket left behind: HomeScreen.js still parses (this file itself is proof the harness required valid JS to import elsewhere, but assert balance directly too)', () => {

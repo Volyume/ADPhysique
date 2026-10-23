@@ -1,10 +1,12 @@
 import { useEffect, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Text from '../Text';
 import { useSharedValue, useDerivedValue, withTiming } from 'react-native-reanimated';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
-import { colors, fontSize, fontWeight, spacing, radius, motion, fontFamily, fontScaleCaps } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, fontFamily, fontScaleCaps, iconSize, withAlpha, alpha } from '../../styles/theme';
+import { touchTarget } from '../../styles/layout';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel, formatEnergy, formatNumber } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -176,10 +178,35 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
   );
 }
 
+// A decorative group of the card: the card's one spoken summary (the layer
+// below) already says what it shows, so a screen reader skips it (it would
+// otherwise read every figure twice), and a touch on it falls through to the
+// summary's tap (the by-meal breakdown), as a touch anywhere on the card
+// always has. Interactive parts of the card (the target, the footer) are NOT
+// inside one of these.
+const DECOR = {
+  pointerEvents: 'none',
+  accessibilityElementsHidden: true,
+  importantForAccessibility: 'no-hide-descendants',
+};
+
 // `totalsOnly` (founder decision 2026-10-20, diary open before coaching is set
 // up): the day's calories and macros as plain numbers, no ring, no bar track,
 // no target, remaining or over figure. Eaten totals only.
-export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onPress, totalsOnly = false }) {
+//
+// D231 (app layout rework, batch 3): the card is no longer ONE accessible
+// element wrapping everything. A parent that is an accessibility element
+// swallows its children for a screen reader (iOS reads it as a single
+// element), so a separate control inside it could not be reached. The card is
+// now a plain View with (1) the summary layer, an accessible Pressable filling
+// the card behind its content: it carries the spoken figures, the live region
+// and the by-meal breakdown tap, exactly as the card did; (2) the content on
+// top, whose decorative groups are hidden from a screen reader and let touches
+// fall through to the layer; and (3) the controls that stand on their own:
+// `onTargetPress` makes "of N kcal" a button of its own (opens Nutrition
+// targets; only with a target, so never in totals-only mode), and `footer` is
+// a slot at the card's foot (the Diary's "Targets updated. See why" chip).
+export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onPress, onTargetPress, footer = null, totalsOnly = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const kcal = Math.round(rollup?.kcal_total ?? 0);
@@ -287,27 +314,29 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   const a11yLabel = onPress ? `${a11ySummary}. Tap for the breakdown by meal.` : a11ySummary;
 
   return (
-    <TouchableOpacity
-      style={[styles.card, live.card]}
-      onPress={onPress}
-      disabled={!onPress}
-      activeOpacity={0.9}
-      accessible
-      accessibilityRole={onPress ? 'button' : 'summary'}
-      accessibilityLabel={a11yLabel}
-      // Food audit F-7: the label carries the live kcal + macro totals (the real
-      // values, not the ring animation), so a polite live region re-announces
-      // the new numbers to a screen reader when the day's intake changes.
-      accessibilityLiveRegion="polite"
-    >
+    <View style={[styles.card, live.card]}>
+      <Pressable
+        testID="macro-summary"
+        style={({ pressed }) => [styles.summaryLayer, pressed && onPress ? live.summaryPressed : null]}
+        onPress={onPress}
+        disabled={!onPress}
+        accessible
+        accessibilityRole={onPress ? 'button' : 'summary'}
+        accessibilityLabel={a11yLabel}
+        // Food audit F-7: the label carries the live kcal + macro totals (the real
+        // values, not the ring animation), so a polite live region re-announces
+        // the new numbers to a screen reader when the day's intake changes.
+        accessibilityLiveRegion="polite"
+      />
+      <View style={styles.cardBody} pointerEvents="box-none">
       {dayTypeLabel ? (
-        <View style={[styles.dayTypeChip, live.dayTypeChip]}>
+        <View style={[styles.dayTypeChip, live.dayTypeChip]} {...DECOR}>
           <Text style={[styles.dayTypeChipText, live.dayTypeChipText]} numberOfLines={1}>{dayTypeLabel}</Text>
         </View>
       ) : null}
-      <View style={styles.kcalRow}>
+      <View style={styles.kcalRow} pointerEvents="box-none">
         {totalsOnly ? (
-          <View style={styles.totalsKcal}>
+          <View style={styles.totalsKcal} {...DECOR}>
             <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalValue, live.kcalValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
             <Text style={[styles.kcalSubLabel, live.kcalSubLabel]}>{energyUnitLabel(energyUnit)}</Text>
             {hasPlanned ? (
@@ -315,7 +344,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
             ) : null}
           </View>
         ) : (
-        <View style={styles.kcalRingWrap}>
+        <View style={styles.kcalRingWrap} {...DECOR}>
           <Ring
             size={KCAL_SIZE}
             stroke={KCAL_STROKE}
@@ -354,11 +383,36 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         </View>
         )}
         {kcalTarget != null ? (
-          <View style={styles.kcalEatenWrap}>
-            <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
-            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${formatEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
+          <View style={styles.kcalEatenWrap} pointerEvents="box-none">
+            <View {...DECOR}>
+              <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
+            </View>
+            {onTargetPress ? (
+              // D231 batch 3: the target is a button of its own, a full 48 dp
+              // tall, separate from the card's by-meal tap. Ink, with a quiet
+              // chevron to say it opens something (one amber on the Diary).
+              <Pressable
+                testID="macro-target"
+                style={styles.kcalTargetPress}
+                onPress={onTargetPress}
+                hitSlop={{ left: spacing.md, right: spacing.md }}
+                accessibilityRole="button"
+                accessibilityLabel={`Target ${formatEnergy(kcalTarget, energyUnit)} ${energyWord}. Open nutrition targets.`}
+              >
+                <View style={styles.kcalTargetRow}>
+                  <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${formatEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+                </View>
+              </Pressable>
+            ) : (
+              <View {...DECOR}>
+                <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${formatEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
+              </View>
+            )}
             {hasPlanned ? (
-              <Text style={[styles.kcalPlanned, live.kcalPlanned, styles.kcalPlannedBeside]}>{`+${formatEnergy(plannedKcal, energyUnit)} planned`}</Text>
+              <View {...DECOR}>
+                <Text style={[styles.kcalPlanned, live.kcalPlanned, styles.kcalPlannedBeside]}>{`+${formatEnergy(plannedKcal, energyUnit)} planned`}</Text>
+              </View>
             ) : null}
           </View>
         ) : null}
@@ -368,7 +422,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           fact lives in the breakdown sheet this card opens (MacroBreakdownSheet,
           `hasPlanned`), and the planned amounts keep their spoken label in
           the summary above. */}
-      <View style={styles.macroRow}>
+      <View style={styles.macroRow} {...DECOR}>
         <MacroBar
           label="Protein"
           value={p}
@@ -389,15 +443,19 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         // R15 (D230): the split reads in words, not letters ("30% protein ·
         // 40% carbs · 30% fat of calories"), and its label speaks the same
         // words. Descriptive only: no colour, no target.
-        <Text
-          style={[styles.macroSplit, live.macroSplit]}
-          accessibilityLabel={`${macroSplit.p}% protein, ${macroSplit.c}% carbs, ${macroSplit.f}% fat of calories`}
-        >
-          {`${macroSplit.p}% protein · ${macroSplit.c}% carbs · ${macroSplit.f}% fat`}
-          <Text style={[styles.macroSplitCaption, live.macroSplitCaption]}> of calories</Text>
-        </Text>
+        <View {...DECOR}>
+          <Text
+            style={[styles.macroSplit, live.macroSplit]}
+            accessibilityLabel={`${macroSplit.p}% protein, ${macroSplit.c}% carbs, ${macroSplit.f}% fat of calories`}
+          >
+            {`${macroSplit.p}% protein · ${macroSplit.c}% carbs · ${macroSplit.f}% fat`}
+            <Text style={[styles.macroSplitCaption, live.macroSplitCaption]}> of calories</Text>
+          </Text>
+        </View>
       ) : null}
-    </TouchableOpacity>
+      {footer ? <View style={styles.footer} pointerEvents="box-none">{footer}</View> : null}
+      </View>
+    </View>
   );
 }
 
@@ -407,8 +465,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg,
-    gap: spacing.lg,
   },
+  // D231: the summary layer fills the card behind its content (see the
+  // component's header comment); the content's own gap lives on cardBody.
+  summaryLayer: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.lg,
+  },
+  cardBody: { gap: spacing.lg },
+  // The card's foot slot: the chip inside is its own 48 dp target, so the
+  // slot gives back the card's gap and padding it would otherwise double.
+  footer: { alignItems: 'center', marginTop: -spacing.sm, marginBottom: -spacing.sm },
   kcalRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
@@ -452,6 +519,16 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   kcalPlannedBeside: { textAlign: 'right' },
+  // D231: the target's own button, a real 48 dp tall (the platform minimum).
+  // Its label is a line of text, so the negative vertical margin hands the
+  // extra height back to the layout: the label sits where the old label sat,
+  // and the touch target reaches into the figures above and below it (both
+  // are decorative and let touches fall through to it).
+  kcalTargetPress: {
+    alignItems: 'flex-end', justifyContent: 'center',
+    minHeight: touchTarget.minimum, marginVertical: -spacing.md,
+  },
+  kcalTargetRow: { flexDirection: 'row', alignItems: 'center' },
   kcalEatenValue: {
     color: colors.textSecondary,
     fontSize: fontSize.xl,
@@ -576,6 +653,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    summaryPressed: { backgroundColor: withAlpha(t.colors.textPrimary, alpha.ghost) },
     kcalValue: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl, lineHeight: Math.round(t.fontSize.xxxl * 1.1) },
     kcalSubLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     kcalPlanned: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },

@@ -66,6 +66,28 @@ function isRecentBest(row) {
     && row.latestE1rm >= row.bestE1rm - 0.05;
 }
 
+/**
+ * A relative-strength row's second line: the ratio to body weight, then the
+ * distance to the next level (D231: moved here from the retired Athlete
+ * profile's strength baselines, with the rule it carried). Under an open ED
+ * flag, a failed read or the unknown state (`withheld`, D228 item 2 tier c) the
+ * ratio goes and the distance stays: it is a figure in the lift's own unit, as
+ * the standing headline's "from Advanced" line already is. With no next level
+ * and a withheld ratio there is no line. Not withheld, the ratio text is
+ * exactly what it was. Pure.
+ */
+export function strengthRowSub({ level, bestE1rm, units, withheld }) {
+  const hasNext = !!(level?.nextLabel && level?.nextTarget) && bestE1rm != null && Number.isFinite(Number(bestE1rm));
+  const distance = hasNext
+    ? `${Math.max(0, level.nextTarget - Number(bestE1rm)).toFixed(1)} ${units} to ${level.nextLabel}`
+    : null;
+  if (withheld) return distance;
+  const ratio = level.ratio >= 1
+    ? `${level.ratio.toFixed(2)}x your body weight`
+    : `${Math.round(level.ratio * 100)}% of your body weight`;
+  return distance ? `${ratio} - ${distance}` : ratio;
+}
+
 // R1 (per-exercise metric switcher): the lenses the sparkline can draw, beyond
 // the default best-set estimated-1RM trend. Each maps one logged set to a
 // number; the session value is the max of its sets (best effort that session),
@@ -253,7 +275,7 @@ export default function LiftProgressScreen({ navigation }) {
           const lvl = getStrengthLevel(r.name, r.bestE1rm, bwValue);
           if (!lvl) continue;
           if (!levels[key] || lvl.ratio > levels[key].level.ratio) {
-            levels[key] = { name: r.name, level: lvl };
+            levels[key] = { name: r.name, level: lvl, bestE1rm: r.bestE1rm };
           }
         }
         setStrengthLevels(levels);
@@ -422,23 +444,24 @@ export default function LiftProgressScreen({ navigation }) {
           {/* B4: one row per matched STANDARD CATEGORY (key), named after
               whichever exercise variant produced that category's best ratio
               -- not one row per exercise name. */}
-          {Object.entries(strengthLevels).map(([key, entry]) => (
-            <View key={key} style={[styles.strengthRow, live.strengthRow]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.strengthName, live.strengthName]} numberOfLines={1}>{entry.name}</Text>
-                {withholdWeight ? null : (
-                  <Text style={[styles.strengthNarrative, live.strengthNarrative]}>
-                    {entry.level.ratio >= 1
-                      ? `${entry.level.ratio.toFixed(2)}x your body weight`
-                      : `${Math.round(entry.level.ratio * 100)}% of your body weight`}
-                  </Text>
-                )}
+          {Object.entries(strengthLevels).map(([key, entry]) => {
+            const rowSub = strengthRowSub({
+              level: entry.level, bestE1rm: entry.bestE1rm, units, withheld: withholdWeight,
+            });
+            return (
+              <View key={key} style={[styles.strengthRow, live.strengthRow]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.strengthName, live.strengthName]} numberOfLines={1}>{entry.name}</Text>
+                  {rowSub ? (
+                    <Text style={[styles.strengthNarrative, live.strengthNarrative]}>{rowSub}</Text>
+                  ) : null}
+                </View>
+                <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(entry.level.label), alpha.tint) }]}>
+                  <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(entry.level.label) }]}>{entry.level.label}</Text>
+                </View>
               </View>
-              <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(entry.level.label), alpha.tint) }]}>
-                <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(entry.level.label) }]}>{entry.level.label}</Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       ) : noMatchingStandard ? (
         // B3: the third state -- bodyweight is known and lifts exist, but

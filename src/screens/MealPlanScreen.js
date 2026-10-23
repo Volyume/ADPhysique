@@ -550,11 +550,10 @@ export default function MealPlanScreen({ navigation, route }) {
       // A successful add lands the user on the result (founder 2026-07-03:
       // staying here read as nothing happening). Diary is this stack's
       // root, so navigate pops back to it; the toast rides the transition
-      // via the app-level provider. `justAddedPlan` is a one-shot signal
-      // (founder ask, 2026-07-09) DiaryScreen reads once to teach that these
-      // meals can be marked eaten one by one or all at once; it consumes and
-      // clears the param itself so a later revisit never re-fires it.
-      if (n > 0) navigation.navigate('Diary', { justAddedPlan: true });
+      // via the app-level provider. (The one-shot route param that taught
+      // "mark eaten" once is retired with its hint, D231 batch 3: the Diary's
+      // one planned-meals line says it whenever planned meals are there.)
+      if (n > 0) navigation.navigate('Diary');
     } catch (e) {
       logError('MealPlanScreen.logDay', e, { replacing: !!clearPlannedFirst });
       toast.show('That day was not added to your diary. Try again in a moment.', { variant: 'error' });
@@ -636,9 +635,8 @@ export default function MealPlanScreen({ navigation, route }) {
       const res = await applyPlanWeekToDiary(user.id, plan, { startDate: planStartDate, planned });
       toast.show(describeWeekMerge(res, mealSlotLabel), { variant: res.addedDays > 0 ? 'success' : 'info' });
       // Same landing rule as writeLogDay: a successful add returns the
-      // user to the diary they just filled, with the same one-shot
-      // `justAddedPlan` teach signal.
-      if (res.addedDays > 0) navigation.navigate('Diary', { justAddedPlan: true });
+      // user to the diary they just filled.
+      if (res.addedDays > 0) navigation.navigate('Diary');
     } catch (e) {
       logError('MealPlanScreen.logWeek', e, { days: plan?.days?.length ?? 0 });
       toast.show('The week was not added to your diary. Try again in a moment.', { variant: 'error' });

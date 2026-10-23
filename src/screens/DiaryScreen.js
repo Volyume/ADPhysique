@@ -42,6 +42,17 @@
  *  - R14: water moves by an atomic delta (food/db.js adjustWaterMl).
  *  - R16: the scan button says it opens the camera; the targets-changed
  *    chip is a full touch target.
+ *
+ * D231 (app layout rework, docs/app-rework-2026-10/SPEC.md, batch 3: the
+ * diary comes first). Top to bottom: the day picker; the calorie and macro
+ * card (its target opens Nutrition targets, and "Targets updated. See why"
+ * sits inside it); ONE planned-meals line ("3 planned meals . Mark all eaten .
+ * Clear") in place of the bottom banner and the two one-time hint captions;
+ * the meals; Add another meal; Water; the tools (Meal builder, Higher-calorie
+ * day); and one offer at a time (the meal-reminder offer, else the barcode-
+ * fixes offer). "Copy yesterday" is not a row any more: Day tools' "Copy from
+ * another day" lists yesterday first. Day tools keeps only that and "Meals";
+ * Trends has the header door and Nutrition targets the card's target.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
@@ -54,7 +65,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize, fontFamily, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
@@ -108,7 +119,6 @@ import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import MealSection, { usualPortionText } from '../components/food/MealSection';
-import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
@@ -119,6 +129,7 @@ import WaterRow from '../components/food/WaterRow';
 import DiaryMoveSheet from '../components/food/DiaryMoveSheet';
 import SaveAsMealSheet from '../components/food/SaveAsMealSheet';
 import DayToolsSheet from '../components/food/DayToolsSheet';
+import PlannedMealsLine from '../components/food/PlannedMealsLine';
 import CopyFromDaySheet from '../components/food/CopyFromDaySheet';
 import MealsSheet from '../components/food/MealsSheet';
 import HeaderAction from '../components/HeaderAction';
@@ -295,13 +306,9 @@ export default function DiaryScreen({ navigation, route }) {
   // The safe per-day floor banking must never breach: max(sex floor, FFM floor)
   // (CB-1 blueprint line 90). Computed on load from latest weight + body comp.
   const [floorKcal, setFloorKcal] = useState(() => safeDayFloorKcal({ sex }));
-  // Whether the day before the one in view has any food logged. Drives the
-  // "Copy yesterday" door an empty day offers (D230 R1, formerly EmptyDiary's
-  // action); the meal builder door owns planning a day with no history.
-  const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
   // D138 item 2: yesterday's rows, kept so an empty meal can offer to copy
-  // just THAT meal across. Loaded by the same (conditional) read that feeds
-  // yesterdayHasFood, never a second query.
+  // just THAT meal across ("Yesterday's <meal>"). One conditional read in
+  // load(), never a second query.
   const [yesterdayEntries, setYesterdayEntries] = useState([]);
   // The slot ladder currently on screen, for load()'s "is any meal empty?"
   // test. A ref, not a dep: adding mealSlots to load() would rebuild it (and
@@ -370,9 +377,9 @@ export default function DiaryScreen({ navigation, route }) {
       }
       // D138 item 5: yesterday's entries are only READ when this day can
       // actually use them - any visible meal is empty (the per-meal
-      // "Yesterday's <meal>" chip; an empty day is every meal empty, which
-      // also feeds the "Copy yesterday" door, D230 R1). A day with every
-      // meal already filled pays nothing for a fetch it cannot show.
+      // "Yesterday's <meal>" chip; an empty day is every meal empty). A day
+      // with every meal already filled pays nothing for a fetch it cannot
+      // show.
       // mealSlotKeysRef carries the currently rendered slot ladder (assigned
       // during render below).
       const loggedSlotKeys = new Set((es ?? []).map((e) => e.meal_slot));
@@ -408,11 +415,8 @@ export default function DiaryScreen({ navigation, route }) {
       setTargets(targetsRow);
       setEdFlagOpen(!!edFlag);
       setFloorKcal(floor);
-      // Only meaningful when the fetch actually ran; it gates the "Copy
-      // yesterday" door, which can only render on a day with no entries at
-      // all - exactly one of the cases that forces the fetch above.
+      // Only meaningful when the fetch actually ran (see needYesterday).
       setYesterdayEntries(yEntries ?? []);
-      setYesterdayHasFood((yEntries?.length ?? 0) > 0);
       setLatestCoachOutput(coachOut ?? null);
       setLoadError(false);
     } catch (e) {
@@ -488,13 +492,14 @@ export default function DiaryScreen({ navigation, route }) {
     };
   }, [userId]);
 
-  // Planned scaffolding from a meal plan (adherence model): shown with a
-  // confirm banner so it counts towards adherence only once the user says they
-  // ate it. "Mark as eaten" flips the day's planned meals to actuals; "Clear"
-  // discards them. Future days only offer Clear (you can't have eaten yet).
+  // Planned scaffolding from a meal plan (adherence model): shown on the one
+  // planned-meals line (D231) so it counts towards adherence only once the
+  // user says they ate it. "Mark all eaten" flips the day's planned meals to
+  // actuals; "Clear" discards them. Future days only offer Clear (you can't
+  // have eaten yet).
   // Count distinct planned MEALS (meal slots), not individual food items. A
   // day plan is ~6 meals of several foods each, so counting entries made the
-  // banner read "20 planned meals" for a single planned day (QA 2026-06-16).
+  // line read "20 planned meals" for a single planned day (QA 2026-06-16).
   // deriveDiaryDayViewModel's readOnly option is a lib API outside this
   // screen's lane; Volyume is fully free, so it is always false here.
   const { viewEntries, plannedCount, plannedTotals } = useMemo(
@@ -506,21 +511,20 @@ export default function DiaryScreen({ navigation, route }) {
   const handleConfirmPlanned = useCallback(async () => {
     if (!userId) return;
     try {
-      // The toast counts MEALS (slots), as the banner does, not the rows the
-      // write changed: one meal of three foods is "1 planned meal", not 3.
+      // The toast counts MEALS (slots), as the planned-meals line does, not
+      // the rows the write changed: one meal of three foods is "1 planned
+      // meal", not 3.
       // plannedCount is read before the confirm; n (rows) still gates the rest.
       const mealsConfirmed = Math.max(1, plannedCount);
       const n = await confirmPlannedDay(userId, selectedDate);
       await load();
       if (n > 0) trackPlannedConfirmed('day', n);
-      if (n > 0) dismissMarkEatenHint(); // discovery: bulk mark-as-eaten used
-      if (n > 0) dismissPlanAddedHint(); // same discovery, plan-added teach's signal
       toast.show(n > 0 ? `${mealsConfirmed} planned ${mealsConfirmed === 1 ? 'meal' : 'meals'} marked as eaten.` : 'Nothing to confirm.', { variant: n > 0 ? 'success' : 'info' });
     } catch (e) {
       logError('DiaryScreen.confirmPlannedDay', e, { userId, plannedCount });
       toast.show('Your planned meals were not marked as eaten. Try again in a moment.', { variant: 'error' });
     }
-  }, [userId, selectedDate, plannedCount, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
+  }, [userId, selectedDate, plannedCount, load, toast]);
 
   // Food audit item 1 ("mark planned meal eaten", one tap): confirm just ONE
   // meal's planned rows, not the whole day, so staging a plan into the diary
@@ -535,15 +539,13 @@ export default function DiaryScreen({ navigation, route }) {
       await load();
       if (n > 0) {
         trackPlannedConfirmed('meal', n);
-        dismissMarkEatenHint(); // discovery: per-meal mark-as-eaten used
-        dismissPlanAddedHint(); // same discovery, plan-added teach's signal
         toast.show('Marked as eaten.', { variant: 'success' });
       }
     } catch (e) {
       logError('DiaryScreen.confirmPlannedSlot', e, { userId, slotKey });
       toast.show('That meal was not marked as eaten. Try again in a moment.', { variant: 'error' });
     }
-  }, [userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
+  }, [userId, selectedDate, load, toast]);
 
   const handleClearPlanned = useCallback(async () => {
     if (!userId) return;
@@ -908,55 +910,23 @@ export default function DiaryScreen({ navigation, route }) {
   // showFoodHint state removed 2026-07-13 (founder order): the caption is
   // gone; the once-ever key + dismissFoodHint discovery write remain.
   const [showWaterHint, setShowWaterHint] = useState(false);
-  // D12 item 3 (ux-world-class-audit-2026-07-09): a user's first sight of
-  // planned meals in the diary now has no bulk-mark button right there (it
-  // moved to the bottom of the page, D12 item 2), so this one-time hint
-  // teaches both ways to confirm a planned meal, same once-ever convention.
-  const [showMarkEatenHint, setShowMarkEatenHint] = useState(false);
-  // Founder ask (2026-07-09): fires once ever, only on arrival from the meal
-  // builder / meal plan's "Add this day" / "Add this week" (route param
-  // `justAddedPlan`, set by MealPlanScreen), not on every sighting of planned
-  // meals like DIARY_MARKEATEN_HINT_KEY above.
-  const [showPlanAddedHint, setShowPlanAddedHint] = useState(false);
+  // D231 (batch 3): the two planned-meals hint captions (D12 item 3's
+  // mark-eaten hint and the 2026-07-09 plan-added teach) are retired; the
+  // one planned-meals line says what can be done with planned meals, at the
+  // moment they are there.
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(DIARY_WATER_HINT_KEY).then((v) => {
       if (active && v !== 'true') setShowWaterHint(true);
     }).catch(() => {}); // a missing hint marker shows the hint once more
-    AsyncStorage.getItem(DIARY_MARKEATEN_HINT_KEY).then((v) => {
-      if (active && v !== 'true') setShowMarkEatenHint(true);
-    }).catch(() => {}); // a missing hint marker shows the hint once more
     return () => { active = false; };
   }, []);
-  // One-shot: only when the nav param is actually present (arriving straight
-  // from a meal-builder add), and only if never dismissed before. The param
-  // is cleared immediately so revisiting this Diary instance later (tab
-  // round-trip, backgrounding) never re-fires it, matching the setParams
-  // idiom AnalyticsScreen's focusWeightTrend and RecipeBuilderScreen's
-  // addedIngredient already use for a one-shot arrival signal.
-  useEffect(() => {
-    if (!route?.params?.justAddedPlan) return;
-    navigation.setParams({ justAddedPlan: undefined });
-    let active = true;
-    AsyncStorage.getItem(DIARY_PLANADDED_HINT_KEY).then((v) => {
-      if (active && v !== 'true') setShowPlanAddedHint(true);
-    }).catch(() => {}); // a missing hint marker shows the hint once more
-    return () => { active = false; };
-  }, [route?.params?.justAddedPlan, navigation]);
   const dismissFoodHint = useCallback(() => {
     AsyncStorage.setItem(DIARY_FOOD_HINT_KEY, 'true').catch(() => {}); // a hint marker is a convenience; the hint shows once more at worst
   }, []);
   const dismissWaterHint = useCallback(() => {
     setShowWaterHint(false);
     AsyncStorage.setItem(DIARY_WATER_HINT_KEY, 'true').catch(() => {}); // a hint marker is a convenience; the hint shows once more at worst
-  }, []);
-  const dismissMarkEatenHint = useCallback(() => {
-    setShowMarkEatenHint(false);
-    AsyncStorage.setItem(DIARY_MARKEATEN_HINT_KEY, 'true').catch(() => {}); // a hint marker is a convenience; the hint shows once more at worst
-  }, []);
-  const dismissPlanAddedHint = useCallback(() => {
-    setShowPlanAddedHint(false);
-    AsyncStorage.setItem(DIARY_PLANADDED_HINT_KEY, 'true').catch(() => {}); // a hint marker is a convenience; the hint shows once more at worst
   }, []);
 
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
@@ -1762,8 +1732,8 @@ export default function DiaryScreen({ navigation, route }) {
   // reported ("Copied 3 entries. 1 could not be copied."), so one rogue row
   // never blocks the day and the write itself has no half-state. The lib
   // leaves planned meals out and keeps each row's time of day. The toast's
-  // Undo removes exactly the rows this copy wrote. Used by both "Copy yesterday" and
-  // the "copy a previous day" picker (food audit F-3).
+  // Undo removes exactly the rows this copy wrote. Used by the "copy a previous
+  // day" picker (food audit F-3), which since D231 also covers copying yesterday.
   const copyFromDate = useCallback(async (sourceDate) => {
     if (!userId || !sourceDate) return;
     const srcEntries = await getFoodEntriesForDay(userId, sourceDate).catch(() => []);
@@ -1805,30 +1775,10 @@ export default function DiaryScreen({ navigation, route }) {
     }
   }, [userId, selectedDate, load, toast]);
 
-  // "Copy yesterday" quick action (empty-state CTA): confirm, then copy.
-  const copyYesterday = useCallback(async () => {
-    if (!userId) return;
-    const yesterday = shiftDate(selectedDate, -1);
-    // Planned meals are never copied (copyEntriesToDate leaves them out), so
-    // the question counts only what was eaten.
-    const yEntries = (await getFoodEntriesForDay(userId, yesterday).catch(() => []) ?? [])
-      .filter((e) => !e.is_planned);
-    if (yEntries.length === 0) {
-      toast.show('Nothing logged yesterday to copy.', { variant: 'info' });
-      return;
-    }
-    appAlert(
-      `Copy ${yEntries.length} ${yEntries.length === 1 ? 'entry' : 'entries'} from yesterday?`,
-      'They will land in this day\'s diary under the same meals.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Copy', onPress: () => copyFromDate(yesterday) },
-      ],
-    );
-  }, [userId, selectedDate, copyFromDate, toast]);
-
   // "Copy a previous day" picker (food audit F-3): open a list of recent days
-  // with food logged, before the day in view; tapping one copies it in.
+  // with food logged, before the day in view, newest first (so the day before
+  // the one in view leads when it has food); tapping one copies it in. Since
+  // D231 this is the one way to copy a day (Day tools -> Copy from another day).
   const openCopyPicker = useCallback(async () => {
     if (!userId) return;
     const days = await getRecentLoggedDays(userId, selectedDate, 14).catch(() => []);
@@ -1838,12 +1788,15 @@ export default function DiaryScreen({ navigation, route }) {
   const openDiaryActions = useCallback(() => {
     setDiaryToolsOpen(true);
   }, []);
+  // D231 (batch 3): the calorie card's target opens Nutrition targets, the
+  // same cross-tab door Day tools used and the no-targets state still uses.
+  const openNutritionTargets = useCallback(() => {
+    haptics.selection();
+    navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets');
+  }, [navigation]);
 
   const todayIso = isoDate(new Date());
   const isViewingToday = selectedDate === todayIso;
-  // D230 R1: "Copy yesterday" is offered on a day with nothing logged whose
-  // yesterday has food (the condition EmptyDiary's action had).
-  const showCopyYesterdayDoor = viewEntries.length === 0 && yesterdayHasFood;
   const dateHeading = isViewingToday ? 'Today' : friendlyDate(selectedDate);
   // Item 12 (food Diary audit 2026-10-16): a day further back than yesterday
   // is already named by its date ("Tue 15 Sept"), so the line under it is not
@@ -1972,27 +1925,19 @@ export default function DiaryScreen({ navigation, route }) {
         </View>
 
         <View style={styles.macroRingsWrap}>
-          {/* Audit item 6: quiet coach receipt chip. Shown only when the coach
-              itself recently changed the calorie target; links to that exact
-              week's decision in CoachOutputScreen, the real "why". */}
-          {coachingSetUp && targetsChangedRecently ? (
-            <TouchableOpacity
-              style={styles.targetsChangedRow}
-              onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart }); }}
-              hitSlop={{ left: spacing.md, right: spacing.md }}
-              accessibilityRole="button"
-              accessibilityLabel="Targets updated. See why."
-            >
-              <Ionicons name="information-circle-outline" size={13} color={t.colors.textSecondary} />
-              <Text style={[styles.targetsChangedText, live.targetsChangedText]}>Targets updated. See why</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          ) : null}
           {/* MacroRings renders unconditionally, first day included (founder
               device verdict 2026-07-12, D75: L05-D2's first-food swap
               REVERTED - a new user must SEE the ring, targets and macros to
               plan their first day; the meal builder tells them to build from
-              targets they could not see). Never re-propose hiding it. */}
+              targets they could not see). Never re-propose hiding it.
+              D231 (batch 3): the card's target ("of N kcal") is its own
+              button to Nutrition targets, separate from the card's tap (the
+              by-meal breakdown), and never in totals-only mode (no target
+              there). Audit item 6's quiet coach receipt chip now sits INSIDE
+              the card (its footer): shown only when the coach itself recently
+              changed the calorie target; it links to that exact week's
+              decision in CoachOutputScreen, the real "why". Same condition,
+              same destination, same 48 dp as when it stood above the card. */}
           <MacroRings
             rollup={rollup}
             targets={coachingSetUp ? effectiveTargets : null}
@@ -2000,6 +1945,20 @@ export default function DiaryScreen({ navigation, route }) {
             planned={plannedTotals}
             dayTypeLabel={coachingSetUp ? dayTypeChip : null}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
+            onTargetPress={coachingSetUp && effectiveTargets ? openNutritionTargets : undefined}
+            footer={coachingSetUp && targetsChangedRecently ? (
+              <TouchableOpacity
+                style={styles.targetsChangedRow}
+                onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart }); }}
+                hitSlop={{ left: spacing.md, right: spacing.md }}
+                accessibilityRole="button"
+                accessibilityLabel="Targets updated. See why."
+              >
+                <Ionicons name="information-circle-outline" size={13} color={t.colors.textSecondary} />
+                <Text style={[styles.targetsChangedText, live.targetsChangedText]}>Targets updated. See why</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+              </TouchableOpacity>
+            ) : null}
           />
           {/* D138 item 4: a user with no nutrition targets sees rings with
               nothing to aim at and, until now, no way out of that state from
@@ -2028,88 +1987,6 @@ export default function DiaryScreen({ navigation, route }) {
               education row to the Diary without a founder order. */}
         </View>
 
-        {showOffCard && selectedDate === isoDate(new Date()) ? (
-          <Card padding="md" style={styles.offCard}>
-            <Text style={[styles.offCardText, live.offCardText]}>
-              Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
-            </Text>
-            <View style={styles.offCardRow}>
-              <Button
-                title="Not now"
-                onPress={onDismissOffCard}
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                style={[styles.offCardButton, live.offCardButton, styles.offCardButtonMuted, live.offCardButtonMuted]}
-                textStyle={[styles.offCardDismiss, live.offCardDismiss]}
-                accessibilityLabel="Not now"
-              />
-              <Button
-                title="Sharing settings"
-                // F4 (audit NAV-3): SettingsPrivacy lives in ProfileStack; the
-                // old bare navigate silently no-opped AFTER dismissing the
-                // card, destroying the affordance. Navigate first (cross-tab),
-                // and only dismiss once the navigation has been issued.
-                onPress={() => {
-                  navigateCrossTab(navigation, 'ProfileTab', 'SettingsPrivacy');
-                  onDismissOffCard();
-                }}
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                style={[styles.offCardButton, live.offCardButton]}
-                textStyle={[styles.offCardCta, live.offCardCta]}
-                accessibilityLabel="Open sharing settings"
-              />
-            </View>
-          </Card>
-        ) : null}
-
-        {/* Item 9(c) (D141): calm, dismissible, one-time discovery offer for
-            the opt-in meal-log reminder. Same card shape as the OFF-consent
-            card above (offCard styles reused, not duplicated), with a title
-            line added since this offer needs one. D230 R4: both offers sit
-            on the house Card. */}
-        {mealReminderOfferVisible ? (
-          <Card padding="md" style={styles.offCard}>
-            <Text style={[styles.mealReminderOfferTitle, live.mealReminderOfferTitle]}>
-              Want a nudge to log?
-            </Text>
-            <Text style={[styles.offCardText, live.offCardText]}>
-              A gentle reminder at your usual meal times can make logging easier. You choose the times, and you can turn it off any time.
-            </Text>
-            <View style={styles.offCardRow}>
-              <Button
-                title="Not now"
-                onPress={dismissMealReminderOffer}
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                style={[styles.offCardButton, live.offCardButton, styles.offCardButtonMuted, live.offCardButtonMuted]}
-                textStyle={[styles.offCardDismiss, live.offCardDismiss]}
-                accessibilityLabel="Not now"
-              />
-              <Button
-                title="Set up reminders"
-                // NotificationSettings lives in ProfileStack, so this diary
-                // (DiaryStack) must cross-tab, same idiom as the OFF-consent
-                // card's "Sharing settings" button just above. Navigate
-                // first, then dismiss, so the tap is never lost.
-                onPress={() => {
-                  navigateCrossTab(navigation, 'ProfileTab', 'NotificationSettings');
-                  dismissMealReminderOffer();
-                }}
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                style={[styles.offCardButton, live.offCardButton]}
-                textStyle={[styles.offCardCta, live.offCardCta]}
-                accessibilityLabel="Set up meal reminders"
-              />
-            </View>
-          </Card>
-        ) : null}
-
         {!loaded ? (
           <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
             <SkeletonRow />
@@ -2137,55 +2014,30 @@ export default function DiaryScreen({ navigation, route }) {
           // one-tap usual chips, "Yesterday's <meal>" and the hour's
           // suggestion (MealSection), so the first food of the day is one
           // tap. The EmptyDiary card that used to replace them is retired;
-          // its "Copy yesterday" and "Meal builder" are doors in the feature
-          // list below.
+          // its "Meal builder" is a door in the tools list below, and
+          // copying yesterday is Day tools -> Copy from another day (D231).
           <>
-            {/* Founder ask (2026-07-09): the moment meals from the meal
-                builder / meal plan land here (arrival flagged by
-                justAddedPlan above), a one-time hint teaches the same two
-                ways to confirm them, anchored to that specific arrival
-                rather than "any time planned meals are visible" (D12's
-                showMarkEatenHint just below). The two never stack: this one
-                takes priority the first time round, since it is more
-                specific to what the user just did; D12's general hint
-                still covers every other time planned meals appear if this
-                one somehow never fires (e.g. an older, already-planned day
-                reached without a fresh add). */}
-            {plannedCount > 0 && !selectionMode && showPlanAddedHint ? (
-              <HintCaption
-                text="Your meals are in the diary. Mark each one eaten as you go, or mark them all at the end of the day."
-                onDismiss={dismissPlanAddedHint}
+            {/* D231 (batch 3): ONE planned-meals line at the top of the meals
+                ("3 planned meals . Mark all eaten . Clear"). It replaces the
+                banner that sat at the foot of the page and the two one-time
+                hint captions (D12 item 3's mark-eaten hint and the
+                2026-07-09 plan-added teach). Same gating as the banner:
+                planned meals present, not selecting. "Mark all eaten" is the
+                banner's "Mark as eaten" (confirms the day's planned meals) and
+                is not offered on a future day, where nothing can have been
+                eaten yet (food Diary audit 2026-10-16, item 11); "Clear" is
+                as before. Per-meal "Mark as eaten" stays on each meal card.
+                A hold-to-select caption was removed 2026-07-13 (founder
+                order) and is not re-added: the gesture still works and its
+                once-ever key is still written on first use. */}
+            {plannedCount > 0 && !selectionMode ? (
+              <PlannedMealsLine
+                count={plannedCount}
+                canMarkEaten={!isFutureDay}
+                onMarkAllEaten={handleConfirmPlanned}
+                onClear={handleClearPlanned}
               />
             ) : null}
-            {/* D12 item 3 (ux-world-class-audit-2026-07-09): the bulk
-                "mark all as eaten" banner used to live here; it is now at
-                the bottom of the page (D12 item 2). The first time a user
-                sees planned meals in the diary, this one-time hint (same
-                '@volyume_seen_*' once-ever convention as showFoodHint /
-                showWaterHint below) teaches both ways to confirm them, since
-                the bulk control is no longer visible at this scroll
-                position. Gone the moment it's dismissed or the user marks
-                any meal as eaten (individually or in bulk). Never shows
-                alongside showPlanAddedHint above (mutually exclusive: a
-                fresh plan-add always dismisses both discovery signals
-                together, see dismissMarkEatenHint/dismissPlanAddedHint in
-                handleConfirmPlanned/handleConfirmPlannedSlot). */}
-            {/* Item 11 (food Diary audit 2026-10-16): nothing on a future day
-                can be ticked off yet (its Mark as eaten is not offered), so
-                the hint that says to is not shown there. */}
-            {plannedCount > 0 && !selectionMode && !isFutureDay && !showPlanAddedHint && showMarkEatenHint ? (
-              <HintCaption
-                text="Tick meals off one by one as you eat, or mark them all as eaten at once from the bottom of the page."
-                onDismiss={dismissMarkEatenHint}
-              />
-            ) : null}
-            {/* Founder order (2026-07-13): the "Hold a food to select
-                several" caption is REMOVED - it stacked on top of the
-                mark-eaten hint above and read as notification noise. The
-                gesture still works; discovery keeps writing the same
-                once-ever flag (dismissFoodHint on first selection) so this
-                stays dead for users who already saw it if it is ever
-                reconsidered. Do not re-add without a founder decision. */}
             {visibleSlots.map((slot, i) => (
               <View
                 key={slot.key}
@@ -2244,6 +2096,16 @@ export default function DiaryScreen({ navigation, route }) {
           </>
         )}
 
+        <WaterRow
+          ml={waterMl}
+          targetMl={waterTargetMl}
+          onAdd={(amount) => { logWaterDelta(amount); if (amount >= 500) dismissWaterHint(); }}
+          onSub={(amount) => { logWaterDelta(-amount); if (amount >= 500) dismissWaterHint(); }}
+          onEditTarget={changeWaterTarget}
+          showHint={showWaterHint}
+          onDismissHint={dismissWaterHint}
+        />
+
         {/* RE-ANCHORED 2026-09-22/23 (founder order, live screenshot of the
             Nutrition tab: the day-tools Chips read as "ugly pills... only
             to one side", not features in their own right). The chip row
@@ -2254,14 +2116,15 @@ export default function DiaryScreen({ navigation, route }) {
             never confined to one side. "Trends" moved into the header's
             right slot (HeaderAction, in the ScreenHeader above); it is not
             repeated here.
-            D230 R1 (the workspace is the same on every day): the list now
-            renders on every loaded day, empty or not. "Meal builder" is
-            always a door; "Copy yesterday" (formerly EmptyDiary's action)
-            is a door only on a day with no entries whose yesterday has food,
-            behind the same confirm as before; "Higher-calorie day" keeps the
-            EXACT banking gate (bankingAvailable: targets present, not
-            floored, no open ED flag) and its accessibility label, so the
-            ED-safety carve-out reads and tests the same. */}
+            D230 R1 (the workspace is the same on every day): the list renders
+            on every loaded day, empty or not. "Meal builder" is always a
+            door; "Higher-calorie day" keeps the EXACT banking gate
+            (bankingAvailable: targets present, not floored, no open ED flag)
+            and its accessibility label, so the ED-safety carve-out reads and
+            tests the same.
+            D231 (batch 3): the tools sit BELOW Water, and "Copy yesterday" is
+            not a row any more (Day tools -> Copy from another day lists
+            yesterday first). */}
         {loaded && !selectionMode ? (
           <View style={[styles.featureRows, live.featureRows]}>
             <FeatureRow
@@ -2271,19 +2134,8 @@ export default function DiaryScreen({ navigation, route }) {
               onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
               accessibilityLabel="Open meal builder for this day or week"
               bordered={false}
-              divider={showCopyYesterdayDoor || bankingAvailable}
+              divider={bankingAvailable}
             />
-            {showCopyYesterdayDoor ? (
-              <FeatureRow
-                icon="copy-outline"
-                title="Copy yesterday"
-                sub="Copy yesterday's foods into this day, under the same meals."
-                onPress={copyYesterday}
-                accessibilityLabel="Copy yesterday's entries"
-                bordered={false}
-                divider={bankingAvailable}
-              />
-            ) : null}
             {bankingAvailable ? (
               <FeatureRow
                 icon="trending-up-outline"
@@ -2296,53 +2148,93 @@ export default function DiaryScreen({ navigation, route }) {
             ) : null}
           </View>
         ) : null}
-        <WaterRow
-          ml={waterMl}
-          targetMl={waterTargetMl}
-          onAdd={(amount) => { logWaterDelta(amount); if (amount >= 500) dismissWaterHint(); }}
-          onSub={(amount) => { logWaterDelta(-amount); if (amount >= 500) dismissWaterHint(); }}
-          onEditTarget={changeWaterTarget}
-          showHint={showWaterHint}
-          onDismissHint={dismissWaterHint}
-        />
 
-        {/* D12 (ux-world-class-audit-2026-07-09, founder direct order): the
-            bulk "mark all planned meals as eaten" control demoted to the
-            bottom of the diary page. Per-meal marking (MealSection's
-            onConfirmPlanned, wired above) is the primary interaction; this
-            is the same confirm/clear pair and gating that used to sit above
-            the meal sections, unchanged in behaviour, just relocated. */}
-        {plannedCount > 0 && !selectionMode ? (
-          <View style={[styles.plannedBanner, live.plannedBanner]}>
-            <Text style={[styles.plannedBannerText, live.plannedBannerText]}>
-              {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
-              {isFutureDay ? ' Confirm them on the day once eaten.' : ' Mark them as eaten when you have them so they count in your day.'}
+        {/* D231 (batch 3): ONE offer at a time, below the tools instead of
+            above the meals: the meal-reminder offer, else the barcode-fixes
+            offer. Each keeps its own conditions and gates: the reminder offer
+            is today only and resolveMealReminderOfferEligible hides it under
+            calm mode or an open ED flag (both fail closed, see the effect
+            above); the barcode offer is today only, once a first barcode-heal
+            chain has completed and consent is still pending. While the
+            reminder offer shows, the barcode offer waits.
+            Item 9(c) (D141): the reminder offer is a calm, dismissible,
+            one-time discovery offer for the opt-in meal-log reminder; its
+            card shape is the barcode offer's (offCard styles reused, not
+            duplicated) with a title line added since it needs one. D230 R4:
+            both offers sit on the house Card. */}
+        {mealReminderOfferVisible ? (
+          <Card padding="md" style={styles.offCard}>
+            <Text style={[styles.mealReminderOfferTitle, live.mealReminderOfferTitle]}>
+              Want a nudge to log?
             </Text>
-            <View style={styles.plannedBannerRow}>
-              {!isFutureDay ? (
-                <Button
-                  title="Mark as eaten"
-                  onPress={handleConfirmPlanned}
-                  variant="primary"
-                  size="sm"
-                  fullWidth={false}
-                  style={[styles.plannedBtnPrimary, live.plannedBtnPrimary]}
-                  textStyle={[styles.plannedBtnPrimaryText, live.plannedBtnPrimaryText]}
-                  accessibilityLabel="Mark planned meals as eaten"
-                />
-              ) : null}
+            <Text style={[styles.offCardText, live.offCardText]}>
+              A gentle reminder at your usual meal times can make logging easier. You choose the times, and you can turn it off any time.
+            </Text>
+            <View style={styles.offCardRow}>
               <Button
-                title="Clear"
-                onPress={handleClearPlanned}
+                title="Not now"
+                onPress={dismissMealReminderOffer}
                 variant="secondary"
                 size="sm"
                 fullWidth={false}
-                style={[styles.plannedBtnGhostButton, live.plannedBtnGhostButton]}
-                textStyle={[styles.plannedBtnGhost, live.plannedBtnGhost]}
-                accessibilityLabel="Clear the planned meals"
+                style={[styles.offCardButton, live.offCardButton, styles.offCardButtonMuted, live.offCardButtonMuted]}
+                textStyle={[styles.offCardDismiss, live.offCardDismiss]}
+                accessibilityLabel="Not now"
+              />
+              <Button
+                title="Set up reminders"
+                // NotificationSettings lives in ProfileStack, so this diary
+                // (DiaryStack) must cross-tab, same idiom as the OFF-consent
+                // card's "Sharing settings" button just below. Navigate
+                // first, then dismiss, so the tap is never lost.
+                onPress={() => {
+                  navigateCrossTab(navigation, 'ProfileTab', 'NotificationSettings');
+                  dismissMealReminderOffer();
+                }}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={[styles.offCardButton, live.offCardButton]}
+                textStyle={[styles.offCardCta, live.offCardCta]}
+                accessibilityLabel="Set up meal reminders"
               />
             </View>
-          </View>
+          </Card>
+        ) : showOffCard && selectedDate === isoDate(new Date()) ? (
+          <Card padding="md" style={styles.offCard}>
+            <Text style={[styles.offCardText, live.offCardText]}>
+              Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
+            </Text>
+            <View style={styles.offCardRow}>
+              <Button
+                title="Not now"
+                onPress={onDismissOffCard}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={[styles.offCardButton, live.offCardButton, styles.offCardButtonMuted, live.offCardButtonMuted]}
+                textStyle={[styles.offCardDismiss, live.offCardDismiss]}
+                accessibilityLabel="Not now"
+              />
+              <Button
+                title="Sharing settings"
+                // F4 (audit NAV-3): SettingsPrivacy lives in ProfileStack; the
+                // old bare navigate silently no-opped AFTER dismissing the
+                // card, destroying the affordance. Navigate first (cross-tab),
+                // and only dismiss once the navigation has been issued.
+                onPress={() => {
+                  navigateCrossTab(navigation, 'ProfileTab', 'SettingsPrivacy');
+                  onDismissOffCard();
+                }}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={[styles.offCardButton, live.offCardButton]}
+                textStyle={[styles.offCardCta, live.offCardCta]}
+                accessibilityLabel="Open sharing settings"
+              />
+            </View>
+          </Card>
         ) : null}
       </ScrollView>
       </GestureDetector>
@@ -2466,14 +2358,14 @@ export default function DiaryScreen({ navigation, route }) {
         onSave={submitSaveMeal}
       />
 
+      {/* D231 (batch 3): Day tools keeps only Copy from another day and
+          Meals. Trends has the header door; Nutrition targets is the calorie
+          card's target (and the no-targets state's button). */}
       <DayToolsSheet
         visible={diaryToolsOpen}
         onClose={() => setDiaryToolsOpen(false)}
-        onTrends={() => { setDiaryToolsOpen(false); navigation.navigate('FoodInsights'); }}
         onCopyFromDay={() => { setDiaryToolsOpen(false); openCopyPicker(); }}
         onMeals={() => { setDiaryToolsOpen(false); setMealsSheetOpen(true); }}
-        // D230 R19: the same cross-tab door the no-targets state uses.
-        onNutritionTargets={() => { setDiaryToolsOpen(false); navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets'); }}
       />
 
       <MealsSheet
@@ -2539,15 +2431,6 @@ function trackDiary(event, payload) {
 }
 const trackPlannedConfirmed = (scope, n) => trackDiary('planned_meal_confirmed', { scope, items: toBucket('count', n) });
 const trackEntriesMoved = (action, n) => trackDiary('diary_entries_moved', { action, items: toBucket('count', n) });
-
-const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';
-// Founder ask (2026-07-09): a one-time teach anchored to the moment meals
-// from the meal builder / meal plan land in the diary (MealPlanScreen's
-// "Add this day" / "Add this week", via the `justAddedPlan` nav param),
-// distinct from DIARY_MARKEATEN_HINT_KEY above (D12's general first-sight-of-
-// planned-meals teach). Same once-ever convention; the two never render at
-// once (see the mutually-exclusive gating where showMarkEatenHint is read).
-const DIARY_PLANADDED_HINT_KEY = '@volyume_seen_diary_planadded_hint';
 
 const styles = StyleSheet.create({
   // D148: the one floating action is a raised charcoal disc with an amber
@@ -2678,13 +2561,12 @@ const styles = StyleSheet.create({
   },
   targetModeText: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   // Audit item 6: the quiet coach-receipt chip, same row shape as
-  // targetModeRow but sits ABOVE the rings and is always a link (never just
-  // informational), so it reads distinctly from the NU-2 exit rows below.
+  // targetModeRow and always a link (never just informational), so it reads
+  // distinctly from the NU-2 exit rows below. D231 (batch 3): it is rendered
+  // as the calorie card's footer (MacroRings `footer`), not above the card.
   // D230 R16: a full 48 dp touch target. A top/bottom hit slop could not do
-  // it here: the row is its parent's first child (the slop is clipped at the
-  // parent's top edge) and the rings below it are a later, pressable sibling
-  // (which wins the overlap), so the row itself is the target's height and
-  // the hit slop widens it sideways only.
+  // it (it would be clipped at the edge of what it sits in), so the row
+  // itself is the target's height and the hit slop widens it sideways only.
   targetsChangedRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     alignSelf: 'center', gap: spacing.xxs, minHeight: touchTarget.minimum,
@@ -2722,34 +2604,6 @@ const styles = StyleSheet.create({
   offCardCta: { ...type.label, color: colors.textPrimary },
   // D230 R11: layout only; the house outline Button owns its look.
   addMealRow: { minHeight: touchTarget.minimum, marginBottom: spacing.md },
-  plannedBanner: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  plannedBannerText: { ...type.bodySm, color: colors.textPrimary },
-  plannedBannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-  plannedBtnPrimary: {
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  plannedBtnPrimaryText: { fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
-  plannedBtnGhostButton: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  plannedBtnGhost: { ...type.label, color: colors.textPrimary },
 });
 
 // CP-10 batch E (2026-07-10): the frozen `styles` block above stays byte-
@@ -2796,11 +2650,5 @@ function buildLiveStyles(t) {
     // D230 R2: the list sits on `surface` with the card edge, so the doors'
     // `surface2` ink tiles read against it (NavGroup's own pairing).
     featureRows: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
-    plannedBanner: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    plannedBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
-    plannedBtnPrimary: {},
-    plannedBtnPrimaryText: { fontSize: t.fontSize.sm },
-    plannedBtnGhostButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    plannedBtnGhost: { ...t.type.label, color: t.colors.textPrimary },
   };
 }

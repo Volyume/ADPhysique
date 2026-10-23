@@ -9,19 +9,21 @@
  * Not exhaustive over every converted file in this batch (that would
  * duplicate near-identical assertions); this covers a representative sample
  * of the two shapes every other file in the batch repeats: (a) a
- * presentational card/sheet with no store dependency (HomeWelcomeCard,
- * WeeklyStreakStrip, CoachBriefCard, TodayStrip), and (b) a component that
+ * presentational card/sheet with no store dependency (WeeklyStreakStrip,
+ * CoachBriefCard, TodayStrip), and (b) a component that
  * ALSO reads the live store for its own data (ActiveSessionMiniBar,
  * VolyumeTabBar).
  *
  * FOUNDER DECISION (fully free, no tier split): AttentionCard is deleted
  * (its trial/free_line/differential variants are all retired), so its own
  * flip-live pin is retired with it.
+ *
+ * D231 (app layout rework, batch 1): HomeWelcomeCard is deleted (the Welcome
+ * card left Today), so its own flip-live pin is retired with it.
  */
 import { create, act } from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
 import useAppStore from '../../store/useAppStore';
-import HomeWelcomeCard from '../HomeWelcomeCard';
 import CoachBriefCard from '../CoachBriefCard';
 import TodayStrip from '../TodayStrip';
 import ActiveSessionMiniBar from '../ActiveSessionMiniBar';
@@ -62,18 +64,6 @@ function flat(node) {
 }
 
 describe('CP-10 stage 3 (Home family): flips live, no remount', () => {
-  test('HomeWelcomeCard: step-number chip background flips light<->dark on the same mounted instance', () => {
-    setTheme('dark');
-    let tree;
-    act(() => { tree = create(<HomeWelcomeCard onDismiss={() => {}} />); });
-    const num = tree.root.findByProps({ children: '1' }).parent;
-    const darkBg = flat(num).backgroundColor;
-
-    setTheme('light');
-    const lightBg = flat(num).backgroundColor;
-    expect(lightBg).not.toBe(darkBg);
-  });
-
   test('CoachBriefCard: border tone and headline ink flip with the theme', () => {
     setTheme('dark');
     const brief = { type: 'go', headline: 'Ready to train', body: 'Good signs across the board.' };

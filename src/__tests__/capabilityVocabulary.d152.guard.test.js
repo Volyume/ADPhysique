@@ -84,11 +84,21 @@ describe('D152 / F-01: the lane is called "Injuries & limitations" everywhere a 
     const read = (rel) => fs.readFileSync(path.join(SRC_ROOT, rel), 'utf8');
     const NAME = 'Injuries & limitations';
     // 1. Coach tab row, 2. Train tab row, 3. Settings row.
-    expect(read('screens/YouScreen.js')).toContain(`label="${NAME}"`);
-    expect(read('screens/PlansScreen.js')).toContain(`>${NAME}</Text>`);
-    expect(read('screens/SettingsScreen.js')).toContain(`label="${NAME}"`);
-    // 4. Today's grouped section label.
-    expect(read('screens/HomeScreen.js')).toContain(`<SectionLabel tone="muted">${NAME}</SectionLabel>`);
+    // RE-POINTED (D231, app layout rework batch 4): the Coach tab no longer has an
+    // "Injuries & limitations" row (its home is Train); the name is on Train and on
+    // the feature's own page.
+    expect(read('screens/YouScreen.js')).not.toContain(`label="${NAME}"`);
+    // RE-POINTED (D231, app layout rework batch 2): the Train row is a NavRow in
+    // Your setup now (it was a hand-built Card with a Text child).
+    expect(read('screens/PlansScreen.js')).toContain(`label="${NAME}"`);
+    // RE-POINTED (D231, app layout rework batch 5): Settings no longer has an
+    // "Injuries & limitations" row (the owner answered "Remove both"); the
+    // other surfaces below are untouched by this batch.
+    expect(read('screens/SettingsScreen.js')).not.toContain(`label="${NAME}"`);
+    // 4. Today's grouped section label. RE-POINTED (D231, app layout rework batch
+    // 2): the group left Today (its lines are on Train, under the row above), so
+    // the label is no longer on Today.
+    expect(read('screens/HomeScreen.js')).not.toContain(`<SectionLabel tone="muted">${NAME}</SectionLabel>`);
     // 5. The feature's own page title.
     expect(read('screens/HowYouTrainScreen.js')).toContain(`<SettingsPage title="${NAME}"`);
     // 6. The onboarding step label.

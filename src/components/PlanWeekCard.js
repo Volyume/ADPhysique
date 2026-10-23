@@ -36,6 +36,13 @@
  * by a screen reader; Consistency passes no children and the card is
  * unchanged there.
  *
+ * `embedded` (D231, app layout rework, batch 2): Train draws the same week
+ * INSIDE its active plan card, so there is no Card shell of its own (a card in a
+ * card), and the subline drops the "in week N of your plan" half the plan card's
+ * own "Week N of M" line already says, keeping only what is new: the next session
+ * ("Upper A is next") or "Every session done". The count, the words and the seven
+ * cells are the view-model's, untouched.
+ *
  * Live theme (`useTheme`): the frozen block holds layout only.
  */
 import { View, StyleSheet } from 'react-native';
@@ -48,11 +55,13 @@ import useTheme from '../hooks/useTheme';
 /**
  * @param {{ summary: import('../lib/progress/planWeek').PlanWeekSummary, testID?: string }} props
  */
-export default function PlanWeekCard({ summary, testID = 'plan-week-card', children = null }) {
+export default function PlanWeekCard({ summary, testID = 'plan-week-card', children = null, embedded = false }) {
   const t = useTheme();
   if (!summary) return null;
+  const Shell = embedded ? View : Card;
+  const subline = embedded ? embeddedSubline(summary) : summary.subline;
   return (
-    <Card testID={testID}>
+    <Shell testID={testID}>
       <View accessible accessibilityLabel={summary.accessibilityLabel} testID="plan-week-summary">
       <View style={styles.headline} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <Text style={[t.type.h2, { color: t.colors.textPrimary }]} testID="plan-week-number">
@@ -62,14 +71,14 @@ export default function PlanWeekCard({ summary, testID = 'plan-week-card', child
           {summary.headlineWords}
         </Text>
       </View>
-      {summary.subline ? (
+      {subline ? (
         <Text
           style={[t.type.bodySm, styles.subline, { color: t.colors.textSecondary }]}
           testID="plan-week-subline"
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          {summary.subline}
+          {subline}
         </Text>
       ) : null}
       </View>
@@ -85,8 +94,15 @@ export default function PlanWeekCard({ summary, testID = 'plan-week-card', child
           {children}
         </View>
       ) : null}
-    </Card>
+    </Shell>
   );
+}
+
+// The embedded subline: only what the plan card's own block line does not say.
+function embeddedSubline(summary) {
+  if (!summary.hasPlan) return null;
+  if (summary.weekComplete) return 'Every session done';
+  return summary.nextName ? `${summary.nextName} is next` : null;
 }
 
 const styles = StyleSheet.create({

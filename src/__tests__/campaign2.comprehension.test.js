@@ -164,7 +164,9 @@ describe('READINESS comprehension', () => {
     // effect, which was the part a user needed in order to answer
     // honestly. Both surfaces still say what the answers are for, and both
     // still keep the "when coaching is active" truthfulness caveat.
-    expect(read('screens/HomeScreen.js')).toMatch(/When coaching is active, poor sleep or heavy soreness can ease today's session/);
+    // RE-POINTED (D231, app layout rework batch 2): the pre-session sheet's copy
+    // moved verbatim to components/SessionIntentSheet.js.
+    expect(read('components/SessionIntentSheet.js')).toMatch(/When coaching is active, poor sleep or heavy soreness can ease today's session/);
     expect(read('screens/WorkoutSummaryScreen.js')).toMatch(/when coaching is active, whether next session's workload still makes sense/);
   });
 
@@ -173,7 +175,7 @@ describe('READINESS comprehension', () => {
     // and loads - never the honest statement that poor recovery can ease a
     // session. C10C requires that statement; this still forbids the
     // mechanics, on both surfaces.
-    const home = read('screens/HomeScreen.js').match(/Takes a second\.[^<]*/)[0];
+    const home = read('components/SessionIntentSheet.js').match(/Takes a second\.[^<]*/)[0];
     const summary = read('screens/WorkoutSummaryScreen.js').match(/Your answers shape how your recovery[^<]*/)[0];
     for (const s of [home, summary]) {
       expect(s).not.toMatch(/fewer sets|more sets|adds? a set|extra set/i);

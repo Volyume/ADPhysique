@@ -14,11 +14,13 @@
  *     Respect reaching `reactToPost` with the author id, the non-member's
  *     read-only Everyone feed routing Respect to Join;
  *   - People, Groups and You content, the invite Accept and Decline;
- *   - the calm-mode and ED-flag withhold: the You row and the ProgressStrip
- *     are absent exactly when `consistencyGateState` says gated (the same
- *     surfaces the previous Hub hid);
- *   - the account notices (rules moved on, legacy partner link), the HOST
- *     row, the early-days zero state, the quiet reload on focus;
+ *   - the calm-mode and ED-flag withhold: the week line, the day dots and the
+ *     ProgressStrip are absent exactly when `consistencyGateState` says gated
+ *     (the same data the previous Hub hid); D231 (app layout rework, batch 5)
+ *     folds the old You row into the one "My profile" row, which stays;
+ *   - the account notices (rules moved on; the legacy partner link's notice is
+ *     retired, D231), the HOST row, the early-days zero state, the quiet
+ *     reload on focus;
  *   - a source guard: no `Eyebrow`, `Card` or `SectionLabel` import remains.
  */
 
@@ -265,7 +267,9 @@ describe('the segment bar', () => {
   test('route.params.segment wins over the remembered one', async () => {
     asMember();
     const view = await render({ segment: 'groups', params: { segment: 'people' } });
-    expect(view.text).toContain('Search people and groups');
+    // D231: the People marker is Find people (the search well is gone).
+    expect(view.text).toContain('Find people');
+    expect(view.text).not.toContain('Browse open groups');
   });
 });
 
@@ -273,7 +277,9 @@ describe('the segment param (SF3) and an early tap (F8)', () => {
   test('a segment param is applied on focus and then consumed, so the same one lands again', async () => {
     asMember();
     const view = await render({ params: { segment: 'people' } });
-    expect(view.text).toContain('Search people and groups');
+    // D231: the People marker is Find people (the search well is gone).
+    expect(view.text).toContain('Find people');
+    expect(view.text).toContain('Your gym');
     expect(view.navigation.setParams).toHaveBeenCalledWith({ segment: undefined });
     // The person goes back to Feed, leaves, and Today sends the same param again.
     await press(view, 'Feed');
@@ -505,7 +511,9 @@ describe('Feed: no Community profile', () => {
 });
 
 describe('People', () => {
-  test('Find people, Requests with the count, the gym, discipline and area bands; style and age group are not Hub rows', async () => {
+  // RE-POINTED (D231, app layout rework batch 5): the Requests row left People
+  // (requests are under the bell); the rest of what this pinned is unchanged.
+  test('Find people, the gym, discipline and area bands; style and age group are not Hub rows', async () => {
     asMember({ pending_requests: 1, pending_connect_requests: 1 });
     loadHubSummary.mockResolvedValue({
       cohorts: [
@@ -526,7 +534,6 @@ describe('People', () => {
       at = i;
     }
     expect(view.text).toContain('Find people');
-    expect(view.text).toContain('2 people want to connect');
     expect(view.text).not.toContain('Powerlifting');
     expect(view.text).not.toContain('18 to 24');
     expect(view.text).toContain('4 trained today · 23 members');
@@ -536,6 +543,55 @@ describe('People', () => {
     asMember();
     const view = await render({ segment: 'people' });
     expect(view.text).toContain('Set your gym');
+  });
+
+  // D231 (app layout rework, batch 5): the header search glyph and the bell do
+  // these two jobs, so People carries neither door. Written to fail against the
+  // old Hub: pending requests are set so the old Requests row would be drawn.
+  test('D231: no search well and no Requests row, even with requests waiting; Find people stays', async () => {
+    asMember({ pending_requests: 2, pending_connect_requests: 1 });
+    const view = await render({ segment: 'people' });
+    expect(view.text).toContain('Find people');
+    expect(view.text).not.toContain('Search people and groups');
+    expect(view.text).not.toContain('Requests');
+    expect(view.text).not.toContain('want to connect');
+    expect(view.text).not.toContain('No new requests');
+    const labels = view.all
+      .flatMap((tr) => tr.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && typeof n.props.onPress === 'function'))
+      .map((n) => n.props.accessibilityLabel);
+    expect(labels.some((l) => /^Requests/.test(l))).toBe(false);
+    expect(labels.some((l) => /^Search people and groups/.test(l))).toBe(false);
+    // Nothing on People opens the search or the activity list any more.
+    await press(view, 'Find people. People who train like you, at your gym, near you or in your discipline');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityFindPeople');
+    expect(view.navigation.navigate).not.toHaveBeenCalledWith('CommunitySearch');
+    expect(view.navigation.navigate).not.toHaveBeenCalledWith('CommunityActivity');
+  });
+
+  test('D231: the two doors that replaced them are still on the header (search, and the bell with the requests)', async () => {
+    asMember({ pending_requests: 1 });
+    const view = await render({ segment: 'people' });
+    await press(view, 'Search Community');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunitySearch');
+    await press(view, 'Activity');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityActivity');
+  });
+
+  // The reason the Requests row can go: CommunityActivity (the bell) lists both
+  // kinds of request with Accept and Decline, and the bell's dot counts both.
+  test('D231: pending follow and connection requests are answered under the bell, and the dot counts them', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const read = (rel) => fs.readFileSync(path.join(__dirname, '..', '..', rel), 'utf8');
+    const activity = read('screens/CommunityActivityScreen.js');
+    expect(activity).toContain('<SectionHeader title="Connection requests" />');
+    expect(activity).toContain('<SectionHeader title="Follow requests" />');
+    expect(activity).toContain('pendingFollowRequests');
+    expect(activity).toContain('respondToConnect');
+    const profile = read('lib/community/profile.js');
+    const dot = /export function hasUnseen\(me\) \{[\s\S]*?\n\}/.exec(profile)[0];
+    expect(dot).toContain('pending_requests');
+    expect(dot).toContain('pending_connect_requests');
   });
 });
 
@@ -584,15 +640,26 @@ describe('Groups', () => {
 });
 
 describe('You', () => {
-  test('the You row, its counters and the rows to profile, followers, privacy, training profile and rules', async () => {
+  const COUNTERS = {
+    c_sessions_week: 3, c_weeks_streak: 2, c_trained_days_week: ['mon', 'wed'], c_last_trained_day: null,
+    c_consistent_weeks_12w: 5, c_weeks_history: [1, 2, 3, 0, 1, 2, 3, 2],
+  };
+  // One entry per drawn element (host nodes only), so a label that appears twice
+  // means two rows, not one row seen through its wrappers.
+  const labelsOf = (view) => view.all
+    .flatMap((tr) => tr.root.findAll((n) => typeof n.type === 'string' && typeof n.props?.accessibilityLabel === 'string'))
+    .map((n) => n.props.accessibilityLabel);
+
+  // RE-POINTED (D231, app layout rework batch 5): the You row and the "My
+  // profile" row are one row now. It carries the old You row's week line and
+  // day dots, and the rows to followers, privacy, training profile and rules
+  // are unchanged.
+  test('one My profile row with its counters, and the rows to followers, privacy, training profile and rules', async () => {
     asMember();
-    loadConsistency.mockResolvedValue({
-      c_sessions_week: 3, c_weeks_streak: 2, c_trained_days_week: ['mon', 'wed'], c_last_trained_day: null,
-      c_consistent_weeks_12w: 5, c_weeks_history: [1, 2, 3, 0, 1, 2, 3, 2],
-    });
+    loadConsistency.mockResolvedValue(COUNTERS);
     const view = await render({ segment: 'you' });
-    const youRow = findByLabel(view, 'You. Trained mon, wed. 3 sessions');
-    expect(youRow).toBeTruthy();
+    const myProfile = findByLabel(view, 'My profile. @rowan_lifts. Trained mon, wed. 3 sessions');
+    expect(myProfile).toBeTruthy();
     expect(view.text).toContain('Sessions this week');
     for (const label of ['My profile', 'Followers and connections', 'Privacy and sharing', 'Training profile', 'Community rules']) {
       expect(view.text).toContain(label);
@@ -601,7 +668,50 @@ describe('You', () => {
     expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityPrivacy');
   });
 
-  test('calm mode or an open ED flag: no You row and no ProgressStrip, the rest of You stays', async () => {
+  // D231: written to fail against the old Hub, which drew "You" and "My
+  // profile" as two rows that both opened the same screen.
+  test('D231: exactly one row opens the profile, named My profile with the username, and it opens CommunityProfile', async () => {
+    asMember();
+    loadConsistency.mockResolvedValue(COUNTERS);
+    const view = await render({ segment: 'you' });
+    const labels = labelsOf(view);
+    expect(labels.filter((l) => /^My profile/.test(l))).toEqual(['My profile. @rowan_lifts. Trained mon, wed. 3 sessions']);
+    // (The segment bar's own "You" radio is not a row: only a "You. ..." row is.)
+    expect(labels.filter((l) => /^You\./.test(l))).toEqual([]);
+    expect(view.text.match(/My profile/g)).toHaveLength(1);
+    expect(view.text).toContain('@rowan_lifts');
+    // The day dots are drawn, and the streak caption gives way to them as it did on the You row.
+    expect(view.all.flatMap((tr) => tr.root.findAll((n) => n.props?.accessibilityRole === 'image')).length).toBeGreaterThan(0);
+    await press(view, 'My profile. @rowan_lifts. Trained mon, wed. 3 sessions');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityProfile', { userId: 'u1' });
+    // The progress strip stays its own line under it, opening the board.
+    const strip = view.all
+      .flatMap((tr) => tr.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && /sessions this week.*See boards/.test(n.props.accessibilityLabel)))[0];
+    expect(strip).toBeTruthy();
+    await act(async () => { strip.props.onPress(); });
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityBoard', { scope: 'following', window: 'week' });
+  });
+
+  test('D231: the account band (followers, privacy, training profile, rules) no longer carries My profile', async () => {
+    asMember();
+    const view = await render({ segment: 'you' });
+    const host = (label) => view.tree.root.findAll(
+      (n) => typeof n.type === 'string' && n.props?.accessibilityLabel === label,
+    )[0];
+    const followers = host('Followers and connections');
+    expect(followers).toBeTruthy();
+    // Walk up to the band that holds all four account rows.
+    let band = followers;
+    while (band && band.findAll((n) => n.props?.accessibilityLabel === 'Community rules').length === 0) band = band.parent;
+    expect(band).toBeTruthy();
+    const mine = band.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && /^My profile/.test(n.props.accessibilityLabel));
+    expect(mine).toHaveLength(0);
+    // And it is the FIRST thing on You, above the account rows.
+    expect(view.text.indexOf('My profile')).toBeGreaterThan(-1);
+    expect(view.text.indexOf('My profile')).toBeLessThan(view.text.indexOf('Followers and connections'));
+  });
+
+  test('calm mode or an open ED flag: no week line, no day dots and no ProgressStrip, My profile and the rest of You stay', async () => {
     asMember();
     consistencyGateState.mockResolvedValue({ allowed: false, gated: true, isMinor: false });
     loadConsistency.mockResolvedValue({
@@ -617,6 +727,40 @@ describe('You', () => {
     expect(youRow).toBeUndefined();
     expect(loadConsistency).not.toHaveBeenCalled();
     expect(view.text).toContain('Privacy and sharing');
+    // D231: only "My profile" remains of the old You row. Exactly the avatar and
+    // username, no days, no sessions, no streak line, no strip.
+    const labels = labelsOf(view);
+    expect(labels.filter((l) => /^My profile/.test(l))).toEqual(['My profile. @rowan_lifts']);
+    expect(view.text).toContain('@rowan_lifts');
+    expect(view.text).not.toContain('Sessions this week');
+    expect(view.text).not.toContain('weeks in a row');
+    expect(view.text).not.toContain('Getting back into it');
+    expect(view.all.flatMap((tr) => tr.root.findAll((n) => n.props?.accessibilityRole === 'image')).length).toBe(0);
+    expect(view.all.flatMap((tr) => tr.root.findAll(
+      (n) => typeof n.props?.accessibilityLabel === 'string' && /See boards/.test(n.props.accessibilityLabel),
+    ))).toHaveLength(0);
+    // It still opens the profile.
+    await press(view, 'My profile. @rowan_lifts');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityProfile', { userId: 'u1' });
+  });
+
+  // The gate is read before the counters, and a gate that cannot answer is
+  // closed (the screen fails closed): My profile shows, the week parts do not.
+  test('a consistency gate that cannot answer keeps the week parts away; My profile still shows', async () => {
+    asMember();
+    consistencyGateState.mockRejectedValue(new Error('unreadable'));
+    const view = await render({ segment: 'you' });
+    expect(loadConsistency).not.toHaveBeenCalled();
+    expect(labelsOf(view).filter((l) => /^My profile/.test(l))).toEqual(['My profile. @rowan_lifts']);
+    expect(view.text).not.toContain('Sessions this week');
+  });
+
+  test('the gate allows but there are no counters yet: My profile alone, no empty week line', async () => {
+    asMember();
+    loadConsistency.mockResolvedValue(null);
+    const view = await render({ segment: 'you' });
+    expect(labelsOf(view).filter((l) => /^My profile/.test(l))).toEqual(['My profile. @rowan_lifts']);
+    expect(view.text).not.toContain('Sessions this week');
   });
 
   test('the early-days zero state lives here: the first-here line and the invite', async () => {
@@ -680,12 +824,29 @@ describe('account notices', () => {
     }
   });
 
-  test('a legacy partner link shows the moved-invites note with a way onward', async () => {
+  // RE-POINTED (D231, app layout rework batch 5): the "Partner invites have
+  // moved" notice is retired. An old partner link still opens this tab (the
+  // router passes its code as a param), and the code is simply not read. Written
+  // to fail against the old Hub, which drew the notice for this exact param.
+  test('D231: a legacy partner link opens the tab with no moved-invites notice, on any segment', async () => {
     asMember();
-    const view = await render({ params: { legacyPartnerCode: 'ABC' } });
-    expect(view.text).toContain('Partner invites have moved');
-    await press(view, 'Find people in Community');
-    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityFindPeople');
+    for (const segment of ['feed', 'people', 'groups', 'you']) {
+      const view = await render({ segment, params: { legacyPartnerCode: 'ABC' } });
+      expect(view.text).not.toContain('Partner invites have moved');
+      expect(view.text).not.toContain('Training partners are now part of Community');
+      expect(findByLabel(view, 'Dismiss the partner invite notice')).toBeUndefined();
+      expect(findByLabel(view, 'Find people in Community')).toBeUndefined();
+    }
+    const notMember = await render({ params: { legacyPartnerCode: 'ABC' } });
+    expect(notMember.text).not.toContain('Partner invites have moved');
+  });
+
+  test('D231: the notice and its param are gone from the Hub source; no stored flag backed it', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'CommunityHubScreen.js'), 'utf8');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    expect(code).not.toContain('Partner invites have moved');
+    expect(code).not.toMatch(/legacyPartnerCode|legacyCardShown/);
+    expect(code).not.toMatch(/AsyncStorage\.(get|set)Item\([^)]*(partner|legacy)/i);
   });
 
   test('no partner note without a legacy code', async () => {

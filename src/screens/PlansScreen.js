@@ -10,7 +10,7 @@ import { planHeadingName } from '../lib/planDisplay';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
@@ -20,6 +20,19 @@ import EmptyState from '../components/EmptyState';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import PressableCard from '../components/PressableCard';
+// D231 (app layout rework, batch 2): the week section Train took over from
+// Progress, the Your setup / Plans lists, and the Repeat on the newest session.
+import { NavRow, NavGroup } from '../components/NavRow';
+import PlanWeekCard from '../components/PlanWeekCard';
+import VolumeStrip from '../components/VolumeStrip';
+import RecentSessionCard from '../components/RecentSessionCard';
+import InjuryLines from '../components/InjuryLines';
+import SessionIntentSheet from '../components/SessionIntentSheet';
+import useTrainWeek from '../hooks/useTrainWeek';
+import useInjuryLines from '../hooks/useInjuryLines';
+import { prepareRepeatSession } from '../lib/repeatSession';
+import { sessionSummaryParams } from '../lib/sessionReport';
+import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import PeekMenu from '../components/PeekMenu';
 import BottomSheet from '../components/BottomSheet';
 import {
@@ -31,7 +44,6 @@ import {
   getProgrammePlanFacts } from '../lib/database';
 import { isAuthoredFacts } from '../lib/library/authored';
 import { planTrainingStyleLabel } from '../lib/trainingArchetypes';
-import { touchTarget } from '../styles/layout';
 // D228 Q4-A: the ONE style-lock rule (PlanUpdateScreen and ProGoalSetupScreen
 // read the same module), so a block boundary cannot disagree with them.
 import { styleLockFromTags } from '../lib/exercise/styleLock';
@@ -57,7 +69,6 @@ import { prepareStartWithPlanOption, saveChosenProfile } from '../lib/startWithP
 import { beforeStructureBlockStart, afterStructureBlockStart } from '../lib/structurePlanChange';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { loadExerciseIntentState, listActiveMovementConstraints } from '../lib/exercise/intent';
 // D134 (founder 2026-09-03): the Injuries & limitations row's live line.
 import { loadCapabilityState } from '../lib/capability/store';
 import { howYouTrainSummary } from '../lib/capability/summary';
@@ -74,36 +85,12 @@ import useScreenReady from '../lib/telemetry/useScreenReady';
 const BLOCK_SNOOZE_KEY_FOR = (uid) => `@volyume_block_snooze_${uid ?? 'anon'}`;
 
 
-// FOUNDER DECISION (fully free, no tier split): every account sees "switch
-// your active plan" framings now -- the Free ACTION_CARDS_DEFAULT set
-// (library first, manual second, no Adjust card) is retired.
-// "Adjust training plan" sits at the top: it rebuilds the plan via the
-// training-only PlanUpdate screen. Goal and calorie/macro changes live in the
-// Coach tab (Update goal and phase / Nutrition targets), so this Train-side flow never
-// touches nutrition targets.
-const ACTION_CARDS_PRO_SWITCH = [
-  {
-    id: 'goals',
-    icon: 'flag-outline',
-    title: 'Adjust training plan',
-    description: 'Change schedule, equipment, experience, division or weak points. Volyume previews the rebuild before it replaces your active plan.',
-    screen: 'PlanUpdate',
-  },
-  {
-    id: 'library',
-    icon: 'library-outline',
-    title: 'Pick from the plan library',
-    description: "Choose a ready-made plan. Your coach keeps adjusting whichever plan you are on.",
-    screen: 'PlanLibrary',
-  },
-  {
-    id: 'manual',
-    icon: 'create-outline',
-    title: 'Create your own',
-    description: 'Create your own plan and choose every exercise. Your coach still reviews your training the same way.',
-    screen: 'ManualBuilder',
-  },
-];
+// D231 (app layout rework, batch 2): the rows that used to be the "Plan tools" card
+// list are two grouped lists now, "Your setup" (Adjust training plan, Injuries &
+// limitations) and "Plans" (the plan library, Create your own, Past blocks). Goal
+// and calorie/macro changes live in the Coach tab (Update goal and phase /
+// Nutrition targets), so the Adjust training plan flow (training-only PlanUpdate)
+// never touches nutrition targets.
 
 const BLOCK_ICON = {
   heads_up: 'alert-circle-outline',
@@ -198,11 +185,12 @@ export default function PlansScreen({ navigation }) {
   // second during a workout.
   // R9 (D70): reduceMotion left with the raw folder Modal - BottomSheet
   // owns it now.
-  const { user, startWorkout, tier, userProfile } = useAppStore(useShallow(s => ({
+  const { user, startWorkout, tier, userProfile, setSessionAdjustments } = useAppStore(useShallow(s => ({
     user: s.user,
     startWorkout: s.startWorkout,
     tier: s.tier,
     userProfile: s.userProfile,
+    setSessionAdjustments: s.setSessionAdjustments,
   })));
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
   // because this screen renders plan/folder/template lists via .map.
@@ -251,12 +239,9 @@ export default function PlansScreen({ navigation }) {
   // The training style the active plan was built with (display only); null hides the line.
   const [activePlanStyle, setActivePlanStyle] = useState(null);
   useScreenReady('Plans', loaded);
-  // D109-3: the Plan tools count for the "Avoided movements" row. Loaded
-  // independently of loadData's Promise.all batch (own failure mode, own
-  // req-guard would be overkill for one count) - a read failure just leaves
-  // the row hidden, which is the correct degrade (D109-2 fail-open: never
-  // block, and there is nothing to filter here, only a count to show).
-  const [avoidedMovementsCount, setAvoidedMovementsCount] = useState(0);
+  // D231 (app layout rework, batch 2): Avoided movements is reached inside
+  // Injuries & limitations ("Movements you would rather not do"), so this
+  // screen no longer reads its count or carries its own row.
   // D134: the live one-line status under the Injuries & limitations row.
   const [hytSummary, setHytSummary] = useState(() => howYouTrainSummary(null));
   // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
@@ -300,6 +285,18 @@ export default function PlansScreen({ navigation }) {
   const ledgerRecordRef = useRef(null);
   useScrollToTop(scrollRef);
 
+  // D231 (batch 2): the week section Train took over from Progress (the plan
+  // week's days, the volume strip, Recent sessions) and the always-on Injuries &
+  // limitations lines Train took over from Today. Both read on focus.
+  const trainWeek = useTrainWeek();
+  const injuryLines = useInjuryLines();
+  // Repeat on the newest Recent session: the same flow Today's last-session row
+  // had. The rows are assembled first (a calm toast names anything left out),
+  // then the same readiness sheet asks, then the workout starts.
+  const [showRepeatIntent, setShowRepeatIntent] = useState(false);
+  const pendingRepeatRef = useRef(null); // ({ routineId, initialExercises })
+  const repeatFlowRef = useRef(false);
+
   useEffect(() => {
     return navigation.getParent()?.addListener('tabPress', () => {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -310,7 +307,6 @@ export default function PlansScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       loadData();
-      loadAvoidedMovementsCount();
       loadHowYouTrainSummary();
       // Founder brief 2026-10-19 (quick start): consume the one-shot route the
       // start-choice screen left, once, then open it.
@@ -330,16 +326,6 @@ export default function PlansScreen({ navigation }) {
       const [state, library] = await Promise.all([loadCapabilityState(user.id), getAllExercises().catch(() => [])]);
       setHytSummary(howYouTrainSummary(state, { nameOf: (id) => library.find((e) => e.id === id)?.name ?? null }));
     } catch (_) { setHytSummary(howYouTrainSummary({ baseline: [], episodes: [], history: [], unavailable: true })); }
-  }
-
-  /** D109-3: refreshed on every focus, so a Remove on AvoidedMovementsScreen updates this count on the way back. */
-  async function loadAvoidedMovementsCount() {
-    if (!user?.id) { setAvoidedMovementsCount(0); return; }
-    try {
-      const block = await getActiveBlock(user.id).catch(() => null);
-      const state = await loadExerciseIntentState(user.id, { activeMesocycleId: block?.id ?? null });
-      setAvoidedMovementsCount(listActiveMovementConstraints(state).length);
-    } catch (_) { setAvoidedMovementsCount(0); }
   }
 
   // Cloud restore: re-run loadData once pullFromCloud lands so a fresh
@@ -531,8 +517,70 @@ export default function PlansScreen({ navigation }) {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await loadData();
+    await Promise.all([loadData(), trainWeek.refresh()]);
     setRefreshing(false);
+  }
+
+  // ── Repeat (D231, moved from Today's last-session row, behaviour unchanged) ──
+  // R2-1: one start flow at a time. The ref is synchronous so a rapid double-tap
+  // cannot queue a second sheet-open that would resolve after the workout began.
+  async function handleRepeatSession(session) {
+    if (!session || !user?.id) return;
+    if (repeatFlowRef.current || showRepeatIntent) return;
+    repeatFlowRef.current = true;
+    try {
+      const { routineId, initialExercises, leftOutNote } = await prepareRepeatSession(session);
+      // D218 (F-2, P7): anything left out is said, calmly and exactly; the repeat
+      // proceeds either way.
+      if (leftOutNote) toast.show(leftOutNote, { variant: 'info', duration: 5000 });
+      pendingRepeatRef.current = { routineId, initialExercises };
+      // D2 (Option A), as Today's Start does: a person who turned the
+      // readiness ask off starts at once with no readiness signal (the exact
+      // Skip path). Re-read each time so the Settings toggle applies at once.
+      const promptOff = await AsyncStorage.getItem('@volyume_intent_prompt_off').catch(() => null);
+      if (promptOff === 'true') {
+        repeatFlowRef.current = false;
+        await confirmRepeatStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
+        return;
+      }
+      setShowRepeatIntent(true);
+    } catch (e) {
+      logError('PlansScreen.handleRepeatSession', e, { userId: user?.id, lastSessionId: session?.id });
+      toast.show('Could not load your last session. Please try again.', { variant: 'error' });
+    } finally {
+      repeatFlowRef.current = false;
+    }
+  }
+
+  // COMP-008: an intent tap carries whatever readiness chips were set; Skip passes
+  // intent null and no readiness (SessionIntentSheet). The values flow straight into
+  // createWorkout, which writes them to the workout row.
+  async function confirmRepeatStart(intent, readinessAnswers) {
+    setShowRepeatIntent(false);
+    const pending = pendingRepeatRef.current;
+    if (!pending || repeatFlowRef.current) return;
+    repeatFlowRef.current = true;
+    try {
+      const workout = await createWorkout(user.id, pending.routineId, {
+        intent,
+        ...readinessAnswers,
+      });
+      startWorkout(workout, pending.initialExercises);
+      // Always pass starterSession explicitly so a normal start can never inherit
+      // a stale starterSession:true param on a reused ActiveWorkout instance.
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false, params: { starterSession: false } });
+      // COMP-015: compute + log this session's adjustments in the background so it
+      // never delays the session opening.
+      computeAndLogSessionAdjustments({ userId: user.id, workout, exercises: pending.initialExercises })
+        .then(setSessionAdjustments)
+        .catch(() => {});
+    } catch (e) {
+      logError('PlansScreen.confirmRepeatStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
+      toast.show('Could not start that workout. Please try again.', { variant: 'error' });
+    } finally {
+      pendingRepeatRef.current = null;
+      repeatFlowRef.current = false;
+    }
   }
 
   // ── D139: "Start with a plan", in two steps (same shape as HomeScreen's
@@ -1324,6 +1372,11 @@ export default function PlansScreen({ navigation }) {
     return t.colors.warning;
   }
 
+  // D231 (batch 2): when the plans could not be read and there is no plan on
+  // screen, nothing here can say whether a plan week exists, so the week items
+  // (the no-plan count, the strip) wait for the retry like the rest.
+  const planUnknown = loadError && !activePlan;
+
   const showBlockCard = blockAdvice && activePlan &&
     blockAdvice.action !== 'continue' &&
     !blockSnoozed;
@@ -1367,17 +1420,6 @@ export default function PlansScreen({ navigation }) {
     if (!anyRecommended && reachableOptions.length === 1) return 'primary';
     return 'secondary';
   }
-
-  // FOUNDER DECISION (fully free, no tier split): every account gets the
-  // coached-builder card set now (it used to be Pro-only); the Free default
-  // order (library first, manual second) is retired.
-  // D139 (finding: "'Adjust training plan' rendered with no plan to
-  // adjust"): with no active plan there is nothing for it to adjust, and
-  // the library card duplicates the no-plan EmptyState's own "Browse
-  // plans" route, so the no-plan state offers only "Create your own".
-  const actionCards = activePlan
-    ? ACTION_CARDS_PRO_SWITCH
-    : ACTION_CARDS_PRO_SWITCH.filter((card) => card.id === 'manual');
 
   // Group the non-active plans by folder. Plans whose folder_id is null (or
   // points at a now-deleted folder) fall through to the unfiled "My plans"
@@ -1454,19 +1496,14 @@ export default function PlansScreen({ navigation }) {
                   {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}
                 </Text>
               ) : null}
+              {/* D231 (batch 2): the training style is a plain line now, not its own
+                  tappable row (Adjust training plan below is the one door). Same
+                  rules as before: from the plan's own facts, hidden for library,
+                  authored, style-locked and competing-category plans. */}
               {activePlanStyle ? (
-                <TouchableOpacity
-                  testID="active-plan-style"
-                  style={styles.activePlanStyleRow}
-                  onPress={() => navigation.navigate('PlanUpdate', { focus: 'style' })}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Training style, ${activePlanStyle}. Change in Adjust training`}
-                >
-                  <Text style={[styles.activePlanMeta, live.activePlanMeta, styles.activePlanStyleText]}>
-                    Training style: {activePlanStyle}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={14} color={t.colors.textSecondary} />
-                </TouchableOpacity>
+                <Text testID="active-plan-style" style={[styles.activePlanMeta, live.activePlanMeta]}>
+                  Training style: {activePlanStyle}
+                </Text>
               ) : null}
               {/* D139 (finding: "the one good block definition sat behind a
                   tooltip on a secondary screen while 'Week N of M' hid
@@ -1500,21 +1537,19 @@ export default function PlansScreen({ navigation }) {
               {blockAdvice?.action === 'continue' && showPeakWeekNote && (
                 <Text style={[styles.proCoachNote, live.proCoachNote]}>{blockAdvice.body}</Text>
               )}
-              {/* FOUNDER DECISION (fully free, no tier split): this note
-                  renders for every account now. */}
-              <Text style={[styles.proCoachNote, live.proCoachNote]}>
-                Your coach reviews this plan each week and suggests changes for you to apply. Change training setup or switch plans from the options below.
-              </Text>
+              {/* D231 (batch 2): this week's days, moved from Progress: the plan
+                  week's count and the seven day cells from the one view-model
+                  (planWeek.js), drawn by the same PlanWeekCard. They show the
+                  week, so the "Your coach reviews this plan each week..."
+                  paragraph and the separate "Week complete. Your next session is
+                  on Monday." line are gone. */}
+              {trainWeek.showPlanWeek ? (
+                <PlanWeekCard summary={trainWeek.planWeekSummary} embedded testID="train-plan-week" />
+              ) : null}
               {/* B-1 (F-18): once every required session this week is
                   resolved there is no "next workout" to start, and the row
-                  used to start session 1 again. It states the position and
-                  its action becomes the choice, mirroring Today's own
-                  week-complete hero. */}
-              {weekComplete ? (
-                <Text style={[styles.proCoachNote, live.proCoachNote]}>
-                  Week complete. Your next session is on Monday.
-                </Text>
-              ) : null}
+                  used to start session 1 again. Its action becomes the
+                  choice, mirroring Today's own week-complete hero. */}
               <View style={styles.activePlanActions}>
                 {/* R9 (D70): startNextBtn -> shared Button primary (fires its
                     own selection() tick on press). */}
@@ -1544,7 +1579,8 @@ export default function PlansScreen({ navigation }) {
             </Card>
           </View>
         ) : (
-          /* FOUNDER DECISION (fully free, no tier split): the Free no-plan
+          <>
+          {/* FOUNDER DECISION (fully free, no tier split): the Free no-plan
              branch (FreeStarter quiz) is retired -- this is the only
              no-plan state now.
              C5-P10-09 (D96): the Pro no-plan state used to be an inert Card
@@ -1562,7 +1598,7 @@ export default function PlansScreen({ navigation }) {
              call, so the actor is "your coach", the locked informal actor
              for running prose (line ~829-830), not collaborative "we".
              Noun unified to "setup" (was "profile" here). Plans' own extra
-             clause (the library) is kept. */
+             clause (the library) is kept. */}
           <EmptyState
             icon="barbell-outline"
             title="No active plan yet"
@@ -1575,7 +1611,27 @@ export default function PlansScreen({ navigation }) {
             onSecondary={() => navigation.navigate('PlanLibrary')}
             secondaryAccessibilityLabel="Browse the plan library"
           />
+          {/* D231 (batch 2): with no active plan the week's count ("2 sessions so
+              far this week", planWeek.js's no-plan variant) shows here, as it did
+              on Progress. */}
+          {trainWeek.showPlanWeek ? (
+            <PlanWeekCard summary={trainWeek.planWeekSummary} testID="train-plan-week" />
+          ) : null}
+          </>
         )}
+
+        {/* D231 (batch 2): this week's training volume strip, moved from Progress
+            with its logic and its tap (the one-week volume view). Its own card
+            now, under the plan card, instead of inside the plan-week card. */}
+        {!planUnknown && trainWeek.showPlanWeek && trainWeek.hasData ? (
+          <Card testID="train-volume-strip">
+            <VolumeStrip
+              strip={trainWeek.strip}
+              legendItems={trainWeek.legendItems}
+              onOpen={() => navigation.navigate('VolumeHeatmap', { windowWeeks: 1 })}
+            />
+          </Card>
+        ) : null}
 
         {/* Block advisor card */}
         {showBlockCard && (
@@ -1870,93 +1926,113 @@ export default function PlansScreen({ navigation }) {
             connecting with other people who train, not sharing programmes,
             so the destination this card promised no longer exists. */}
 
-        {/* Plan tools. Campaign 25 (PLANS-SCREEN-SPEC.md §2 item 3): MOVED UP
-            from the page bottom, one SectionLabel over the training-blocks
-            row and the action cards -- same components, same destinations,
-            same tier logic (actionCards, above), only position and the
-            unifying label change. */}
+        {/* Recent sessions (D231, batch 2: moved from Progress, same cards and the
+            same tap to the read-only Workout Summary), with the All sessions door.
+            The newest card carries Repeat, moved from Today's last-session row. */}
+        {trainWeek.recentSessions.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.rowBetween}>
+              <SectionLabel>Recent sessions</SectionLabel>
+              {/* R9 (D70): seeAllButton -> shared Button outline sm. */}
+              <Button
+                variant="outline"
+                size="sm"
+                fullWidth={false}
+                icon="list-outline"
+                title="All sessions"
+                onPress={() => navigation.navigate('WorkoutHistory')}
+                accessibilityLabel="See all sessions"
+              />
+            </View>
+            {trainWeek.recentSessions.map((w, i) => {
+              // L04-1 (design audit 2026-07-09): the cards open WorkoutSummary
+              // (read-only). D218 (founder order 2026-10-03, audit F-2): the params
+              // are the shared session report's (src/lib/sessionReport.js), the
+              // very object History's "View summary" and "Rate your last session"
+              // carry, over the unfiltered, survivor-aware exercise lookup the
+              // hook returns (null until loaded, which the helper accepts).
+              const mySets = trainWeek.allSets.filter(set => set.workoutId === w.id);
+              return (
+                <RecentSessionCard
+                  key={w.id}
+                  workout={w}
+                  onPress={() => navigation.navigate('WorkoutSummary', {
+                    ...sessionSummaryParams(w, mySets, trainWeek.exerciseLookup),
+                    // Founder device report 2026-08-24: without the routine the
+                    // summary has nothing to title the session with and its share
+                    // card falls back to a join of the first two exercise names,
+                    // which then moves whenever an exercise is swapped.
+                    routineId: w.routineId ?? null,
+                    routineName: w.routineName ?? null,
+                  })}
+                  onRepeat={i === 0 ? () => handleRepeatSession(w) : null}
+                />
+              );
+            })}
+          </View>
+        )}
+
+        {/* Your setup (D231, batch 2): the two ways to change what the plan is
+            built from. Avoided movements is reached inside Injuries & limitations
+            ("Movements you would rather not do"), and the Training style row is
+            the plain line on the plan card, so neither has a row of its own. */}
         <View style={styles.section}>
-          <SectionLabel>Plan tools</SectionLabel>
-          {/* D134 (founder 2026-09-03): the FIRST row, always shown - the
-              thing every plan is built from lives where plans are built.
-              Same card as the rows beneath; only the live line is new. */}
-          <Card
-            style={styles.trainingBlocksRow}
-            onPress={() => navigation.navigate('HowYouTrain')}
-            accessibilityLabel={`Injuries & limitations. ${hytSummary.sub}`}
-          >
-            <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
-              <Ionicons name="body-outline" size={20} color={hytSummary.attention ? t.colors.primary : t.colors.textSecondary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>Injuries & limitations</Text>
-              <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>{hytSummary.sub}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </Card>
-          <Card
-            style={styles.trainingBlocksRow}
-            onPress={() => navigation.navigate('MesocycleBuilder')}
-            accessibilityLabel="Training blocks"
-          >
-            <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
-              <Ionicons name="layers-outline" size={20} color={t.colors.textSecondary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>Training blocks</Text>
-              <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>View completed blocks and long-term progress</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </Card>
-          {/* D109-3: only renders when the count is > 0 - no empty-state
-              entry point in Plan tools for a feature most users never touch.
-              Set/clear stays on the exercise long-press (RoutineDetailScreen);
-              this is the list home. */}
-          {avoidedMovementsCount > 0 && (
-            <Card
-              style={styles.trainingBlocksRow}
-              onPress={() => navigation.navigate('AvoidedMovements')}
-              accessibilityLabel={`Avoided movements, ${avoidedMovementsCount}`}
-            >
-              <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
-                <Ionicons name="shield-outline" size={20} color={t.colors.textSecondary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>
-                  Avoided movements · {avoidedMovementsCount}
-                </Text>
-                <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>Types of movement Volyume is leaving out of suggestions</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-            </Card>
-          )}
-          {actionCards.map(card => {
-            const featured = card.featured !== undefined ? card.featured : Boolean(card.badge);
-            return (
-              <Card
-                key={card.id}
-                style={[styles.actionCard, featured && [styles.actionCardFeatured, live.actionCardFeatured]]}
-                onPress={() => navigation.navigate(card.screen)}
-                accessibilityLabel={card.title}
-              >
-                <View style={[styles.actionCardIcon, live.actionCardIcon, featured && [styles.actionCardIconFeatured, live.actionCardIconFeatured]]}>
-                  <Ionicons name={card.icon} size={24} color={t.colors.primary} />
-                </View>
-                <View style={styles.actionCardBody}>
-                  <View style={styles.actionCardTitleRow}>
-                    <Text style={[styles.actionCardTitle, live.actionCardTitle]}>{card.title}</Text>
-                    {card.badge ? (
-                      <View style={[styles.actionCardBadge, live.actionCardBadge]}>
-                        <Text style={[styles.actionCardBadgeText, live.actionCardBadgeText]}>{card.badge}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Text style={[styles.actionCardDesc, live.actionCardDesc]}>{card.description}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={featured ? t.colors.primary : t.colors.textMuted} />
-              </Card>
-            );
-          })}
+          <SectionLabel>Your setup</SectionLabel>
+          <NavGroup>
+            {/* D139 (finding: "'Adjust training plan' rendered with no plan to
+                adjust"): with no active plan there is nothing for it to adjust. */}
+            {activePlan ? (
+              <NavRow
+                icon="flag-outline"
+                label="Adjust training plan"
+                sub="Change days, equipment or focus areas"
+                onPress={() => navigation.navigate('PlanUpdate')}
+              />
+            ) : null}
+            {/* D134 (founder 2026-09-03): always shown - the thing every plan is
+                built from lives where plans are built. The live line is its one
+                sub line. */}
+            <NavRow
+              icon="body-outline"
+              label="Injuries & limitations"
+              sub={hytSummary.sub}
+              onPress={() => navigation.navigate('HowYouTrain')}
+            />
+            {/* The always-on lines from Today (works around an injury, the build-
+                back line, could-not-check), plain text under the row with the
+                conditions they had. */}
+            <InjuryLines lines={injuryLines} hasPlan={!!activePlan} />
+          </NavGroup>
+        </View>
+
+        {/* Plans (D231, batch 2): the plan library (only with an active plan, as
+            before: with none, the empty state above already offers "Browse
+            plans"), Create your own, and Past blocks (the training blocks
+            screen, today's "Training blocks" row). */}
+        <View style={styles.section}>
+          <SectionLabel>Plans</SectionLabel>
+          <NavGroup>
+            {activePlan ? (
+              <NavRow
+                icon="library-outline"
+                label="Pick from the plan library"
+                sub="Choose a ready-made plan"
+                onPress={() => navigation.navigate('PlanLibrary')}
+              />
+            ) : null}
+            <NavRow
+              icon="create-outline"
+              label="Create your own"
+              sub="Choose every exercise yourself"
+              onPress={() => navigation.navigate('ManualBuilder')}
+            />
+            <NavRow
+              icon="layers-outline"
+              label="Past blocks"
+              sub="Completed blocks and long-term progress"
+              onPress={() => navigation.navigate('MesocycleBuilder')}
+            />
+          </NavGroup>
         </View>
 
         {/* Previous plans. Campaign 25 (PLANS-SCREEN-SPEC.md §2 item 4): the
@@ -2182,6 +2258,14 @@ export default function PlansScreen({ navigation }) {
 
       </ScrollView>
       <PeekMenu ref={peekRef} />
+
+      {/* D231 (batch 2): the readiness ask for Repeat, the same sheet Today's own
+          Start workout uses. */}
+      <SessionIntentSheet
+        visible={showRepeatIntent}
+        onClose={() => { setShowRepeatIntent(false); pendingRepeatRef.current = null; }}
+        onConfirm={confirmRepeatStart}
+      />
 
       {/* D139: the first plan is previewed before it is built. The sheet
           shows the prospective week, what a block is, and what happens to
@@ -2513,16 +2597,7 @@ const styles = StyleSheet.create({
   folderSheetSaveButton: { borderRadius: radius.md },
   folderSheetSave: { ...type.label },
 
-  trainingBlocksRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-  },
-  trainingBlocksIcon: {
-    width: 40, height: 40, borderRadius: radius.md,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
-  },
-  trainingBlocksLabel: { ...type.bodyStrong, color: colors.textPrimary },
-  trainingBlocksSub: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   proCoachNote: {
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
     borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm,
@@ -2545,8 +2620,6 @@ const styles = StyleSheet.create({
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black },
   activePlanName: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
-  activePlanStyleRow: { flexDirection: 'row', alignItems: 'center', minHeight: touchTarget.minimum, gap: spacing.xs },
-  activePlanStyleText: { flexShrink: 1 },
   activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
   // D139: the block-position line plus its InfoTooltip, as true row
   // siblings (AX-11 law: never nest a touchable inside another).
@@ -2602,32 +2675,6 @@ const styles = StyleSheet.create({
   // R9 (D70): startTemplateBtn/startTemplateBtnText deleted - converted to
   // the shared Button primitive (secondary sm).
 
-  actionCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-  },
-  actionCardIcon: {
-    width: 48, height: 48, borderRadius: radius.md,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
-  },
-  actionCardBody: { flex: 1 },
-  actionCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
-  actionCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  actionCardBadge: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
-  },
-  actionCardBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.primary },
-  actionCardDesc: { ...type.captionTight, color: colors.textMuted },
-  actionCardFeatured: {
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.primaryBg,
-  },
-  actionCardIconFeatured: {
-    backgroundColor: colors.surface,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-  },
   // Block advisor card
   blockCard: {
     gap: spacing.md,
@@ -2763,9 +2810,6 @@ function buildLiveStyles(t) {
     folderInput: { fontSize: t.fontSize.md },
     folderSheetCancel: { ...t.type.label, color: t.colors.textSecondary },
     folderSheetSave: { ...t.type.label },
-    trainingBlocksIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    trainingBlocksLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    trainingBlocksSub: { ...t.type.caption, color: t.colors.textMuted },
     proCoachNote: { fontSize: t.fontSize.xs, color: t.colors.textMuted, borderTopColor: t.colors.border },
     noActivePlanText: { ...t.type.bodySm, color: t.colors.textMuted },
     activePlanCard: { borderColor: withAlpha(t.colors.primary, alpha.edge) },
@@ -2792,13 +2836,6 @@ function buildLiveStyles(t) {
     compactRowMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     templateName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     templateMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    actionCardIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    actionCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    actionCardBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    actionCardBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
-    actionCardDesc: { ...t.type.captionTight, color: t.colors.textMuted },
-    actionCardFeatured: { borderColor: withAlpha(t.colors.primary, alpha.edge), backgroundColor: t.colors.primaryBg },
-    actionCardIconFeatured: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     blockCardHeadsUp: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.warning, alpha.mid) },
     blockCardWarning: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.warning, alpha.strong) },
     blockCardRecovery: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.mid) },

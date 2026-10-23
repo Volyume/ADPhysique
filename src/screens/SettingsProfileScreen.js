@@ -11,7 +11,9 @@ import TextField from '../components/TextField';
 import Chip from '../components/Chip';
 import HeightFeetInchesField from '../components/HeightFeetInchesField';
 import AgeYearsField from '../components/AgeYearsField';
+import ProfileAvatarPicker from '../components/ProfileAvatarPicker';
 import { appAlert } from '../components/AppAlert';
+import { isApplePrivateRelayEmail } from '../lib/appleIdentity';
 import { getUserBodyProfile, saveUserBodyProfile } from '../lib/database';
 import { ageYearsFromDateOfBirth, dateOfBirthFromAgeYears } from '../lib/profileAge';
 import { logError } from '../lib/errorLog';
@@ -59,7 +61,11 @@ const SEX_OPTIONS = [
   { value: 'female', label: 'Female' },
 ];
 
-// Profile: the handful of things the user types or picks about themselves.
+// Profile: the handful of things the user types or picks about themselves, and
+// their picture. D231 (app layout rework, 2026-10-22): the profile picture
+// (photo from the phone, a Volyume avatar, or clear) moved here from the retired
+// Athlete profile screen, on the same storage (avatarUri / avatarPreset on the
+// stored profile).
 export default function SettingsProfileScreen() {
   const { user, userProfile, saveLocalProfile, setDietPreference } = useAppStore(
     useShallow(s => ({
@@ -84,6 +90,14 @@ export default function SettingsProfileScreen() {
   const [heightIn, setHeightIn] = useState('');
   const [age,      setAge]      = useState('');
   const toast = useToast();
+  // Only the initial inside the picture mark reads this. The e-mail fallback
+  // is a nicety for people whose address carries their name. Apple's Hide My
+  // Email gives a random token instead, so skip it and say Athlete.
+  const displayName = userProfile?.firstName
+    || (isApplePrivateRelayEmail(user?.email)
+      ? null
+      : user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim())
+    || 'Athlete';
   // CP-10 stage 3: live theme (src/hooks/useTheme.js). `live` is the shared
   // settingsStyles override (SettingsPrimitives.js); `liveText` covers this
   // screen's own colour/type-bearing style keys the same way.
@@ -208,6 +222,12 @@ export default function SettingsProfileScreen() {
   return (
     <SettingsPage title="Profile">
       <View style={[settingsStyles.section, live.section]}>
+        <ProfileAvatarPicker
+          userId={user?.id}
+          userProfile={userProfile}
+          saveLocalProfile={saveLocalProfile}
+          displayName={displayName}
+        />
         <View style={styles.nameRow}>
           <TextField
             containerStyle={styles.nameField}

@@ -5,10 +5,12 @@
  * Coach and Progress doors use (ink tiles, NavRow.js header), so the sheet
  * carries no amber of its own (D230 R2). The title is a heading (D230 R16).
  *
- * Rows, in order (4.1): Trends; Copy from another day; Meals (D230 R11:
- * meals per day and their names); Nutrition targets (D230 R19: the same
- * cross-tab door the no-targets state uses). The caller owns every action;
- * this sheet only lays the doors out.
+ * Rows, in order: Copy from another day; Meals (D230 R11: meals per day and
+ * their names). D231 (app layout rework, batch 3): Trends and Nutrition
+ * targets are not here any more, because each has a home on the screen
+ * already (the header's Trends door; the calorie card's target) and a screen
+ * has one door to a place. The caller owns every action; this sheet only
+ * lays the doors out.
  */
 import { StyleSheet } from 'react-native';
 import BottomSheet from '../BottomSheet';
@@ -17,7 +19,7 @@ import { NavRow, NavGroup } from '../NavRow';
 import { spacing } from '../../styles/theme';
 
 export default function DayToolsSheet({
-  visible, onClose, onTrends, onCopyFromDay, onMeals, onNutritionTargets,
+  visible, onClose, onCopyFromDay, onMeals,
 }) {
   return (
     <BottomSheet
@@ -29,15 +31,9 @@ export default function DayToolsSheet({
       <SectionLabel heading style={styles.title}>Day tools</SectionLabel>
       <NavGroup>
         <NavRow
-          icon="analytics-outline"
-          label="Trends"
-          sub="Calorie, macro and consistency trends, and your diary export."
-          onPress={onTrends}
-        />
-        <NavRow
           icon="copy-outline"
           label="Copy from another day"
-          sub="Choose a recent logged day and copy its foods into this one."
+          sub="Copy yesterday or another recent day into this one."
           onPress={onCopyFromDay}
         />
         <NavRow
@@ -45,12 +41,6 @@ export default function DayToolsSheet({
           label="Meals"
           sub="How many meals your diary shows, and their names."
           onPress={onMeals}
-        />
-        <NavRow
-          icon="nutrition-outline"
-          label="Nutrition targets"
-          sub="Your daily calorie, protein, carb and fat targets."
-          onPress={onNutritionTargets}
         />
       </NavGroup>
     </BottomSheet>

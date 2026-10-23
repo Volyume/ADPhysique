@@ -7,12 +7,15 @@
  * ways to change plans (Plan library / manual build / adjust / switch) sat
  * at the very bottom, below that stack.
  *
- * This suite pins the rebuilt hierarchy at the source level (PlansScreen has
- * no real-render harness; see PlansScreen.loadErrorState.guard.test.js for
- * the same convention):
- *   - section order: hero -> block-advice card -> "Plan tools" label ->
+ * This suite pins the rebuilt hierarchy at the source level (the mounted order
+ * is pinned in PlansScreen.d231Train.test.js; see PlansScreen.loadErrorState.
+ * guard.test.js for the same convention):
+ *   - section order: hero -> block-advice card -> Recent sessions -> "Your
+ *     setup" -> "Plans" (the plan library, Create your own, Past blocks) ->
  *     "Previous plans" header -> "Archived plans" header (source-position
  *     assertions, so a future edit that silently reorders them fails here).
+ *     RE-POINTED (D231, app layout rework batch 2): "Plan tools" became "Your
+ *     setup" and "Plans", and Recent sessions came from Progress.
  *   - previousExpanded defaults false and the section is gated on
  *     myPlans.length > 0 (renders nothing for a brand-new user -- no empty
  *     shell).
@@ -34,29 +37,31 @@ function idx(needle, from = 0) {
   return i;
 }
 
-describe('Campaign 25: section order (hero -> Plan tools -> Previous plans -> Archived)', () => {
-  test('the hero (Active Plan) renders before the block-advice card', () => {
+describe('Campaign 25 / D231: section order (hero -> strip -> block card -> Recent sessions -> Your setup -> Plans -> Previous plans -> Archived)', () => {
+  test('the hero (Active Plan) renders before the volume strip and the block-advice card', () => {
     const heroIdx = idx('{/* Active Plan. Campaign 25');
+    const stripIdx = idx('<Card testID="train-volume-strip">');
     const blockCardIdx = idx('{/* Block advisor card */}');
-    expect(heroIdx).toBeLessThan(blockCardIdx);
+    expect(heroIdx).toBeLessThan(stripIdx);
+    expect(stripIdx).toBeLessThan(blockCardIdx);
   });
 
-  test('the block-advice card renders before the "Plan tools" section', () => {
+  test('the block-advice card renders before Recent sessions, Your setup and Plans', () => {
     const blockCardIdx = idx('{/* Block advisor card */}');
-    const planToolsIdx = idx('{/* Plan tools. Campaign 25');
-    expect(blockCardIdx).toBeLessThan(planToolsIdx);
+    const recentIdx = idx('<SectionLabel>Recent sessions</SectionLabel>');
+    const setupIdx = idx('<SectionLabel>Your setup</SectionLabel>');
+    const plansIdx = idx('<SectionLabel>Plans</SectionLabel>');
+    expect(blockCardIdx).toBeLessThan(recentIdx);
+    expect(recentIdx).toBeLessThan(setupIdx);
+    expect(setupIdx).toBeLessThan(plansIdx);
   });
 
-  test('"Plan tools" (Training blocks row + action cards) renders before "Previous plans"', () => {
-    const planToolsIdx = idx('{/* Plan tools. Campaign 25');
-    const planToolsLabelIdx = idx('<SectionLabel>Plan tools</SectionLabel>', planToolsIdx);
-    const trainingBlocksIdx = idx('accessibilityLabel="Training blocks"', planToolsIdx);
+  test('Plans (library, Create your own, Past blocks) renders before "Previous plans"', () => {
+    const plansIdx = idx('<SectionLabel>Plans</SectionLabel>');
+    const pastBlocksIdx = idx('label="Past blocks"', plansIdx);
     const previousIdx = idx('{/* Previous plans. Campaign 25');
-    // The label and the relocated Training-blocks row both sit inside the
-    // Plan tools section, ahead of Previous plans.
-    expect(planToolsLabelIdx).toBeGreaterThan(planToolsIdx);
-    expect(trainingBlocksIdx).toBeGreaterThan(planToolsLabelIdx);
-    expect(previousIdx).toBeGreaterThan(trainingBlocksIdx);
+    expect(pastBlocksIdx).toBeGreaterThan(plansIdx);
+    expect(previousIdx).toBeGreaterThan(pastBlocksIdx);
   });
 
   test('"Previous plans" renders before "Archived plans"', () => {
@@ -65,11 +70,12 @@ describe('Campaign 25: section order (hero -> Plan tools -> Previous plans -> Ar
     expect(previousIdx).toBeLessThan(archivedIdx);
   });
 
-  test('the "Plan tools" SectionLabel replaces the old dynamic Switch/Start label as the single unifying header', () => {
-    const src = source;
-    expect(src).toContain('<SectionLabel>Plan tools</SectionLabel>');
-    // The old per-tier dynamic label text no longer drives a SectionLabel.
-    expect(src).not.toMatch(/<SectionLabel>\s*\{isProWithPlan \? 'Switch your plan' : 'Start with a plan'\}/);
+  test('the "Plan tools" label and the Training blocks / Avoided movements / Training style rows are retired', () => {
+    expect(source).not.toContain('<SectionLabel>Plan tools</SectionLabel>');
+    expect(source).not.toContain('accessibilityLabel="Training blocks"');
+    expect(source).not.toMatch(/<SectionLabel>\s*\{isProWithPlan \? 'Switch your plan' : 'Start with a plan'\}/);
+    expect(source).toContain('label="Past blocks"');
+    expect(source).toContain('sub="Completed blocks and long-term progress"');
   });
 });
 
@@ -173,12 +179,14 @@ describe('Campaign 25: Set-active affordance (previous rows keep it, archived ro
 
 describe('Campaign 25: free/pro tier logic is retired (FOUNDER DECISION: fully free, no tier split)', () => {
   // RE-ANCHORED (D139, programme creation masterpass, 2026-09-03, finding:
-  // "'Adjust training plan' rendered with no plan to adjust"): actionCards is
-  // no longer unconditional -- it is gated on having an active plan, never on
-  // tier. With no active plan only "Create your own" renders (the library is
-  // already offered by the no-plan EmptyState's own "Browse plans").
-  test('actionCards is gated on having an active plan, never on tier', () => {
-    expect(source).toMatch(/const actionCards = activePlan\s*\n\s*\? ACTION_CARDS_PRO_SWITCH\s*\n\s*: ACTION_CARDS_PRO_SWITCH\.filter\(\(card\) => card\.id === 'manual'\);/);
+  // "'Adjust training plan' rendered with no plan to adjust"): the plan rows are
+  // gated on having an active plan, never on tier. With no active plan only
+  // "Create your own" and "Past blocks" render (the library is already offered by
+  // the no-plan EmptyState's own "Browse plans"). RE-POINTED (D231, batch 2): the
+  // actionCards table became NavRows in Your setup and Plans.
+  test('Adjust training plan and the library row are gated on having an active plan, never on tier', () => {
+    expect(source).toMatch(/\{activePlan \? \(\s*<NavRow\s+icon="flag-outline"\s+label="Adjust training plan"/);
+    expect(source).toMatch(/\{activePlan \? \(\s*<NavRow\s+icon="library-outline"\s+label="Pick from the plan library"/);
     // Comments stripped: a retirement note may name the retired constant in
     // prose without that counting as it surviving in code.
     const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');

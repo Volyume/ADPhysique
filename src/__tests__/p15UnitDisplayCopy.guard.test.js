@@ -23,7 +23,8 @@ const FORMAT = read('lib/format.js');
 const WORKOUT_HISTORY = read('screens/WorkoutHistoryScreen.js');
 const WORKOUT_SUMMARY = read('screens/WorkoutSummaryScreen.js');
 const RECAP_PAYLOAD = read('lib/shareCard/recapPayload.js');
-const ATHLETE_PROFILE = read('screens/AthleteProfileScreen.js');
+// D231: the Athlete profile is retired; its strength-standard ratio line (the "body weight" noun rule) lives on Lift Progress.
+const LIFT_PROGRESS = read('screens/LiftProgressScreen.js');
 const SETTINGS_ROOT = read('screens/SettingsScreen.js');
 const SETTINGS_UNITS = read('screens/SettingsUnitsScreen.js');
 const IMPORT_SCREEN = read('screens/ImportScreen.js');
@@ -105,18 +106,17 @@ describe('Recap share-card payload aligns tonnage/count formatting to the shared
   });
 });
 
-describe('Athlete Profile uses the noun form "body weight", not compounded "bodyweight" (P-15)', () => {
-  test('strength-standard ratio line reads "x body weight" / "% body weight"', () => {
-    expect(ATHLETE_PROFILE).toMatch(/\$\{level\.ratio\.toFixed\(2\)\}x body weight/);
-    expect(ATHLETE_PROFILE).toMatch(/\$\{Math\.round\(level\.ratio \* 100\)\}% body weight/);
-    expect(ATHLETE_PROFILE).not.toMatch(/x bodyweight/);
-    expect(ATHLETE_PROFILE).not.toMatch(/% bodyweight/);
-  });
-
-  test('the Body weight stat tile label is unchanged (already correct two-word noun form)', () => {
-    // D228 item 2 tier c: the tile's value and sub now come from bodyWeightTile()
-    // (withheld under an open flag); the label is the same two-word noun.
-    expect(ATHLETE_PROFILE).toMatch(/<StatTile label="Body weight" value=\{weightTile\.value\} sub=\{weightTile\.sub\} \/>/);
+describe('Lift Progress uses the noun form "body weight", not compounded "bodyweight" (P-15)', () => {
+  // Re-pointed under D231 from the retired Athlete profile: the same rule
+  // (two words, "x ... body weight" / "% ... body weight") on the screen that now
+  // carries the strength-standard ratio line. Its own wording keeps "your".
+  test('strength-standard ratio line reads "x your body weight" / "% of your body weight"', () => {
+    expect(LIFT_PROGRESS).toMatch(/\$\{level\.ratio\.toFixed\(2\)\}x your body weight/);
+    expect(LIFT_PROGRESS).toMatch(/\$\{Math\.round\(level\.ratio \* 100\)\}% of your body weight/);
+    expect(LIFT_PROGRESS).not.toMatch(/x bodyweight/);
+    expect(LIFT_PROGRESS).not.toMatch(/x your bodyweight/);
+    expect(LIFT_PROGRESS).not.toMatch(/% bodyweight/);
+    expect(LIFT_PROGRESS).not.toMatch(/% of your bodyweight/);
   });
 });
 

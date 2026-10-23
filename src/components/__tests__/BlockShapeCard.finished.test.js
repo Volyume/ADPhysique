@@ -63,6 +63,12 @@ describe('every consumer threads awaitingDecision into finished', () => {
 
   test("HomeScreen's chip override replaces the readiness line, not decorates it", () => {
     const src = read('screens/HomeScreen.js');
-    expect(src).toMatch(/currentMesoWeek\?\.awaitingDecision\s*\n?\s*\?\s*\{ tone: 'go', line: 'Block finished\./);
+    // RE-POINTED (D231, app layout rework batch 1): the Today chip keeps only
+    // its new part, "Sets stay as light as a recovery week until you choose
+    // what comes next." ("Block finished." is said by the main card and the
+    // Today line). The override still replaces the readiness line outright.
+    expect(src).toMatch(/currentMesoWeek\?\.awaitingDecision\s*\n?\s*\?\s*\{ tone: 'go', line: BLOCK_FINISHED_CHIP_LINE \}/);
+    expect(src).toContain("const BLOCK_FINISHED_CHIP_LINE = 'Sets stay as light as a recovery week until you choose what comes next.';");
+    expect(src).not.toContain("line: 'Block finished. Sets stay as light");
   });
 });

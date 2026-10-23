@@ -10,6 +10,13 @@
  * no-haptic exception (Haptics completion pass, 2026-07-10). Each row's sub
  * line reads "3 entries · 1850 kcal", one spaced middle dot (D230 R15).
  * The title is a heading (D230 R16).
+ *
+ * D231 (app layout rework, batch 3): this sheet is now the one way to copy a
+ * day, so it also does what the Diary's separate "Copy yesterday" row did.
+ * The rows are the picker's days in the order they arrive, most recent first
+ * (getRecentLoggedDays reads the days before the one in view, newest first),
+ * so the day before the day in view leads whenever it has food, and reads
+ * "Yesterday" when the day in view is today.
  */
 import { StyleSheet } from 'react-native';
 import Text from '../Text';

@@ -68,11 +68,13 @@ describe('CoachReview: the weekly volume review row on the Recovery screen', () 
     expect(code).not.toMatch(/navigation\.navigate|useNavigation|navigateCrossTab/);
   });
 
-  test('CoachReview is registered in the Progress stack (so Back returns to Recovery) and still lazy-imported', () => {
+  // RE-POINTED (D231, batch 4): Recovery and CoachReview are in the Coach stack
+  // (ProfileStack) now that the Progress stack is retired.
+  test('CoachReview is registered in the Coach stack (so Back returns to Recovery) and still lazy-imported', () => {
     expect(NAV).toContain("const CoachReviewScreen = lazyScreen(() => require('../screens/CoachReviewScreen').default);");
-    expect(stackBody('ProgressStack')).toContain('<Stack.Screen name="CoachReview" component={CoachReviewScreen}');
+    expect(stackBody('ProfileStack')).toContain('<Stack.Screen name="CoachReview" component={CoachReviewScreen}');
     // Recovery and CoachReview share the stack the row navigates within.
-    expect(stackBody('ProgressStack')).toContain('<Stack.Screen name="Recovery" component={RecoveryScreen}');
+    expect(stackBody('ProfileStack')).toContain('<Stack.Screen name="Recovery" component={RecoveryScreen}');
   });
 
   test('the row carries no tier gate, price or upsell (the product is fully free)', () => {

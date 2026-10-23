@@ -1074,8 +1074,10 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
     const coach = stripComments(read('screens/YouScreen.js'));
     expect(coach).not.toContain('Coach is available on Pro');
     expect(coach).not.toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'coach_pitch_card' \}\)/);
-    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
-    expect(coach).toContain('What your coach changed this week, what stayed the same, and why.');
+    // RE-POINTED (D231, batch 4): the "Weekly coaching decision" card and its body
+    // sentence are replaced by the one This week card, which reads "This week's
+    // decision · See why" once the decision exists.
+    expect(coach).toContain("This week's decision \\u00B7 See why");
   });
 
   test('the free column carries the tier word, never a hardcoded currency (C5-P8-01)', () => {
@@ -1112,9 +1114,13 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
   // (the Your progress card), so it pointed the wrong way. It now names the
   // weigh-ins, photos and scans as the rows above; the promise to every account
   // is unchanged.
+  // RE-POINTED (D231, batch 4): the Progress rows (and this empty state) moved to
+  // components/coach/CoachProgress.js, drawn by the Coach screen.
   test('the Progress empty state promises the same, real destinations to every account (C5-P35-01 superseded)', () => {
-    const src = read('screens/AnalyticsScreen.js');
-    expect(src).toContain('Training charts appear here once sessions are logged. Weigh-ins, photos and scans are in the rows above.');
+    const src = read('components/coach/CoachProgress.js');
+    // D231 lead review: the page empty state left Coach (no chart appears
+    // there); the Training row's own empty line speaks to every account alike.
+    expect(src).not.toContain('Training charts appear here');
     expect(src).not.toContain('still available below');
     expect(src).not.toContain('Your consistency, lifts and full history are still available below.');
   });
@@ -1145,19 +1151,24 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
 describe('FREE: zero-history Home claims no history it does not have (C5-P7-05 / C5-P1-08, D96)', () => {
   // FOUNDER DECISION (fully free, no tier split): every account has a
   // coach now, so the isPro fork is retired -- one sentence for everyone.
-  test('the welcome card promises a coach to every account (superseded)', () => {
-    const card = stripComments(read('components/HomeWelcomeCard.js'));
-    expect(card).toContain('Your coach learns as you train');
-    expect(card).not.toMatch(/isPro/);
-    expect(read('screens/HomeScreen.js')).toContain('<HomeWelcomeCard onDismiss={dismissWelcome} />');
+  // RE-POINTED (D231, app layout rework batch 1): the Welcome card is gone from
+  // Today (the main card already says "Start your first workout" / "Start
+  // workout"), so the two claims this block pinned about that card's copy have
+  // nothing left to pin. What survives is that the card is really gone: no
+  // component, no render, and the zero-history Home still claims no history.
+  test('the welcome card is gone from Today (D231), so it promises nothing', () => {
+    expect(fs.existsSync(SRC('components/HomeWelcomeCard.js'))).toBe(false);
+    const home = read('screens/HomeScreen.js');
+    expect(home).not.toMatch(/HomeWelcomeCard/);
+    expect(home).not.toContain('Welcome to Volyume');
   });
 
-  test('the free welcome copy claims no past training and no personalisation from it', () => {
-    const card = stripComments(read('components/HomeWelcomeCard.js'));
+  test('the zero-history Home claims no past training and no personalisation from it', () => {
+    const home = stripComments(read('screens/HomeScreen.js'));
     // Nothing may read the app's history back to a user who has none.
-    expect(card).not.toMatch(/based on your (last|previous|recent)/i);
-    expect(card).not.toMatch(/we(?:'ve| have) (?:seen|learned|noticed)/i);
-    expect(card).not.toMatch(/your (?:trend|average|usual)/i);
+    expect(home).not.toMatch(/based on your (last|previous|recent)/i);
+    expect(home).not.toMatch(/we(?:'ve| have) (?:seen|learned|noticed)/i);
+    expect(home).not.toMatch(/your (?:trend|average|usual)/i);
   });
 });
 
@@ -1197,7 +1208,6 @@ describe('PRO: setup hands over live features only, and no removed one (D96)', (
       'screens/WelcomeScreen.js',
       'screens/SubscriptionPolicyScreen.js',
       'components/TierComparisonStrip.js',
-      'components/HomeWelcomeCard.js',
     ]) {
       expect(stripComments(read(f))).not.toMatch(/[Cc]ardio/);
     }
@@ -1750,7 +1760,10 @@ describe('CHECK-IN: no false-confidence recommendation from a week with no check
   test('the week-one ledger point survives: retirement still keys on a completed decision, not a persisted row', () => {
     const src = read('screens/YouScreen.js');
     expect(src).not.toMatch(/trialBanner/);
-    expect(src).toMatch(/const latestDecision = isCompletedCoachDecision\(latest, checkin\) \? latest : null;/);
+    // RE-POINTED (D231, batch 4): the predicate is the shared lib/coachDecision.js
+    // one, and the Coach screen keeps only the decisions that pass it.
+    expect(src).toMatch(/decisions = await completedDecisionsFrom\(history, /);
+    expect(read('lib/coachDecision.js')).toMatch(/if \(isCompletedCoachDecision\(row, checkin\)\) out\.push\(row\);/);
   });
 
   test('the engine files are untouched by this fix', () => {
@@ -2219,7 +2232,10 @@ describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)',
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     // -- "moving on" read as the idiom "move on" (proceed), not "moving,
     // dependent on", so both surfaces now say "moving based on".
-    expect(read('screens/HomeScreen.js')).toMatch(/next block's set targets stay where they are rather than moving based on what this block showed/);
+    // RE-POINTED (D231, app layout rework batch 2): the Today sheet moved verbatim to
+    // components/SessionIntentSheet.js (Train's Repeat asks the same question); the
+    // sentence is unchanged.
+    expect(read('components/SessionIntentSheet.js')).toMatch(/next block's set targets stay where they are rather than moving based on what this block showed/);
     expect(read('screens/SettingsCoachingScreen.js')).toMatch(/set targets stay where they are rather than moving based on what the block showed/);
   });
 

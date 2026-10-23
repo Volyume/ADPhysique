@@ -13,15 +13,17 @@
  *   control, the compose well, then `PostRow`s. A scope the server cannot
  *   serve yet (migration 190 unapplied, `fallback === 'scope'`) is left out of
  *   the sheet until it can.
- * - People: search, Find people, Requests, then the gym, discipline and area
- *   rows from `community_hub_summary` (the age group is a Find people filter
- *   now, not a Hub row).
+ * - People: Find people, then the gym, discipline and area rows from
+ *   `community_hub_summary` (the age group is a Find people filter now, not a
+ *   Hub row). D231: no search well (the header glyph opens the same search)
+ *   and no Requests row (requests are under the bell, CommunityActivity).
  * - Groups: my groups (each with its chat unread count), pending invites
  *   (Accept, or Decline, which removes the invite), New group and Browse open groups.
- * - You: the You row and ProgressStrip (withheld under calm mode or an open
- *   ED flag by `consistencyGateState`, exactly as before), the HOST and
- *   early-days rows, and the rows to profile, followers, privacy, training
- *   profile and rules.
+ * - You: ONE "My profile" row (D231: avatar and username, always shown to a
+ *   joined person) that also carries the old You row's week line and day dots,
+ *   and the ProgressStrip under it, both withheld under calm mode or an open ED
+ *   flag by `consistencyGateState`, exactly as before; the HOST and early-days
+ *   rows; and the rows to followers, privacy, training profile and rules.
  *
  * `route.params.segment` ('feed' | 'people' | 'groups' | 'you') opens a
  * segment (the Today row sends 'people').
@@ -30,9 +32,10 @@
  * read-only; Respect and the compose entry route to Join.
  *
  * Every loader and gate from the previous Hub is kept: join state, the host
- * row, early days, the moderation and rules notices, the legacy partner card,
- * the `me` refresh (the unseen dot is published by `useCommunityMe`), the
- * foreground publish and the pending-join drain.
+ * row, early days, the moderation and rules notices, the `me` refresh (the
+ * unseen dot is published by `useCommunityMe`), the foreground publish and the
+ * pending-join drain. D231 retired the "Partner invites have moved" notice: an
+ * old partner link still opens this tab, and its code is simply not read.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -54,7 +57,6 @@ import Band, { BandGap } from '../components/community/Band';
 import EmptyState from '../components/EmptyState';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
-import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import SectionHeader from '../components/community/SectionHeader';
 import EntryRow from '../components/community/EntryRow';
 import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
@@ -117,7 +119,6 @@ const SORT_LABELS = Object.freeze({ newest: 'Newest', respected: 'Most respected
 const HEADER_GLYPH_BOX = 34;
 const HEADER_GLYPH = 20;
 const WELL_HEIGHT = 44;
-const MARK = 32;
 
 // The HOST row's read (26-EARLY-DAYS-SPEC.md 1.2) happens once per app
 // session per reader once its answer is "no row": the reader is the host,
@@ -217,7 +218,6 @@ export default function CommunityHubScreen({ navigation, route }) {
   // their gym. Absent fields (an older server) compare as not behind.
   const rulesBehind = joined
     && Number(me?.accepted_rules_version) < Number(me?.rules_version);
-  const legacyPartnerCode = route?.params?.legacyPartnerCode ?? null;
   const segmentParam = route?.params?.segment ?? null;
 
   const [segment, setSegmentState] = useState('feed');
@@ -234,7 +234,6 @@ export default function CommunityHubScreen({ navigation, route }) {
   useScreenReady('Community', !loading);
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
-  const [legacyCardShown, setLegacyCardShown] = useState(!!legacyPartnerCode);
   const [browsing, setBrowsing] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -743,20 +742,25 @@ export default function CommunityHubScreen({ navigation, route }) {
   // 2): a failed or rate-limited read shows nothing rather than telling a
   // member of a full gym that they are the first here.
   const summaryEmpty = !!summary && Array.isArray(summary.cohorts) && summary.cohorts.length === 0;
-  const requestCount = (Number(me?.pending_requests) || 0) + (Number(me?.pending_connect_requests) || 0);
   const visibleInvites = invites;
 
-  const youPerson = joined ? {
+  // D231: ONE "My profile" row. It always shows for a joined person. The old
+  // You row's week line (sessions this week, the days, the streak caption) rides
+  // on it only while the consistency gate allows (calm mode or an open ED flag
+  // withholds it, and the counters are not even read then), and the progress
+  // strip under it keeps the same gate.
+  const showWeek = !consistencyGated && !!weekCounters;
+  const myProfilePerson = joined ? {
     user_id: uid,
     avatar_preset: me?.profile?.avatar_preset ?? null,
     handle: me?.profile?.handle ?? null,
-    display_name: 'You',
+    display_name: me?.profile?.display_name || me?.profile?.handle || '',
     isYou: true,
-    caption: weekCounters ? streakCaption(weekCounters.c_weeks_streak) : null,
+    caption: showWeek ? streakCaption(weekCounters.c_weeks_streak) : null,
   } : null;
-  const youDays = weekCounters?.c_trained_days_week;
-  const youMetric = weekCounters ? metricLabel('week', weekCounters.c_sessions_week) : null;
-  const youTrainedToday = !!weekCounters && weekCounters.c_last_trained_day === todayLocalKey();
+  const youDays = showWeek ? weekCounters.c_trained_days_week : undefined;
+  const youMetric = showWeek ? metricLabel('week', weekCounters.c_sessions_week) : null;
+  const youTrainedToday = showWeek && weekCounters.c_last_trained_day === todayLocalKey();
 
   function openProfile(card) {
     if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
@@ -919,38 +923,6 @@ export default function CommunityHubScreen({ navigation, route }) {
                 title="Dismiss"
                 onPress={settleJoinReceipt}
                 accessibilityLabel="Dismiss this notice about your sessions"
-              />
-            </View>
-          </Band>
-          <BandGap />
-        </>
-      ) : null}
-
-      {legacyCardShown ? (
-        <>
-          <Band style={styles.notice}>
-            <Text style={[t.type.bodyStrong, { color: t.colors.textPrimary }]}>
-              Partner invites have moved
-            </Text>
-            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
-              Training partners are now part of Community. Search for the person who sent this and follow each other.
-            </Text>
-            <View style={styles.noticeActions}>
-              <Button
-                variant="primary"
-                size="sm"
-                fullWidth={false}
-                title="Find people"
-                onPress={() => navigation.navigate('CommunityFindPeople')}
-                accessibilityLabel="Find people in Community"
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                title="Dismiss"
-                onPress={() => setLegacyCardShown(false)}
-                accessibilityLabel="Dismiss the partner invite notice"
               />
             </View>
           </Band>
@@ -1218,29 +1190,16 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   const people = joined ? (
     <>
+      {/* D231: no search well (the header glyph opens the same search) and no
+          Requests row (follow and connection requests are listed under the
+          bell, CommunityActivity, which also carries their dot). */}
       <Band>
-        <Well
-          icon="search-outline"
-          text="Search people and groups"
-          onPress={() => navigation.navigate('CommunitySearch')}
-        />
         <EntryRow
           big
           icon="people-outline"
           title="Find people"
           subtitle="People who train like you, at your gym, near you or in your discipline"
           onPress={() => navigation.navigate('CommunityFindPeople')}
-        />
-        <EntryRow
-          icon="person-add-outline"
-          title="Requests"
-          subtitle={requestCount > 0
-            ? `${requestCount} ${requestCount === 1 ? 'person wants' : 'people want'} to connect`
-            : 'No new requests'}
-          onPress={() => navigation.navigate('CommunityActivity')}
-          trailing={requestCount > 0 ? (
-            <Text style={[t.type.num('label'), { color: t.colors.textPrimary }]}>{requestCount}</Text>
-          ) : undefined}
         />
       </Band>
       <BandGap />
@@ -1379,29 +1338,27 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   const youSegment = joined ? (
     <>
-      {!consistencyGated ? (
-        <>
-          <Band>
-            <PersonRow
-              inBand
-              person={youPerson}
-              metric={youMetric}
-              days={youDays}
-              trainedToday={youTrainedToday}
-              metricRole="title"
-              onPress={() => navigation.navigate('CommunityProfile', { userId: uid })}
-            />
-            {weekCounters ? (
-              <ProgressStrip
-                band
-                counters={weekCounters}
-                onPress={() => navigation.navigate('CommunityBoard', { scope: 'following', window: 'week' })}
-              />
-            ) : null}
-          </Band>
-          <BandGap />
-        </>
-      ) : null}
+      <Band>
+        <PersonRow
+          inBand
+          person={myProfilePerson}
+          title="My profile"
+          subtitle={me?.profile?.handle ? `@${me.profile.handle}` : undefined}
+          metric={youMetric}
+          days={youDays}
+          trainedToday={youTrainedToday}
+          metricRole="title"
+          onPress={() => navigation.navigate('CommunityProfile', { userId: uid })}
+        />
+        {showWeek ? (
+          <ProgressStrip
+            band
+            counters={weekCounters}
+            onPress={() => navigation.navigate('CommunityBoard', { scope: 'following', window: 'week' })}
+          />
+        ) : null}
+      </Band>
+      <BandGap />
       {host ? (
         <>
           <Band>
@@ -1450,18 +1407,6 @@ export default function CommunityHubScreen({ navigation, route }) {
         </>
       ) : null}
       <Band>
-        <EntryRow
-          leading={(
-            <ProfileAvatarMark
-              presetKey={me?.profile?.avatar_preset ?? null}
-              displayName={me?.profile?.display_name || me?.profile?.handle || ''}
-              size={MARK}
-            />
-          )}
-          title="My profile"
-          subtitle={me?.profile?.handle ? `@${me.profile.handle}` : undefined}
-          onPress={() => navigation.navigate('CommunityProfile', { userId: uid })}
-        />
         <EntryRow
           icon="people-outline"
           title="Followers and connections"

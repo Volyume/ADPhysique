@@ -22,6 +22,12 @@
  * 2026-07-01) was a path whose param was named `:id` while the screen read
  * `planId`, which routes perfectly and dead-ends on a blank screen.
  *
+ * AMENDED 2026-10-22 (D231, app layout rework, batch 4): the Progress tab is
+ * gone, so `volyume://progress` opens the Coach tab root (the You screen, where
+ * Your progress and Looking back live), and the legacy partner link opens the
+ * Community tab with no code (batch 5 retired the "Partner invites have moved"
+ * notice, the only reader of the code).
+ *
  * AMENDED 2026-09-06 (social-discovery blueprint sections 1 and 8):
  *   - The partner invite path now lands on Community with the code in hand,
  *     so an old share message opens the "Partner invites have moved" card
@@ -150,24 +156,22 @@ describe('linking config — legacy partner invite links now open Community', ()
   test.each([
     'volyume://partner/ABCD12',
     'https://volyume.app/partner/ABCD12',
-  ])('%s opens Community in the Community tab with the legacy code', (url) => {
-    expect(routeFor(url)).toEqual({
-      tab: 'CommunityTab',
-      name: 'Community',
-      params: { legacyPartnerCode: 'ABCD12' },
-    });
+  ])('%s opens Community in the Community tab, and carries no code', (url) => {
+    // RE-POINTED (D231, batch 4): the code is no longer handed over (the Hub's
+    // "Partner invites have moved" notice, its only reader, is retired).
+    const route = routeFor(url);
+    expect(route).toMatchObject({ tab: 'CommunityTab', name: 'Community' });
+    expect(route.params?.legacyPartnerCode).toBeUndefined();
   });
 
-  test('a real server-issued code still arrives intact', () => {
-    // Codes were uppercase hex, 8 characters or more. Community does not
-    // redeem one; it carries it so the "Partner invites have moved" card
-    // knows the link was an invite. Partners itself retired on 2026-09-06
-    // (SD-03), so nothing parses the code any more, but links already out
-    // in share messages must still resolve.
+  test('a real server-issued code still resolves, to Community, without being carried', () => {
+    // Codes were uppercase hex, 8 characters or more. Partners itself retired on
+    // 2026-09-06 (SD-03), so nothing parses the code any more, but links
+    // already out in share messages must still resolve.
     const route = routeFor('volyume://partner/9F3A1C7B');
 
-    expect(route).toMatchObject({ name: 'Community', params: { legacyPartnerCode: '9F3A1C7B' } });
-    expect(route.params.legacyPartnerCode).toBe('9F3A1C7B');
+    expect(route).toMatchObject({ tab: 'CommunityTab', name: 'Community' });
+    expect(route.params?.legacyPartnerCode).toBeUndefined();
   });
 
   test('a bare partner link still resolves, to Community with no code', () => {
@@ -180,7 +184,7 @@ describe('linking config — legacy partner invite links now open Community', ()
   test('the Partner route is no longer a deep-link destination', () => {
     // Retired outright on 2026-09-06 (SD-03): the screen and its
     // registration are gone, so there is nothing left to link to.
-    expect(config.screens.ProgressTab.screens.Partner).toBeUndefined();
+    expect(config.screens.ProfileTab.screens.Partner).toBeUndefined();
     expect(source).not.toMatch(/<Stack\.Screen name="Partner"/);
   });
 });
@@ -227,7 +231,8 @@ describe('linking config — existing paths still resolve', () => {
     ['volyume://workout/start', 'HomeTab', 'BuildWorkout'],
     ['volyume://diary/2026-09-02', 'DiaryTab', 'Diary'],
     ['volyume://routine/plan-7', 'PlansTab', 'PlanDetail'],
-    ['volyume://progress', 'ProgressTab', 'Analytics'],
+    // D231 (batch 4): the Progress tab is gone; the link opens the Coach tab root.
+    ['volyume://progress', 'ProfileTab', 'You'],
     ['volyume://coach', 'ProfileTab', 'CoachOutput'],
     ['volyume://checkin', 'ProfileTab', 'WeeklyCheckIn'],
   ])('%s → %s / %s', (url, tab, name) => {
@@ -248,7 +253,8 @@ describe('linking config — existing paths still resolve', () => {
   // caught here, at the source.
   test('the config was actually parsed out of RootNavigator.js', () => {
     expect(Object.keys(config.screens).sort())
-      .toEqual(['CommunityTab', 'DiaryTab', 'HomeTab', 'PlansTab', 'ProfileTab', 'ProgressTab']);
+      .toEqual(['CommunityTab', 'DiaryTab', 'HomeTab', 'PlansTab', 'ProfileTab']);
+    expect(config.screens.ProfileTab.screens.You).toBe('progress');
     expect(config.screens.HomeTab.screens.Home).toBe('active-workout');
     expect(config.screens.CommunityTab.screens.Community).toBe('community');
   });
@@ -257,8 +263,7 @@ describe('linking config — existing paths still resolve', () => {
   // would leave every legacy-link assertion above running against an
   // identity function.
   test('the legacy rewrite was actually read out of RootNavigator.js', () => {
-    expect(rewriteLegacyCommunityPath('partner/ABCD12'))
-      .toBe('community?legacyPartnerCode=ABCD12');
+    expect(rewriteLegacyCommunityPath('partner/ABCD12')).toBe('community');
     expect(rewriteLegacyCommunityPath('diary/2026-09-02')).toBe('diary/2026-09-02');
   });
 });
