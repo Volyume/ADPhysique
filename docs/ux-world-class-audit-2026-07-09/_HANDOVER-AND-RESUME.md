@@ -1,6 +1,10 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-23 — APP LAYOUT REWORK (D231) LANDED ON MAIN (`82142238d`) ★
+Owner: "5 tabs, Progress in Coach (Recommended)", "Remove both (Recommended)", "Retire it, move its parts (Recommended)", "Go on all of it". Spec `docs/app-rework-2026-10/SPEC.md`; pre-rework inventory `docs/app-rework-2026-10/TAB-INVENTORY.md`; rulings in `DECISIONS-2026-07-09.md`, D231 and D231 landing note. Five batches on main: Today `4ac77fa3d`, Nutrition `e180af78c`, Community and Settings `465e99da7`, Train `0399edcb5`, Coach with Progress `2962dd6f1` + `82142238d`. Final gate: lint clean; 1809 suites passed, 32,533 tests passed, 17 skipped. No build started. OPEN with the owner: version and What's new for the build that carries this; the year-of-lifts message copy (locked doc) now says "Coach tab"; the unpublished website's /features/ still describes the Progress tab and the Athlete profile. `CURRENT-APP-MAP.md` predates D231 (header note added).
+
+===============================================================================
 ## ★ 2026-10-20 — 3.2.0 MERGED; CURRENT APP MAP ★
 `release/3.2.0` merged to main (e9bfd86a) over a green tree (lint OK;
 32,066 passed, 17 skipped). What's new 3.2.0 video line is the founder's

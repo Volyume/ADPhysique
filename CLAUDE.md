@@ -113,7 +113,7 @@ session/auth, tier, userProfile, units, consent flags, sync status. Screens
 select with `useShallow`. Persistent prefs go to AsyncStorage or SQLite, not
 the store alone.
 
-**Data flow.** UI (src/screens: 105 registered screens, six tabs; the full
+**Data flow.** UI (src/screens: about 105 registered screens, five tabs since D231: Today, Train, Nutrition, Coach, Community; the full
 code-derived map is `CURRENT-APP-MAP.md`; src/components) → domain logic in
 `src/lib/*` → `database.js`/`food/db.js` (SQLite, device truth) → sync layer →
 Supabase. Store holds session/derived state, never bypasses the DB. Navigation:

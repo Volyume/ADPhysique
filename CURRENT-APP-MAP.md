@@ -1,5 +1,7 @@
 # Volyume: current app map
 
+> **Superseded in part (2026-10-23, D231 app layout rework).** The app now has five tabs (Today, Train, Nutrition, Coach, Community); Progress lives inside Coach and Train, the Athlete profile is retired, and Today, Train, Nutrition, Coach, Community and Settings were restructured. Sections 2.4, 3, 4, 5.1, 6, 7 and 10.5 below describe 3.2.0. The source for the new layout is `docs/app-rework-2026-10/SPEC.md` and the D231 entries in the decisions register.
+
 Built 2026-10-20 from the code on `main` at version 3.2.0. It was derived
 only from source code, configuration (`app.json`, `eas.json`,
 `package.json`), Supabase migrations and tests. No earlier map, status file
