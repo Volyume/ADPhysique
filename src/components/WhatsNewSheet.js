@@ -169,7 +169,10 @@ export const WHATS_NEW = {
   // 3.4.0 (2026-10-21): the same four lines as 3.3.0. App Store Connect
   // rejected 3.3.0 build 94 (a placeholder URL scheme, ITMS-90158), so 3.3.0
   // never reached iPhone users and the release ships as 3.4.0.
+  // D231 (owner 2026-10-23, "3.4.0 plus a What's new line"): the layout
+  // rework leads, in the owner's approved words.
   '3.4.0': [
+    { icon: 'grid-outline', text: 'Progress now sits inside Coach, and Today shows only what needs you.' },
     { icon: 'log-in-outline', text: 'More ways to sign in: Apple now works on Android, and you can add or remove sign-in methods in your account. You can also set a new password from a reset email.' },
     { icon: 'restaurant-outline', text: 'Meal plans are easier to read, and adding a plan to your diary now fills only the meals you have not logged yet. You can also choose how many oily fish meals a week your plan includes.' },
     { icon: 'chatbubbles-outline', text: 'Your weekly coaching now says what it saw, what changes and when your coach looks again.' },

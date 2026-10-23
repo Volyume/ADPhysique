@@ -234,6 +234,10 @@ describe('privacy, consent, export and store-copy truth', () => {
     const start34 = sheet.indexOf("'3.4.0': [");
     expect(start34).toBeGreaterThan(-1);
     const entry34 = sheet.slice(start34, sheet.indexOf('],', start34));
+    // D231 (owner 2026-10-23, "3.4.0 plus a What's new line"): the layout line
+    // leads 3.4.0 and is not on 3.3.0.
+    expect(entry34).toContain("{ icon: 'grid-outline', text: 'Progress now sits inside Coach, and Today shows only what needs you.' }");
+    expect(entry34.indexOf('Progress now sits inside Coach')).toBeLessThan(entry34.indexOf('More ways to sign in'));
     expect(entry34).toContain('More ways to sign in');
     expect(entry34).toContain('oily fish meals a week');
     expect(entry34).toContain('Settings are grouped more clearly');
@@ -246,6 +250,7 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry33).toContain('More ways to sign in');
     expect(entry33).toContain('oily fish meals a week');
     expect(entry33).toContain('Settings are grouped more clearly');
+    expect(entry33).not.toContain('Progress now sits inside Coach');
     expect(entry33).not.toMatch(/privacy policy|Privacy and legal|OAuth|identity|OTA|over the air|\u2014/i);
     expect({ bad: /\bclips?\b|email address|plan again/i.test(entry33) }).toEqual({ bad: false });
     // 3.1.0: the Android setup fix, with the same three founder lines.
