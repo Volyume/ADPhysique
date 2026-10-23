@@ -138,13 +138,135 @@ async function seedHistoryBeforeBlock({
   jest.setSystemTime(NOW_MS);
 }
 
+/**
+ * The authored coach decision the persona carries (see the bypassedWrites
+ * note at its call site): written through the real saveCoachOutput() writer,
+ * with content authored for realism rather than engine-derived.
+ */
+function authoredDecision(weekStart) {
+  return {
+    weekStart,
+    hasEnoughData: true,
+    dataNote: null,
+    goalPhase: 'mild_bulk',
+    trainingGoal: 'lean_gain',
+    volumeSignal: 'push',
+    loadSignal: 'increase',
+    recoveryFlag: 'normal',
+    deloadSuggested: false,
+    dietBreakSuggested: false,
+    returningAfterDecline: false,
+    autoApplyHoldActive: false,
+    heldDecisions: [],
+    holdReinforcement: null,
+    confidence: 'high',
+    evidenceSignature: 'paper-render-seed-v1',
+    whyThisWeek: 'Weight is trending up in line with the lean-gain target and training sessions landed on plan, so calories and training volume both hold their current course this week.',
+    primary: {
+      domain: 'training',
+      reasonKey: 'stabilise_sessions',
+      headline: 'Steady progress, hold the course',
+      body: 'Bodyweight is tracking up gently, sessions landed on plan, and both lifts you pushed this week hit a new best. Nothing to change; keep training the plan as written.',
+    },
+    context: {
+      weight: { trend: { value: 0.1, unit: 'kg/week' } },
+      recovery: { systemic: { value: 'normal' } },
+      training: { sessionsCompleted: 3, sessionsPlanned: 4 },
+    },
+    limiters: { nutrition: { because: null }, training: { because: null } },
+    claims: {},
+    appliedAdjustments: {},
+    adjustments: {
+      calories: { change: 0 },
+      steps: { target: 8000 },
+    },
+    generatedAt: Date.now(),
+  };
+}
+
+/**
+ * The two pieces of client-only state the persona carries in AsyncStorage
+ * (see the bypassedWrites notes at the call site): the Community "me" cache
+ * and the notification prefs (checkinDay = today). Separate so a pass that
+ * reloads the module registry (jest.resetModules gives AsyncStorage's mock a
+ * fresh, empty store) can write them again for the same user. Returns the
+ * Community "me" object.
+ */
+async function seedClientState(userId) {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const communityProfile = require('../../src/lib/community/profile');
+  const me = {
+    ...communityProfile.emptyMe(),
+    profile: {
+      handle: 'alexlifts',
+      display_name: 'Alex',
+      display_name_locked: false,
+      gym_name: null,
+      area: null,
+      created_at: NOW_MS - 60 * DAY_MS,
+    },
+    is_minor: false,
+    following_count: 2,
+    follower_count: 1,
+    unseen_activity: 0,
+    pending_requests: 0,
+  };
+  await AsyncStorage.setItem(communityProfile.meCacheKey(userId), JSON.stringify(me));
+
+  const todayWeekday = new Date(NOW_MS).getDay(); // 0=Sun .. 6=Sat; Thu 17 Sep 2026 = 4
+  await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({
+    checkinEnabled: true,
+    checkinDay: todayWeekday,
+    checkinHour: 18,
+    checkinMinute: 0,
+    morningEnabled: true,
+    morningHour: 7,
+    morningMinute: 30,
+  }));
+  return me;
+}
+
+/**
+ * This week's weekly check-in plus a completed coach decision for the same
+ * week, so Today's coaching-decision line and Coach's "This week's decision"
+ * card have something to show. The same authored decision the persona carries
+ * for last week (authoredDecision), written through the same real writers
+ * (saveWeeklyCheckin, saveCoachOutput); the caller must have jest fake timers
+ * running, and the clock is left at NOW_MS on return.
+ */
+async function seedThisWeekDecision(userId, jest) {
+  const database = require('../../src/lib/database');
+  const dayKey = require('../../src/lib/dayKey');
+  const thisWeekMonday = dayKey.localWeekStartMs(NOW_MS);
+  const wednesday = new Date(thisWeekMonday + 2 * DAY_MS);
+  jest.setSystemTime(at(wednesday.getFullYear(), wednesday.getMonth(), wednesday.getDate(), 20, 15));
+  await database.saveWeeklyCheckin(userId, {
+    weekStart: thisWeekMonday,
+    energyScore: 4,
+    sorenessScore: 2,
+    stressScore: 2,
+    sleepHours: 7.5,
+    calsAdherence: 'on_target',
+    stepsAdherence: 'on_target',
+    cardioAdherence: 'on_target',
+    stepsAvg: 8400,
+    cycleOverride: null,
+    notes: null,
+    trainingPerformance: 'as_planned',
+    jointPain: 0,
+    soreMuscles: null,
+    sleepQuality: 4,
+  });
+  await database.saveCoachOutput(userId, authoredDecision(thisWeekMonday));
+  jest.setSystemTime(NOW_MS);
+  return { thisWeekMonday };
+}
+
 async function seedPersona() {
   const database = require('../../src/lib/database');
   const food = require('../../src/lib/food/db');
   const dayKey = require('../../src/lib/dayKey');
   const { runExerciseSeedChain } = require('../../src/lib/seedExercises');
-  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  const communityProfile = require('../../src/lib/community/profile');
 
   const report = {
     dataLayer: 'real (node:sqlite shim + dbCrypto pass-through)',
@@ -481,44 +603,7 @@ async function seedPersona() {
     + 'takes ~20 interdependent inputs or none. The write path is real; the '
     + 'decision content is realistic but not engine-derived.',
   );
-  await database.saveCoachOutput(userId, {
-    weekStart: lastWeekMonday,
-    hasEnoughData: true,
-    dataNote: null,
-    goalPhase: 'mild_bulk',
-    trainingGoal: 'lean_gain',
-    volumeSignal: 'push',
-    loadSignal: 'increase',
-    recoveryFlag: 'normal',
-    deloadSuggested: false,
-    dietBreakSuggested: false,
-    returningAfterDecline: false,
-    autoApplyHoldActive: false,
-    heldDecisions: [],
-    holdReinforcement: null,
-    confidence: 'high',
-    evidenceSignature: 'paper-render-seed-v1',
-    whyThisWeek: 'Weight is trending up in line with the lean-gain target and training sessions landed on plan, so calories and training volume both hold their current course this week.',
-    primary: {
-      domain: 'training',
-      reasonKey: 'stabilise_sessions',
-      headline: 'Steady progress, hold the course',
-      body: 'Bodyweight is tracking up gently, sessions landed on plan, and both lifts you pushed this week hit a new best. Nothing to change; keep training the plan as written.',
-    },
-    context: {
-      weight: { trend: { value: 0.1, unit: 'kg/week' } },
-      recovery: { systemic: { value: 'normal' } },
-      training: { sessionsCompleted: 3, sessionsPlanned: 4 },
-    },
-    limiters: { nutrition: { because: null }, training: { because: null } },
-    claims: {},
-    appliedAdjustments: {},
-    adjustments: {
-      calories: { change: 0 },
-      steps: { target: 8000 },
-    },
-    generatedAt: Date.now(),
-  });
+  await database.saveCoachOutput(userId, authoredDecision(lastWeekMonday));
   jest.setSystemTime(NOW_MS);
 
   // 9. Community profile: display name + two follows. Community's own
@@ -540,23 +625,7 @@ async function seedPersona() {
     + 'would otherwise resolve the background refresh to an empty profile '
     + 'and overwrite this seed.',
   );
-  const me = {
-    ...communityProfile.emptyMe(),
-    profile: {
-      handle: 'alexlifts',
-      display_name: 'Alex',
-      display_name_locked: false,
-      gym_name: null,
-      area: null,
-      created_at: NOW_MS - 60 * DAY_MS,
-    },
-    is_minor: false,
-    following_count: 2,
-    follower_count: 1,
-    unseen_activity: 0,
-    pending_requests: 0,
-  };
-  await AsyncStorage.setItem(communityProfile.meCacheKey(userId), JSON.stringify(me));
+  const me = await seedClientState(userId);
 
   // 10. Notification prefs: checkinDay set to TODAY's weekday, so
   // WeeklyCheckInScreen's own gate ladder (wrong_day -> too_soon ->
@@ -580,16 +649,6 @@ async function seedPersona() {
     + 'render. Sets checkinDay to TODAY so WeeklyCheckInScreen opens (brief: '
     + '"WeeklyCheckInScreen (open)") instead of showing its wrong-day gate.',
   );
-  const todayWeekday = new Date(NOW_MS).getDay(); // 0=Sun .. 6=Sat; Thu 17 Sep 2026 = 4
-  await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({
-    checkinEnabled: true,
-    checkinDay: todayWeekday,
-    checkinHour: 18,
-    checkinMinute: 0,
-    morningEnabled: true,
-    morningHour: 7,
-    morningMinute: 30,
-  }));
 
   // Handed back for the test file to build store state / route params from,
   // rather than re-querying the DB for facts this function already knows.
@@ -652,4 +711,4 @@ async function seedDayZeroPersona() {
   return { userId, firstName: 'Sam', sex: 'female' };
 }
 
-module.exports = { seedPersona, seedDayZeroPersona, NOW_MS, DAY_MS };
+module.exports = { seedPersona, seedDayZeroPersona, seedClientState, seedThisWeekDecision, NOW_MS, DAY_MS };

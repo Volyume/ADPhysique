@@ -40,6 +40,11 @@
  *      treeToHtml.js): a paper-render harness draws a component's actual
  *      SVG rather than leaving an unknown-type box where a design reviewer
  *      would look.
+ *   7. GradientCard renders for real (see its own site below), and the
+ *      modules below that changed in the rework are named where they sit:
+ *      react-native (window size, FlatList rows, AccessibilityInfo),
+ *      react-native-vision-camera, expo-constants and expo-application (the
+ *      real app.json values), react-native-gesture-handler's Gesture builders.
  * Every mock NOT called out above is the same module, same factory, as
  * screen-mount's own preamble.
  *
@@ -75,8 +80,25 @@ process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANO
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));
 jest.mock('expo/virtual/env', () => ({ env: process.env }));
-jest.mock('expo-application');
-jest.mock('expo-constants');
+// ADDED BEYOND screen-mount's preamble: expo-constants and expo-application
+// carry the REAL app.json values (version, build numbers, package) instead of
+// the shared mocks' 1.1.0, so a screen that prints the version (Settings >
+// About) prints the one the build would carry.
+jest.mock('expo-application', () => {
+  const { expo } = require('../../app.json');
+  return {
+    __esModule: true,
+    nativeApplicationVersion: expo.version,
+    nativeBuildVersion: String(expo.android.versionCode),
+    applicationId: expo.android.package,
+    applicationName: expo.name,
+    getInstallationTimeAsync: async () => new Date(0),
+  };
+});
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: require('../../app.json').expo, manifest: null },
+}));
 jest.mock('expo-crypto');
 jest.mock('expo-secure-store');
 
@@ -334,6 +356,9 @@ jest.mock('react-native-gesture-handler', () => {
     Gesture: {
       Pan: gestureFactory, Tap: gestureFactory, LongPress: gestureFactory,
       Fling: gestureFactory, Race: gestureFactory, Simultaneous: gestureFactory, Exclusive: gestureFactory,
+      // ShareCardScreen's photo framer builds Gesture.Native() (and the rest of
+      // the builder family); screen-mount only ever mounted it with no photo.
+      Native: gestureFactory, Pinch: gestureFactory, Rotation: gestureFactory, Manual: gestureFactory,
     },
     PanGestureHandler: passthrough('PanGH'),
     TapGestureHandler: passthrough('TapGH'),
@@ -356,8 +381,15 @@ jest.mock('react-native-gesture-handler/Swipeable', () => {
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
   return {
-    useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), replace: jest.fn(), addListener: () => () => {}, setOptions: jest.fn(), dispatch: jest.fn(), getParent: () => ({ addListener: () => () => {} }) }),
-    useRoute: () => ({ params: {} }),
+    // ADDED BEYOND screen-mount's own preamble: a screen that reads its params
+    // through the hook (HowYouTrain, HowYouTrainAdd) rather than the `route`
+    // prop got screen-mount's empty `{ params: {} }`, so an every-screen render
+    // would show it as if opened with no params. paper-render.test.js's
+    // mountScreen parks the route and navigation object it hands the screen
+    // on these two globals for the duration of the mount, so the hook and the
+    // prop agree.
+    useNavigation: () => global.__PAPER_RENDER_NAV__ || ({ navigate: jest.fn(), goBack: jest.fn(), replace: jest.fn(), addListener: () => () => {}, setOptions: jest.fn(), dispatch: jest.fn(), getParent: () => ({ addListener: () => () => {} }) }),
+    useRoute: () => global.__PAPER_RENDER_ROUTE__ || ({ params: {} }),
     // ADDED BEYOND screen-mount's own preamble, and the second deliberate
     // departure (besides the real data layer) this file's header doesn't
     // yet name -- screen-mount's own `useFocusEffect: jest.fn()` NEVER
@@ -420,11 +452,95 @@ jest.mock('../../src/components/FeedbackSheet', () => {
 // rendering screens already exercise successfully through this same mock
 // wall.
 
-// Components that wrap react-native-svg or Skia: stubbed so we don't
-// need every drawing primitive to be mocked deeply.
-jest.mock('../../src/components/GradientCard', () => {
+// GradientCard: NOT stubbed here (departure 7, this file's header).
+// screen-mount.test.js stubs it to a bare string type, but the component is a
+// compatibility shim over Card (a plain View), no gradient and no native
+// module, and the stub drew a grey type label on every card that uses it
+// (the Year of Lifts story cards).
+
+// ADDED BEYOND screen-mount's preamble: the shared react-native mock
+// (__mocks__/react-native.js) is used unchanged except for three things,
+// each a gap a paper render shows and a crash sweep does not:
+//   - no AccessibilityInfo and no findNodeHandle, which HowYouTrainAddScreen
+//     calls on mount to announce its step and move focus;
+//   - a 412 x 915 window (the page the converter lays out is 412 wide; the
+//     shared mock says 375 x 812), so a screen that sizes itself from the
+//     window (the Year of Lifts story cards, chart widths) matches the page;
+//   - a FlatList that renders its `data` through `renderItem` like the
+//     FlashList mock below (the shared one is a bare passthrough that draws
+//     no rows): Year of Lifts' story cards and the Plan library's filter
+//     chips. A horizontal list is a clipped row, so only what fits shows,
+//     as on a device before any scrolling.
+jest.mock('react-native', () => {
   const React = require('react');
-  return { __esModule: true, default: props => React.createElement('GradientCard', props, props.children) };
+  const base = jest.requireActual('../../__mocks__/react-native.js');
+  const WINDOW = { width: 412, height: 915, scale: 2, fontScale: 1 };
+  const slot = (s) => {
+    if (s == null) return null;
+    if (React.isValidElement(s)) return s;
+    return typeof s === 'function' ? React.createElement(s) : null;
+  };
+  const FlatList = React.forwardRef(function FlatListMock(props, ref) {
+    React.useImperativeHandle(ref, () => ({
+      scrollToIndex() {}, scrollToOffset() {}, scrollToEnd() {}, flashScrollIndicators() {},
+    }));
+    const {
+      data, renderItem, keyExtractor, ListHeaderComponent, ListFooterComponent, ListEmptyComponent,
+      horizontal, style, contentContainerStyle,
+    } = props;
+    const rows = Array.isArray(data) ? data.slice(0, 40) : [];
+    const items = typeof renderItem === 'function'
+      ? rows.map((item, index) => {
+        const el = renderItem({ item, index, separators: {} });
+        const key = typeof keyExtractor === 'function' ? keyExtractor(item, index) : (item?.id ?? index);
+        return el ? React.cloneElement(el, { key }) : null;
+      })
+      : [];
+    const inner = React.createElement(
+      base.View,
+      { style: [contentContainerStyle, horizontal ? { flexDirection: 'row' } : null] },
+      slot(ListHeaderComponent),
+      rows.length ? items : slot(ListEmptyComponent),
+      slot(ListFooterComponent),
+    );
+    return React.createElement(base.View, { style: [style, horizontal ? { overflow: 'hidden' } : null] }, inner);
+  });
+  FlatList.displayName = 'FlatList';
+  return {
+    ...base,
+    FlatList,
+    Dimensions: { ...base.Dimensions, get: () => WINDOW },
+    useWindowDimensions: () => WINDOW,
+    AccessibilityInfo: {
+      announceForAccessibility: jest.fn(),
+      setAccessibilityFocus: jest.fn(),
+      isScreenReaderEnabled: jest.fn(() => Promise.resolve(false)),
+      isReduceMotionEnabled: jest.fn(() => Promise.resolve(false)),
+      addEventListener: jest.fn(() => ({ remove: () => {} })),
+    },
+    findNodeHandle: jest.fn(() => 1),
+  };
+});
+
+// react-native-vision-camera (the barcode and label scanners): its real
+// module reaches for a native CameraDevicesManager at import time, which a
+// node run has none of. The mock is the camera as a person with permission
+// sees it: a granted permission and a back camera, with the preview itself a
+// 'Camera' host node that treeToHtml.js draws as a black surface (a live video
+// feed has no still to render). paper-render.test.js sets
+// global.__PAPER_RENDER_CAMERA_PERMISSION__ to 'not-determined' for the
+// permission-prompt variant.
+jest.mock('react-native-vision-camera', () => {
+  const React = require('react');
+  const Camera = React.forwardRef((props, ref) => React.createElement('Camera', { ...props, ref }, props.children));
+  Camera.displayName = 'Camera';
+  Camera.getCameraPermissionStatus = () => global.__PAPER_RENDER_CAMERA_PERMISSION__ || 'granted';
+  Camera.requestCameraPermission = () => Promise.resolve('granted');
+  return {
+    Camera,
+    useCameraDevice: () => ({ id: 'paper-render-back', position: 'back', hasTorch: true }),
+    useCodeScanner: (config) => config,
+  };
 });
 
 // Local native modules, referenced by package.json file: deps.

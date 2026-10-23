@@ -3,18 +3,20 @@
  *
  * Converts a react-test-renderer host tree (the shape `tree.toJSON()`
  * produces -- see paper-render.test.js's `safeTreeJSON`, which falls back
- * to an equivalent hand-walked tree for the one screen (Analytics) whose
+ * to an equivalent hand-walked tree for a screen whose
  * `refreshControl` prop makes the real `toJSON()` throw) into a standalone
  * HTML document with inline CSS, close enough to React Native's own layout
  * rules that dark/light theme, type sizes, fitting and density read
  * honestly for a design review. See README.md for the full rule list this
  * implements; the header comments below track it section by section.
  *
- * Pure module: no fs/jest dependency beyond resolving font file paths
- * under the repo root, which the caller may override via opts.repoRoot.
+ * Pure module: no jest dependency. It reads the font files and any image
+ * file an Image node names (embedded as a data URI), resolved under the repo
+ * root, which the caller may override via opts.repoRoot.
  */
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 
 const REPO_ROOT_DEFAULT = path.resolve(__dirname, '..', '..');
@@ -240,6 +242,8 @@ function cssToString(css) {
 // shows: nothing. Named host types straight from that mock's own object
 // literal, not guessed.
 const HIDDEN_TYPES = new Set([
+  // StatusBar draws nothing of its own: it only sets the OS bar's style.
+  'StatusBar',
   'ContextMenuItem', 'ContextMenuItemTitle', 'ContextMenuItemSubtitle',
   'ContextMenuItemIcon', 'ContextMenuItemImage', 'ContextMenuItemIndicator',
   'ContextMenuSeparator', 'ContextMenuCheckboxItem', 'ContextMenuLabel',
@@ -262,6 +266,10 @@ const CONTAINER_TYPES = new Set([
   // jest mock (__mocks__/react-native-keyboard-controller.js re-exports it)
   // resolves this to a plain string host component, same passthrough shape.
   'KeyboardGestureArea',
+  // @gorhom/bottom-sheet's parts (its jest mock, __mocks__/@gorhom/bottom-sheet.js,
+  // renders each as a plain host node): the sheet body and its scroll view
+  // lay out like a View; the backdrop carries its own absolute-fill scrim.
+  'BottomSheetView', 'BottomSheetScrollView', 'BottomSheetBackdrop', 'BottomSheetHandle',
 ]);
 const SCROLL_TYPES = new Set(['ScrollView', 'RCTScrollView', 'Animated.ScrollView']);
 const SVG_TAGS = new Set(['Svg', 'Path', 'Rect', 'Circle', 'Ellipse', 'Line', 'G', 'Polyline', 'Defs', 'LinearGradient', 'Stop', 'ClipPath']);
@@ -330,8 +338,91 @@ function renderIonicons(node, ctx) {
   return `<span style="${cssToString(css)}">${String.fromCodePoint(codepoint)}</span>`;
 }
 
+// ── Images ───────────────────────────────────────────────────────────────
+// An Image's `source` reaches the converter in one of these shapes:
+//   { testUri: <path> }   what the harness's own Jest config (jest.config.js
+//                         + assetTransform.js) makes of require('x.png'); the
+//                         path is absolute, or relative to the repo or to
+//                         node_modules/react-native/jest (the react-native
+//                         preset's own convention);
+//   { uri: <string> }     a file:// or absolute path on disk, a data: URI, or
+//                         a remote http(s) URL;
+//   a number              an asset-registry id (what package.json's own
+//                         moduleNameMapper stub gives, `1`): the file is lost;
+//   a string, or an array of any of the above (first wins).
+// A source that names an image file that exists is embedded as a data URI so
+// the page stays standalone. A remote URL, a number or a missing file keeps
+// the dark placeholder box and is counted as 'image-unresolved:<why>'.
+const IMAGE_MIME = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
+  '.webp': 'image/webp', '.svg': 'image/svg+xml',
+};
+const imageDataUriCache = new Map();
+
+function imageFileToDataUri(file) {
+  if (imageDataUriCache.has(file)) return imageDataUriCache.get(file);
+  const mime = IMAGE_MIME[path.extname(file).toLowerCase()];
+  let uri = null;
+  if (mime) {
+    try { uri = `data:${mime};base64,${fs.readFileSync(file).toString('base64')}`; } catch (_) { uri = null; }
+  }
+  imageDataUriCache.set(file, uri);
+  return uri;
+}
+
+/** @returns {{ dataUri: string|null, why: string|null }} */
+function resolveImageSource(source, repoRoot) {
+  const first = Array.isArray(source) ? source[0] : source;
+  if (first === null || first === undefined) return { dataUri: null, why: 'no-source' };
+  if (typeof first === 'number') return { dataUri: null, why: 'asset-id' };
+  let raw = null;
+  if (typeof first === 'string') raw = first;
+  else if (typeof first === 'object') raw = first.testUri || first.uri || null;
+  if (!raw) return { dataUri: null, why: 'no-uri' };
+  if (/^data:image\//i.test(raw)) return { dataUri: raw, why: null };
+  if (/^https?:\/\//i.test(raw)) return { dataUri: null, why: 'remote' };
+  const bare = raw.replace(/^file:\/\//, '');
+  const candidates = path.isAbsolute(bare)
+    ? [bare]
+    : [path.resolve(repoRoot, bare), path.resolve(repoRoot, 'node_modules', 'react-native', 'jest', bare)];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) {
+      const uri = imageFileToDataUri(c);
+      if (uri) return { dataUri: uri, why: null };
+      return { dataUri: null, why: 'unreadable-type' };
+    }
+  }
+  return { dataUri: null, why: 'file-missing' };
+}
+
+const OBJECT_FIT = {
+  cover: 'cover', contain: 'contain', fill: 'fill', stretch: 'fill', none: 'none', center: 'none',
+  'scale-down': 'scale-down', repeat: 'fill',
+};
+
 function renderImage(node, ctx) {
-  const style = mapContainerCss(flattenStyle(node.props.style));
+  const flat = flattenStyle(node.props.style);
+  const { dataUri, why } = resolveImageSource(node.props.source, ctx.repoRoot);
+  if (dataUri) {
+    const css = mapContainerCss(flat);
+    css.display = 'block';
+    const fit = OBJECT_FIT[node.props.contentFit || node.props.resizeMode || flat.resizeMode] || 'cover';
+    const tint = node.props.tintColor || flat.tintColor;
+    if (tint) {
+      // RN's tintColor paints every opaque pixel in one colour: the image is
+      // a mask over a flat fill.
+      css['background-color'] = String(tint);
+      css['-webkit-mask-image'] = `url('${dataUri}')`;
+      css['-webkit-mask-repeat'] = 'no-repeat';
+      css['-webkit-mask-position'] = 'center';
+      css['-webkit-mask-size'] = fit === 'fill' ? '100% 100%' : (fit === 'none' ? 'auto' : fit);
+      return `<div style="${cssToString(css)}"></div>`;
+    }
+    css['object-fit'] = fit;
+    return `<img alt="" src="${dataUri}" style="${cssToString(css)}">`;
+  }
+  bumpStat(ctx, 'converterFallbacks', `image-unresolved:${why}`);
+  const style = mapContainerCss(flat);
   style.background = '#1c1b19';
   style['border-width'] = style['border-width'] || '1px';
   style['border-style'] = 'solid';
@@ -463,6 +554,35 @@ function renderUnknown(node, ctx) {
   return `<div style="${cssToString(style)}">${label}${renderChildren(node.children, ctx)}</div>`;
 }
 
+// A presented BottomSheetModal (the mock only renders one once the screen has
+// called present(); LoginScreen opens its sheet on mount). On a device it is a
+// portal above everything, the tab bar included: a scrim over the whole
+// screen and the sheet anchored to the bottom. It is collected here and
+// emitted as the last, absolutely positioned child of the page.
+function renderBottomSheet(node, ctx) {
+  const kids = Array.isArray(node.children) ? node.children : (node.children ? [node.children] : []);
+  const isBackdrop = (k) => k && typeof k === 'object' && k.type === 'BottomSheetBackdrop';
+  const backdrop = kids.filter(isBackdrop).map((k) => renderNode(k, ctx)).join('');
+  const content = kids.filter((k) => !isBackdrop(k)).map((k) => renderNode(k, ctx)).join('');
+  const sheetCss = mapContainerCss(flattenStyle(node.props.backgroundStyle));
+  sheetCss['max-height'] = '88%';
+  sheetCss.overflow = 'hidden';
+  sheetCss.position = 'relative';
+  sheetCss['z-index'] = '1';
+  // The default grab handle, unless the sheet passed its own component (the
+  // wrapper passes a no-op one to hide it).
+  let handle = '';
+  if (typeof node.props.handleComponent !== 'function') {
+    const bar = mapContainerCss(flattenStyle(node.props.handleIndicatorStyle));
+    const wrap = mapContainerCss(flattenStyle(node.props.handleStyle));
+    wrap['align-items'] = 'center';
+    handle = `<div style="${cssToString(wrap)}"><div style="${cssToString({ ...bar, width: bar.width || '36px', height: bar.height || '4px', 'border-radius': bar['border-radius'] || '2px', 'background-color': bar['background-color'] || '#888' })}"></div></div>`;
+  }
+  const overlay = 'position:absolute;left:0;top:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:flex-end;z-index:5000;';
+  ctx.overlays.push(`<div style="${overlay}">${backdrop}<div style="${cssToString(sheetCss)}">${handle}${content}</div></div>`);
+  return '';
+}
+
 function renderNode(node, ctx, forceInlineText) {
   if (node === null || node === undefined) return '';
   if (typeof node === 'string' || typeof node === 'number') return escapeHtml(node);
@@ -471,6 +591,7 @@ function renderNode(node, ctx, forceInlineText) {
   if (HIDDEN_TYPES.has(type)) return '';
 
   if (type === 'Canvas') return renderSkiaCanvas(node, ctx);
+  if (type === 'BottomSheetModal') return renderBottomSheet(node, ctx);
 
   if (isModalLike(node)) {
     if (!node.props.visible) return '';
@@ -497,6 +618,15 @@ function renderNode(node, ctx, forceInlineText) {
       if (node.props.textAnchor) attrs.push(`text-anchor="${node.props.textAnchor}"`);
       return `<text ${attrs.join(' ')}>${escapeHtml(textContentOf(node))}</text>`;
     }
+  }
+
+  // A native camera preview (react-native-vision-camera's Camera, mocked to a
+  // host node by mockPreamble.js): a live video feed has no still to draw, so
+  // it is a black surface at the node's own size, its children on top.
+  if (type === 'Camera') {
+    const css = mapContainerCss(flattenStyle(node.props.style));
+    css['background-color'] = '#000000';
+    return `<div style="${cssToString(css)}">${renderChildren(node.children, ctx)}</div>`;
   }
 
   if (type === 'Ionicons') return renderIonicons(node, ctx);
@@ -639,6 +769,10 @@ function estimateNode(node, availWidth) {
  *   name in FONT_FACES is always registered. Reserved for future faces.
  * @param {string} [opts.repoRoot]
  * @param {number} [opts.foldY] - default 915.
+ * @param {number} [opts.minHeight] - the least height of a full-page render
+ *   (default foldY, one phone tall): the screen's own flex: 1 root fills it
+ *   and the tab bar sits at its foot, as on a device; a longer screen is
+ *   simply taller.
  * @param {{height:number}} [opts.phone] - lay the page out as one phone
  *   screen of this CSS height instead of the full scroll: the screen fills
  *   the height (its own flex does the rest, so a pinned footer sits at the
@@ -659,10 +793,10 @@ function treeToHtml(json, opts) {
   try { glyphmap = require(path.join(repoRoot, IONICONS_GLYPHMAP_REL)); } catch (_) { /* best-effort */ }
 
   const stats = { unknownTypes: {}, converterFallbacks: {} };
-  const ctx = { fontFamilyMap, ionicons: glyphmap, stats, svgDepth: 0 };
+  const ctx = { fontFamilyMap, ionicons: glyphmap, stats, svgDepth: 0, repoRoot, overlays: [] };
 
   const roots = Array.isArray(json) ? json : [json];
-  const bodyHtml = roots.map((r) => renderNode(r, ctx)).join('');
+  const bodyHtml = roots.map((r) => renderNode(r, ctx)).join('') + ctx.overlays.join('');
   const estimatedHeightPx = 24 /* status-bar padding */
     + roots.reduce((sum, r) => sum + estimateNode(r, 412), 0);
 
@@ -701,7 +835,11 @@ body {
   position: absolute; left: 0; top: ${foldY}px; width: 412px; height: 0;
   border-top: 1px dashed #ff2d55; z-index: 100000; pointer-events: none;
 }
-${process.env.PAPER_RENDER_NO_FOLD === '1' ? '#pr-fold { display: none; }\n' : ''}${opts.phone ? `#pr-page { display: flex; flex-direction: column; height: ${Number(opts.phone.height)}px; overflow: hidden; }
+${process.env.PAPER_RENDER_NO_FOLD === '1' ? '#pr-fold { display: none; }\n' : ''}${opts.phone ? '' : `/* A screen is at least one phone tall: its root (flex: 1) fills the viewport and the tab bar sits at the foot of it, as on a device. Longer content simply makes the page taller. */
+#pr-page { display: flex; flex-direction: column; min-height: ${Number.isFinite(opts.minHeight) ? opts.minHeight : foldY}px; }
+#pr-page > * { flex-shrink: 0; }
+#pr-page > :nth-child(2) { margin-top: auto; }
+`}${opts.phone ? `#pr-page { display: flex; flex-direction: column; height: ${Number(opts.phone.height)}px; overflow: hidden; }
 #pr-page > * { flex-shrink: 0; }
 #pr-page > :first-child { flex: 1 1 0%; min-height: 0; overflow: hidden; }
 #pr-fold { display: none; }
@@ -714,6 +852,18 @@ ${process.env.PAPER_RENDER_NO_FOLD === '1' ? '#pr-fold { display: none; }\n' : '
 <body>
 <div id="pr-page">${bodyHtml}</div>
 <div id="pr-fold"></div>
+<script>
+/* The page's real height, for shoot.js (read with --dump-dom): the layout is
+   measured once the fonts are in, never estimated. */
+window.addEventListener('load', function () {
+  var done = function () {
+    var page = document.getElementById('pr-page');
+    var h = Math.ceil(Math.max(page.getBoundingClientRect().bottom, document.body.scrollHeight));
+    document.documentElement.setAttribute('data-pr-height', String(h));
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(done); else done();
+});
+</script>
 ${opts.phone && opts.phone.scrollToText ? `<script>
 (function () {
   var want = ${JSON.stringify(String(opts.phone.scrollToText))};

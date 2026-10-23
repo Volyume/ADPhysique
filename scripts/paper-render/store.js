@@ -29,13 +29,11 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const SCRATCH = process.env.PAPER_RENDER_SCRATCH
-  || '/tmp/claude-0/-home-user-ADPhysique/d71ddd7a-c7b0-5d8f-8ef8-fbac54ce6084/scratchpad';
-const WORK_DIR = path.join(SCRATCH, 'paper-render-work');
+const paths = require('./paths');
+const WORK_DIR = paths.WORK_DIR;
 const REPORT_JSON = path.join(WORK_DIR, 'report-data.json');
-const OUT_DIR = path.join(process.env.PAPER_RENDER_OUT_DIR || path.join(SCRATCH, 'paper-renders'), 'store');
-const CHROME = process.env.PAPER_RENDER_CHROME
-  || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const OUT_DIR = path.join(paths.OUT_DIR, 'store');
+const CHROME = paths.CHROME;
 
 const CSS_WIDTH = 412;
 // Headless Chromium leaves the bottom of the window unpainted (see

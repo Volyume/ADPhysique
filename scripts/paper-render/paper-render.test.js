@@ -5,8 +5,8 @@
  * jest.testMatch only matches `**\/__tests__/**` and `**\/tests/**`, and
  * this file lives directly under scripts/paper-render/ (proved by `npx
  * jest --listTests | grep -c paper-render` printing 0, see README.md).
- * Run explicitly via run.sh, or:
- *   npx jest --rootDir /home/user/ADPhysique --testMatch '**\/scripts/paper-render/*.test.js' scripts/paper-render
+ * Run via run.sh, or:
+ *   npx jest --config scripts/paper-render/jest.config.js
  *
  * MOUNTING: this is screen-mount.test.js's own mock preamble
  * (mockPreamble.js, copied with paths adjusted for this folder), with the
@@ -18,36 +18,48 @@
  * (useFocusEffect actually firing chief among them; screen-mount's crash
  * sweep never needed it to).
  *
- * Three test() blocks:
- *   1. seeds the persona, mounts all 16 screens (dark), converts each to
- *      HTML (treeToHtml.js) and writes it to disk, screen 02 (ActiveWorkout)
- *      driven by store state per screen-mount's own lifecycle pattern, four
- *      screens (01/04/06/07) additionally rendered with the real
- *      VolyumeTabBar docked beneath them (13 gets one too, standalone, since
- *      it is itself a tab-bar-hosted screen).
- *   1b. the day-zero variants (01/04/06/07, suffix '-day0'): a second,
- *      brand-new user (seedDayZeroPersona()) with no plan, session, food
- *      entry or weight entry at all, same dark theme, same live database --
- *      no resetModules needed since it runs before test 2's reload.
- *   2. the light-theme variants (01/04/06 + their tab bar): these screens'
- *      StyleSheet.create calls read the theme.js legacy singleton at
- *      MODULE-LOAD time, so a correct light render needs jest.resetModules()
- *      + a fresh applyAccessibility({theme:'light'}) BEFORE the screen
- *      module is re-required -- setting the store's accessibility.theme
- *      preference alone (what CP-10-migrated call sites read live via
- *      useTheme()) is not sufficient for the many call sites still on the
- *      static import. The real SQLite file on disk makes the reopen after
- *      resetModules land on the same seeded data with no extra plumbing.
+ * WHAT IS RENDERED. The list of screens is not kept here: screenPlan.js
+ * reads src/navigation/RootNavigator.js as text and returns every screen the
+ * app registers (all navigators, de-duplicated by component), each with its
+ * group, the route params it reads and where the tab bar sits. The tab-bar
+ * fixture below (TAB_DEFS) is an explicit copy of RootNavigator's five tabs,
+ * and the first test fails if RootNavigator.js and the fixture ever disagree,
+ * which is how the harness went stale when D231 changed the tabs.
+ *
+ * Test blocks, in order (all share one seeded database):
+ *   0.  the fixture matches RootNavigator.js; no dormant billing screen is
+ *       registered.
+ *   1.  seeds the persona ("Alex") and mounts EVERY registered screen in the
+ *       dark theme with the params it reads, plus each screen's extra states
+ *       (Community hub segments, the finished-session reopen, the recap
+ *       variants, the coaching set-up route, the sign-up sheet). Screens in a
+ *       tab's stack get that tab's real VolyumeTabBar docked beneath them.
+ *   1b. the day-zero variants (suffix '-day0'): a second, brand-new user
+ *       (seedDayZeroPersona()) with no plan, session, food entry or weight
+ *       entry at all, same dark theme.
+ *   1c. the Welcome screen's product captures, 1d. the store listing
+ *       screenshots (both unchanged in method; see their blocks).
+ *   1e. Nutrition with a planned day (the real day-plan generator, removed
+ *       again afterwards).
+ *   2.  the light-theme variants: these screens' StyleSheet.create calls read
+ *       the theme.js legacy singleton at MODULE-LOAD time, so a correct light
+ *       render needs jest.resetModules() + a fresh applyAccessibility({theme:
+ *       'light'}) BEFORE the screen module is re-required.
+ *   3.  after one more module reload back to the dark theme: this week's
+ *       check-in and a completed coaching decision are saved, then Today
+ *       (the coaching-decision line) and Coach (This week's decision) are
+ *       rendered. Last, because it changes the persona's data.
  *
  * Per-screen failures are caught and recorded into report-data.json (which
- * run.sh turns into report.md) rather than failing the whole file -- "if a
- * screen will not mount, record why and move on" is the brief's own rule.
+ * shoot.js turns into report.md, and phoneSet.js into manifest.json) rather
+ * than failing the whole file -- "if a screen will not mount, record why and
+ * move on" is the brief's own rule.
  */
 'use strict';
 
 require('./mockPreamble');
 
-// 23 ChallengeScreen: the challenge RPC layer is the one network edge the
+// ChallengeScreen: the challenge RPC layer is the one network edge the
 // screen has (src/lib/challenges/api.js -> Community transport -> Supabase),
 // so it is mocked here with plausible data: an active gym challenge the persona
 // has joined, a score of 64 of 100 split per src/lib/challenges/copy.js
@@ -89,7 +101,7 @@ jest.mock('../../src/lib/challenges/api', () => {
     setChallengeTarget: jest.fn(async () => ({ planned_per_week: 4 })),
     withdrawFromChallenge: jest.fn(async () => ({ withdrawn: true })),
     getPublicChallenge: jest.fn(async () => null),
-    lookupChallenge: jest.fn(async () => null),
+    lookupChallenge: jest.fn(async () => ({ ...challenge, joined: false, withdrawn: false })),
     joinChallenge: jest.fn(async () => ({ challenge_id: id, joined: true })),
     challengeForMyGym: jest.fn(async () => null),
   };
@@ -99,12 +111,11 @@ const MOCK_CHALLENGE_ID = 'ch-paper-render-1';
 const fs = require('node:fs');
 const path = require('node:path');
 
-jest.setTimeout(120000);
+// The every-screen pass mounts ~120 screens in one go.
+jest.setTimeout(1800000);
 
 // ── Paths ──────────────────────────────────────────────────────────────
-const SCRATCH = process.env.PAPER_RENDER_SCRATCH
-  || '/tmp/claude-0/-home-user-ADPhysique/d71ddd7a-c7b0-5d8f-8ef8-fbac54ce6084/scratchpad';
-const WORK_DIR = path.join(SCRATCH, 'paper-render-work');
+const { WORK_DIR } = require('./paths');
 const HTML_DIR = path.join(WORK_DIR, 'html');
 const REPORT_JSON = path.join(WORK_DIR, 'report-data.json');
 process.env.PAPER_RENDER_SQLITE_DIR = path.join(WORK_DIR, 'db');
@@ -112,9 +123,20 @@ process.env.PAPER_RENDER_SQLITE_DIR = path.join(WORK_DIR, 'db');
 fs.mkdirSync(HTML_DIR, { recursive: true });
 
 const { treeToHtml } = require('./treeToHtml');
-const { seedPersona, seedDayZeroPersona, NOW_MS, DAY_MS } = require('./seedPersona');
+const {
+  seedPersona, seedDayZeroPersona, seedClientState, seedThisWeekDecision, NOW_MS, DAY_MS,
+} = require('./seedPersona');
+const { buildPlan } = require('./screenPlan');
+const registry = require('./registry');
 
-// ── Mutable "current module set", reloaded once for the light-theme pass.
+// PAPER_RENDER_ONLY="HomeScreen,CoachOutputScreen": a quick look at a few
+// screens. Only the every-screen pass runs, and only for these.
+const ONLY = (process.env.PAPER_RENDER_ONLY || '').split(',').map((s) => s.trim()).filter(Boolean);
+const QUICK = ONLY.length > 0;
+const full = QUICK ? test.skip : test;
+
+// ── Mutable "current module set", reloaded for the light-theme pass and the
+// decision pass.
 const ENV = {
   React: require('react'),
   TestRenderer: require('react-test-renderer'),
@@ -126,6 +148,8 @@ const REPORT = {
   bypassedWrites: [],
   seedNotes: [],
   screens: [],
+  plan: [],
+  registered: null,
   converterStats: { unknownTypes: {}, converterFallbacks: {} },
   nowMs: NOW_MS,
 };
@@ -140,9 +164,9 @@ function mergeConverterStats(stats) {
 }
 
 // ── react-test-renderer tree -> toJSON()-shaped plain object, without
-// calling the library's own toJSON(): AnalyticsScreen passes a real
-// `<RefreshControl>` element as its ScrollView's `refreshControl` prop, and
-// react-test-renderer's toJSON() throws walking that unrendered element
+// calling the library's own toJSON(): a screen that passes a real
+// `<RefreshControl>` element as its ScrollView's `refreshControl` prop makes
+// react-test-renderer's toJSON() throw walking that unrendered element
 // (the exact issue src/screens/__tests__/*.guard tests in this repo work
 // around with the same tree.root/findAll traversal used here, see e.g.
 // the "toJSON() chokes on the circular refreshControl element" comment in
@@ -151,7 +175,7 @@ function mergeConverterStats(stats) {
 const SAFE_PROPS = new Set([
   'style', 'value', 'placeholder', 'placeholderTextColor', 'testID', 'accessibilityLabel',
   'accessibilityRole', 'numberOfLines', 'trackColor', 'thumbColor', 'source', 'name', 'size', 'color',
-  'visible', 'tintColor',
+  'visible', 'tintColor', 'contentFit', 'resizeMode', 'contentContainerStyle',
   'd', 'fill', 'stroke', 'strokeWidth', 'strokeLinecap', 'strokeLinejoin', 'strokeDasharray',
   'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'viewBox',
   'points', 'offset', 'stopColor', 'stopOpacity', 'id', 'opacity', 'transform', 'fillOpacity',
@@ -190,6 +214,24 @@ function safeTreeJSON(tree) {
   }
 }
 
+// What a rendered tree says, for the manifest's "state" column (loading,
+// empty, offline, content): its text, and whether a spinner is on it. The
+// reading itself is phoneSet.js's job; this only records the evidence.
+function treeSignals(json) {
+  const out = []; let spinners = 0;
+  const walk = (n) => {
+    if (n === null || n === undefined) return;
+    if (typeof n === 'string' || typeof n === 'number') { out.push(String(n)); return; }
+    if (Array.isArray(n)) { n.forEach(walk); return; }
+    if (n.type === 'ActivityIndicator') spinners += 1;
+    if (n.type === 'Ionicons') return;
+    (Array.isArray(n.children) ? n.children : (n.children ? [n.children] : [])).forEach(walk);
+  };
+  walk(json);
+  const text = out.join(' | ').replace(/\s+/g, ' ').trim();
+  return { spinners, textLength: text.length, text: text.slice(0, 1500) };
+}
+
 // ── mountScreen: screen-mount.test.js's own helper, verbatim behaviour,
 // paths adjusted, flush loop lengthened (real SQLite reads chain through
 // more promise turns than the mocked DB screen-mount was written against).
@@ -213,14 +255,17 @@ async function mountScreen(Screen, props = {}) {
     if (/wrap.*act|environment has been torn down|Cannot log after tests|Each child in a list|Function components cannot be given refs|forwardRef|inside StrictMode|react-test-renderer is deprecated/i.test(text)) return;
     errors.push(text);
   };
+  const navigation = makeNav();
+  const route = { params: props.params || {}, name: props.routeName || 'Test', key: `${props.routeName || 'Test'}-1` };
+  // useNavigation() / useRoute() read these (mockPreamble.js).
+  global.__PAPER_RENDER_NAV__ = navigation;
+  global.__PAPER_RENDER_ROUTE__ = route;
   let tree = null;
   try {
     await ENV.TestRenderer.act(async () => {
       tree = ENV.TestRenderer.create(
         ENV.React.createElement(props.__rootType || Wrap, {},
-          ENV.React.createElement(props.Screen, {
-            navigation: makeNav(), route: { params: props.params || {}, name: 'Test' },
-          }),
+          ENV.React.createElement(props.Screen, { navigation, route }),
           props.extra || null,
         ),
       );
@@ -239,13 +284,14 @@ async function mountScreen(Screen, props = {}) {
 function Wrap(props) { return ENV.React.createElement(ENV.React.Fragment, null, props.children); }
 
 // ── Tab bar fixture ───────────────────────────────────────────────────────
+// RootNavigator.js's MainTabs (D231): five tabs, with its own route names,
+// titles and icons. Block 0 below fails if the navigator and this copy part.
 const TAB_DEFS = [
   { key: 'HomeTab-1', name: 'HomeTab', title: 'Today', icon: 'today', iconOutline: 'today-outline' },
   { key: 'PlansTab-1', name: 'PlansTab', title: 'Train', icon: 'barbell', iconOutline: 'barbell-outline' },
   { key: 'DiaryTab-1', name: 'DiaryTab', title: 'Nutrition', icon: 'nutrition', iconOutline: 'nutrition-outline' },
-  { key: 'ProgressTab-1', name: 'ProgressTab', title: 'Progress', icon: 'stats-chart', iconOutline: 'stats-chart-outline' },
-  { key: 'CommunityTab-1', name: 'CommunityTab', title: 'Community', icon: 'people', iconOutline: 'people-outline' },
   { key: 'ProfileTab-1', name: 'ProfileTab', title: 'Coach', icon: 'pulse', iconOutline: 'pulse-outline' },
+  { key: 'CommunityTab-1', name: 'CommunityTab', title: 'Community', icon: 'people', iconOutline: 'people-outline' },
 ];
 function buildTabBarElement(focusedIndex, nestedRouteName) {
   const Ionicons = require('@expo/vector-icons/Ionicons');
@@ -373,8 +419,8 @@ function workoutSummaryParams(seed) {
   };
 }
 
-// ── App-map screen helpers ───────────────────────────────────────────────
-// 21: ProOnboardingScreen holds its step in local state and resumes from the
+// ── Prepare steps (state a screen needs that the seed does not carry) ─────
+// ProOnboardingScreen holds its step in local state and resumes from the
 // per-user draft the wizard itself saves (proOnboardingDraft.saveDraft), so
 // the training-style step (7) is reached by saving a draft the app's own way.
 // The persona is signed in, so the wizard starts past the account step.
@@ -387,79 +433,92 @@ async function prepareOnboardingStep7(seed) {
     trainingGoal: 'general', trainingPhase: 'lean_gain', planWeakPoints: [],
   });
 }
-// 13: earlier screens' mounts each run Community's background refresh against
-// the mocked-empty transport, which overwrites the seeded "me" cache; the hub
-// would then show the logged-out Join card. Write the seeded cache again just
-// before this mount (same key, same value seedPersona wrote).
+async function clearOnboardingDraft(seed) {
+  await require('../../src/lib/proOnboardingDraft').clearDraft(seed.userId);
+}
+// The Debug log screen lists the app's own error log. Under the harness that
+// log is the mocks' noise (a file system that is not there, a server that
+// never answers), not anything the app did, so it is emptied first and the
+// screen shows its empty state.
+async function clearDebugLog() {
+  const errorLog = require('../../src/lib/errorLog');
+  await errorLog.clearErrors();
+  await errorLog.clearCrashLog();
+}
+// Community: earlier screens' mounts each run Community's background refresh
+// against the mocked-empty transport, which overwrites the seeded "me" cache;
+// the hub would then show the logged-out Join card. Write the seeded cache
+// again just before the mount (same key, same value seedPersona wrote).
 async function restoreCommunityMe(seed) {
   const AsyncStorage = require('@react-native-async-storage/async-storage').default;
   const communityProfile = require('../../src/lib/community/profile');
   await AsyncStorage.setItem(communityProfile.meCacheKey(seed.userId), JSON.stringify(seed.communityMe));
 }
-// 22: the real, deterministic day-plan generator, from the persona's saved
+// A hub segment is remembered per device (CommunityHubScreen HUB_SEGMENT_KEY)
+// and a route param then wins over it; clear the memory so each variant is
+// exactly the segment its param names.
+async function prepareHubSegment(seed) {
+  await restoreCommunityMe(seed);
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  await AsyncStorage.removeItem('community.hub.segment');
+}
+// The camera screens read the permission through the vision-camera mock
+// (mockPreamble.js); this is the prompt a person sees before granting it.
+async function prepareCameraPermission() { global.__PAPER_RENDER_CAMERA_PERMISSION__ = 'not-determined'; }
+async function clearCameraPermission() { global.__PAPER_RENDER_CAMERA_PERMISSION__ = undefined; }
+const VARIANT_PREPARE = { hubSegment: prepareHubSegment, cameraPermission: prepareCameraPermission };
+// The real, deterministic day-plan generator, from the persona's saved
 // nutrition target (fixed seed so the plan is the same on every run).
 async function prepareDayMealPlan(seed) {
   const { generateAndSaveDayPlan } = require('../../src/lib/food/mealPlanService');
   const res = await generateAndSaveDayPlan(seed.userId, ENV.useAppStore.getState().userProfile, { seed: 7 });
   if (res && res.error) throw new Error(`meal plan seed failed: ${res.error}`);
 }
-
-// ── Screen configs ─────────────────────────────────────────────────────
-function screenConfigs(seed) {
-  return [
-    { n: '01', name: 'HomeScreen', tabBarIndex: 0 },
-    { n: '02', name: 'ActiveWorkoutScreen', storeOverride: activeWorkoutOverride(seed) },
-    { n: '03', name: 'WorkoutSummaryScreen', params: workoutSummaryParams(seed) },
-    { n: '04', name: 'AnalyticsScreen', tabBarIndex: 3 },
-    { n: '05', name: 'CoachOutputScreen', params: { weekStart: seed.lastWeekMonday } },
-    { n: '06', name: 'DiaryScreen', tabBarIndex: 2 },
-    { n: '07', name: 'PlansScreen', tabBarIndex: 1 },
-    { n: '08', name: 'PlanDetailScreen', params: { planId: seed.programmeId, isLibrary: false } },
-    { n: '09', name: 'ExerciseDetailScreen', params: { exerciseId: seed.exercises.bench.id } },
-    { n: '10', name: 'LiftProgressScreen' },
-    { n: '11', name: 'BodyMetricsScreen' },
-    { n: '12', name: 'WeeklyCheckInScreen' },
-    { n: '13', name: 'CommunityHubScreen', tabBarIndex: 4, prepare: restoreCommunityMe },
-    { n: '14', name: 'YouScreen', tabBarIndex: 5 },
-    { n: '15', name: 'SettingsScreen' },
-    { n: '16', name: 'WorkoutHistoryScreen' },
-    // Audit 2026-10-01 (progress, recovery heatmap, consistency): the three
-    // Progress-stack screens under review, rendered full height.
-    { n: '17', name: 'RecoveryScreen', tabBarIndex: 3, tabBarNested: 'Recovery' },
-    { n: '18', name: 'ConsistencyScreen', tabBarIndex: 3, tabBarNested: 'Consistency' },
-    { n: '19', name: 'VolumeHeatmapScreen', tabBarIndex: 3, tabBarNested: 'VolumeHeatmap' },
-    // App-map set: onboarding choice, the wizard at its training-style step,
-    // a built day meal plan, and a joined gym challenge.
-    { n: '20', name: 'StartChoiceScreen' },
-    { n: '21', name: 'ProOnboardingScreen', prepare: prepareOnboardingStep7 },
-    { n: '22', name: 'MealPlanScreen', prepare: prepareDayMealPlan },
-    { n: '23', name: 'ChallengeScreen', params: { id: MOCK_CHALLENGE_ID } },
-  ];
+// Remove the plan again (the app's own deleteMealPlan), so only the screens
+// that are meant to show a planned day do.
+async function clearDayMealPlan(seed) {
+  const { getActiveMealPlan, deleteMealPlan } = require('../../src/lib/food/db');
+  const active = await getActiveMealPlan(seed.userId);
+  if (active && active.id) await deleteMealPlan(seed.userId, active.id);
 }
-const BASE_SCREEN_COUNT = 23;
-const LIGHT_SCREENS = new Set(['01', '04', '06', '17', '18', '19']);
-const DAY_ZERO_SCREENS = new Set(['01', '04', '06', '07', '17', '18', '19']);
 
 // ── Per-screen processing ────────────────────────────────────────────────
-// `variant` (optional) lets a caller other than the two main passes pick its
-// own filename suffix and layer an extra store override on top of the
-// config's own -- used by the day-zero pass below (suffix '-day0', a
-// swapped-in fresh userId + userProfile, still the dark theme).
+// `variant` (optional) lets a caller pick its own filename suffix and layer an
+// extra store override on top of the config's own -- used by the day-zero pass
+// (suffix '-day0', a swapped-in fresh userId + userProfile, still the dark
+// theme) and by the extra states.
 async function processScreen(config, seed, theme, variant = {}) {
   const suffix = variant.suffix !== undefined ? variant.suffix : (theme === 'light' ? '-light' : '');
   const label = `${config.n}-${config.name}${suffix}`;
-  const entry = { n: config.n, name: config.name, theme, htmlPath: null, pngHint: `${label}.png`, mounted: false, error: null, pageHeightPx: null, treeFallback: false };
+  const entry = {
+    n: config.n, name: config.name, theme, group: config.group || null,
+    variant: suffix ? suffix.replace(/^-/, '') : (theme === 'light' ? 'light' : ''),
+    route: config.route || null, stacks: config.stacks || [], note: variant.note || config.note || null,
+    htmlPath: null, pngHint: `${label}.png`, mounted: false, error: null, pageHeightPx: null, treeFallback: false,
+    signals: null,
+  };
+  let tree = null;
   try {
     const storeOverride = { ...(config.storeOverride || {}), ...(variant.storeOverride || {}) };
     ENV.useAppStore.setState(personaStoreState(seed, storeOverride));
     if (theme === 'light') ENV.useAppStore.setState({ accessibility: { ...ENV.useAppStore.getState().accessibility, theme: 'light' } });
 
-    if (config.prepare) await config.prepare(seed);
+    // Earlier mounts' background refresh overwrites the seeded Community "me"
+    // cache with the mocked-empty server answer; write it back before every
+    // persona render so the persona is a member on every screen (not for the
+    // day-zero account, which has none).
+    if (seed.communityMe && !variant.skipCommunityMe) await restoreCommunityMe(seed);
+    const prepare = variant.prepare || config.prepare;
+    if (prepare) await prepare(seed);
     // eslint-disable-next-line global-require
     const Screen = require(`../../src/screens/${config.name}`).default;
-    const tabBarEl = config.tabBarIndex !== undefined ? buildTabBarElement(config.tabBarIndex, config.tabBarNested) : null;
+    const tabBar = variant.tabBar !== undefined ? variant.tabBar : config.tabBar;
+    const tabBarEl = tabBar ? buildTabBarElement(tabBar.index, tabBar.nested) : null;
 
-    const { tree, errors } = await mountScreen(Screen, { Screen, params: config.params || {}, extra: tabBarEl });
+    const params = variant.params !== undefined ? variant.params : (config.params || {});
+    const mounted = await mountScreen(Screen, { Screen, params, extra: tabBarEl, routeName: variant.route || config.route });
+    tree = mounted.tree;
+    const { errors } = mounted;
     if (!tree) { entry.error = `mount produced no tree${errors.length ? `: ${errors.join(' | ')}` : ''}`; return entry; }
     entry.mounted = true;
     if (errors.length) entry.renderErrors = errors.slice(0, 10);
@@ -467,6 +526,7 @@ async function processScreen(config, seed, theme, variant = {}) {
     const { json, fallback, error } = safeTreeJSON(tree);
     entry.treeFallback = fallback;
     if (fallback) entry.treeFallbackError = error;
+    entry.signals = treeSignals(json);
 
     // eslint-disable-next-line global-require
     const themeMod = require('../../src/styles/theme');
@@ -478,21 +538,45 @@ async function processScreen(config, seed, theme, variant = {}) {
     const htmlPath = path.join(HTML_DIR, `${label}.html`);
     fs.writeFileSync(htmlPath, html, 'utf8');
     entry.htmlPath = htmlPath;
-
-    try { await ENV.TestRenderer.act(() => { tree.unmount(); }); } catch (_) { /* best-effort teardown */ }
   } catch (e) {
     entry.error = `${e && e.message}\n${(e && e.stack || '').split('\n').slice(1, 6).join('\n')}`;
+  } finally {
+    if (tree) { try { await ENV.TestRenderer.act(() => { tree.unmount(); }); } catch (_) { /* best-effort teardown */ } }
+    global.__PAPER_RENDER_NAV__ = undefined;
+    global.__PAPER_RENDER_ROUTE__ = undefined;
+    if (config.cleanup && !variant.noCleanup) {
+      try { await config.cleanup(seed); } catch (_) { /* best-effort: the next screen must not inherit it */ }
+    }
   }
   console.log(`[paper-render] ${entry.mounted ? 'OK  ' : 'FAIL'} ${label}${entry.error ? ` -- ${entry.error.split('\n')[0]}` : ''}`);
   return entry;
 }
 
-// ── Test 1: seed + dark-theme pass (all 16 screens) ──────────────────────
-test('seed the persona and paper-render every screen in dark theme', async () => {
-  jest.useFakeTimers({
-    now: NOW_MS,
-    doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'hrtime', 'performance'],
-  });
+const fakeTimers = () => jest.useFakeTimers({
+  now: NOW_MS,
+  doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'hrtime', 'performance'],
+});
+
+// ── Test 0: the fixture and the navigator agree ──────────────────────────
+test('the tab-bar fixture matches RootNavigator.js and no billing screen is registered', () => {
+  const { tabs, screens } = registry.registeredScreens();
+  expect(tabs.map((t) => ({ name: t.name, title: t.title, icon: t.icon, iconOutline: t.iconOutline })))
+    .toEqual(TAB_DEFS.map((d) => ({ name: d.name, title: d.title, icon: d.icon, iconOutline: d.iconOutline })));
+  const dormant = ['ProUpgradeScreen', 'SubscriptionScreen', 'CascadeGateScreen', 'SubscriptionPolicyScreen'];
+  expect(screens.map((s) => s.component).filter((c) => dormant.includes(c))).toEqual([]);
+  // Every registered component has a file to mount.
+  const missing = screens.map((s) => s.component).filter((c) => !fs.existsSync(path.join(__dirname, '..', '..', 'src', 'screens', `${c}.js`)));
+  expect(missing).toEqual([]);
+  REPORT.registered = { count: screens.length, components: screens.map((s) => s.component) };
+});
+
+// ── Plan state shared by the blocks below ────────────────────────────────
+let PLAN = null; // { plan, width }
+const planByName = (name) => PLAN.plan.find((p) => p.name === name);
+
+// ── Test 1: seed + the every-screen dark pass ────────────────────────────
+test('seed the persona and paper-render every registered screen in dark theme', async () => {
+  fakeTimers();
 
   const seed = await seedPersona();
   REPORT.dataLayerNote = seed.dataLayer;
@@ -503,32 +587,116 @@ test('seed the persona and paper-render every screen in dark theme', async () =>
   REPORT.diaryTotalKcal = seed.diaryTotalKcal;
   console.log('[paper-render] seed complete, userId =', seed.userId);
 
-  for (const config of screenConfigs(seed)) {
+  // Ids the screens' params need that the seed does not hand back.
+  const database = require('../../src/lib/database');
+  const dayKey = require('../../src/lib/dayKey');
+  const { topSetFromExerciseData, liftOptionsFromExerciseData, intensityTier } = require('../../src/lib/sessionShareData');
+  const workouts = (await database.getAllWorkouts(seed.userId)).filter((w) => w.isCompleted);
+  const mesocycles = await database.getAllMesocycles(seed.userId);
+  const earliest = workouts.length ? Math.min(...workouts.map((w) => w.startedAt)) : null;
+  const ids = {
+    workoutId: workouts[0] ? workouts[0].id : null,
+    olderWorkoutId: workouts[1] ? workouts[1].id : null,
+    mesocycleId: mesocycles[0] ? mesocycles[0].id : null,
+    todayKey: dayKey.localDayKey(NOW_MS),
+    thisWeekMonday: dayKey.localWeekStartMs(NOW_MS),
+  };
+  const summaryParams = workoutSummaryParams(seed);
+  const sessionData = {
+    sessionName: 'Upper B',
+    date: workouts[0] ? workouts[0].startedAt : NOW_MS - 3 * DAY_MS,
+    duration: summaryParams.durationMinutes,
+    workingSets: summaryParams.workingSetCount,
+    exerciseCount: summaryParams.exerciseCount,
+    tonnage: summaryParams.tonnage,
+    prCount: summaryParams.detectedPRs.length,
+    topSet: topSetFromExerciseData(summaryParams.exerciseData),
+    liftOptions: liftOptionsFromExerciseData(summaryParams.exerciseData),
+    highlightOptions: [],
+    intensityTier: intensityTier(summaryParams.detectedPRs.length, summaryParams.tonnage, summaryParams.workingSetCount),
+    units: 'kg',
+  };
+  // The summary as History opens it (WorkoutHistoryScreen's own params), built
+  // from the finished session's stored rows.
+  const historySets = ids.workoutId ? await database.getWorkoutSetsForWorkout(ids.workoutId) : [];
+  const nameById = Object.fromEntries(Object.values(seed.exercises).filter(Boolean).map((e) => [e.id, e.name]));
+  const historyWorking = historySets.filter((st) => st.setType !== 'warmup');
+  const historyParams = workouts[0] ? {
+    workoutId: workouts[0].id,
+    durationMinutes: workouts[0].durationMinutes,
+    exerciseCount: new Set(historySets.map((st) => st.exerciseId)).size,
+    setCount: historySets.length,
+    workingSetCount: historyWorking.length,
+    tonnage: Math.round(historyWorking.reduce((sum, st) => sum + (Number(st.weight) || 0) * (Number(st.actualReps) || 0), 0)),
+    exerciseNames: [...new Set(historySets.map((st) => nameById[st.exerciseId]).filter(Boolean))],
+    startedAt: workouts[0].startedAt,
+    endedAt: workouts[0].endedAt,
+    routineId: workouts[0].routineId ?? null,
+    routineName: workouts[0].routineName ?? null,
+    readOnly: true,
+  } : null;
+  const { recentMonthRecapParams } = require('../../src/components/coach/CoachProgress');
+  const monthRecapParams = recentMonthRecapParams(earliest);
+  REPORT.ids = ids;
+
+  PLAN = buildPlan({
+    seed, ids, summaryParams, historyParams, sessionData, monthRecapParams, mockChallengeId: MOCK_CHALLENGE_ID,
+    hooks: {
+      ActiveWorkoutScreen: { storeOverride: activeWorkoutOverride(seed) },
+      MealPlanScreen: { prepare: prepareDayMealPlan, cleanup: clearDayMealPlan },
+      // The wizard's saved draft would make StartChoice skip itself.
+      ProOnboardingScreen: { prepare: prepareOnboardingStep7, cleanup: clearOnboardingDraft },
+      CommunityHubScreen: { prepare: restoreCommunityMe },
+      DebugLogScreen: { prepare: clearDebugLog },
+    },
+  });
+  REPORT.plan = PLAN.plan.map((p) => ({
+    n: p.n, name: p.name, group: p.group, route: p.route, stacks: p.stacks, tabBar: p.tabBar,
+    variants: p.variants.map((v) => v.suffix), hasParamsEntry: p.hasParamsEntry,
+  }));
+  REPORT.nPadWidth = PLAN.width;
+  // A newly registered screen with no params entry still renders (empty
+  // params); it is named here so the gap is visible rather than silent.
+  REPORT.screensWithoutParamsEntry = PLAN.plan.filter((p) => !p.hasParamsEntry).map((p) => p.name);
+  expect(PLAN.plan.length).toBe(REPORT.registered.count);
+
+  const selected = QUICK ? PLAN.plan.filter((p) => ONLY.includes(p.name)) : PLAN.plan;
+  expect(selected.length).toBeGreaterThan(0);
+
+  for (const config of selected) {
     // eslint-disable-next-line no-await-in-loop
-    const entry = await processScreen(config, seed, 'dark');
-    REPORT.screens.push(entry);
+    REPORT.screens.push(await processScreen(config, seed, 'dark'));
+    for (const v of config.variants) {
+      const prepare = VARIANT_PREPARE[v.prepareKey] || config.prepare;
+      // eslint-disable-next-line no-await-in-loop
+      REPORT.screens.push(await processScreen(
+        { ...config, route: v.route || config.route, cleanup: v.prepareKey === 'cameraPermission' ? clearCameraPermission : config.cleanup },
+        seed, 'dark',
+        { suffix: `-${v.suffix}`, params: v.params, prepare, tabBar: v.tabBar, note: v.note },
+      ));
+    }
   }
+  // The segment memory the hub variants wrote must not leak into later passes.
+  try { await require('@react-native-async-storage/async-storage').default.removeItem('community.hub.segment'); } catch (_) { /* best-effort */ }
 
   global.__PAPER_RENDER_SEED__ = seed;
   jest.useRealTimers();
-  expect(REPORT.screens.length).toBe(BASE_SCREEN_COUNT);
 });
 
-// ── Test 1b: day-zero pass (01/04/06/07, fresh account, dark theme) ──────
+// ── Test 1b: day-zero pass (fresh account, dark theme) ───────────────────
 // Same live database, same module instances as test 1 (no jest.resetModules
 // -- that only happens before the light pass below), a second user with a
 // saved body profile + nutrition targets (seedDayZeroPersona's own header
-// explains why those two writes and nothing else) and no plan, session,
-// food entry or weight entry at all -- "the founder judges the app on a
-// fresh account" (brief).
-test('paper-render the day-zero variant for Home, Analytics, Diary and Plans', async () => {
+// explains why those two writes and nothing else) and no plan, session, food
+// entry or weight entry at all -- "the founder judges the app on a fresh
+// account" (brief).
+const DAY_ZERO_SCREENS = [
+  'HomeScreen', 'YouScreen', 'DiaryScreen', 'PlansScreen', 'RecoveryScreen', 'ConsistencyScreen', 'VolumeHeatmapScreen',
+];
+full('paper-render the day-zero variant of Today, Coach, Nutrition, Train and the three progress screens', async () => {
   const seed = global.__PAPER_RENDER_SEED__;
   expect(seed).toBeTruthy();
-
-  jest.useFakeTimers({
-    now: NOW_MS,
-    doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'hrtime', 'performance'],
-  });
+  fakeTimers();
 
   const dayZero = await seedDayZeroPersona();
   console.log('[paper-render] day-zero seed complete, userId =', dayZero.userId);
@@ -540,18 +708,19 @@ test('paper-render the day-zero variant for Home, Analytics, Diary and Plans', a
     },
   };
 
-  const configs = screenConfigs(seed).filter((c) => DAY_ZERO_SCREENS.has(c.n));
-  for (const config of configs) {
+  const before = REPORT.screens.length;
+  for (const name of DAY_ZERO_SCREENS) {
     // eslint-disable-next-line no-await-in-loop
-    const entry = await processScreen(config, daySeed, 'dark', { suffix: '-day0', storeOverride: dayZeroStoreOverride });
+    const entry = await processScreen(planByName(name), daySeed, 'dark', {
+      suffix: '-day0', storeOverride: dayZeroStoreOverride, skipCommunityMe: true, note: 'a brand-new account: no plan, session, food or weigh-in',
+    });
     REPORT.screens.push(entry);
   }
-
   jest.useRealTimers();
-  expect(REPORT.screens.length).toBe(BASE_SCREEN_COUNT + configs.length);
+  expect(REPORT.screens.length).toBe(before + DAY_ZERO_SCREENS.length);
 });
 
-// ── Test 1c: the Welcome screen's product captures (01/02/06) ───────────
+// ── Test 1c: the Welcome screen's product captures ───────────────────────
 // The first-launch Welcome screen shows three real captures of the app
 // (register D145): Today, a set being logged, the day's nutrition. The
 // founder, 2026-09-26: the captures were rendered by Claude Code, not taken
@@ -565,21 +734,17 @@ test('paper-render the day-zero variant for Home, Analytics, Diary and Plans', a
 // as before. The entries go to REPORT.welcome, not REPORT.screens, so the
 // contact sheet and its counts are unchanged; welcome.js shoots them.
 const WELCOME_CAPTURES = [
-  { n: '01', file: 'today' },
-  { n: '02', file: 'workout' },
-  { n: '06', file: 'nutrition' },
+  { name: 'HomeScreen', file: 'today' },
+  { name: 'ActiveWorkoutScreen', file: 'workout' },
+  { name: 'DiaryScreen', file: 'nutrition' },
 ];
 // 480 x 940, the Welcome assets' own size, at 412 CSS pixels wide.
 const WELCOME_PHONE_HEIGHT = Math.round(412 * (940 / 480));
 
-test('paper-render the Welcome captures (Today, a set being logged, Nutrition)', async () => {
+full('paper-render the Welcome captures (Today, a set being logged, Nutrition)', async () => {
   const seed = global.__PAPER_RENDER_SEED__;
   expect(seed).toBeTruthy();
-
-  jest.useFakeTimers({
-    now: NOW_MS,
-    doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'hrtime', 'performance'],
-  });
+  fakeTimers();
 
   const AsyncStorage = require('@react-native-async-storage/async-storage').default;
   const { MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR } = require('../../src/lib/food/mealReminderOffer');
@@ -591,11 +756,9 @@ test('paper-render the Welcome captures (Today, a set being logged, Nutrition)',
 
   REPORT.welcome = [];
   try {
-    const configs = screenConfigs(seed);
     for (const capture of WELCOME_CAPTURES) {
-      const config = configs.find((c) => c.n === capture.n);
       // eslint-disable-next-line no-await-in-loop
-      const entry = await processScreen(config, seed, 'dark', { suffix: '-welcome', phone: { height: WELCOME_PHONE_HEIGHT } });
+      const entry = await processScreen(planByName(capture.name), seed, 'dark', { suffix: '-welcome', phone: { height: WELCOME_PHONE_HEIGHT } });
       REPORT.welcome.push({ ...entry, file: capture.file, cssHeight: WELCOME_PHONE_HEIGHT });
     }
   } finally {
@@ -624,50 +787,37 @@ test('paper-render the Welcome captures (Today, a set being logged, Nutrition)',
 // not a scaled photo of the same one). store.js shoots each HTML file at
 // the device scale that gives that platform's target pixel width and
 // crops/scales to the exact target size with CanvasKit. Entries go to
-// REPORT.store, never REPORT.screens, so every existing pass's screen
-// count and its hardcoded assertion (test 1's 16, test 1b's 16+4, test
-// 2's 16+4+3 below) stay exactly as they were.
+// REPORT.store, never REPORT.screens, so the per-screen counts stay what the
+// every-screen pass says they are.
 const STORE_PLATFORMS = [
   { key: 'play', targetWidth: 1080, targetHeight: 1920 },
   { key: 'appstore', targetWidth: 1290, targetHeight: 2796 },
 ].map((p) => ({ ...p, cssHeight: Math.round(412 * (p.targetHeight / p.targetWidth)) }));
 
-// Recovery (register D208): not in screenConfigs() -- reached from
-// Progress (tab index 3), nested route "Recovery"
-// (src/navigation/RootNavigator.js's ProgressStack: `<Stack.Screen
-// name="Recovery" component={RecoveryScreen} .../>`). Same config shape as
-// every tab-hosted entry in screenConfigs() above (n/name/tabBarIndex/
-// tabBarNested); kept OUT of screenConfigs() itself so test 1's
-// unconditional dark-pass loop never mounts it too -- adding it there
-// would silently grow REPORT.screens past the 16 test 1 pins.
-const RECOVERY_STORE_CONFIG = { n: '17', name: 'RecoveryScreen', tabBarIndex: 3, tabBarNested: 'Recovery' };
-
 // Store set v2 (D210 addendum 2): Recovery is shot twice, each starting at
 // its own section (treeToHtml opts.phone.scrollToText): the muscle figure,
 // and the "Your recovery speed" card the personal learner fills. Play takes
 // at most eight phone screenshots; the founder picks which eight from these
-// ten when uploading.
+// ten when uploading. D231: the Progress tab is gone; its capture is now the
+// Coach tab, and Recovery is opened from the Coach tab's stack. `tabBar:
+// null` keeps the captures that were taken without the bar bar-less.
 const STORE_CAPTURES = [
-  { n: '01', file: 'today', configN: '01' }, // HomeScreen, Today (tab 0)
-  { n: '02', file: 'train', configN: '07' }, // PlansScreen, Train (tab 1)
-  { n: '03', file: 'set-logged', configN: '02' }, // ActiveWorkoutScreen, no tab bar
-  { n: '04', file: 'workout-summary', configN: '03' }, // WorkoutSummaryScreen, no tab bar
-  { n: '05', file: 'progress', configN: '04' }, // AnalyticsScreen, Progress (tab 3)
-  { n: '06', file: 'recovery', config: RECOVERY_STORE_CONFIG, scrollToText: 'Recovery by muscle' }, // RecoveryScreen, from Progress (tab 3)
-  { n: '07', file: 'recovery-speed', config: RECOVERY_STORE_CONFIG, scrollToText: 'Your recovery speed' },
-  { n: '08', file: 'nutrition', configN: '06' }, // DiaryScreen, Nutrition (tab 2)
-  { n: '09', file: 'weekly-coaching', configN: '05' }, // CoachOutputScreen, no tab bar
-  { n: '10', file: 'community', configN: '13' }, // CommunityHubScreen, Community (tab 4)
+  { n: '01', file: 'today', name: 'HomeScreen' }, // Today (tab 0)
+  { n: '02', file: 'train', name: 'PlansScreen' }, // Train (tab 1)
+  { n: '03', file: 'set-logged', name: 'ActiveWorkoutScreen' }, // no tab bar (the band hides itself)
+  { n: '04', file: 'workout-summary', name: 'WorkoutSummaryScreen', tabBar: null },
+  { n: '05', file: 'coach', name: 'YouScreen' }, // Coach (tab 3)
+  { n: '06', file: 'recovery', name: 'RecoveryScreen', scrollToText: 'Recovery by muscle' }, // from Coach (tab 3)
+  { n: '07', file: 'recovery-speed', name: 'RecoveryScreen', scrollToText: 'Your recovery speed' },
+  { n: '08', file: 'nutrition', name: 'DiaryScreen' }, // Nutrition (tab 2)
+  { n: '09', file: 'weekly-coaching', name: 'CoachOutputScreen', tabBar: null },
+  { n: '10', file: 'community', name: 'CommunityHubScreen' }, // Community (tab 4)
 ];
 
-test('paper-render the store listing screenshots (Play + App Store)', async () => {
+full('paper-render the store listing screenshots (Play + App Store)', async () => {
   const seed = global.__PAPER_RENDER_SEED__;
   expect(seed).toBeTruthy();
-
-  jest.useFakeTimers({
-    now: NOW_MS,
-    doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'hrtime', 'performance'],
-  });
+  fakeTimers();
 
   const AsyncStorage = require('@react-native-async-storage/async-storage').default;
   const { MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR } = require('../../src/lib/food/mealReminderOffer');
@@ -691,9 +841,9 @@ test('paper-render the store listing screenshots (Play + App Store)', async () =
 
   REPORT.store = [];
   try {
-    const configs = screenConfigs(seed);
     for (const capture of STORE_CAPTURES) {
-      const config = capture.config || configs.find((c) => c.n === capture.configN);
+      const base = planByName(capture.name);
+      const config = capture.tabBar === null ? { ...base, tabBar: null } : base;
       for (const platform of STORE_PLATFORMS) {
         const suffix = `-store-${platform.key}-${capture.n}`;
         const phone = capture.scrollToText
@@ -722,42 +872,109 @@ test('paper-render the store listing screenshots (Play + App Store)', async () =
   expect(REPORT.store.every((e) => e.mounted)).toBe(true);
 });
 
-// ── Test 2: light theme (01/04/06), with the resetModules reload ─────────
-test('paper-render the light theme variant for Home, Analytics and Diary', async () => {
+// ── Test 1e: Nutrition with a planned day ────────────────────────────────
+// A day plan is generated by the app's own day-plan generator and written to
+// TOMORROW's diary as planned meals (applyPlanDayMerging, the call "Add to
+// diary" makes), then the Diary opens on that date. Tomorrow, because a day
+// that already holds logged meals only takes the plan's unfilled meals; a
+// whole planned day is the state worth looking at. Removed again afterwards.
+full('paper-render Nutrition with planned meals', async () => {
   const seed = global.__PAPER_RENDER_SEED__;
   expect(seed).toBeTruthy();
+  fakeTimers();
+  try {
+    const dayKey = require('../../src/lib/dayKey');
+    const tomorrow = dayKey.localDayKey(NOW_MS + DAY_MS);
+    const { generateAndSaveDayPlan, applyPlanDayMerging } = require('../../src/lib/food/mealPlanService');
+    const foodDb = require('../../src/lib/food/db');
+    const config = planByName('DiaryScreen');
+    REPORT.screens.push(await processScreen(
+      {
+        ...config,
+        cleanup: async () => {
+          await foodDb.clearPlannedDay(seed.userId, tomorrow);
+          await clearDayMealPlan(seed);
+        },
+      },
+      seed, 'dark',
+      {
+        suffix: '-planned',
+        params: { date: tomorrow },
+        prepare: async () => {
+          const res = await generateAndSaveDayPlan(seed.userId, ENV.useAppStore.getState().userProfile, { seed: 7 });
+          if (res && res.error) throw new Error(`meal plan seed failed: ${res.error}`);
+          await applyPlanDayMerging(seed.userId, res.plan.days[0], { entryDate: tomorrow, replacePlanned: true });
+        },
+        note: 'tomorrow, with a generated day plan added as planned meals',
+      },
+    ));
+  } finally {
+    jest.useRealTimers();
+  }
+});
 
-  jest.useFakeTimers({
-    now: NOW_MS,
-    doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'hrtime', 'performance'],
-  });
-
-  // Close the dark pass's handle before the module registry that owns it
-  // is discarded -- a stale open connection must never outlive its module.
+// ── Reload the module registry (the theme singleton is read at module
+// load; AsyncStorage's mock loses its contents with it, so the persona's two
+// client-only pieces are written again) ───────────────────────────────────
+async function reloadModules(seed, themeName) {
   try { await require('../../src/lib/database').closeDatabase(); } catch (_) { /* best-effort */ }
-
   jest.resetModules();
   ENV.React = require('react');
   ENV.TestRenderer = require('react-test-renderer');
   ENV.useAppStore = require('../../src/store/useAppStore').default;
-
   // Re-open + re-verify the real (already-migrated, already-seeded) SQLite
-  // file, then flip the legacy theme singleton BEFORE any screen module
-  // that reads it statically is required for the first time this pass.
+  // file, then set the legacy theme singleton BEFORE any screen module that
+  // reads it statically is required for the first time this pass.
   await require('../../src/lib/database').initDatabase();
-  require('../../src/styles/theme').applyAccessibility({ theme: 'light', higherContrast: false, colorBlindSafe: false, largerText: false });
-
-  const configs = screenConfigs(seed).filter((c) => LIGHT_SCREENS.has(c.n));
-  for (const config of configs) {
-    // eslint-disable-next-line no-await-in-loop
-    const entry = await processScreen(config, seed, 'light');
-    REPORT.screens.push(entry);
+  if (themeName === 'light') {
+    require('../../src/styles/theme').applyAccessibility({ theme: 'light', higherContrast: false, colorBlindSafe: false, largerText: false });
   }
+  await seedClientState(seed.userId);
+}
 
+// ── Test 2: light theme ──────────────────────────────────────────────────
+const LIGHT_SCREENS = ['HomeScreen', 'YouScreen', 'DiaryScreen', 'RecoveryScreen', 'ConsistencyScreen', 'VolumeHeatmapScreen'];
+full('paper-render the light theme variant of Today, Coach, Nutrition and the progress screens', async () => {
+  const seed = global.__PAPER_RENDER_SEED__;
+  expect(seed).toBeTruthy();
+  fakeTimers();
+
+  // Close the dark pass's handle before the module registry that owns it
+  // is discarded -- a stale open connection must never outlive its module.
+  await reloadModules(seed, 'light');
+
+  const before = REPORT.screens.length;
+  for (const name of LIGHT_SCREENS) {
+    // eslint-disable-next-line no-await-in-loop
+    REPORT.screens.push(await processScreen(planByName(name), seed, 'light'));
+  }
   jest.useRealTimers();
-  // 16 dark + DAY_ZERO_SCREENS.size day-zero (test 1b, already pushed) + this
-  // pass's own light screens.
-  expect(REPORT.screens.length).toBe(BASE_SCREEN_COUNT + DAY_ZERO_SCREENS.size + configs.length);
+  expect(REPORT.screens.length).toBe(before + LIGHT_SCREENS.length);
+});
+
+// ── Test 3: this week's coaching decision (dark, after a reload) ─────────
+// Last, because it saves this week's check-in and decision, which the earlier
+// passes must not see (Weekly check-in would read "done", Today and Coach
+// would already carry the decision).
+full('paper-render Today and Coach with this week\'s coaching decision', async () => {
+  const seed = global.__PAPER_RENDER_SEED__;
+  expect(seed).toBeTruthy();
+  fakeTimers();
+
+  await reloadModules(seed, 'dark');
+  await seedThisWeekDecision(seed.userId, jest);
+  REPORT.bypassedWrites.push(
+    'This week\'s check-in and coaching decision (the "decision" renders only) are saved through '
+    + 'saveWeeklyCheckin() and saveCoachOutput(), with the same authored decision content the persona '
+    + 'carries for last week -- not the output of running runWeeklyCoach().',
+  );
+  for (const name of ['HomeScreen', 'YouScreen']) {
+    // eslint-disable-next-line no-await-in-loop
+    REPORT.screens.push(await processScreen(planByName(name), seed, 'dark', {
+      suffix: '-decision', note: 'this week\'s check-in is done and its coaching decision exists',
+    }));
+  }
+  jest.useRealTimers();
 });
 
 afterAll(async () => {

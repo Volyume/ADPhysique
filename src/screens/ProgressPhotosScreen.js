@@ -1612,7 +1612,10 @@ export default function ProgressPhotosScreen({ navigation }) {
         <EmptyState
           icon="camera-outline"
           title="No saved photos yet"
-          text="Add front, back and side photos to start.\n\nThe scale cannot tell muscle from water. Photos can."
+          // A JSX attribute string keeps "\n" as two characters; the
+          // expression form gives the real paragraph break (seen in the
+          // 2026-10-23 renders, where the screen printed "\n\n").
+          text={'Add front, back and side photos to start.\n\nThe scale cannot tell muscle from water. Photos can.'}
         />
       );
     }
