@@ -91,8 +91,10 @@ function profileFocusLine(profile = {}) {
   return [
     phase,
     goal && goal !== 'Not competing' ? goal : null,
-    Number.isFinite(days) && days > 0 ? `${days} days/week` : null,
-  ].filter(Boolean).join(' - ');
+    Number.isFinite(days) && days > 0 ? `${days} days a week` : null,
+    // D231 lead review: the owner-approved shape, "Building · 4 days a week"
+    // (the app's own separator and plain words, no slash).
+  ].filter(Boolean).join(' \u00B7 ');
 }
 
 function parseCheckinDay(rawPrefs) {

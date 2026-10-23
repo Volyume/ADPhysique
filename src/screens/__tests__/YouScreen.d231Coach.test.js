@@ -485,7 +485,8 @@ describe('Coach: top to bottom', () => {
     const goal = Object.keys(GOAL_LABELS).find((k) => GOAL_LABELS[k] !== 'Not competing');
     await arrange({ profile: { trainingPhase: phase, trainingGoal: goal, daysPerWeek: 4 } });
     const { tree, nav } = await mountCoach();
-    const focus = `${PHASE_LABELS[phase]} - ${GOAL_LABELS[goal]} - 4 days/week`;
+    // D231 lead review: the approved shape, "Building · 4 days a week".
+    const focus = `${PHASE_LABELS[phase]} \u00B7 ${GOAL_LABELS[goal]} \u00B7 4 days a week`;
     expect(byLabel(tree, `Goal and phase. ${focus}`)).toHaveLength(1);
     press(tree, `Goal and phase. ${focus}`);
     expect(nav.navigate).toHaveBeenCalledWith('ProGoalSetup');

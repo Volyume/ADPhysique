@@ -335,6 +335,10 @@ function personaStoreState(seed, overrides = {}) {
     userProfile: {
       firstName: 'Alex', sex: 'male', goal: 'lean_gain', trainingFocus: 'hypertrophy',
       units: 'kg', coachAutonomy: 'collaborative', coachTone: 'automatic',
+      // The fields a real onboarding writes for the Coach tab's "Goal and
+      // phase" line (YouScreen profileFocusLine): the persona's lean gain on
+      // the Upper Lower 4-Day plan, not competing.
+      trainingPhase: 'lean_gain', trainingGoal: 'general', daysPerWeek: 4,
       // CoachOutputScreen reads userProfile.phaseStartedAt (store field, set
       // by ProOnboardingScreen at real onboarding time) STRAIGHT from the
       // store, not from a DB row, to compute weeksInPhase for the real
