@@ -125,7 +125,7 @@ Method (so the lead can repeat it):
 - Set videos: 3 per workout; length 60, 90 or 120 s (default 90); kept 7, 30, 90 days or forever (default 7). [CODE `src/lib/clips/rules.js:43,69-70,85-86`]
 - Raw/dry versus cooked weight conversion for 13 staple foods (rice, pasta, potato, chicken, turkey, steak, beef mince, cod, salmon, lentils, bacon medallions and others). [CODE `src/lib/food/cookYield.js:33-56`; measured `Object.keys(COOK_YIELD_PAIRS).length` = 13] Do not give a number on the page; the list changed on 2026-10-20.
 - Training milestones: sessions 5, 10, 25, 50, 100, a first-week milestone and a first PR. [CODE `src/lib/milestones.js:52-88`] Older 250/500 figures are stale.
-- 6 tabs: Today, Train, Nutrition, Progress, Community, Coach. [CODE `src/navigation/RootNavigator.js:824-829`]
+- 6 tabs: Today, Train, Nutrition, Progress, Community, Coach. [CODE `src/navigation/RootNavigator.js:824-829`] (Superseded 2026-10-23 by the layout rework D231: 5 tabs in this order, Today, Train, Nutrition, Coach, Community, with Progress inside Coach and Train. [CODE `src/navigation/RootNavigator.js:805-809`]. See FEATURES.md correction 6.)
 - Do NOT use: weigh-in counts, "3 PR types", screen counts, migration counts, telemetry event counts.
 
 ---

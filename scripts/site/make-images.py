@@ -8,8 +8,11 @@ Run by hand when an image changes (the outputs are committed):
 
 SCREENS_DIR holds the app screen captures as 1080 x 1920 PNGs named as in
 SCREENS below (the paper-render harness writes them as store/play/*.png).
-A few are cut short (see CROPS), so their height is less than 1280 at 720 wide:
-the page's width and height attributes follow the file.
+Several are cut short (see CROPS), so their height is less than 1280 at 720
+wide: the page's width and height attributes follow the file.
+
+The harness's tab bar is a fixed fixture of the earlier six tabs, so every
+crop of a screen that has a tab bar stops above it: no image shows a tab bar.
 
 Writes, under public/assets/:
   screens/NAME-360.webp, NAME-720.webp, NAME-720.jpg
@@ -40,36 +43,54 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 PUBLIC = os.path.join(ROOT, 'public')
 ASSETS = os.path.join(PUBLIC, 'assets')
 
-# capture file name -> name on the site
-SCREENS = {
-    '01-today.png': 'today',
-    '02-train.png': 'train',
-    '03-set-logged.png': 'set-logged',
-    '04-workout-summary.png': 'workout-summary',
-    '05-progress.png': 'progress',
-    '06-recovery.png': 'recovery',
-    '08-nutrition.png': 'nutrition',
-    '09-weekly-coaching.png': 'coaching-decision',
-}
+# (capture file name, name on the site). One capture can serve two names:
+# the Progress tab is gone (D231, the app layout rework), so the picture the
+# site names "progress" is the lower part of the Train capture, where this
+# week's sets and the recent sessions now are (see CROPS).
+SCREENS = [
+    ('01-today.png', 'today'),
+    ('02-train.png', 'train'),
+    ('02-train.png', 'progress'),
+    ('03-set-logged.png', 'set-logged'),
+    ('04-workout-summary.png', 'workout-summary'),
+    ('06-recovery.png', 'recovery'),
+    ('08-nutrition.png', 'nutrition'),
+    ('09-weekly-coaching.png', 'coaching-decision'),
+]
 WIDTHS = (360, 720)
 
 # name on the site -> (top, bottom) rows of the 1080 x 1920 capture to keep.
 # The capture is only ever cut, never edited. Each cut leaves out what the
-# site's wording rules (docs/site-rebuild-2026-10/REVIEW-1.md, F3 and F4)
+# site's wording rules (docs/site-rebuild-2026-10/REVIEW-1.md, F3, F4 and N10)
 # do not allow on a page, so a page never shows it:
-#   today              stops above the card that lists morning weigh-ins and
-#                      the morning weight
-#   train              stops above the plan tools, which name a population
-#   progress           stops above the body card (trend in kg a week) and
-#                      above the Your progress list, so no result shows
-#   coaching-decision  stops above the line naming the weigh-ins it is based on
-#   workout-summary    starts below the card that names the strongest
-#                      workout in recent weeks
+#   today              starts below the screen header and stops after the
+#                      main card, above the "Since your
+#                      check-in" pane that lists morning weigh-ins and the
+#                      morning weight
+#   train              starts below the screen header: the plan card with
+#                      this week's days; stops above the
+#                      this-week sets bar
+#   progress           from the Train capture: this week's sets bar and the
+#                      recent sessions. The Coach tab's "Your progress" card
+#                      is not shown: its Training row states strength results
+#                      and its Body row a body weight trend (N10, F3)
+#   nutrition          stops above the tab bar
+#   recovery           stops above the tab bar
+# The Train capture is also cut above the tab bar for "progress", and nothing
+# below it (Your setup, which names a population in its summary line) is in
+# the capture at all. coaching-decision stops above the line naming the
+# weigh-ins it is based on, and workout-summary starts below the card that
+# names the strongest workout in recent weeks (both unchanged).
+# today and train start below their headers because the harness draws the
+# header's brand mark (an image) as a dark placeholder box; cutting the
+# header off leaves out a box that is not in the real app, and edits nothing.
 # Every row count is a multiple of 3, so 360 and 720 wide come out exact.
 CROPS = {
-    'today': (0, 1038),
-    'train': (0, 1005),
-    'progress': (0, 966),
+    'today': (228, 1038),
+    'train': (228, 1098),
+    'progress': (1086, 1788),
+    'nutrition': (0, 1788),
+    'recovery': (0, 1788),
     'coaching-decision': (0, 1251),
     'workout-summary': (849, 1920),
 }
@@ -98,7 +119,7 @@ def token(name):
 def screens(src_dir):
     out = os.path.join(ASSETS, 'screens')
     os.makedirs(out, exist_ok=True)
-    for capture, name in SCREENS.items():
+    for capture, name in SCREENS:
         im = Image.open(os.path.join(src_dir, capture)).convert('RGB')
         if im.size != (1080, 1920):
             raise SystemExit(capture + ' is ' + str(im.size) + ', expected (1080, 1920)')
