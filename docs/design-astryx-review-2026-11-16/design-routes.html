@@ -1,0 +1,486 @@
+<title>Volyume Design Routes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: a short route summary, then each screen drawn three ways in a row (route 1 | 2 | 3), stacking to one column on a phone. Phone interiors are fixed dark app looks and ignore the page theme. */
+:root {
+  color-scheme: dark;
+  --bg: #0D0D0D; --panel: #191917; --line: #2E2E2C;
+  --fg: #F2F1EE; --muted: #A3A19B; --accent: #F5A623;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { color-scheme: light; --bg: #F6F5F2; --panel: #FFFFFF; --line: #DEDBD3; --fg: #1A1916; --muted: #5E5C56; --accent: #A8650A; }
+}
+:root[data-theme="light"] { color-scheme: light; --bg: #F6F5F2; --panel: #FFFFFF; --line: #DEDBD3; --fg: #1A1916; --muted: #5E5C56; --accent: #A8650A; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 72px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -0.02em; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.1rem; }
+p { margin: 0; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.lede { font-size: 1.1rem; color: var(--muted); margin-top: 10px; max-width: 68ch; }
+section { display: flex; flex-direction: column; gap: 20px; }
+.routes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.route { background: var(--panel); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.route .num { font-family: var(--font-display); font-weight: 700; color: var(--accent); font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.route p { color: var(--muted); font-size: 0.93rem; }
+.route dl { margin: 4px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 0.88rem; }
+.route dt { color: var(--muted); }
+.route dd { margin: 0; }
+.row3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
+.col { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+.cap { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.sub { font-size: 0.85rem; color: var(--muted); text-align: center; max-width: 340px; }
+.ref { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.ref img { width: 180px; max-width: 100%; border-radius: 16px; border: 4px solid #2a2a2a; }
+.ref p { flex: 1; min-width: 220px; color: var(--muted); font-size: 0.93rem; }
+.foot { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+
+/* shared phone frame */
+.phone { width: 100%; max-width: 360px; border-radius: 28px; border: 6px solid #2a2a2a; overflow: hidden; font-family: var(--font-body); font-size: 14px; line-height: 1.4; display: flex; flex-direction: column; }
+.scr { padding: 22px 16px 18px; display: flex; flex-direction: column; }
+svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.flex { display: flex; align-items: center; }
+.grow { flex: 1; min-width: 0; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ======== ROUTE 1: Volyume building blocks ======== */
+.r1 { background: #0D0D0D; color: #fff; }
+.r1 .scr { gap: 20px; }
+.r1 h4 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+.r1 .ib { width: 40px; height: 40px; border-radius: 999px; background: #222220; display: grid; place-items: center; }
+.r1 .ib svg { width: 20px; height: 20px; }
+.r1 .tint { background: rgba(245,166,35,0.12); border-radius: 12px; padding: 12px 14px; gap: 10px; }
+.r1 .dot { width: 8px; height: 8px; border-radius: 99px; background: #F5A623; }
+.r1 .go { color: #F5A623; font-weight: 700; }
+.r1 .hero { background: #191917; border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.r1 .ey { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #9E9E9E; font-weight: 600; }
+.r1 .t { font-size: 26px; font-weight: 800; }
+.r1 .meta { color: #9E9E9E; font-size: 13.5px; }
+.r1 .chip { align-self: flex-start; gap: 6px; background: #2A2A27; border-radius: 99px; padding: 5px 10px; font-size: 12.5px; }
+.r1 .chip svg { width: 14px; height: 14px; color: #F5A623; }
+.r1 .pri { flex: 1; background: #E08C0B; color: #0D0D0D; border-radius: 14px; height: 52px; justify-content: center; gap: 8px; font-weight: 700; font-size: 16px; }
+.r1 .pri svg { width: 16px; height: 16px; fill: #0D0D0D; stroke: none; }
+.r1 .sq { width: 52px; height: 52px; border-radius: 14px; background: #2A2A27; display: grid; place-items: center; }
+.r1 .gh { display: flex; justify-content: space-between; padding: 0 4px 8px; font-size: 13px; color: #9E9E9E; font-weight: 700; }
+.r1 .list { background: #191917; border-radius: 16px; overflow: hidden; }
+.r1 .li { gap: 12px; padding: 13px 14px; min-height: 52px; }
+.r1 .li + .li { box-shadow: inset 0 1px 0 #2E2E2C; }
+.r1 .li b { font-weight: 600; display: block; }
+.r1 .li small { color: #9E9E9E; font-size: 12.5px; display: block; }
+.r1 .ok { width: 18px; height: 18px; border-radius: 99px; background: #4CAF50; display: grid; place-items: center; flex: none; }
+.r1 .ok svg { width: 11px; height: 11px; color: #0D0D0D; stroke-width: 3; }
+.r1 .tx { color: #F5A623; font-weight: 700; font-size: 13.5px; }
+.r1 .chev { width: 16px; height: 16px; color: #9E9E9E; }
+/* r1 logger */
+.r1 .bar { justify-content: space-between; padding: 14px 16px; }
+.r1 .fin { background: #E08C0B; color: #0D0D0D; border-radius: 99px; padding: 8px 14px; font-weight: 700; font-size: 13px; }
+.r1 .prog { height: 3px; background: #2A2A27; } .r1 .prog i { display: block; height: 100%; width: 22%; background: #F5A623; }
+.r1 .ex { background: #191917; border-radius: 20px; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.r1 .sets, .r2 .sets, .r3 .sets { display: grid; grid-template-columns: 24px 58px 1fr 1fr 38px; gap: 8px; align-items: center; }
+.r1 .sh { font-size: 10.5px; letter-spacing: 0.08em; color: #9E9E9E; font-weight: 600; padding: 0 4px; }
+.r1 .set { padding: 4px; border-radius: 14px; }
+.r1 .n, .r1 .last { color: #9E9E9E; font-size: 12.5px; text-align: center; }
+.r1 .f { height: 44px; border-radius: 10px; background: #2A2A27; display: grid; place-items: center; font-size: 17px; font-weight: 600; }
+.r1 .done .f { background: transparent; color: #9E9E9E; }
+.r1 .now { background: rgba(245,166,35,0.12); } .r1 .now .f { background: #343431; }
+.r1 .f.gh2 { color: #9E9E9E; font-weight: 500; }
+.r1 .tk { width: 32px; height: 32px; border-radius: 99px; display: grid; place-items: center; justify-self: center; }
+.r1 .tk svg { width: 16px; height: 16px; stroke-width: 3; }
+.r1 .tk.d { background: #4CAF50; color: #0D0D0D; } .r1 .tk.c { background: #E08C0B; color: #0D0D0D; } .r1 .tk.o { box-shadow: inset 0 0 0 2px #343431; }
+.r1 .tools { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px; }
+.r1 .tools span { height: 36px; padding: 0 12px; border-radius: 99px; background: #222220; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; }
+.r1 .tools .lead { background: rgba(245,166,35,0.12); color: #F5A623; }
+.r1 .nm { width: 26px; height: 26px; border-radius: 99px; background: #2A2A27; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #9E9E9E; flex: none; }
+
+/* ======== ROUTE 2: React Native Reusables (shadcn/ui, new-york) ======== */
+.r2 { background: #0A0A0A; color: #FAFAFA; }
+.r2 .scr { gap: 16px; }
+.r2 h4 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.r2 .muted { color: #A1A1A1; }
+.r2 .btn { height: 40px; border-radius: 8px; padding: 0 16px; font-weight: 500; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.r2 .btn svg { width: 16px; height: 16px; }
+.r2 .btn.pri { background: #F5A623; color: #1A1206; }
+.r2 .btn.pri svg { fill: #1A1206; stroke: none; }
+.r2 .btn.out { border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.045); }
+.r2 .btn.sec { background: #262626; }
+.r2 .btn.ghost { padding: 0 10px; }
+.r2 .btn.icon { width: 40px; padding: 0; }
+.r2 .btn.sm { height: 34px; padding: 0 12px; font-size: 13px; }
+.r2 .card { background: #171717; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+.r2 .ct { font-weight: 600; font-size: 16px; line-height: 1.2; }
+.r2 .cd { color: #A1A1A1; font-size: 13.5px; }
+.r2 .badge { display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; align-self: flex-start; }
+.r2 .badge svg { width: 12px; height: 12px; color: #F5A623; }
+.r2 .alert { border: 1px solid rgba(245,166,35,0.35); border-radius: 10px; padding: 12px 14px; gap: 12px; align-items: flex-start; }
+.r2 .alert svg { width: 16px; height: 16px; color: #F5A623; flex: none; margin-top: 2px; }
+.r2 .alert b { font-weight: 500; display: block; font-size: 14px; }
+.r2 .sep { height: 1px; background: rgba(255,255,255,0.1); }
+.r2 .item { gap: 12px; padding: 10px 0; }
+.r2 .item b { font-weight: 500; display: block; font-size: 14px; }
+.r2 .item small { color: #A1A1A1; font-size: 12.5px; display: block; }
+.r2 .chk { width: 16px; height: 16px; border-radius: 4px; background: #F5A623; display: grid; place-items: center; flex: none; }
+.r2 .chk svg { width: 11px; height: 11px; color: #1A1206; stroke-width: 3; }
+.r2 .chk.off { background: transparent; border: 1px solid rgba(255,255,255,0.3); }
+.r2 .av { width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: grid; place-items: center; flex: none; }
+.r2 .av svg { width: 16px; height: 16px; }
+.r2 .tabs { display: grid; grid-template-columns: repeat(6, 1fr); padding: 8px 4px 12px; border-top: 1px solid rgba(255,255,255,0.1); background: #0A0A0A; margin-top: auto; }
+.r2 .tabs span { font-size: 10.5px; color: #A1A1A1; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.r2 .tabs span i { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid currentColor; }
+.r2 .tabs .on { color: #FAFAFA; font-weight: 500; }
+/* r2 logger */
+.r2 .bar { justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.r2 .progress { height: 6px; border-radius: 99px; background: #262626; overflow: hidden; } .r2 .progress i { display: block; width: 22%; height: 100%; background: #F5A623; }
+.r2 .th { font-size: 12px; color: #A1A1A1; font-weight: 500; }
+.r2 .inp { height: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.045); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500; }
+.r2 .inp.ph { color: #737373; }
+.r2 .inp.focus { border-color: #F5A623; box-shadow: 0 0 0 3px rgba(245,166,35,0.25); }
+.r2 .done .inp { border-color: transparent; background: transparent; color: #A1A1A1; }
+.r2 .cb { width: 20px; height: 20px; border-radius: 5px; justify-self: center; display: grid; place-items: center; border: 1px solid rgba(255,255,255,0.3); }
+.r2 .cb.on { background: #F5A623; border-color: #F5A623; }
+.r2 .cb svg { width: 13px; height: 13px; color: #1A1206; stroke-width: 3; }
+.r2 .n { color: #A1A1A1; font-size: 13px; text-align: center; }
+.r2 .last { color: #A1A1A1; font-size: 12.5px; }
+.r2 .acc { gap: 10px; padding: 14px 0; font-weight: 500; }
+.r2 .acc + .acc { border-top: 1px solid rgba(255,255,255,0.1); }
+.r2 .acc svg { width: 16px; height: 16px; color: #A1A1A1; }
+
+/* ======== ROUTE 3: Tamagui (Radix-style scales, sub-themes, grouped list items) ======== */
+.r3 { background: #111110; color: #EEEEEC; }
+.r3 .scr { gap: 18px; }
+.r3 h4 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.r3 .c11 { color: #B5B3AD; }
+.r3 .circ { width: 44px; height: 44px; border-radius: 99px; background: #222221; border: 1px solid #3B3A37; display: grid; place-items: center; }
+.r3 .circ svg { width: 20px; height: 20px; }
+/* amber sub-theme: whole surface takes the amber scale */
+.r3 .amber { background: #1F1300; border: 1px solid #4F3422; border-radius: 18px; color: #FFE7B3; }
+.r3 .amber .a11 { color: #FFCA16; }
+.r3 .banner { padding: 12px 14px; gap: 10px; border-radius: 14px; }
+.r3 .banner svg { width: 18px; height: 18px; color: #FFCA16; flex: none; }
+.r3 .hero { padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
+.r3 .hero .t { font-size: 28px; font-weight: 700; color: #FFF7C2; }
+.r3 .hero .ey { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
+.r3 .pill { align-self: flex-start; gap: 6px; background: #302008; border: 1px solid #4F3422; border-radius: 99px; padding: 5px 12px; font-size: 12.5px; }
+.r3 .pill svg { width: 14px; height: 14px; }
+.r3 .tbtn { height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 15px; }
+.r3 .tbtn svg { width: 16px; height: 16px; }
+.r3 .tbtn.solid { flex: 1; background: #FFC53D; color: #241500; }
+.r3 .tbtn.solid svg { fill: #241500; stroke: none; }
+.r3 .tbtn.soft { width: 48px; background: #302008; border: 1px solid #4F3422; color: #FFCA16; }
+.r3 .ygroup { background: #191918; border: 1px solid #2A2A28; border-radius: 16px; overflow: hidden; }
+.r3 .listitem { gap: 12px; padding: 12px 14px; min-height: 56px; }
+.r3 .listitem + .listitem { border-top: 1px solid #2A2A28; }
+.r3 .listitem b { font-weight: 600; display: block; font-size: 14.5px; }
+.r3 .listitem small { color: #B5B3AD; font-size: 12.5px; display: block; }
+.r3 .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none; }
+.r3 .ico svg { width: 17px; height: 17px; }
+.r3 .ico.g { background: #132D21; color: #3DD68C; }
+.r3 .ico.a { background: #302008; color: #FFCA16; }
+.r3 .ico.b { background: #0D2847; color: #70B8FF; }
+.r3 .ico.v { background: #2D1C3D; color: #D19DFF; }
+.r3 .chev { width: 16px; height: 16px; color: #7C7B74; }
+.r3 .lab { font-size: 13px; font-weight: 600; color: #B5B3AD; padding: 0 6px 8px; }
+.r3 .tabs { display: flex; justify-content: space-around; padding: 10px 6px 12px; margin: 0 10px 10px; background: #1F1F1E; border: 1px solid #2A2A28; border-radius: 22px; }
+.r3 .tabs span { font-size: 10.5px; color: #B5B3AD; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 6px; border-radius: 14px; }
+.r3 .tabs .on { background: #302008; color: #FFCA16; font-weight: 600; }
+.r3 .tabs i { width: 18px; height: 18px; border-radius: 6px; border: 1.5px solid currentColor; }
+/* r3 logger */
+.r3 .bar { justify-content: space-between; padding: 14px 16px 6px; }
+.r3 .ring { width: 44px; height: 44px; position: relative; }
+.r3 .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.r3 .ex { background: #191918; border: 1px solid #2A2A28; border-radius: 20px; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.r3 .sh { font-size: 11px; color: #7C7B74; font-weight: 600; padding: 0 4px; }
+.r3 .set { padding: 4px; border-radius: 14px; }
+.r3 .set.now { background: #1F1300; border: 1px solid #4F3422; padding: 3px; }
+.r3 .n { color: #7C7B74; font-size: 13px; text-align: center; }
+.r3 .last { color: #7C7B74; font-size: 12.5px; }
+.r3 .inp { height: 44px; border-radius: 12px; background: #222221; border: 1px solid #3B3A37; display: grid; place-items: center; font-size: 17px; font-weight: 600; }
+.r3 .inp.ph { color: #7C7B74; font-weight: 500; }
+.r3 .now .inp { background: #302008; border-color: #5C3D05; color: #FFE7B3; }
+.r3 .done .inp { background: transparent; border-color: transparent; color: #7C7B74; }
+.r3 .tick { width: 34px; height: 34px; border-radius: 99px; display: grid; place-items: center; justify-self: center; }
+.r3 .tick svg { width: 16px; height: 16px; stroke-width: 3; }
+.r3 .tick.d { background: #132D21; color: #3DD68C; border: 1px solid #20573E; }
+.r3 .tick.c { background: #FFC53D; color: #241500; }
+.r3 .tick.o { border: 2px dashed #3B3A37; }
+.r3 .chips { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
+.r3 .chips span { height: 36px; padding: 0 14px; border-radius: 99px; background: #222221; border: 1px solid #3B3A37; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.r3 .chips svg { width: 14px; height: 14px; }
+.r3 .chips .lead { background: #FFC53D; color: #241500; border-color: #FFC53D; }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Volyume · design routes</p>
+  <h1>Three ways to redesign Volyume</h1>
+  <p class="lede">The same two screens drawn in each route's style, using Volyume's real content and amber brand. Each concept follows that library's default look, re-skinned in amber, so you can judge the character, not the colours.</p>
+</header>
+
+<section>
+  <div class="routes">
+    <div class="route">
+      <span class="num">Route 1</span>
+      <h3>Volyume building blocks</h3>
+      <p>Keep today's code. Build a small, fixed set of pieces (one primary button, grouped list, prompt row, input field) with checks that stop screens styling things by hand.</p>
+      <dl><dt>Look</dt><dd>Dark charcoal, borderless, amber leads</dd><dt>New packages</dt><dd>None</dd><dt>Change</dt><dd>Gradual, screen by screen</dd><dt>Keeps</dt><dd>Higher-contrast and colour-blind palettes as they are</dd></dl>
+    </div>
+    <div class="route">
+      <span class="num">Route 2</span>
+      <h3>React Native Reusables</h3>
+      <p>shadcn/ui for phones. Components are copied into the repo, so Volyume owns and edits them. Styling moves to NativeWind (Tailwind classes).</p>
+      <dl><dt>Look</dt><dd>Crisp, neutral, hairline borders, compact</dd><dt>New packages</dt><dd>NativeWind, Tailwind, a few small helpers (MIT)</dd><dt>Change</dt><dd>Restyle about 309 files</dd><dt>Keeps</dt><dd>Palettes need rebuilding as Tailwind theme variables</dd></dl>
+    </div>
+    <div class="route">
+      <span class="num">Route 3</span>
+      <h3>Tamagui</h3>
+      <p>A theme engine with a compiler, plus a UI kit. Its "sub-themes" let a whole card take on the amber palette in one line. Grouped list items are a built-in strength.</p>
+      <dl><dt>Look</dt><dd>Soft, layered, tinted surfaces, rounder</dd><dt>New packages</dt><dd>Tamagui core, UI kit and Babel compiler (MIT)</dd><dt>Change</dt><dd>Rewrite components on its primitives</dd><dt>Keeps</dt><dd>Palettes map to its themes fairly directly</dd></dl>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div>
+    <p class="eyebrow">Screen 1</p>
+    <h2>Today</h2>
+  </div>
+  <div class="ref">
+    <img src="img/01-today.png" alt="Current Today screen for reference.">
+    <p>For reference, the current Today screen. Every block is a bordered card and all buttons share one outlined style. Each route below shows the same next workout, check-in progress, last session, challenge and the two offers.</p>
+  </div>
+  <div class="row3">
+
+    <!-- ROUTE 1 TODAY -->
+    <div class="col">
+      <span class="cap">Route 1 · Volyume blocks</span>
+      <div class="phone r1">
+        <div class="scr">
+          <div class="flex" style="justify-content:space-between"><h4>Today</h4><span class="ib"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5"/><circle cx="17" cy="9" r="2.5"/></svg></span></div>
+          <div class="tint flex"><span class="dot"></span><span class="grow">Your weekly check-in is ready.</span><span class="go">Start</span></div>
+          <div class="hero">
+            <span class="ey">Upper Lower 4-day · Week 3</span>
+            <span class="t">Upper A</span>
+            <span class="meta">6 exercises · Bench, Row, Overhead press and 3 more</span>
+            <span class="chip flex"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/></svg>On track for this block</span>
+            <div class="flex" style="gap:10px"><span class="pri flex"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>Start workout</span><span class="sq"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span></div>
+          </div>
+          <div>
+            <div class="gh"><span>Since your check-in</span><span style="font-weight:500">Today</span></div>
+            <div class="list">
+              <div class="li flex"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><b>2 training sessions logged</b></div>
+              <div class="li flex"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><b>4 morning weigh-ins this week</b></div>
+              <div class="li flex"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><b>Food logged on 1 of the last 7 days</b></div>
+            </div>
+          </div>
+          <div class="list">
+            <div class="li flex"><div class="grow"><small>Last session · Yesterday</small><b>Lower A</b><small>58m · 12 sets · 3,965 kg</small></div><span class="tx">Repeat</span></div>
+            <div class="li flex"><div class="grow"><small>Challenge</small><b>Summer Strength Challenge</b><small>64 of 100 · 40 days left</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          </div>
+          <div class="list">
+            <div class="li flex"><div class="grow"><b>Anything to build your training around?</b><small>Injuries, pain or conditions. Optional.</small></div><span class="tx">Set up</span></div>
+            <div class="li flex"><div class="grow"><b>See who is training</b><small>Friends and people at your gym</small></div><span class="tx">Have a look</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="sub">Quiet and dense. Amber appears once, on the one action that matters.</p>
+    </div>
+
+    <!-- ROUTE 2 TODAY -->
+    <div class="col">
+      <span class="cap">Route 2 · Reusables (shadcn)</span>
+      <div class="phone r2">
+        <div class="scr">
+          <div class="flex" style="justify-content:space-between"><div><h4>Today</h4><span class="muted" style="font-size:13px">Monday 16 November</span></div><span class="btn out icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5"/><circle cx="17" cy="9" r="2.5"/></svg></span></div>
+          <div class="alert flex"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><div class="grow"><b>Weekly check-in ready</b><span class="muted" style="font-size:13px">It shapes this week's coaching decision.</span></div></div>
+          <div class="card">
+            <div style="display:flex;flex-direction:column;gap:6px"><span class="cd">Upper Lower 4-day · Week 3</span><span class="ct" style="font-size:22px">Upper A</span><span class="cd">6 exercises · Bench, Row, Overhead press and 3 more</span></div>
+            <span class="badge"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/></svg>On track for this block</span>
+            <div class="flex" style="gap:8px"><span class="btn pri" style="flex:1"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>Start workout</span><span class="btn out">Options</span></div>
+          </div>
+          <div class="card" style="gap:4px;padding:18px 20px 10px">
+            <span class="ct">Since your check-in</span>
+            <span class="cd" style="margin-bottom:6px">Check-in is today</span>
+            <div class="item flex"><span class="chk"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><b>2 training sessions logged</b></div>
+            <div class="sep"></div>
+            <div class="item flex"><span class="chk"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><b>4 morning weigh-ins this week</b></div>
+            <div class="sep"></div>
+            <div class="item flex"><span class="chk"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><b>Food logged on 1 of the last 7 days</b></div>
+          </div>
+          <div class="card" style="gap:0;padding:8px 20px">
+            <div class="item flex"><div class="grow"><small>Yesterday</small><b>Lower A</b><small>58m · 12 sets · 3,965 kg</small></div><span class="btn sec sm">Repeat</span></div>
+            <div class="sep"></div>
+            <div class="item flex"><div class="grow"><small>Challenge</small><b>Summer Strength Challenge</b><small>64 of 100 · 40 days left</small></div><span class="btn ghost sm"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          </div>
+          <div class="card" style="gap:10px">
+            <div class="flex" style="gap:12px;align-items:flex-start"><span class="av"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M5 9h14M12 9v11"/></svg></span><div class="grow"><span class="ct" style="font-size:14.5px">Anything to build your training around?</span><p class="cd" style="margin-top:4px">Injuries, pain or conditions. Optional.</p></div></div>
+            <div class="flex" style="gap:8px;justify-content:flex-end"><span class="btn ghost sm">No thanks</span><span class="btn out sm">Set it up</span></div>
+          </div>
+        </div>
+        <div class="tabs"><span class="on"><i></i>Today</span><span><i></i>Train</span><span><i></i>Nutrition</span><span><i></i>Progress</span><span><i></i>Community</span><span><i></i>Coach</span></div>
+      </div>
+      <p class="sub">Clean and professional, close to the web apps people already know. Cards keep thin borders; text is smaller and calmer.</p>
+    </div>
+
+    <!-- ROUTE 3 TODAY -->
+    <div class="col">
+      <span class="cap">Route 3 · Tamagui</span>
+      <div class="phone r3">
+        <div class="scr">
+          <div class="flex" style="justify-content:space-between"><h4>Today</h4><span class="circ"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5"/><circle cx="17" cy="9" r="2.5"/></svg></span></div>
+          <div class="amber banner flex"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg><span class="grow">Weekly check-in is ready</span><span class="a11" style="font-weight:700">Open</span></div>
+          <div class="amber hero">
+            <span class="ey a11">UPPER LOWER 4-DAY · WEEK 3</span>
+            <span class="t">Upper A</span>
+            <span style="opacity:0.8">6 exercises · Bench, Row, Overhead press and 3 more</span>
+            <span class="pill flex"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/></svg>On track for this block</span>
+            <div class="flex" style="gap:10px"><span class="tbtn solid"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>Start workout</span><span class="tbtn soft"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span></div>
+          </div>
+          <div>
+            <div class="lab">Since your check-in</div>
+            <div class="ygroup">
+              <div class="listitem flex"><span class="ico g"><svg viewBox="0 0 24 24"><path d="M6 6v12M18 6v12M3 9v6M21 9v6M6 12h12"/></svg></span><div class="grow"><b>2 training sessions</b><small>Logged since Monday</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" style="stroke:#3DD68C"/></svg></div>
+              <div class="listitem flex"><span class="ico g"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2 2"/></svg></span><div class="grow"><b>4 morning weigh-ins</b><small>This week</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" style="stroke:#3DD68C"/></svg></div>
+              <div class="listitem flex"><span class="ico g"><svg viewBox="0 0 24 24"><path d="M4 11h16M6 11a6 6 0 0 0 12 0"/></svg></span><div class="grow"><b>Food logged 1 of 7 days</b><small>Last 7 days</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" style="stroke:#3DD68C"/></svg></div>
+            </div>
+          </div>
+          <div class="ygroup">
+            <div class="listitem flex"><span class="ico a"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span><div class="grow"><b>Lower A · Yesterday</b><small>58m · 12 sets · 3,965 kg</small></div><span class="a11" style="color:#FFCA16;font-weight:600">Repeat</span></div>
+            <div class="listitem flex"><span class="ico b"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/></svg></span><div class="grow"><b>Summer Strength Challenge</b><small>64 of 100 · 40 days left</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="listitem flex"><span class="ico v"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M5 9h14M12 9v11"/></svg></span><div class="grow"><b>Build training around you</b><small>Injuries or conditions. Optional.</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          </div>
+        </div>
+        <div class="tabs"><span class="on"><i></i>Today</span><span><i></i>Train</span><span><i></i>Nutrition</span><span><i></i>Progress</span><span><i></i>Community</span><span><i></i>Coach</span></div>
+      </div>
+      <p class="sub">Warmer and more expressive. The next workout becomes a whole amber-tinted surface; lists get coloured icons.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div>
+    <p class="eyebrow">Screen 2</p>
+    <h2>Workout logger</h2>
+  </div>
+  <div class="ref">
+    <img src="img/02-workout-logger.png" alt="Current workout logger for reference.">
+    <p>For reference, the current logger. Every weight and rep box is outlined the same way, the current set is marked only by its tick, and remaining exercises are separate cards.</p>
+  </div>
+  <div class="row3">
+
+    <!-- ROUTE 1 LOGGER -->
+    <div class="col">
+      <span class="cap">Route 1 · Volyume blocks</span>
+      <div class="phone r1">
+        <div class="bar flex"><span class="ib"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span><span style="text-align:center"><b style="display:block">Upper A</b><small style="color:#F5A623;font-weight:600" class="tnum">12:00</small></span><span class="fin">Finish</span></div>
+        <div class="prog"><i></i></div>
+        <div class="scr" style="gap:14px">
+          <div class="list"><div class="li flex"><span class="nm" style="background:#4CAF50;color:#0D0D0D">1</span><b class="grow">Barbell Bench Press</b><small>3 of 3</small></div></div>
+          <div class="ex">
+            <div class="flex" style="justify-content:space-between;padding:0 4px 6px"><b style="font-size:17px">Barbell Row (Bent Over)</b></div>
+            <div class="sets sh"><span>SET</span><span>LAST</span><span style="text-align:center">KG</span><span style="text-align:center">REPS</span><span></span></div>
+            <div class="sets set done"><span class="n">W</span><span class="last"></span><span class="f tnum">40</span><span class="f tnum">10</span><span class="tk d"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="sets set done"><span class="n">1</span><span class="last tnum">70 × 8</span><span class="f tnum">70</span><span class="f tnum">8</span><span class="tk d"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="sets set now"><span class="n">2</span><span class="last tnum">72.5 × 8</span><span class="f tnum">70</span><span class="f tnum">9</span><span class="tk c"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="sets set"><span class="n">3</span><span class="last tnum">72.5 × 8</span><span class="f gh2 tnum">70</span><span class="f gh2 tnum">6-10</span><span class="tk o"></span></div>
+            <div class="tools"><span class="lead">+ Add set</span><span>Remove</span><span>Swap</span><span>Film</span></div>
+          </div>
+          <div>
+            <div class="gh"><span>Up next</span><span style="font-weight:500">4 exercises</span></div>
+            <div class="list">
+              <div class="li flex"><span class="nm">3</span><b class="grow">Barbell Overhead Press</b></div>
+              <div class="li flex"><span class="nm">4</span><b class="grow">Barbell Curl</b></div>
+              <div class="li flex"><span class="nm">5</span><b class="grow">Assisted Dip Machine</b></div>
+              <div class="li flex"><span class="nm">6</span><b class="grow">Band Face Pull</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="sub">The set you are on glows amber; finished sets fade back.</p>
+    </div>
+
+    <!-- ROUTE 2 LOGGER -->
+    <div class="col">
+      <span class="cap">Route 2 · Reusables (shadcn)</span>
+      <div class="phone r2">
+        <div class="bar flex"><span class="btn ghost icon"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span><span style="text-align:center"><b style="display:block;font-weight:600">Upper A</b><small class="muted tnum">12:00 · 2 of 6</small></span><span class="btn pri sm">Finish</span></div>
+        <div class="scr" style="gap:14px">
+          <div class="progress"><i></i></div>
+          <div class="card" style="gap:12px;padding:16px">
+            <div class="flex" style="justify-content:space-between"><span class="ct">Barbell Row (Bent Over)</span><span class="badge">Set 2 of 3</span></div>
+            <div class="sets th"><span>Set</span><span>Last</span><span style="text-align:center">kg</span><span style="text-align:center">Reps</span><span></span></div>
+            <div class="sets done"><span class="n">W</span><span class="last"></span><span class="inp tnum">40</span><span class="inp tnum">10</span><span class="cb on"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="sets done"><span class="n">1</span><span class="last tnum">70 × 8</span><span class="inp tnum">70</span><span class="inp tnum">8</span><span class="cb on"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="sets"><span class="n">2</span><span class="last tnum">72.5 × 8</span><span class="inp tnum">70</span><span class="inp focus tnum">9</span><span class="cb"></span></div>
+            <div class="sets"><span class="n">3</span><span class="last tnum">72.5 × 8</span><span class="inp ph tnum">70</span><span class="inp ph tnum">6-10</span><span class="cb"></span></div>
+            <div class="sep"></div>
+            <div class="flex" style="gap:6px;flex-wrap:wrap"><span class="btn out sm">+ Add set</span><span class="btn ghost sm">Remove</span><span class="btn ghost sm">Swap</span><span class="btn ghost sm">Film</span></div>
+          </div>
+          <div class="card" style="gap:0;padding:4px 16px">
+            <div class="acc flex"><span class="muted tnum">1</span><span class="grow">Barbell Bench Press</span><span class="badge" style="border-color:rgba(119,194,122,0.4);color:#77C27A">Done</span></div>
+            <div class="acc flex"><span class="muted tnum">3</span><span class="grow">Barbell Overhead Press</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="acc flex"><span class="muted tnum">4</span><span class="grow">Barbell Curl</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="acc flex"><span class="muted tnum">5</span><span class="grow">Assisted Dip Machine</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="acc flex"><span class="muted tnum">6</span><span class="grow">Band Face Pull</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+        </div>
+      </div>
+      <p class="sub">Familiar form controls: outlined inputs with a focus ring, square checkboxes, exercises as an accordion.</p>
+    </div>
+
+    <!-- ROUTE 3 LOGGER -->
+    <div class="col">
+      <span class="cap">Route 3 · Tamagui</span>
+      <div class="phone r3">
+        <div class="bar flex">
+          <span class="circ"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+          <span style="text-align:center"><b style="display:block;font-size:16px">Upper A</b><small class="c11 tnum">12:00 elapsed</small></span>
+          <span class="ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" stroke="#2A2A28" stroke-width="4"/><circle cx="22" cy="22" r="18" stroke="#FFC53D" stroke-width="4" stroke-dasharray="25 113"/></svg></span>
+        </div>
+        <div class="scr" style="gap:14px">
+          <div class="ex">
+            <div class="flex" style="gap:10px;padding:0 4px 4px"><span class="ico a"><svg viewBox="0 0 24 24"><path d="M6 6v12M18 6v12M3 9v6M21 9v6M6 12h12"/></svg></span><div class="grow"><b style="font-size:16px;display:block">Barbell Row (Bent Over)</b><small class="c11">Exercise 2 of 6</small></div></div>
+            <div class="sets sh"><span>SET</span><span>LAST</span><span style="text-align:center">KG</span><span style="text-align:center">REPS</span><span></span></div>
+            <div class="sets set done"><span class="n">W</span><span class="last"></span><span class="inp tnum">40</span><span class="inp tnum">10</span><span class="tick d"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="sets set done"><span class="n">1</span><span class="last tnum">70 × 8</span><span class="inp tnum">70</span><span class="inp tnum">8</span><span class="tick d"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="sets set now"><span class="n" style="color:#FFCA16">2</span><span class="last tnum" style="color:#FFCA16">72.5 × 8</span><span class="inp tnum">70</span><span class="inp tnum">9</span><span class="tick c"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="sets set"><span class="n">3</span><span class="last tnum">72.5 × 8</span><span class="inp ph tnum">70</span><span class="inp ph tnum">6-10</span><span class="tick o"></span></div>
+            <div class="chips"><span class="lead"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add set</span><span><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>Swap</span><span><svg viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 10l6-3v10l-6-3"/></svg>Film</span><span>More</span></div>
+          </div>
+          <div>
+            <div class="lab">Up next</div>
+            <div class="ygroup">
+              <div class="listitem flex"><span class="ico b"><svg viewBox="0 0 24 24"><path d="M12 3v18M6 9l6-6 6 6"/></svg></span><div class="grow"><b>Barbell Overhead Press</b><small>Not started</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+              <div class="listitem flex"><span class="ico v"><svg viewBox="0 0 24 24"><path d="M7 20c0-6 4-8 4-14M17 20c0-6-4-8-4-14"/></svg></span><div class="grow"><b>Barbell Curl</b><small>Not started</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+              <div class="listitem flex"><span class="ico g"><svg viewBox="0 0 24 24"><path d="M5 12h14M8 8v8M16 8v8"/></svg></span><div class="grow"><b>Assisted Dip Machine</b><small>Not started</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <div class="tabs"><span><i></i>Today</span><span class="on"><i></i>Train</span><span><i></i>Nutrition</span><span><i></i>Progress</span><span><i></i>Community</span><span><i></i>Coach</span></div>
+      </div>
+      <p class="sub">Rounder and more tactile. The current set becomes an amber-tinted row; progress shows as a ring in the header.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>How they differ in practice</h2>
+  <div class="routes">
+    <div class="route"><span class="num">Route 1</span><p>Closest to Volyume today, so least risk to the accessibility work and the safety-related screens. The look is only as good as the building blocks we design, but once they exist every new screen gets them for free.</p></div>
+    <div class="route"><span class="num">Route 2</span><p>The most widely recognised modern look, and Volyume owns every component file. It is also the most generic: without care it can feel like a web dashboard, and it rewrites how every screen is styled.</p></div>
+    <div class="route"><span class="num">Route 3</span><p>The most distinctive and the most "app-like" of the three. Sub-themes make tinted states easy. It is the biggest technical change and adds a compiler step to the build.</p></div>
+  </div>
+  <p style="color:var(--muted);font-size:0.93rem;max-width:68ch">Routes 2 and 3 are new dependencies, which need your yes under the project rules. Screens keep their wording and their calm-mode and ED-flag behaviour in every route; only the presentation changes.</p>
+</section>
+
+<p class="foot">Drawn in HTML with Volyume's real content. Route 2 follows shadcn/ui "new-york" defaults (neutral greys, hairline borders, 8px buttons, square checkboxes). Route 3 follows Tamagui's default look (Radix-style colour scales, sub-themed surfaces, grouped list items). Both are re-skinned in amber. These are illustrations of each library's character, not output from the libraries themselves.</p>
+
+</div>
