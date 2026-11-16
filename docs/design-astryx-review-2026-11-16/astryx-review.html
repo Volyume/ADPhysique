@@ -1,0 +1,555 @@
+<title>Volyume and Astryx</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: one reading column for the verdict and principles, then paired phone frames (real screen | concept) per screen. Phone interiors use Volyume's real dark tokens and never change with the page theme. */
+:root {
+  color-scheme: dark;
+  --bg: #0D0D0D;
+  --panel: #191917;
+  --panel2: #222220;
+  --line: #2E2E2C;
+  --fg: #F2F1EE;
+  --muted: #A3A19B;
+  --accent: #F5A623;
+  --accent-ink: #0D0D0D;
+  --good: #77C27A;
+  --no: #F88A82;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Volyume app tokens (src/styles/theme.js), fixed in both page themes */
+  --a-bg: #0D0D0D; --a-s1: #191917; --a-s2: #222220; --a-s3: #2A2A27; --a-s4: #343431;
+  --a-hair: #2E2E2C; --a-text: #FFFFFF; --a-text2: #9E9E9E;
+  --a-amber: #F5A623; --a-amberFill: #E08C0B; --a-amberBg: rgba(245,166,35,0.12);
+  --a-green: #4CAF50; --a-carb: #56B4E9; --a-fat: #C792EA;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #F6F5F2; --panel: #FFFFFF; --panel2: #EEECE7; --line: #DEDBD3;
+    --fg: #1A1916; --muted: #5E5C56; --accent: #A8650A; --accent-ink: #FFFFFF;
+    --good: #2E7D32; --no: #B3261E;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #F6F5F2; --panel: #FFFFFF; --panel2: #EEECE7; --line: #DEDBD3;
+  --fg: #1A1916; --muted: #5E5C56; --accent: #A8650A; --accent-ink: #FFFFFF;
+  --good: #2E7D32; --no: #B3261E;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 72px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+.read { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -0.02em; }
+h2 { font-size: 1.6rem; letter-spacing: -0.01em; }
+h3 { font-size: 1.1rem; }
+p { margin: 0; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.lede { font-size: 1.15rem; color: var(--muted); margin-top: 12px; }
+section { display: flex; flex-direction: column; gap: 20px; }
+a { color: var(--accent); }
+code { font-size: 0.88em; background: var(--panel2); padding: 1px 6px; border-radius: 4px; }
+
+.verdict { background: var(--panel); border-radius: 16px; padding: 24px; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.verdict > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tag { display: inline-flex; align-self: flex-start; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.tag.no { background: color-mix(in srgb, var(--no) 18%, transparent); color: var(--no); }
+.tag.yes { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+.verdict p { color: var(--muted); font-size: 0.95rem; }
+
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.93rem; }
+th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+
+.ideas { display: flex; flex-direction: column; gap: 0; counter-reset: idea; }
+.idea { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.idea::before { counter-increment: idea; content: counter(idea); font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; color: var(--accent); }
+.idea > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.idea p { color: var(--muted); }
+.idea .src { font-size: 0.8rem; color: var(--muted); opacity: 0.85; }
+.skip li { color: var(--muted); margin-bottom: 6px; }
+.skip li strong { color: var(--fg); }
+
+/* Before / after */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; align-items: center; }
+.col .cap { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); align-self: stretch; text-align: center; }
+.col .cap.new { color: var(--accent); }
+.shot { width: 100%; max-width: 360px; border-radius: 28px; border: 6px solid #2a2a2a; overflow: hidden; background: #0D0D0D; }
+.shot.tall { max-height: 1180px; overflow-y: auto; }
+.shot img { display: block; width: 100%; }
+.notes { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.notes li { background: var(--panel); border-radius: 12px; padding: 14px 16px; font-size: 0.92rem; color: var(--muted); }
+.notes li b { color: var(--fg); display: block; margin-bottom: 2px; }
+
+/* ---------- Phone concept (fixed Volyume dark) ---------- */
+.phone { width: 100%; max-width: 360px; border-radius: 28px; border: 6px solid #2a2a2a; background: var(--a-bg); color: var(--a-text); overflow: hidden; font-family: var(--font-body); font-size: 14px; line-height: 1.4; display: flex; flex-direction: column; }
+.phone.tall { max-height: 1180px; overflow-y: auto; }
+.scr { padding: 22px 16px 18px; display: flex; flex-direction: column; gap: 20px; }
+.ph-head { display: flex; align-items: center; justify-content: space-between; }
+.ph-head h4 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+.iconbtn { width: 40px; height: 40px; border-radius: 999px; background: var(--a-s2); display: grid; place-items: center; color: var(--a-text); flex: none; }
+.iconbtn svg { width: 20px; height: 20px; }
+svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.tint { background: var(--a-amberBg); border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
+.tint .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--a-amber); flex: none; }
+.tint p { flex: 1; font-size: 13.5px; }
+.tint .go { color: var(--a-amber); font-weight: 700; font-size: 13.5px; }
+
+.hero { background: var(--a-s1); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.ey { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--a-text2); font-weight: 600; }
+.hero .t { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+.meta { color: var(--a-text2); font-size: 13.5px; }
+.chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; background: var(--a-s3); border-radius: 999px; padding: 5px 10px; font-size: 12.5px; color: var(--a-text); }
+.chip svg { width: 14px; height: 14px; color: var(--a-amber); }
+.actions { display: flex; gap: 10px; }
+.primary { flex: 1; background: var(--a-amberFill); color: #0D0D0D; border-radius: 14px; height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 16px; }
+.primary svg { width: 16px; height: 16px; fill: #0D0D0D; stroke: none; }
+.square { width: 52px; height: 52px; border-radius: 14px; background: var(--a-s3); display: grid; place-items: center; }
+.square svg { width: 20px; height: 20px; }
+
+.grp { display: flex; flex-direction: column; gap: 8px; }
+.grp-h { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px; }
+.grp-h span:first-child { font-size: 13px; font-weight: 700; color: var(--a-text2); }
+.grp-h span:last-child { font-size: 12.5px; color: var(--a-text2); }
+.list { background: var(--a-s1); border-radius: 16px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; min-height: 52px; }
+.row + .row { box-shadow: inset 0 1px 0 var(--a-hair); }
+.row .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row .main b { font-weight: 600; font-size: 14.5px; }
+.row .main small { color: var(--a-text2); font-size: 12.5px; }
+.row .end { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.row .end b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.row .end small { color: var(--a-text2); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.chev { width: 16px; height: 16px; color: var(--a-text2); flex: none; }
+.ok { width: 18px; height: 18px; border-radius: 999px; background: var(--a-green); display: grid; place-items: center; flex: none; }
+.ok svg { width: 11px; height: 11px; color: #0D0D0D; stroke-width: 3; }
+.txtbtn { color: var(--a-amber); font-weight: 700; font-size: 13.5px; white-space: nowrap; }
+.quiet { color: var(--a-text2); font-weight: 600; font-size: 13.5px; }
+.ic { width: 36px; height: 36px; border-radius: 10px; background: var(--a-amberBg); color: var(--a-amber); display: grid; place-items: center; flex: none; }
+.ic svg { width: 18px; height: 18px; }
+
+.tabbar { display: flex; justify-content: space-around; padding: 10px 6px 12px; background: #111111; box-shadow: inset 0 1px 0 #222; margin-top: auto; }
+.tabbar span { font-size: 10.5px; color: var(--a-text2); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tabbar span i { width: 20px; height: 4px; border-radius: 4px; background: transparent; }
+.tabbar span.on { color: var(--a-amber); font-weight: 600; }
+.tabbar span.on i { background: var(--a-amber); }
+
+/* logger */
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; }
+.topbar .ttl { display: flex; flex-direction: column; align-items: center; }
+.topbar .ttl b { font-size: 15px; }
+.topbar .ttl small { color: var(--a-amber); font-variant-numeric: tabular-nums; font-weight: 600; }
+.finish { background: var(--a-amberFill); color: #0D0D0D; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 13px; }
+.progress { height: 3px; background: var(--a-s3); }
+.progress i { display: block; height: 100%; width: 22%; background: var(--a-amber); }
+.ex { background: var(--a-s1); border-radius: 20px; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.ex-h { display: flex; justify-content: space-between; align-items: center; padding: 0 4px 6px; }
+.ex-h b { font-size: 17px; }
+.sets-h, .set { display: grid; grid-template-columns: 26px 62px 1fr 1fr 40px; gap: 8px; align-items: center; }
+.sets-h { font-size: 10.5px; letter-spacing: 0.08em; color: var(--a-text2); font-weight: 600; padding: 0 4px; }
+.set { padding: 4px; border-radius: 14px; }
+.set .n { color: var(--a-text2); text-align: center; font-variant-numeric: tabular-nums; }
+.set .last { color: var(--a-text2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.field { height: 44px; border-radius: 10px; background: var(--a-s3); display: grid; place-items: center; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.field.ghost { color: var(--a-text2); font-weight: 500; }
+.set.done .field { background: transparent; color: var(--a-text2); }
+.set.now { background: var(--a-amberBg); }
+.set.now .field { background: var(--a-s4); color: var(--a-text); }
+.tick { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; justify-self: center; }
+.tick svg { width: 16px; height: 16px; stroke-width: 3; }
+.tick.done { background: var(--a-green); color: #0D0D0D; }
+.tick.now { background: var(--a-amberFill); color: #0D0D0D; }
+.tick.todo { box-shadow: inset 0 0 0 2px var(--a-s4); }
+.pr { font-size: 12.5px; color: var(--a-text2); padding: 4px 6px; display: flex; gap: 6px; align-items: center; }
+.pr b { color: var(--a-amber); font-weight: 600; }
+.tools { display: flex; gap: 8px; padding-top: 6px; flex-wrap: wrap; }
+.tools span { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; background: var(--a-s2); font-size: 13px; font-weight: 600; }
+.tools span.lead { background: var(--a-amberBg); color: var(--a-amber); }
+.tools svg { width: 15px; height: 15px; }
+.num { width: 26px; height: 26px; border-radius: 999px; background: var(--a-s3); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--a-text2); flex: none; }
+.num.done { background: var(--a-green); color: #0D0D0D; }
+
+/* nutrition */
+.ringcard { background: var(--a-s1); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.ringrow { display: flex; align-items: center; gap: 16px; }
+.ring { width: 104px; height: 104px; flex: none; position: relative; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .c b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ring .c small { color: var(--a-text2); font-size: 11.5px; }
+.bars { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.bar .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--a-text2); margin-bottom: 4px; }
+.bar .lbl b { color: var(--a-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.bar .tr { height: 6px; border-radius: 6px; background: var(--a-s3); overflow: hidden; }
+.bar .tr i { display: block; height: 100%; border-radius: 6px; }
+.split { font-size: 12px; color: var(--a-text2); text-align: center; }
+.addrow { color: var(--a-amber); font-weight: 600; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+.addrow svg { width: 16px; height: 16px; }
+.extras { font-size: 12.5px; color: var(--a-text2); padding: 10px 14px; box-shadow: inset 0 1px 0 var(--a-hair); }
+.daypager { display: flex; align-items: center; justify-content: space-between; }
+.daypager .d { text-align: center; }
+.daypager .d b { display: block; font-size: 14px; }
+.daypager .d small { color: var(--a-text2); font-size: 12px; }
+.water { display: flex; align-items: center; gap: 12px; }
+.water .w { flex: 1; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.foot { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+
+<header class="read">
+  <p class="eyebrow">Design review · 16 November 2026</p>
+  <h1>Volyume and Astryx, Meta's design system</h1>
+  <p class="lede">What Astryx is, whether Volyume can use it, which of its ideas would make the app noticeably better, and three screens redrawn to show it.</p>
+</header>
+
+<section>
+  <h2>The short answer</h2>
+  <div class="verdict">
+    <div>
+      <span class="tag no">Can't install it</span>
+      <h3>Astryx is a web toolkit</h3>
+      <p>Its components are React for web browsers (react-dom, CSS custom properties, StyleX). Volyume is React Native. The React Native version is a written proposal (spec AST-112, phase "proposed") with no code. The native package is canary-only, labelled "Nothing here is supported for production apps", and so far only draws six components in SwiftUI for iPhone.</p>
+    </div>
+    <div>
+      <span class="tag no">Don't swap the look</span>
+      <h3>Volyume's own tokens are stronger</h3>
+      <p>Volyume's theme already has contrast-tested light, dark, higher-contrast and colour-blind-safe palettes. Astryx's seven themes (Neutral, Butter, Chocolate, Matcha, Stone, Gothic, Y2K) are general-purpose looks. Adopting one would lose the amber identity and the accessibility work.</p>
+    </div>
+    <div>
+      <span class="tag yes">Borrow the rules</span>
+      <h3>Its design principles are the real value</h3>
+      <p>Eight years of Meta use is written down as plain design rules: one strong action per group, space before boxes, nested corners that match, one edge style per surface. Volyume breaks several of these today. The licence is MIT, so ideas and values can be reused freely, with no new dependency.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Side by side</h2>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Area</th><th>Astryx</th><th>Volyume today</th><th>Better for Volyume</th></tr></thead>
+      <tbody>
+        <tr><td>Platform</td><td>Web (React 19 + react-dom). Native is experimental.</td><td>React Native 0.81, Expo 54</td><td>Volyume. Astryx can't run here.</td></tr>
+        <tr><td>Components</td><td>150+, built for web: tables, command palette, side nav</td><td>Its own BottomSheet, SegmentedControl, Skeleton, EmptyState, Stepper, RestTimer</td><td>Volyume already has the mobile ones that matter.</td></tr>
+        <tr><td>Colour</td><td>Palettes generated from one seed colour in OKLCH, 21 tonal steps</td><td>Hand-picked hex with written contrast ratios, plus HC and colour-blind sets</td><td>Volyume for safety. Astryx's generator is a useful way to tune the surface ladder.</td></tr>
+        <tr><td>Corners</td><td>Named by role: inner, element, container, page. Nested corners must look concentric.</td><td>Named by size: xs to xl. Cards 16, inputs 10, pills 999.</td><td><strong>Astryx.</strong> Role names stop drift and fix mismatched nested corners.</td></tr>
+        <tr><td>Emphasis</td><td>"A local action group should expose one clear primary emphasis."</td><td>Start workout, Options, Set it up and No thanks all share one outlined style</td><td><strong>Astryx.</strong> This is the biggest visible gain.</td></tr>
+        <tr><td>Containers</td><td>"Use spacing and alignment before containment." One edge language per surface.</td><td>Most blocks are bordered and filled cards, and buttons inside cards are bordered too</td><td><strong>Astryx.</strong> Fewer boxes, calmer screens.</td></tr>
+        <tr><td>Text size</td><td>Mobile reading base of at least 16px, scaled by the person's own text size</td><td>16px body, larger-text scaling, font-scale caps</td><td>Even. Volyume already does this.</td></tr>
+        <tr><td>Status</td><td>Meaning must survive without colour. Busy states never shift layout.</td><td>Ticks plus colour, no red for "over" on food</td><td>Even. Volyume already does this.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="read">
+    <h2>Worth adopting, best first</h2>
+    <p class="lede">Each one is a design rule, not a package. All can be done with Volyume's existing theme file and components.</p>
+  </div>
+  <div class="ideas">
+    <div class="idea"><div>
+      <h3>One filled button per group</h3>
+      <p>The main action on a card gets a solid amber fill. Everything next to it steps down to a quiet fill or plain text. Today "Start workout" looks the same as "Options", and "Set it up" looks the same as "No thanks", so the eye has nowhere to land.</p>
+      <span class="src">Astryx: color-emphasis DR3, "Emphasis remains scarce"</span>
+    </div></div>
+    <div class="idea"><div>
+      <h3>Space first, boxes second</h3>
+      <p>Group related rows into one filled list with hairline dividers instead of a separate bordered card each. Drop card borders and let the surface ladder (background, surface, raised) show depth, which is what Volyume's own materials policy already says for the dark theme. Last session and Challenge become two rows of one list; Meal 1 to Meal 4 stop being four empty cards.</p>
+      <span class="src">Astryx: spatial-hierarchy DR3, elevation-hierarchy DR3, "One edge language leads"</span>
+    </div></div>
+    <div class="idea"><div>
+      <h3>Corner radius named by role</h3>
+      <p>Add role names (inner, element, container, page) alongside the size names, and make nested corners concentric: inner radius equals outer radius minus padding. Inputs inside a 20 radius card with 12 padding get about 8 to 10, not a separate guess.</p>
+      <span class="src">Astryx: shape-relationships DR1 and DR2</span>
+    </div></div>
+    <div class="idea"><div>
+      <h3>Fill-only inputs in the workout logger</h3>
+      <p>Weight and rep boxes lose their outline and use a fill. Done sets fade back, the current set gets a soft amber band. Under gym lighting and fast thumbs, the current set is then the brightest thing on screen.</p>
+      <span class="src">Astryx: user-states and control-rhythm DR2, "Size and density are tuned together"</span>
+    </div></div>
+    <div class="idea"><div>
+      <h3>Motion timing by weight</h3>
+      <p>Small feedback (a tick, a chip) is quick; whole sheets and screens take longer and settle. Volyume already has motion tokens and Reduce Motion support; this is a rule for choosing between them.</p>
+      <span class="src">Astryx: motion DR2, "Weight determines timing"</span>
+    </div></div>
+  </div>
+  <div class="read">
+    <h3>Not worth taking</h3>
+    <ul class="skip">
+      <li><strong>The components.</strong> They are web-only, and Volyume already has native versions of the mobile ones.</li>
+      <li><strong>The seven themes.</strong> They would replace the amber identity and lose the colour-blind and higher-contrast palettes.</li>
+      <li><strong>The CLI and "agent-ready" tooling.</strong> It reads Astryx's own docs, so it adds nothing without the components.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ TODAY ============ -->
+<section>
+  <div class="read">
+    <p class="eyebrow">View 1</p>
+    <h2>Today</h2>
+    <p class="lede">Same content, same order of importance. The next workout leads with one solid button; the coaching prompts shrink to rows.</p>
+  </div>
+  <div class="pair">
+    <div class="col">
+      <span class="cap">Now (real screen)</span>
+      <div class="shot tall"><img src="img/01-today.png" alt="Current Today screen: check-in banner, a large injuries prompt card, the Upper A card with outlined Start workout and Options buttons, check-in evidence, last session, challenge and community cards."></div>
+    </div>
+    <div class="col">
+      <span class="cap new">Concept</span>
+      <div class="phone tall">
+        <div class="scr">
+          <div class="ph-head">
+            <h4>Today</h4>
+            <span class="iconbtn" aria-label="Community"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.3 0 4 1.3 4.5 4"/></svg></span>
+          </div>
+
+          <div class="tint"><span class="dot"></span><p>Your weekly check-in is ready.</p><span class="go">Start</span></div>
+
+          <div class="hero">
+            <span class="ey">Upper Lower 4-day · Week 3</span>
+            <span class="t">Upper A</span>
+            <span class="meta">6 exercises · Bench, Row, Overhead press and 3 more</span>
+            <span class="chip"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>On track for this block</span>
+            <div class="actions">
+              <span class="primary"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>Start workout</span>
+              <span class="square" aria-label="Options"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span>Since your check-in</span><span>Check-in is today</span></div>
+            <div class="list">
+              <div class="row"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><div class="main"><b>2 training sessions logged</b></div></div>
+              <div class="row"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><div class="main"><b>4 morning weigh-ins this week</b></div></div>
+              <div class="row"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><div class="main"><b>Food logged on 1 of the last 7 days</b></div></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span>Recent</span></div>
+            <div class="list">
+              <div class="row"><div class="main"><small>Last session · Yesterday</small><b>Lower A</b><small>58m · 12 sets · 3,965 kg lifted</small></div><span class="txtbtn">Repeat</span></div>
+              <div class="row"><div class="main"><small>Challenge</small><b>Summer Strength Challenge</b><small>Your score 64 of 100 · 40 days left</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+          </div>
+
+          <div class="list">
+            <div class="row"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M5 9h14M12 9v11M9 20l3-6 3 6"/></svg></span><div class="main"><b>Anything to build your training around?</b><small>Injuries, pain or conditions. Optional.</small></div><span class="txtbtn">Set up</span></div>
+            <div class="row"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5"/><circle cx="17" cy="9" r="2.5"/></svg></span><div class="main"><b>See who is training</b><small>Friends and people at your gym</small></div><span class="txtbtn">Have a look</span></div>
+          </div>
+        </div>
+        <div class="tabbar"><span class="on"><i></i>Today</span><span><i></i>Train</span><span><i></i>Nutrition</span><span><i></i>Progress</span><span><i></i>Community</span><span><i></i>Coach</span></div>
+      </div>
+    </div>
+  </div>
+  <ul class="notes">
+    <li><b>One solid button</b>Start workout is the only filled amber control on the screen. Options becomes a quiet square.</li>
+    <li><b>Prompts become rows</b>The injuries and Community offers keep their wording and action, at a third of the height. Dismiss stays as a swipe or long-press.</li>
+    <li><b>Fewer boxes</b>Seven bordered cards become one hero and three filled lists. No borders; depth comes from the surface ladder.</li>
+    <li><b>Order changed</b>The workout card moves above the injuries prompt. That is a product choice for you, shown here as an option.</li>
+  </ul>
+</section>
+
+<!-- ============ LOGGER ============ -->
+<section>
+  <div class="read">
+    <p class="eyebrow">View 2</p>
+    <h2>Workout logger</h2>
+    <p class="lede">The screen people use mid-set with a tired thumb. The current set should be the loudest thing on it.</p>
+  </div>
+  <div class="pair">
+    <div class="col">
+      <span class="cap">Now (real screen)</span>
+      <div class="shot"><img src="img/02-workout-logger.png" alt="Current workout logger: outlined weight and rep boxes for every set, a row of four text actions, and remaining exercises as separate bordered cards."></div>
+    </div>
+    <div class="col">
+      <span class="cap new">Concept</span>
+      <div class="phone">
+        <div class="topbar">
+          <span class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+          <span class="ttl"><b>Upper A</b><small>12:00</small></span>
+          <span class="finish">Finish</span>
+        </div>
+        <div class="progress"><i></i></div>
+        <div class="scr" style="gap:14px">
+          <div class="list"><div class="row"><span class="num done">1</span><div class="main"><b>Barbell Bench Press</b></div><small class="meta">3 of 3</small></div></div>
+
+          <div class="ex">
+            <div class="ex-h"><b>Barbell Row (Bent Over)</b><span class="iconbtn" style="width:32px;height:32px" aria-label="More"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span></div>
+            <div class="sets-h"><span>SET</span><span>LAST</span><span style="text-align:center">KG</span><span style="text-align:center">REPS</span><span></span></div>
+            <div class="set done"><span class="n">W</span><span class="last"></span><span class="field">40</span><span class="field">10</span><span class="tick done"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="set done"><span class="n">1</span><span class="last">70 × 8</span><span class="field">70</span><span class="field">8</span><span class="tick done"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="set now"><span class="n">2</span><span class="last">72.5 × 8</span><span class="field">70</span><span class="field">9</span><span class="tick now"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <div class="set"><span class="n">3</span><span class="last">72.5 × 8</span><span class="field ghost">70</span><span class="field ghost">6-10</span><span class="tick todo"></span></div>
+            <div class="pr"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>This set would be a new PR · <b>Film it</b></div>
+            <div class="tools">
+              <span class="lead"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add set</span>
+              <span><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>Remove</span>
+              <span><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>Swap</span>
+              <span><svg viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 10l6-3v10l-6-3"/></svg>Film</span>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span>Up next</span><span>4 exercises</span></div>
+            <div class="list">
+              <div class="row"><span class="num">3</span><div class="main"><b>Barbell Overhead Press</b></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+              <div class="row"><span class="num">4</span><div class="main"><b>Barbell Curl</b></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+              <div class="row"><span class="num">5</span><div class="main"><b>Assisted Dip Machine</b></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+              <div class="row"><span class="num">6</span><div class="main"><b>Band Face Pull</b></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ul class="notes">
+    <li><b>Current set glows</b>A soft amber band and a filled tick mark the set you are on. Done sets drop their boxes and fade.</li>
+    <li><b>Fill, not outline</b>Number boxes use a fill with concentric corners. Same 44pt height, so tap targets don't shrink.</li>
+    <li><b>Clear finish</b>The double-tick icon becomes a labelled "Finish" pill. A thin progress line sits under the header.</li>
+    <li><b>Up next as a list</b>Remaining exercises share one list with numbers and dividers instead of six bordered cards.</li>
+  </ul>
+</section>
+
+<!-- ============ NUTRITION ============ -->
+<section>
+  <div class="read">
+    <p class="eyebrow">View 3</p>
+    <h2>Nutrition diary</h2>
+    <p class="lede">The current screen is about 5,900 pixels tall, largely from empty meals that each carry a full outlined "Add food" button. The concept keeps every function in roughly half the length.</p>
+  </div>
+  <div class="pair">
+    <div class="col">
+      <span class="cap">Now (real screen, scroll inside)</span>
+      <div class="shot tall"><img src="img/03-nutrition-diary.png" alt="Current nutrition diary: calorie ring and macro bars, a reminders card, breakfast, lunch and dinner cards each with an outlined Add food button, then four empty meal cards each with their own Add food button, meal builder, higher-calorie day and water."></div>
+    </div>
+    <div class="col">
+      <span class="cap new">Concept</span>
+      <div class="phone tall">
+        <div class="scr" style="gap:16px">
+          <div class="ph-head"><h4>Nutrition</h4><span class="iconbtn" aria-label="Trends"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/></svg></span></div>
+          <div class="daypager">
+            <span class="iconbtn" style="width:34px;height:34px"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span>
+            <span class="d"><b>Today</b><small>Thu 17 Sept</small></span>
+            <span class="iconbtn" style="width:34px;height:34px"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+          </div>
+
+          <div class="ringcard">
+            <div class="ringrow">
+              <div class="ring">
+                <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" stroke="#2A2A27" stroke-width="9"/><circle cx="50" cy="50" r="42" stroke="#F5A623" stroke-width="9" stroke-dasharray="163 264"/></svg>
+                <div class="c"><b>1,025</b><small>left</small></div>
+              </div>
+              <div class="bars">
+                <div class="bar"><div class="lbl"><span>Protein</span><b>127 / 170 g</b></div><div class="tr"><i style="width:75%;background:#F5A623"></i></div></div>
+                <div class="bar"><div class="lbl"><span>Carbs</span><b>186 / 313 g</b></div><div class="tr"><i style="width:59%;background:#56B4E9"></i></div></div>
+                <div class="bar"><div class="lbl"><span>Fat</span><b>43 / 80 g</b></div><div class="tr"><i style="width:54%;background:#C792EA"></i></div></div>
+              </div>
+            </div>
+            <span class="split">1,625 of 2,650 kcal · 31% protein · 45% carbs · 24% fat</span>
+          </div>
+
+          <div class="tint"><span class="dot"></span><p>Want a gentle nudge at your usual meal times?</p><span class="go">Set up</span></div>
+
+          <div class="grp">
+            <div class="grp-h"><span>Breakfast</span><span>511 kcal · 25 g protein</span></div>
+            <div class="list">
+              <div class="row"><div class="main"><b>Porridge oats</b><small>70 g · 07:45</small></div><div class="end"><b>265</b><small>9P 47C 5F</small></div></div>
+              <div class="row"><div class="main"><b>Whole eggs (medium/large)</b><small>120 g · 07:45</small></div><div class="end"><b>157</b><small>15P 1C 11F</small></div></div>
+              <div class="row"><div class="main"><b>Banana</b><small>100 g · 07:45</small></div><div class="end"><b>89</b><small>1P 23C 0F</small></div></div>
+              <div class="extras">Optional extras: black pepper and chives, fresh dill, lemon zest, chilli flakes.</div>
+              <div class="row"><span class="addrow"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add food</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span>Lunch</span><span>551 kcal · 58 g protein</span></div>
+            <div class="list">
+              <div class="row"><div class="main"><b>Chicken breast fillet (cooked)</b><small>160 g · 12:50</small></div><div class="end"><b>264</b><small>50P 0C 6F</small></div></div>
+              <div class="row"><div class="main"><b>White rice (cooked)</b><small>180 g · 12:50</small></div><div class="end"><b>234</b><small>5P 50C 1F</small></div></div>
+              <div class="row"><div class="main"><b>Mixed veg</b><small>150 g · 12:50</small></div><div class="end"><b>53</b><small>4P 9C 1F</small></div></div>
+              <div class="row"><span class="addrow"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add food</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span>Dinner</span><span>563 kcal · 43 g protein</span></div>
+            <div class="list">
+              <div class="row"><div class="main"><b>Salmon fillet (cooked)</b><small>150 g · 18:55</small></div><div class="end"><b>312</b><small>36P 0C 20F</small></div></div>
+              <div class="row"><div class="main"><b>Sweet potato (baked)</b><small>180 g · 18:55</small></div><div class="end"><b>207</b><small>4P 47C 1F</small></div></div>
+              <div class="row"><div class="main"><b>Broccoli</b><small>130 g · 18:55</small></div><div class="end"><b>44</b><small>4P 9C 1F</small></div></div>
+              <div class="row"><span class="addrow"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add food</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span>Other meals</span><span>Nothing logged</span></div>
+            <div class="list">
+              <div class="row"><div class="main"><b>Meal 1</b></div><span class="addrow"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</span></div>
+              <div class="row"><div class="main"><b>Meal 2</b></div><span class="addrow"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</span></div>
+              <div class="row"><div class="main"><b>Meal 3</b></div><span class="addrow"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</span></div>
+              <div class="row"><div class="main"><b>Meal 4</b></div><span class="addrow"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</span></div>
+              <div class="row"><span class="quiet">+ Add another meal</span></div>
+            </div>
+          </div>
+
+          <div class="list">
+            <div class="row"><div class="main"><b>Meal builder</b><small>Build a day or week from your targets</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="row"><div class="main"><b>Higher-calorie day</b><small>Your weekly total stays the same</small></div><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span>Water</span><span>Hold + to add 500 ml</span></div>
+            <div class="list"><div class="row water">
+              <span class="iconbtn" aria-label="Remove 250 ml"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span>
+              <span class="w">0.0 of 3.0 litres</span>
+              <span class="iconbtn" style="background:#E08C0B;color:#0D0D0D" aria-label="Add 250 ml"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            </div></div>
+          </div>
+        </div>
+        <div class="tabbar"><span><i></i>Today</span><span><i></i>Train</span><span class="on"><i></i>Nutrition</span><span><i></i>Progress</span><span><i></i>Community</span><span><i></i>Coach</span></div>
+      </div>
+    </div>
+  </div>
+  <ul class="notes">
+    <li><b>Empty meals collapse</b>Meal 1 to Meal 4 share one list with an "Add" on each row, instead of four cards and four outlined buttons.</li>
+    <li><b>Add food as a row</b>"Add food" sits as the last row of each meal in amber text, so food rows and actions read as one group.</li>
+    <li><b>Ring beside the bars</b>Macros sit next to the ring. Colours unchanged: protein amber, carbs blue, fat violet, nothing red for "over".</li>
+    <li><b>Nothing removed</b>Day pager, Trends, reminders offer, extras, meal builder, higher-calorie day and water all stay.</li>
+  </ul>
+</section>
+
+<section class="read">
+  <h2>If you want to go ahead</h2>
+  <p>The three concepts need no new package and no change to the coaching engine or the safety rules. The work is in Volyume's own theme file and shared components:</p>
+  <ul class="skip">
+    <li><strong>Theme:</strong> add role-named radius values and a "quiet fill" button style next to the existing tokens.</li>
+    <li><strong>Shared components:</strong> a grouped list with dividers, and a compact prompt row that the Today offers can use.</li>
+    <li><strong>Screens:</strong> Today, the workout logger and the nutrition diary, one at a time, each checked on device at the largest text size.</li>
+  </ul>
+  <p style="margin-top:12px">The calm-mode and ED-flag behaviour on Today and Nutrition (hidden counts, no weight figures, no higher-calorie day under a flag) would carry over unchanged, since only the presentation moves.</p>
+</section>
+
+<p class="foot">Source: github.com/meta/astryx, read on 16 November 2026 (core 0.7.17, "Currently in Beta", MIT licence). Volyume screens are the repo's own renders in screenshots/current (images and chart canvases show as dark boxes there). Concepts are drawn in HTML with Volyume's real colour and type values; they are illustrations, not app code.</p>
+
+</div>
