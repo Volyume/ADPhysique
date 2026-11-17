@@ -22,5 +22,24 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins,
+    // React Native Reusables kit trial (LOC-411). NativeWind's JSX runtime
+    // reroutes every View/Text/Pressable it compiles through its CSS layer,
+    // so it is scoped to the kit's own files and the @rn-primitives packages
+    // they render through (shipped as uncompiled JSX). Every other file
+    // compiles exactly as before, so existing StyleSheet screens are untouched
+    // (pinned by src/components/ui/__tests__/kitCoexistence.test.js).
+    overrides: [
+      {
+        test: KIT_JSX_PATHS,
+        presets: [['babel-preset-expo', { jsxImportSource: 'nativewind' }]],
+      },
+    ],
   };
 };
+
+// Files compiled with NativeWind's JSX runtime (className support).
+const KIT_JSX_PATHS = [
+  /[\\/]src[\\/]components[\\/]ui[\\/](?!__tests__[\\/])/,
+  /[\\/]node_modules[\\/]@rn-primitives[\\/]/,
+];
+module.exports.KIT_JSX_PATHS = KIT_JSX_PATHS;

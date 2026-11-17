@@ -11,7 +11,14 @@
 // Asset.fromModule resolves, instead of being inlined as parsed source:
 //   - *.dat    OpenFoodFacts UK snapshot
 //   - *.tflite Progress Scan on-device segmentation model
+//
+// Wrapped last with NativeWind (React Native Reusables kit trial, LOC-411):
+// compiles global.css with tailwind.config.js for the kit's className styles.
+// Only src/components/ui/kit-theme-provider.tsx imports global.css, and only
+// the kit's files compile with NativeWind's JSX runtime (babel.config.js), so
+// no existing screen's styles change. inlineRem 16 is the kit's own setting.
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
+const { withNativeWind } = require('nativewind/metro');
 
 const config = getSentryExpoConfig(__dirname, { includeWebReplay: false });
 for (const ext of ['dat', 'tflite']) {
@@ -20,4 +27,9 @@ for (const ext of ['dat', 'tflite']) {
   }
 }
 
-module.exports = config;
+// Exported for scripts/compile-kit-styles.cjs, so the kit's Jest tests compile
+// with exactly the options a device bundle uses.
+const KIT_NATIVEWIND_OPTIONS = Object.freeze({ input: './global.css', inlineRem: 16 });
+
+module.exports = withNativeWind(config, { ...KIT_NATIVEWIND_OPTIONS });
+module.exports.KIT_NATIVEWIND_OPTIONS = KIT_NATIVEWIND_OPTIONS;

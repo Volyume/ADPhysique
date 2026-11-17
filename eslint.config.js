@@ -15,6 +15,9 @@ const importPlugin = require('eslint-plugin-import');
 // installed with legacy peer resolution; its rules are plain AST checks that
 // run fine under flat config.
 const a11yPlugin = require('eslint-plugin-react-native-a11y');
+// React Native Reusables kit trial (LOC-411, trial-only dependency): parses
+// the kit's TypeScript files so scope analysis sees type names.
+const tsParser = require('@typescript-eslint/parser');
 
 // React Native / Hermes runtime globals, so `no-undef` does not fire on them.
 const rnGlobals = {
@@ -117,7 +120,10 @@ module.exports = [
     ],
   },
   {
-    files: ['**/*.js'],
+    // The React Native Reusables kit trial (LOC-411) adds TypeScript files
+    // under src/components/ui/; they get every rule below (the parser is
+    // swapped for them in the next block).
+    files: ['**/*.js', 'src/components/ui/**/*.{ts,tsx}'],
     // The codebase carries `// eslint-disable-next-line import/no-unresolved`
     // at its optional-native-require sites. Import resolution is not turned on
     // yet (it needs an RN-aware resolver + asset handling to avoid flooding;
@@ -178,6 +184,22 @@ module.exports = [
     },
   },
   {
+    // Kit trial TypeScript (LOC-411). @babel/eslint-parser cannot follow type
+    // names, so these files parse with @typescript-eslint/parser and keep
+    // every rule from the block above except no-undef. typescript-eslint's
+    // own guidance is not to run no-undef on TypeScript: the compiler already
+    // proves every name resolves (TS2304), and `npm run typecheck` and
+    // release:quality's `tsc --noEmit --strict` both cover these files.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+    rules: {
+      'no-undef': 'off',
+    },
+  },
+  {
     files: ['**/__tests__/**/*.js', '**/*.test.js', 'tests/**/*.js', '__mocks__/**/*.js'],
     languageOptions: { globals: { ...rnGlobals, ...jestGlobals } },
   },
@@ -188,7 +210,7 @@ module.exports = [
     // and drift is blocked. The handful of intentional large hero/display
     // numerals (e.g. the 96px Year-of-Lifts number) carry a scoped
     // eslint-disable with a reason.
-    files: ['src/screens/**/*.js', 'src/components/**/*.js'],
+    files: ['src/screens/**/*.js', 'src/components/**/*.js', 'src/components/ui/**/*.{ts,tsx}'],
     ignores: [
       '**/__tests__/**',
       '**/*.test.js',

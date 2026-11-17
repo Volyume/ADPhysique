@@ -1,0 +1,10 @@
+/*
+ * NativeWind entry for the React Native Reusables kit trial (LOC-411).
+ * Imported only by src/components/ui/kit-theme-provider.tsx, so the app's
+ * existing screens never load it. Deliberately no :root variables: every kit
+ * colour variable is set at runtime from theme.js by KitThemeProvider
+ * (src/styles/kitTheme.js), so no colour is copied into CSS.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

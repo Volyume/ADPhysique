@@ -7,6 +7,6 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler"
   },
-  "include": ["src", "App.js", "index.js"],
+  "include": ["src", "App.js", "index.js", "nativewind-env.d.ts"],
   "exclude": ["node_modules", "supabase", "scripts", "modules"]
 }
