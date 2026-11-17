@@ -44,12 +44,20 @@ const DEPENDENCIES = [
   'react-native-reanimated', 'react-native-safe-area-context', 'react-native-screens', 'react-native-svg',
   'react-native-url-polyfill', 'react-native-vision-camera', 'react-native-webview', 'react-native-worklets',
   'rest-timer-live', 'volyume-video-export', 'zeego', 'zustand',
+  // LOC-409/LOC-411 kit trial: founder-approved for the trial only (LOC-409
+  // plan, accepted 2026-11-16); names, versions and licences are in the
+  // LOC-411 trial-dependencies document. This branch never reaches main.
+  '@rn-primitives/accordion', '@rn-primitives/checkbox', '@rn-primitives/collapsible',
+  '@rn-primitives/separator', '@rn-primitives/slot', 'class-variance-authority', 'clsx',
+  'lucide-react-native', 'nativewind', 'tailwind-merge',
 ];
 
 const DEV_DEPENDENCIES = [
   '@babel/core', '@babel/eslint-parser', 'babel-jest', 'babel-plugin-transform-remove-console', 'cross-env',
   'eslint', 'eslint-plugin-import', 'eslint-plugin-react', 'eslint-plugin-react-hooks',
   'eslint-plugin-react-native-a11y', 'jest', 'jest-expo', 'typescript', 'xlsx',
+  // LOC-409/LOC-411 kit trial: founder-approved for the trial only (see above).
+  '@types/react', '@typescript-eslint/parser', 'jiti', 'tailwindcss',
 ];
 
 describe('package.json', () => {
