@@ -1,17 +1,48 @@
 /**
  * SetRow (12-BUILD-SPEC sections 2, 2a and 3, register D220, the row redrawn on
- * the founder's render verdict, addendum 8). Pins: the three row states and the
- * editing state (wells and check), the markers, the Last cell (plain, stale,
- * pressable), the record mark (a plain "PR" under the set number, no Target
- * column, no pill), the wells as separate flex 1 boxes with an 8 dp gap and no
- * divider, the 28 dp check, every callback and its argument, the test ids, the
- * sizes, the accessibility labels and the token-only source guard.
+ * the founder's render verdict, addendum 8; redrawn again with the kit in
+ * LOC-412, kit trial 2). Pins: the three row states and the editing state
+ * (wells and check), the markers, the Last cell (plain, stale, pressable), the
+ * record mark (a plain "PR" under the set number, no Target column, no pill),
+ * the wells as separate flex 1 boxes with an 8 dp gap and no divider, the 48 dp
+ * check column holding a square kit checkbox, every callback and its argument,
+ * the test ids, the sizes, the accessibility labels and the token-only source
+ * guard.
+ *
+ * Kit look (LOC-412): the row's parts are drawn by src/components/ui/
+ * set-row-kit.tsx with Tailwind classes that NativeWind resolves at render
+ * time, so the presentation pins here read the RESOLVED style off the host
+ * nodes through the kit's real styling pipeline (kitTestEnv.js, the model is
+ * kitTrial2Surfaces.test.js) in the dark palette, not inline StyleSheet values.
+ * Behaviour, callbacks, test ids and spoken labels are pinned as before.
  */
+jest.mock('react-native-svg', () => require('../../../ui/__tests__/kitTestEnv').svgMock());
+jest.mock('react-native', () => require('../../../ui/__tests__/kitTestEnv').reactNativeMock());
 import fs from 'fs';
 import path from 'path';
-import { create, act } from 'react-test-renderer';
-import { alpha, colors, radius, spacing, type, withAlpha } from '../../../../styles/theme';
-import SetRow, { SET_COLUMNS } from '../SetRow';
+import { act } from 'react-test-renderer';
+
+const {
+  loadNativeInteropRuntime,
+  setUpKitStyles,
+  setPalette,
+  renderKit,
+  hostNodes,
+  normaliseColour,
+  flatStyle,
+} = require('../../../ui/__tests__/kitTestEnv');
+
+// Before the first kit or nativewind require (an ES import would hoist above
+// this call, so SetRow and the theme are required below it).
+loadNativeInteropRuntime();
+
+const { resolveTheme, fontScaleCaps, radius, spacing } = require('../../../../styles/theme');
+const { default: SetRow, SET_COLUMNS } = require('../SetRow');
+
+const colors = resolveTheme({ theme: 'dark' }).colors;
+const hex = (c) => normaliseColour(c).hex;
+
+beforeAll(() => { setUpKitStyles(); setPalette({ theme: 'dark' }); }, 120000);
 
 const DOT = String.fromCharCode(0x00b7);
 const TIMES = String.fromCharCode(0x00d7);
@@ -24,16 +55,14 @@ const BASE = {
 };
 
 function render(props) {
-  let tree;
-  act(() => { tree = create(<SetRow {...BASE} {...props} />); });
-  return tree;
+  return renderKit(<SetRow {...BASE} {...props} />);
 }
 const hosts = (tree, pred) => tree.root.findAll((n) => typeof n.type === 'string' && pred(n.props || {}));
 const byLabel = (tree, label) => hosts(tree, (p) => p.accessibilityLabel === label);
 const byId = (tree, id) => hosts(tree, (p) => p.testID === id);
 const one = (list) => { expect(list).toHaveLength(1); return list[0]; };
 const press = (node) => act(() => { node.props.onPress(); });
-const flat = (style) => Object.assign({}, ...[].concat(style).filter(Boolean).map((s) => (Array.isArray(s) ? flat(s) : s)));
+const flat = flatStyle;
 function words(node) {
   if (node == null) return [];
   if (typeof node === 'string' || typeof node === 'number') return [String(node)];
@@ -47,8 +76,10 @@ const wellsRow = (tree) => one(hosts(tree, (p) => {
   return s.flex === 1 && s.flexDirection === 'row' && s.gap === 8;
 }));
 const boxOf = (tree, label) => flat(one(byLabel(tree, label)).props.style);
-const circleOf = (touchable) => touchable.findAll((n) => n.type === 'View')[0];
-const tickOf = (touchable) => touchable.findAll((n) => n.type === 'Ionicons')[0];
+// kit trial 2 (LOC-412): the check is a kit Checkbox (a host with role checkbox).
+const checkOf = (tree, label) => one(byLabel(tree, label));
+const hasTick = (checkbox) => checkbox.findAll((n) => n.type === 'LucideIcon' && n.props.name === 'Check').length > 0;
+const edge = (box) => hex(box.borderColor);
 
 describe('SetRow wells', () => {
   test('the wells container shares the remaining width: flex 1, row, an 8 dp gap between the boxes', () => {
@@ -59,26 +90,34 @@ describe('SetRow wells', () => {
     expect(s.gap).toBe(spacing.sm);
   });
 
-  test.each([['logged'], ['next']])('%s: two separate boxes in the house field (surface2, 1.5 border, radius md, 44 dp, flex 1), primary-ink values at the regular numeric face', (state) => {
+  // kit trial 2 (LOC-412): the wells are outlined boxes drawn by the kit (page
+  // ground, 48 dp tall, flex 1, radius md, 1 dp field edge; a logged set's edge
+  // drops to the hairline), the value in Inter SemiBold 20 on a 32 line,
+  // tabular; the old surface2 fill, 1.5 dp edge and 44 dp height are gone.
+  test.each([['logged'], ['next']])('%s: two separate outlined boxes (page ground, 1 dp edge, radius md, 48 dp, flex 1), tabular numerals', (state) => {
     const tree = render({ wells: { weight: 70, reps: 8, state }, check: state });
     ['Set 2 weight', 'Set 2 reps'].forEach((label) => {
       const box = flat(one(byLabel(tree, label)).props.style);
-      expect(box.backgroundColor).toBe(colors.surface2);
-      expect(box.borderColor).toBe(colors.border);
-      expect(box.borderWidth).toBe(1.5);
+      expect(hex(box.backgroundColor)).toBe(hex(colors.background));
+      expect(hex(box.borderColor)).toBe(hex(state === 'logged' ? colors.borderSubtle : colors.border));
+      expect(box.borderWidth).toBe(1);
       expect(box.borderRadius).toBe(radius.md);
-      expect(box.height).toBe(44);
-      expect(box.flex).toBe(1);
+      expect(box.height).toBe(48);
+      expect(box.flexGrow).toBe(1);
+      expect(box.flexShrink).toBe(1);
+      expect(box.flexBasis).toBe('0%');
       expect(box.minWidth).toBe(0);
       expect(box.width).toBeUndefined();
     });
     const s = wellText(tree, 'Set 2 weight');
-    expect(s.color).toBe(colors.textPrimary);
-    expect(s.fontFamily).toBe(type.num('bodyStrong').fontFamily);
-    expect(s.fontFamily).not.toBe(type.w(type.num('bodyStrong'), 'semibold').fontFamily);
-    expect(s.fontSize).toBe(type.bodyStrong.fontSize);
+    // Ink: primary on the set you are on, the muted step once it is logged.
+    const ink = state === 'logged' ? colors.textMuted : colors.textPrimary;
+    expect(hex(s.color)).toBe(hex(ink));
+    expect(s.fontFamily).toBe('Inter-SemiBold');
+    expect(s.fontSize).toBe(20);
+    expect(s.lineHeight).toBe(32);
     expect(s.fontVariant).toEqual(['tabular-nums']);
-    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
+    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(ink));
   });
 
   test('the two wells are separate boxes with no divider between them', () => {
@@ -88,43 +127,51 @@ describe('SetRow wells', () => {
     [weight, reps].forEach((s) => {
       expect(s.borderLeftWidth).toBeUndefined();
       expect(s.borderLeftColor).toBeUndefined();
-      expect(s.borderWidth).toBe(1.5);
+      expect(s.borderWidth).toBe(1); // kit trial 2 (LOC-412): the idle edge is 1 dp (was 1.5)
     });
     expect(one(byLabel(tree, 'Set 2 weight'))).not.toBe(one(byLabel(tree, 'Set 2 reps')));
   });
 
-  test('pending: placeholder ink, the regular numeric face', () => {
+  test('pending: placeholder (muted) ink, the same numeric face', () => {
     const tree = render({ wells: { weight: 70, reps: 8, state: 'pending' }, check: 'pending' });
     const s = wellText(tree, 'Set 2 weight');
-    expect(s.color).toBe(colors.textMuted);
-    expect(s.fontFamily).toBe(type.bodyStrong.fontFamily);
-    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textMuted);
+    expect(hex(s.color)).toBe(hex(colors.textMuted));
+    expect(s.fontFamily).toBe('Inter-SemiBold'); // kit trial 2 (LOC-412): one numeral face on every state
+    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(colors.textMuted));
   });
 
-  test('editing weight: only the weight box takes the primary-tint edge, both values stay primary ink', () => {
+  // kit trial 2 (LOC-412): the edited box takes the amber ring (border-ring,
+  // 2 dp) instead of the primary-tint 1.5 dp edge; amber is for the field being
+  // edited only, so no value text is amber.
+  test('editing weight: only the weight box takes the amber ring, both values stay primary ink', () => {
     const tree = render({ wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
-    expect(boxOf(tree, 'Set 2 weight').borderColor).toBe(withAlpha(colors.primary, alpha.strong));
-    expect(boxOf(tree, 'Set 2 reps').borderColor).toBe(colors.border);
-    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textPrimary);
-    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
+    expect(edge(boxOf(tree, 'Set 2 weight'))).toBe(hex(colors.primary));
+    expect(boxOf(tree, 'Set 2 weight').borderWidth).toBe(2);
+    expect(edge(boxOf(tree, 'Set 2 reps'))).toBe(hex(colors.border));
+    expect(boxOf(tree, 'Set 2 reps').borderWidth).toBe(1);
+    expect(hex(wellText(tree, 'Set 2 weight').color)).toBe(hex(colors.textPrimary));
+    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(colors.textPrimary));
     expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityState.selected).toBe(true);
     expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityState.selected).toBe(false);
   });
 
-  test('editing reps: only the reps box takes the edge, the reverse selection, no amber text on either value', () => {
+  test('editing reps: only the reps box takes the ring, the reverse selection, no amber text on either value', () => {
     const tree = render({ wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'reps' } });
-    expect(boxOf(tree, 'Set 2 reps').borderColor).toBe(withAlpha(colors.primary, alpha.strong));
-    expect(boxOf(tree, 'Set 2 weight').borderColor).toBe(colors.border);
-    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textPrimary);
-    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
+    expect(edge(boxOf(tree, 'Set 2 reps'))).toBe(hex(colors.primary));
+    expect(boxOf(tree, 'Set 2 reps').borderWidth).toBe(2);
+    expect(edge(boxOf(tree, 'Set 2 weight'))).toBe(hex(colors.border));
+    ['Set 2 weight', 'Set 2 reps'].forEach((label) => {
+      expect(hex(wellText(tree, label).color)).toBe(hex(colors.textPrimary));
+      expect(hex(wellText(tree, label).color)).not.toBe(hex(colors.primary));
+    });
     expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityState.selected).toBe(true);
     expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityState.selected).toBe(false);
   });
 
-  test('outside editing every box edge is the border colour', () => {
+  test('outside editing every box edge is the field edge colour', () => {
     const tree = render({});
-    expect(boxOf(tree, 'Set 2 weight').borderColor).toBe(colors.border);
-    expect(boxOf(tree, 'Set 2 reps').borderColor).toBe(colors.border);
+    expect(edge(boxOf(tree, 'Set 2 weight'))).toBe(hex(colors.border));
+    expect(edge(boxOf(tree, 'Set 2 reps'))).toBe(hex(colors.border));
   });
 
   test('values are read out; zero is a value, empty is empty', () => {
@@ -133,7 +180,7 @@ describe('SetRow wells', () => {
     expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityValue).toEqual({ text: 'empty' });
   });
 
-  test('each box is 44 dp tall with a 2 dp slop for a 48 dp reach, one line, never fit-scaled', () => {
+  test('each box is 48 dp tall with a 2 dp slop, one line, numeral-capped, never fit-scaled', () => {
     // D220 addendum 22: on the founder's iPhone every fit-scaled text on the
     // row being typed into collapsed far below its declared floor, so no text
     // on the row carries adjustsFontSizeToFit; the columns fit their content.
@@ -141,9 +188,10 @@ describe('SetRow wells', () => {
     // 2026-10-11, pinned in the hold block below).
     const cell = one(byLabel(render({}), 'Set 2 weight'));
     expect(cell.props.hitSlop).toEqual({ top: 2, bottom: 2, left: spacing.sm / 2, right: spacing.sm / 2 });
-    expect(flat(cell.props.style).height).toBe(44);
+    expect(flat(cell.props.style).height).toBe(48); // kit trial 2 (LOC-412): the box is 48 dp tall (was 44 plus slop)
     const text = textIn(cell);
     expect(text.props.numberOfLines).toBe(1);
+    expect(text.props.maxFontSizeMultiplier).toBe(fontScaleCaps.numeral);
     expect(text.props.adjustsFontSizeToFit).toBeUndefined();
     expect(text.props.minimumFontScale).toBeUndefined();
   });
@@ -164,51 +212,59 @@ describe('SetRow wells', () => {
 });
 
 describe('SetRow check', () => {
-  test('logged: the app\'s done mark, a 28 dp checkmark-circle in success, no ring view', () => {
+  // kit trial 2 (LOC-412): the check is a kit Checkbox, a plain square (32 dp,
+  // radius 6, 2 dp edge, page ground) in a 48 by 48 dp layout box with a 8 dp
+  // slop, so the touch area is 48 by 48. The old Ionicons checkmark-circle and
+  // amber ring are dropped on purpose: amber means "act here" only, and the
+  // tick is a plain square. The state is carried by the edge ink and the tick.
+  const squareOf = (checkbox) => flat(checkbox.props.style);
+
+  test('logged: a checked checkbox in the muted edge ink with the kit tick inside', () => {
     const tree = render({ check: 'logged' });
-    const touch = one(byLabel(tree, 'Set 2 logged'));
-    const icon = tickOf(touch);
-    expect(icon.props.name).toBe('checkmark-circle');
-    expect(icon.props.size).toBe(28);
-    expect(icon.props.color).toBe(colors.success);
-    expect(touch.findAll((n) => flat(n.props.style).backgroundColor !== undefined)).toHaveLength(0);
-    expect(touch.findAll((n) => flat(n.props.style).borderWidth !== undefined)).toHaveLength(0);
+    const box = checkOf(tree, 'Set 2 logged');
+    expect(box.props.role).toBe('checkbox');
+    expect(box.props['aria-checked']).toBe(true);
+    expect(edge(squareOf(box))).toBe(hex(colors.textMuted));
+    expect(hasTick(box)).toBe(true);
   });
 
-  test('next: a 28 dp ring (1.5 dp) in primary with no fill, and a 16 dp primary checkmark', () => {
+  test('next: an unchecked square in the primary ink edge, no tick, no amber', () => {
     const tree = render({ check: 'next' });
-    const touch = one(byLabel(tree, 'Log set 2'));
-    const s = flat(circleOf(touch).props.style);
-    expect(s.width).toBe(28);
-    expect(s.borderWidth).toBe(1.5);
-    expect(s.borderColor).toBe(colors.primary);
-    expect(s.backgroundColor).toBeUndefined();
-    expect(tickOf(touch).props.name).toBe('checkmark');
-    expect(tickOf(touch).props.size).toBe(16);
-    expect(tickOf(touch).props.color).toBe(colors.primary);
+    const box = checkOf(tree, 'Log set 2');
+    expect(box.props.role).toBe('checkbox');
+    expect(box.props['aria-checked']).toBe(false);
+    expect(edge(squareOf(box))).toBe(hex(colors.textPrimary));
+    expect(edge(squareOf(box))).not.toBe(hex(colors.primary));
+    expect(hasTick(box)).toBe(false);
   });
 
-  test('pending: the same 28 dp ring (1.5 dp) in borderSubtle with no glyph and no fill', () => {
+  test('pending: the same square in the field edge colour with no tick', () => {
     const tree = render({ check: 'pending' });
-    const touch = one(byLabel(tree, 'Set 2 not logged yet'));
-    const s = flat(circleOf(touch).props.style);
-    expect(s.width).toBe(28);
-    expect(s.borderWidth).toBe(1.5);
-    expect(s.borderColor).toBe(colors.borderSubtle);
-    expect(s.backgroundColor).toBeUndefined();
-    expect(tickOf(touch)).toBeUndefined();
+    const box = checkOf(tree, 'Set 2 not logged yet');
+    expect(box.props['aria-checked']).toBe(false);
+    expect(edge(squareOf(box))).toBe(hex(colors.border));
+    expect(hasTick(box)).toBe(false);
   });
 
-  test('a 28 dp circle in a 36 by 48 target with a 6 dp side slop (48 dp reach)', () => {
-    const touch = one(byLabel(render({}), 'Log set 2'));
-    const s = flat(circleOf(touch).props.style);
-    expect(s.width).toBe(28);
-    expect(s.height).toBe(28);
-    expect(s.borderRadius).toBe(14);
-    const box = flat(touch.props.style);
-    expect(box.width).toBe(SET_COLUMNS.check);
-    expect(box.height).toBe(48);
-    expect(touch.props.hitSlop).toEqual({ top: 0, bottom: 0, left: 6, right: 6 });
+  test('a 32 dp square (radius 6, 2 dp edge) in a 48 by 48 target with 8 dp slop (48 dp reach)', () => {
+    ['logged', 'next', 'pending'].forEach((check) => {
+      const tree = render({ check });
+      const box = hosts(tree, (p) => p.role === 'checkbox')[0];
+      const s = squareOf(box);
+      expect(s.width).toBe(32);
+      expect(s.height).toBe(32);
+      expect(s.borderRadius).toBe(6);
+      expect(s.borderWidth).toBe(2);
+      expect(hex(s.backgroundColor)).toBe(hex(colors.background));
+      expect(box.props.hitSlop).toBe(8);
+      expect(s.width + 2 * box.props.hitSlop).toBe(48);
+      const target = hostNodes(tree).find((n) => {
+        const t = flat(n.props.style);
+        return t.width === 48 && t.height === 48 && n.findAll((m) => m === box).length > 0;
+      });
+      expect(target).toBeTruthy();
+    });
+    expect(SET_COLUMNS.check).toBe(48);
   });
 
   test('onCheck is called with no arguments', () => {
@@ -217,6 +273,22 @@ describe('SetRow check', () => {
     press(one(byLabel(tree, 'Log set 2')));
     expect(onCheck).toHaveBeenCalledTimes(1);
     expect(onCheck).toHaveBeenCalledWith();
+  });
+
+  test('busy or no onCheck: the check is disabled, speaks it, and a press does nothing', () => {
+    // The old suite had no busy pin; this keeps the component's documented
+    // contract (busy: the check is disabled and speaks busy) under the new check.
+    const onCheck = jest.fn();
+    const busy = render({ onCheck, busy: true });
+    const box = checkOf(busy, 'Log set 2');
+    expect(box.props.accessibilityState).toEqual({ checked: false, disabled: true, busy: true });
+    expect(box.props['aria-disabled']).toBe(true);
+    act(() => { box.props.onPress?.(); });
+    expect(onCheck).not.toHaveBeenCalled();
+    const idle = checkOf(render({ onCheck }), 'Log set 2');
+    expect(idle.props.accessibilityState).toEqual({ checked: false, disabled: false, busy: false });
+    const none = checkOf(render({}), 'Log set 2');
+    expect(none.props.accessibilityState.disabled).toBe(true);
   });
 
   test('labels name the set kind', () => {
@@ -250,38 +322,51 @@ describe('SetRow test ids', () => {
 });
 
 describe('SetRow marker', () => {
-  test('a number is secondary ink at the numeric label role', () => {
+  // kit trial 2 (LOC-412): marker text is the kit's muted ink in Inter Medium
+  // 11 (was secondary ink at the label role); the letters sit on a 24 dp round
+  // badge, the failure badge on the destructive fill with its own ink.
+  const badgeOf = (tree) => one(hosts(tree, (p) => flat(p.style).width === 24 && flat(p.style).height === 24));
+
+  test('a number is muted ink in Inter Medium 11, tabular', () => {
     const tree = render({ marker: 3 });
     const text = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === '3'));
     const s = flat(text.props.style);
-    expect(s.color).toBe(colors.textSecondary);
-    expect(s.fontSize).toBe(type.label.fontSize);
+    expect(hex(s.color)).toBe(hex(colors.textMuted));
+    expect(s.fontFamily).toBe('Inter-Medium');
+    expect(s.fontSize).toBe(11);
     expect(s.fontVariant).toEqual(['tabular-nums']);
   });
 
-  test('W is a 24 dp pill badge: primary tint, primary glyph, caption strong', () => {
+  test('W is a 24 dp round badge: quiet surface2 fill, the same muted ink', () => {
     const tree = render({ marker: 'W' });
     const text = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === 'W'));
     const s = flat(text.props.style);
     // D220 addendum 30 (audit D2): no amber on a warm-up; the W sits on the
-    // quiet badge in secondary ink.
-    expect(s.color).toBe(colors.textSecondary);
-    expect(s.fontSize).toBe(type.captionStrong.fontSize);
+    // quiet badge (kit trial 2: in the muted ink, fontSize 11, Inter Medium).
+    expect(hex(s.color)).toBe(hex(colors.textMuted));
+    expect(s.fontSize).toBe(11);
+    expect(s.fontFamily).toBe('Inter-Medium');
     // The badge, not the 24 dp marker column it sits in: the one with a height.
-    const badge = one(hosts(tree, (p) => flat(p.style).width === 24 && flat(p.style).height === 24));
-    const b = flat(badge.props.style);
+    const b = flat(badgeOf(tree).props.style);
     expect(b.height).toBe(24);
-    expect(b.backgroundColor).toBe(colors.surface2);
-    expect(b.borderRadius).toBe(radius.full);
+    expect(hex(b.backgroundColor)).toBe(hex(colors.surface2));
+    expect(b.borderRadius).toBe(999);
   });
 
-  test('F is a pill in the error tint with the error glyph', () => {
+  test('typed letters wear the same quiet badge as W', () => {
+    ['D', 'M', 'R', 'A'].forEach((marker) => {
+      const tree = render({ marker });
+      expect(hex(flat(badgeOf(tree).props.style).backgroundColor)).toBe(hex(colors.surface2));
+    });
+  });
+
+  test('F is a round badge on the destructive fill with its on-error ink', () => {
     const tree = render({ marker: 'F' });
     const text = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === 'F'));
-    expect(flat(text.props.style).color).toBe(colors.error);
-    const badge = flat(one(hosts(tree, (p) => flat(p.style).width === 24 && flat(p.style).height === 24)).props.style);
-    expect(badge.backgroundColor).toBe(colors.errorBg);
-    expect(badge.borderRadius).toBe(radius.full);
+    expect(hex(flat(text.props.style).color)).toBe(hex(colors.onError));
+    const badge = flat(badgeOf(tree).props.style);
+    expect(hex(badge.backgroundColor)).toBe(hex(colors.errorFill));
+    expect(badge.borderRadius).toBe(999);
   });
 
   test('not a control without onPressMarker; a button with it, called with no arguments', () => {
@@ -298,23 +383,28 @@ describe('SetRow marker', () => {
 describe('SetRow Last cell (2a)', () => {
   const lastText = (tree, text) => flat(one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === text)).props.style);
 
-  test('plain: the set in secondary ink (history, not the live number), one line', () => {
+  // kit trial 2 (LOC-412): Last is the muted ink at 13 in Inter Medium.
+  test('plain: the set in muted ink (history, not the live number), one line', () => {
     // Founder device verdict 2026-10-08: a bold white Last value read as the
     // live number beside the wells; history is quiet.
     const text = `72.5 ${TIMES} 8`;
     const tree = render({});
     const s = lastText(tree, text);
-    expect(s.color).toBe(colors.textSecondary);
-    expect(s.fontSize).toBe(type.bodySm.fontSize);
-    expect(s.fontFamily).toBe(type.num('bodySm').fontFamily);
+    expect(hex(s.color)).toBe(hex(colors.textMuted));
+    expect(s.fontSize).toBe(13);
+    expect(s.fontFamily).toBe('Inter-Medium');
     expect(s.fontVariant).toEqual(['tabular-nums']);
     expect(one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === text)).props.numberOfLines).toBe(1);
   });
 
-  test('stale: muted ink with a leading middle dot', () => {
+  test('stale: the leading middle dot, in the same muted ink as a plain Last', () => {
+    // kit trial 2 (LOC-412): stale is no longer a different colour; only the
+    // leading dot marks it.
     const tree = render({ last: { text: `40 ${TIMES} 10`, stale: true } });
     const shown = `${DOT} 40 ${TIMES} 10`;
-    expect(lastText(tree, shown).color).toBe(colors.textMuted);
+    expect(hex(lastText(tree, shown).color)).toBe(hex(colors.textMuted));
+    expect(words(tree.toJSON())).toContain(shown);
+    expect(words(render({}).toJSON())).not.toContain(DOT);
   });
 
   test('without onPressLast it is not a control', () => {
@@ -353,15 +443,17 @@ describe('SetRow record mark', () => {
     expect(words(render({}).toJSON())).not.toContain('PR');
   });
 
-  test('record: a plain amber "PR" under the set number inside the marker column, no pill', () => {
+  // kit trial 2 (LOC-412): PR is plain bold primary ink, not amber (amber is
+  // reserved for the field being edited).
+  test('record: a plain "PR" in primary ink under the set number inside the marker column, no pill', () => {
     const tree = render({ record: true, testIDs: { marker: 'm' } });
     const tag = one(byLabel(tree, 'Personal record'));
     expect(tag.props.accessible).toBe(true);
     expect(words(tag).join('')).toBe('PR');
     const s = flat(tag.props.style);
-    expect(s.color).toBe(colors.primary);
-    expect(s.fontSize).toBe(type.captionStrong.fontSize);
-    expect(s.fontFamily).toBe(type.captionStrong.fontFamily);
+    expect(hex(s.color)).toBe(hex(colors.textPrimary));
+    expect(hex(s.color)).not.toBe(hex(colors.primary));
+    expect(s.fontWeight).toBe('700');
     expect(s.backgroundColor).toBeUndefined();
     expect(s.minHeight).toBeUndefined();
     expect(s.borderRadius).toBeUndefined();
@@ -369,7 +461,7 @@ describe('SetRow record mark', () => {
     const texts = one(byId(tree, 'm')).findAll((n) => n.type === 'Text').map((n) => words(n).join(''));
     expect(texts.indexOf('2')).toBeGreaterThanOrEqual(0);
     expect(texts.indexOf('PR')).toBeGreaterThan(texts.indexOf('2'));
-    expect(tree.root.findAll((n) => flat(n.props.style).backgroundColor === colors.primaryBg)).toHaveLength(0);
+    expect(tree.root.findAll((n) => flat(n.props.style).backgroundColor !== undefined && hex(flat(n.props.style).backgroundColor) === hex(colors.primaryBg))).toHaveLength(0);
   });
 
   test('record leaves the entry area alone: Last and the wells read the same', () => {
@@ -388,18 +480,28 @@ describe('SetRow frame', () => {
     expect(s.minHeight).toBe(64);
     expect(s.flexDirection).toBe('row');
     expect(s.alignItems).toBe('center');
-    expect(s.borderBottomWidth).toBe(1);
-    expect(s.borderBottomColor).toBe(colors.borderSubtle);
-    // The card grid (D220 addendum 8): 12/8 dp padding and an 8 dp gap between
-    // marker, Last, the wells and the check, so nothing touches.
+    // kit trial 2 (LOC-412): the hairline is a separate Separator host right
+    // after the row (role presentation, 1 dp, borderSubtle) instead of a
+    // borderBottom on the row.
+    expect(s.borderBottomWidth).toBeUndefined();
+    const all = hostNodes(root);
+    const rule = all[all.indexOf(row) + all.slice(all.indexOf(row)).findIndex((n) => n.props.role === 'presentation')];
+    expect(rule.props.role).toBe('presentation');
+    expect(flat(rule.props.style).height).toBe(1);
+    expect(hex(flat(rule.props.style).backgroundColor)).toBe(hex(colors.borderSubtle));
+    expect(row.findAll((n) => n === rule)).toHaveLength(0); // a sibling after the row, not inside it
+    // The card grid (D220 addendum 8): 12 dp left padding, the check column
+    // flush to the card edge (0 right padding; kit trial 2), and an 8 dp gap
+    // between marker, Last, the wells and the check, so nothing touches.
     expect(s.paddingLeft).toBe(12);
-    expect(s.paddingRight).toBe(8);
-    expect(s.gap).toBe(8);
+    expect(s.paddingRight).toBe(0);
+    expect(s.gap ?? s.rowGap).toBe(8);
+    expect(s.columnGap ?? s.gap).toBe(8);
     expect(spacing.sm).toBe(8);
     expect(spacing.md).toBe(12);
     // Last is 80 so "· 137.5 × 15" (76.7 dp at bodySm in Inter) fits with no
-    // font fitting (D220 addendum 22).
-    expect(SET_COLUMNS).toEqual({ marker: 24, last: 80, check: 36 });
+    // font fitting (D220 addendum 22); the check column is 48 (the tick's target).
+    expect(SET_COLUMNS).toEqual({ marker: 24, last: 80, check: 48 });
   });
 
   test('cell text never widens a column: the Last cell is one line and never fit-scaled', () => {
@@ -440,7 +542,7 @@ describe('SetRow exercise kinds', () => {
     expect(buttons[0].props.accessibilityLabel).toBe('Set 2 reps');
     expect(buttons[0].props.accessibilityValue).toEqual({ text: '8' });
     expect(words(tree.toJSON())).not.toContain('99');
-    expect(flat(buttons[0].props.style).flex).toBe(1);
+    expect(flat(buttons[0].props.style).flexGrow).toBe(1); // kit trial 2 (LOC-412): flex-1 resolves to grow 1 / shrink 1 / basis 0%
     press(buttons[0]);
     expect(onPressWell).toHaveBeenCalledWith('reps');
   });
@@ -503,40 +605,44 @@ describe('SetRow exercise kinds', () => {
   });
 
   test.each([['reps_only', 'reps'], ['duration', 'time'], ['distance', 'time']])(
-    '%s: placeholder ink while pending; primary ink and the tinted edge while editing',
+    '%s: placeholder ink while pending; primary ink and the amber ring while editing',
     (kind, label) => {
       const pending = render({ kind, wells: { weight: 10, reps: 60, state: 'pending' }, check: 'pending' });
-      expect(wellText(pending, `Set 2 ${label}`).color).toBe(colors.textMuted);
+      expect(hex(wellText(pending, `Set 2 ${label}`).color)).toBe(hex(colors.textMuted));
       const editing = render({ kind, wells: { weight: 10, reps: 60, state: 'editing', editingField: 'reps' } });
-      expect(wellText(editing, `Set 2 ${label}`).color).toBe(colors.textPrimary);
-      expect(flat(one(byLabel(editing, `Set 2 ${label}`)).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
+      expect(hex(wellText(editing, `Set 2 ${label}`).color)).toBe(hex(colors.textPrimary));
+      // kit trial 2 (LOC-412): the edge is the amber ring (2 dp), not the primary tint.
+      const box = flat(one(byLabel(editing, `Set 2 ${label}`)).props.style);
+      expect(hex(box.borderColor)).toBe(hex(colors.primary));
+      expect(box.borderWidth).toBe(2);
     },
   );
 });
 
 describe('SetRow ghost seed', () => {
-  test('ghost values read in secondary ink, not primary', () => {
+  // kit trial 2 (LOC-412): ghost values fade to the muted ink (was secondary).
+  test('ghost values read in muted ink, not primary', () => {
     const tree = render({ wells: { weight: 70, reps: 8, state: 'next', ghost: true } });
-    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textSecondary);
-    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textSecondary);
+    expect(hex(wellText(tree, 'Set 2 weight').color)).toBe(hex(colors.textMuted));
+    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(colors.textMuted));
     expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityValue).toEqual({ text: '70' });
   });
 
   test('without ghost, or with ghost false, the values stay primary', () => {
-    expect(wellText(render({}), 'Set 2 weight').color).toBe(colors.textPrimary);
-    expect(wellText(render({ wells: { weight: 70, reps: 8, state: 'next', ghost: false } }), 'Set 2 weight').color)
-      .toBe(colors.textPrimary);
+    expect(hex(wellText(render({}), 'Set 2 weight').color)).toBe(hex(colors.textPrimary));
+    expect(hex(wellText(render({ wells: { weight: 70, reps: 8, state: 'next', ghost: false } }), 'Set 2 weight').color))
+      .toBe(hex(colors.textPrimary));
   });
 
   test('primary editing ink wins over ghost on the field being edited only', () => {
     const tree = render({ wells: { weight: 70, reps: 8, state: 'editing', editingField: 'weight', ghost: true } });
-    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textPrimary);
-    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textSecondary);
+    expect(hex(wellText(tree, 'Set 2 weight').color)).toBe(hex(colors.textPrimary));
+    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(colors.textMuted));
   });
 
   test('ghost applies to every kind', () => {
     const tree = render({ kind: 'duration', wells: { reps: 60, state: 'next', ghost: true } });
-    expect(wellText(tree, 'Set 2 time').color).toBe(colors.textSecondary);
+    expect(hex(wellText(tree, 'Set 2 time').color)).toBe(hex(colors.textMuted));
   });
 });
 
@@ -656,18 +762,20 @@ describe('SetRow phone-keyboard path', () => {
     expect(box.props.autoFocus).toBeUndefined();
     expect(box.props.submitBehavior).toBe('submit');
     expect(box.props.onSubmitEditing).toBe(input.onSubmitEditing);
-    // The box around the field is a plain View (not a button) carrying the editing edge.
-    const wrap = one(hosts(tree, (p) => flat(p.style).borderWidth === 1.5 && flat(p.style).borderColor === withAlpha(colors.primary, alpha.strong)));
-    expect(flat(wrap.props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
-    expect(flat(wrap.props.style).flex).toBe(1);
+    // The box around the field is a plain View (not a button) carrying the
+    // editing edge (kit trial 2, LOC-412: the 2 dp amber ring, flex 1).
+    const wrap = one(hosts(tree, (p) => flat(p.style).borderWidth === 2 && flat(p.style).borderColor !== undefined && hex(flat(p.style).borderColor) === hex(colors.primary)));
+    expect(flat(wrap.props.style).flexGrow).toBe(1);
+    expect(flat(wrap.props.style).height).toBe(48);
     expect(wrap.props.accessibilityRole).toBeUndefined();
     act(() => { box.props.onChangeText('80'); });
     expect(input.onChangeText).toHaveBeenCalledWith('80');
     const s = flat(box.props.style);
-    expect(s.color).toBe(colors.textPrimary);
-    expect(s.fontFamily).toBe(type.num('bodyStrong').fontFamily);
-    expect(s.fontSize).toBe(type.bodyStrong.fontSize);
+    expect(hex(s.color)).toBe(hex(colors.textPrimary));
+    expect(s.fontFamily).toBe('Inter-SemiBold');
+    expect(s.fontSize).toBe(20);
     expect(s.fontVariant).toEqual(['tabular-nums']);
+    expect(box.props.maxFontSizeMultiplier).toBe(fontScaleCaps.numeral);
   });
 
   // Founder report 2026-10-11: "This note thing keeps popping up when I
@@ -680,9 +788,17 @@ describe('SetRow phone-keyboard path', () => {
     const tree = render({ onLongPressRow: jest.fn(), inputField: field(), wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
     const input = one(inputs(tree));
     const s = flat(input.props.style);
-    expect(s.flex).toBe(1);
+    expect(s.flexGrow).toBe(1);
     expect(s.alignSelf).toBe('stretch');
+    // kit trial 2 (LOC-412): the centring is set as style props on the kit Input
+    // (textAlign and textAlignVertical), as before; the box is now filled by a
+    // full-height field (height 100% of the 48 dp box, no padding).
     expect(s.textAlignVertical).toBe('center');
+    // NativeWind moves a TextInput's textAlign from the style onto the host's
+    // textAlign prop, which is where React Native reads it.
+    expect(input.props.textAlign).toBe('center');
+    expect(s.height).toBe('100%');
+    expect(s.padding).toBe(0);
     expect(input.props.hitSlop).toEqual(one(byLabel(tree, 'Set 2 reps')).props.hitSlop);
   });
 

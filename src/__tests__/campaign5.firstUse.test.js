@@ -1418,7 +1418,10 @@ describe('LOGGER: the first session states its effort target and its own words (
     const section = read('components/workout/session/ExerciseSection.js');
     expect(section).toContain("accessibilityLabel={moreHint ? 'More options for this exercise, including how logging works' : 'More options for this exercise'}");
     // Stage 1 of D104-1 phase 2b (2026-10-09) put the chrome cap on this hint
-    expect(section).toMatch(/\{moreHint \? <Text style=\{live\.hint\} maxFontSizeMultiplier=\{fontScaleCaps\.chrome\}>\{moreHint\}<\/Text> : null\}/);
+    // Kit trial 2 (LOC-412): the hint word is the kit's ExerciseCaption (the
+    // chrome font-scale cap is set inside it).
+    expect(section).toMatch(/\{moreHint \? <ExerciseCaption>\{moreHint\}<\/ExerciseCaption> : null\}/);
+    expect(read('components/ui/exercise-card-kit.tsx')).toMatch(/function ExerciseCaption[\s\S]{0,300}?maxFontSizeMultiplier=\{fontScaleCaps\.chrome\}/);
   });
 
   test('the warm-up sheet helps the user with no working weight (C5-P13-04)', () => {

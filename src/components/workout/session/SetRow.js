@@ -70,27 +70,27 @@
  *                  next row defaults to "volyume-btn-complete-set", the primary
  *                  control's existing id, unless testIDs.check overrides it
  *
- * Ink: the Last fact is secondary ink on tabular figures; the live number in a
- * well is the one figure at bodyStrong, a placeholder in disabled ink. No text
- * on the row fit-scales (adjustsFontSizeToFit): the columns are sized for
- * their longest content instead (D220 addendum 22). Each
- * well is the house field (surface2, 1.5 border, radius md) and only the well
- * being edited takes the amber edge. The check is a 28 dp mark in a 36 by 48
- * target: logged is the app's success checkmark-circle, next the one amber
- * ring on the card, pending a subtle ring.
+ * Look (kit trial 2, LOC-412): the pieces are drawn by the kit parts in
+ * src/components/ui/set-row-kit.tsx. The weight and reps wells are OUTLINED
+ * boxes of the largest type on the row in tabular figures, and the one being
+ * edited takes the amber ring (the only amber on the row). The Last fact and
+ * the labels are smaller and quieter; a logged set fades back to the muted ink
+ * (at least 4.5:1 in every palette). The check is a square tick box in a 48 by
+ * 48 dp target (a checkbox, with the checked state spoken); the rows sit in the
+ * exercise's one card, separated by the kit's Separator. No text on the row
+ * fit-scales (adjustsFontSizeToFit): the columns are sized for their longest
+ * content instead (D220 addendum 22).
  */
-import { useEffect, useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
-import Text from '../../Text';
-import TextInput from '../../TextInput';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import useTheme from '../../../hooks/useTheme';
-import { alpha, circle, radius, spacing, withAlpha, fontScaleCaps } from '../../../styles/theme';
+import { useEffect, useRef } from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SetCheck, SetLastText, SetMarkerBadge, SetRowShell, SetWell } from '../../ui/set-row-kit';
+import { spacing } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 import { formatSeconds } from '../../../lib/workoutHelpers';
 
 // The grid, sized for the house card (a 360 dp phone's card is 326 dp inside
-// its border). Marker 24, Last 80 and the check 36 are fixed; the two wells
+// its border). Marker 24, Last 80 and the check column 48 (the tick box's
+// touch target, which sits flush to the card edge) are fixed; the two wells
 // share what is left as equal boxes with an 8 dp gap between every column, so
 // nothing touches (founder render verdict 2026-10-08, D220 addendum 8).
 // SetTable lays its column labels on the same widths. Last is 80 so the
@@ -99,22 +99,14 @@ import { formatSeconds } from '../../../lib/workoutHelpers';
 // the founder's iPhone every fit-scaled text on the row being typed into
 // collapsed far below its declared floor (D220 addendum 22), so nothing on
 // the row scales at runtime any more.
-export const SET_COLUMNS = Object.freeze({ marker: 24, last: 80, check: 36 });
+export const SET_COLUMNS = Object.freeze({ marker: 24, last: 80, check: touchTarget.minimum });
 
-// Spec section 2 sizes.
-const ROW_MIN_HEIGHT = 64;
-const MARKER_SIZE = 24;
-const WELL_HEIGHT = 44;
-const CHECK_SIZE = 28;
-const TICK_SIZE = 16;
-const RING_WIDTH = 1.5;
 // 44 dp wells and a 24 dp marker column are taken to 48 dp by their slop.
 // Sideways each well takes half the gap between the two wells, so a tap that
 // just misses a box lands on the nearer box, never on the row, whose 300 ms
 // hold opens the set sheet (founder report 2026-10-11: the note sheet opened
 // when tapping a box to enter a weight or reps).
 const WELL_HIT_SLOP = { top: 2, bottom: 2, left: spacing.sm / 2, right: spacing.sm / 2 };
-const CHECK_HIT_SLOP = { top: 0, bottom: 0, left: 6, right: 6 };
 const MARKER_HIT_SLOP = { top: 0, bottom: 0, left: 12, right: 12 };
 
 const MIDDLE_DOT = '\u00B7';
@@ -205,65 +197,15 @@ function wellsFor(kind, units) {
   ];
 }
 
-function buildLive(t) {
-  const c = t.colors;
-  const { num } = t.type;
-  return {
-    row: { borderBottomColor: c.borderSubtle },
-    markerNumber: { ...num('label'), color: c.textSecondary },
-    // Amber is for the set you are on, a record, Finish and the drain line
-    // (D220 addendum 30, audit D2): a warm-up wears its W on the quiet badge.
-    markerWarmup: { backgroundColor: c.surface2 },
-    markerWarmupText: { ...t.type.captionStrong, color: c.textSecondary },
-    markerFailure: { backgroundColor: c.errorBg },
-    markerFailureText: { ...t.type.captionStrong, color: c.error },
-    // A typed set (drop, myo-reps, rest-pause, AMRAP) wears its letter on
-    // the quiet badge, in the number's ink.
-    markerTyped: { backgroundColor: c.surface2 },
-    markerTypedText: { ...t.type.captionStrong, color: c.textSecondary },
-    // Facts are ink (the app's rule): Last in secondary ink at the list's
-    // small numeric role; the live number in the well is the one figure at
-    // bodyStrong.
-    cellDim: { ...num('bodySm'), color: c.textSecondary },
-    cellStale: { color: c.textMuted },
-    prText: { ...t.type.captionStrong, color: c.primary },
-    // Each well is the house field (TextField: surface2 fill, border 1.5
-    // `border`, radius.md); the one being edited takes the field's focus edge.
-    well: { backgroundColor: c.surface2, borderColor: c.border },
-    wellEditing: { borderColor: withAlpha(c.primary, alpha.strong) },
-    wellValue: { ...num('bodyStrong'), color: c.textPrimary },
-    wellGhost: { color: c.textSecondary },
-    // The house TextField's placeholder ink (textMuted); textDisabled is for
-    // disabled controls (2026-10-09 audit D6).
-    wellPlaceholder: { ...num('bodyStrong'), color: c.textMuted },
-    wellActive: { color: c.textPrimary },
-    // A logged set wears the app's "done" mark (checkmark-circle in
-    // success); the set you are on is the one amber ring on the card.
-    checkNext: { borderColor: c.primary },
-    checkPending: { borderColor: c.borderSubtle },
-  };
-}
-
-function MarkerCell({ marker, record, onPress, testID, hint, live }) {
+function MarkerCell({ marker, record, onPress, testID, hint }) {
   const isWarmup = marker === 'W';
   const isFailure = marker === 'F';
   const isTyped = typeof marker === 'string' && !isWarmup && !isFailure;
-  const badge = (
-    <View style={styles.markerStack}>
-      <View style={[styles.marker, isWarmup && live.markerWarmup, isFailure && live.markerFailure, isTyped && live.markerTyped]}>
-        <Text
-          style={isWarmup ? live.markerWarmupText : isFailure ? live.markerFailureText : isTyped ? live.markerTypedText : live.markerNumber}
-          numberOfLines={1}
-          maxFontSizeMultiplier={fontScaleCaps.numeral}
-          >
-          {String(marker)}
-        </Text>
-      </View>
-      {record ? (
-        <Text style={live.prText} accessible accessibilityLabel="Personal record" numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>PR</Text>
-      ) : null}
-    </View>
-  );
+  // A warm-up and a typed set (drop, myo-reps, rest-pause, AMRAP) wear their
+  // letter on the quiet badge; a failure set on the destructive one; a working
+  // set carries its number (D220 addendum 28).
+  const tone = isFailure ? 'failure' : isWarmup ? 'warmup' : isTyped ? 'typed' : 'number';
+  const badge = <SetMarkerBadge tone={tone} text={String(marker)} record={record} />;
   if (!onPress) {
     if (hint) {
       // Not a button, but it still has to say the row answers a hold.
@@ -296,16 +238,12 @@ function MarkerCell({ marker, record, onPress, testID, hint, live }) {
   );
 }
 
-function LastCell({ last, onPress, testID, live }) {
+function LastCell({ last, onPress, testID }) {
   if (!last || !last.text) {
     return <View style={styles.lastCol} testID={testID} />;
   }
   const text = last.stale ? `${MIDDLE_DOT} ${last.text}` : last.text;
-  const content = (
-    <Text style={[styles.cellText, live.cellDim, last.stale && live.cellStale]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>
-      {text}
-    </Text>
-  );
+  const content = <SetLastText text={text} />;
   if (!onPress) {
     return <View style={styles.lastCol} testID={testID}>{content}</View>;
   }
@@ -323,7 +261,7 @@ function LastCell({ last, onPress, testID, live }) {
   );
 }
 
-function WellCell({ field, word, text, spoken, wellState, editingField, ghost, input, onPress, testID, name, live }) {
+function WellCell({ field, word, text, spoken, wellState, editingField, ghost, input, onPress, testID, name }) {
   const isEditingThis = wellState === 'editing' && editingField === field;
   // Focus through the input's own focus method, not autoFocus: on the new
   // architecture autoFocus makes the field first responder directly and never
@@ -337,95 +275,63 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
     const el = inputRef.current;
     if (el && typeof el.focus === 'function') el.focus();
   }, [hasInput]);
-  const box = [styles.well, live.well, isEditingThis && live.wellEditing];
   const label = `${name} ${word}`;
-  if (input) {
-    // The well itself is the field: no stepper, no label row. A plain View, not
-    // a button, so the field is its own element for a screen reader. The field
-    // fills the whole box and keeps the box's reach: sized to its one line of
-    // text it left the box's top and bottom to the row, so a touch there that
-    // rested 300 ms opened the set sheet instead of the keyboard (founder
-    // report 2026-10-11).
-    return (
-      <View style={box}>
-        <TextInput
-          ref={inputRef}
-          testID={input.testID}
-          hitSlop={WELL_HIT_SLOP}
-          style={[live.wellValue, live.wellActive, styles.wellInput]}
-          value={input.value == null ? '' : String(input.value)}
-          onChangeText={input.onChangeText}
-          keyboardType={input.keyboardType}
-          returnKeyType={input.returnKeyType}
-          inputAccessoryViewID={input.inputAccessoryViewID}
-          onSubmitEditing={input.onSubmitEditing}
-          selectTextOnFocus
-          submitBehavior="submit"
-          accessibilityLabel={label}
-          // The same cap the number at rest wears: the house TextInput's
-          // reading cap (2.0) let a typed 137.5 outgrow its 64 dp well at the
-          // phone's largest text (audit D9).
-          maxFontSizeMultiplier={fontScaleCaps.numeral}
-        />
-      </View>
-    );
-  }
+  // While editing, the well itself is the field: no stepper, no label row. The
+  // field fills the whole box and keeps the box's reach: sized to its one line
+  // of text it left the box's top and bottom to the row, so a touch there that
+  // rested 300 ms opened the set sheet instead of the keyboard (founder
+  // report 2026-10-11). Its text wears the same numeral cap the number at rest
+  // does, so a typed 137.5 cannot outgrow its well at the phone's largest text
+  // (audit D9).
+  const inputProps = input
+    ? {
+      ref: inputRef,
+      testID: input.testID,
+      value: input.value == null ? '' : String(input.value),
+      onChangeText: input.onChangeText,
+      keyboardType: input.keyboardType,
+      returnKeyType: input.returnKeyType,
+      inputAccessoryViewID: input.inputAccessoryViewID,
+      onSubmitEditing: input.onSubmitEditing,
+      selectTextOnFocus: true,
+      submitBehavior: 'submit',
+    }
+    : null;
   return (
-    <TouchableOpacity
-      testID={testID}
-      style={box}
+    <SetWell
+      text={text}
+      state={wellState}
+      ghost={ghost}
+      isEditing={isEditingThis}
       onPress={onPress}
-      disabled={!onPress}
-      hitSlop={WELL_HIT_SLOP}
-      accessibilityRole="button"
+      testID={testID}
       accessibilityLabel={label}
-      accessibilityValue={{ text: text === '' ? 'empty' : spoken }}
+      accessibilityValueText={text === '' ? 'empty' : spoken}
       accessibilityState={{ selected: isEditingThis, disabled: !onPress }}
-    >
-      <Text
-        style={[
-          wellState === 'pending' ? live.wellPlaceholder : live.wellValue,
-          ghost && wellState !== 'pending' && live.wellGhost,
-          isEditingThis && live.wellActive,
-        ]}
-        numberOfLines={1}
-        maxFontSizeMultiplier={fontScaleCaps.numeral}
-        >
-        {text}
-      </Text>
-    </TouchableOpacity>
+      hitSlop={WELL_HIT_SLOP}
+      input={inputProps}
+    />
   );
 }
 
-function CheckButton({ check, onPress, testID, label, busy, onMore, live, colors }) {
-  const logged = check === 'logged';
-  const next = check === 'next';
+function CheckButton({ check, onPress, testID, label, busy, onMore }) {
   const disabled = !onPress || !!busy;
   // A screen reader cannot hold a row, so the row's overflow is also an
   // accessibility action on the check (the one control every row has).
   const actions = onMore ? [{ name: 'longpress', label: 'More options' }] : undefined;
   return (
-    <TouchableOpacity
+    <SetCheck
       testID={testID}
-      style={styles.checkCol}
+      logged={check === 'logged'}
+      next={check === 'next'}
       onPress={disabled ? undefined : onPress}
       disabled={disabled && !onMore}
-      hitSlop={CHECK_HIT_SLOP}
-      accessibilityRole="button"
+      busy={!!busy}
       accessibilityLabel={label}
       accessibilityHint={onMore ? LONG_PRESS_HINT : undefined}
-      accessibilityState={{ disabled, busy: !!busy }}
       accessibilityActions={actions}
       onAccessibilityAction={onMore ? (e) => { if (e?.nativeEvent?.actionName === 'longpress') onMore(); } : undefined}
-    >
-      {logged ? (
-        <Ionicons name="checkmark-circle" size={CHECK_SIZE} color={colors.success} />
-      ) : (
-        <View style={[styles.check, styles.checkRing, next ? live.checkNext : live.checkPending]}>
-          {next ? <Ionicons name="checkmark" size={TICK_SIZE} color={colors.primary} /> : null}
-        </View>
-      )}
-    </TouchableOpacity>
+    />
   );
 }
 
@@ -449,8 +355,6 @@ export default function SetRow({
   holdOff = false,
   testIDs,
 }) {
-  const t = useTheme();
-  const live = useMemo(() => buildLive(t), [t]);
   const ids = testIDs || {};
   const w = wells || {};
   const wellState = w.state || 'pending';
@@ -466,9 +370,8 @@ export default function SetRow({
         onPress={onPressMarker}
         testID={ids.marker}
         hint={onLongPressRow && !onPressMarker ? LONG_PRESS_HINT : undefined}
-        live={live}
       />
-      <LastCell last={last} onPress={onPressLast} testID={ids.last} live={live} />
+      <LastCell last={last} onPress={onPressLast} testID={ids.last} />
       <View style={styles.wells}>
         {specs.map((spec) => {
           const value = w[spec.field];
@@ -486,7 +389,6 @@ export default function SetRow({
               onPress={onPressWell ? () => onPressWell(spec.field) : undefined}
               testID={spec.field === 'weight' ? ids.weight : ids.reps}
               name={name}
-              live={live}
             />
           );
         })}
@@ -498,90 +400,37 @@ export default function SetRow({
         label={checkLabel || defaultCheckLabel(check, marker)}
         busy={busy}
         onMore={onLongPressRow}
-        live={live}
-        colors={t.colors}
       />
     </>
   );
 
-  if (onLongPressRow) {
-    // The hold lives on the container with no onPress of its own, so the
-    // children keep their plain presses. accessible={false} keeps the row from
-    // swallowing its own controls into one element for a screen reader.
-    // A Pressable claims every touch on it, onPress or not, so while the
-    // keyboard is up it is disabled (holdOff): a disabled Pressable claims
-    // nothing, and a tap on the row's blank space puts the keyboard away.
-    // The Pressable stays mounted either way, so the field being typed into
-    // is never remounted.
-    return (
-      <Pressable
-        testID={ids.row}
-        style={[styles.row, live.row]}
-        onLayout={onLayout}
-        onLongPress={() => onLongPressRow()}
-        delayLongPress={LONG_PRESS_MS}
-        disabled={!!holdOff}
-        accessible={false}
-      >
-        {body}
-      </Pressable>
-    );
-  }
+  // With a hold handler the hold lives on the container with no onPress of
+  // its own, so the children keep their plain presses. accessible={false} keeps
+  // the row from swallowing its own controls into one element for a screen
+  // reader. A Pressable claims every touch on it, onPress or not, so while the
+  // keyboard is up it is disabled (holdOff): a disabled Pressable claims
+  // nothing, and a tap on the row's blank space puts the keyboard away. The
+  // Pressable stays mounted either way, so the field being typed into is never
+  // remounted. The divider under the row is the shell's.
   return (
-    <View testID={ids.row} style={[styles.row, live.row]} onLayout={onLayout}>
+    <SetRowShell
+      testID={ids.row}
+      onLayout={onLayout}
+      onLongPress={onLongPressRow ? () => onLongPressRow() : null}
+      holdOff={holdOff}
+      longPressMs={LONG_PRESS_MS}
+    >
       {body}
-    </View>
+    </SetRowShell>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    minHeight: ROW_MIN_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.sm,
-    borderBottomWidth: 1,
-  },
   markerCol: { width: SET_COLUMNS.marker, alignItems: 'center' },
   markerPress: { minHeight: touchTarget.minimum, justifyContent: 'center' },
-  markerStack: { alignItems: 'center' },
-  marker: {
-    width: MARKER_SIZE,
-    height: MARKER_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.full,
-  },
   lastCol: { width: SET_COLUMNS.last, alignItems: 'center', justifyContent: 'center' },
   lastPress: { minHeight: touchTarget.minimum },
-  cellText: { textAlign: 'center' },
   // The wells share the row's remaining width as equal boxes with the row gap
   // between them.
   wells: { flex: 1, minWidth: 0, flexDirection: 'row', gap: spacing.sm },
-  well: {
-    flex: 1,
-    minWidth: 0,
-    height: WELL_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: radius.md,
-  },
-  wellInput: { flex: 1, alignSelf: 'stretch', minWidth: 0, padding: 0, textAlign: 'center', textAlignVertical: 'center' },
-  checkCol: {
-    width: SET_COLUMNS.check,
-    height: touchTarget.minimum,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  check: {
-    width: CHECK_SIZE,
-    height: CHECK_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: circle(CHECK_SIZE),
-  },
-  checkRing: { borderWidth: RING_WIDTH },
 });

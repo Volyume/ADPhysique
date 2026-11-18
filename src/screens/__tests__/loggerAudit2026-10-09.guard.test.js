@@ -30,6 +30,8 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const SRC = read('screens/ActiveWorkoutScreen.js');
 const ROW = read('components/workout/session/SetRow.js');
 const TABLE = read('components/workout/session/SetTable.js');
+const KIT_ROW = read('components/ui/set-row-kit.tsx');
+const KIT_CARD = read('components/ui/exercise-card-kit.tsx');
 
 describe('the second logger audit stays fixed', () => {
   test('blocker 1: the hardware back listener is focus-scoped', () => {
@@ -137,9 +139,18 @@ describe('the second logger audit stays fixed', () => {
   });
 
   test('D9, unsure 4: the open well and the column labels keep the numeral cap', () => {
-    expect(ROW).toMatch(/submitBehavior="submit"[\s\S]{0,400}?maxFontSizeMultiplier=\{fontScaleCaps\.numeral\}\s*\/>/);
-    const columns = TABLE.slice(TABLE.indexOf('<View style={[styles.columns, live.columns]}>'), TABLE.indexOf('<View style={styles.colCheck}>'));
-    expect((columns.match(/fontScaleCaps\.numeral/g) || []).length).toBe(3);
-    expect(columns).not.toContain('fontScaleCaps.chrome');
+    // Kit trial 2 (LOC-412): the open well is the kit Input drawn in
+    // set-row-kit.tsx and the column labels are SetColumnLabel in
+    // exercise-card-kit.tsx; the caps are the same ones, asserted where the
+    // code now lives. SetRow.js still hands the input its props and submit
+    // behaviour.
+    expect(ROW).toMatch(/submitBehavior: 'submit'/);
+    expect(KIT_ROW).toMatch(/<Input[\s\S]{0,700}?maxFontSizeMultiplier=\{fontScaleCaps\.numeral\}/);
+    expect(KIT_CARD).toMatch(/function SetColumnLabel[\s\S]{0,400}?maxFontSizeMultiplier=\{chrome \? fontScaleCaps\.chrome : fontScaleCaps\.numeral\}/);
+    const columns = TABLE.slice(TABLE.indexOf('<SetColumnsShell>'), TABLE.indexOf('</SetColumnsShell>'));
+    // SET, LAST and the wells' labels take the numeral cap; only the tick-all word is chrome.
+    expect((columns.match(/<SetColumnLabel>/g) || []).length).toBe(3);
+    expect((columns.match(/<SetColumnLabel chrome>/g) || []).length).toBe(1);
   });
+
 });

@@ -6,6 +6,14 @@ import {
   colors, spacing, radius, type, iconSize,
 } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import { CoachNotice } from '../ui/coach-notice';
+
+// The coach's own notices (the weekly check-in is due; a coaching decision is
+// ready to review) are drawn as the kit's amber-outlined alert with an icon
+// (kit trial 2, LOC-412, design rule 8). Every other occupant of the line (the
+// plan, recovery, re-entry, limitation and nutrition-phase rows) keeps the
+// quiet tinted row, and no safety message is restyled.
+const COACH_NOTICE_KEYS = Object.freeze(['check_in', 'coach_decision']);
 
 /**
  * TodayLine — Campaign 22 Phase 2, Stage 1. The single P1 idiom.
@@ -22,6 +30,9 @@ import useTheme from '../../hooks/useTheme';
  *
  * Presentation only, per the build brief: no data logic here.
  *
+ * Kit trial 2 (LOC-412): the coach's check-in and coaching-decision notices
+ * render through CoachNotice (src/components/ui/coach-notice.tsx).
+ *
  * D231 (app layout rework, batch 1): an item with `wrap: true` is shown in full
  * (no two-line clamp). The three occupants that moved onto the line from
  * unclamped cards and rows set it, so a long limitation sentence or a large
@@ -36,6 +47,18 @@ function TodayLine({ item, testID }) {
   if (!item) return null;
 
   const { text, onPress, onDismiss, accessibilityLabel, wrap } = item;
+  if (COACH_NOTICE_KEYS.includes(item.key)) {
+    return (
+      <CoachNotice
+        text={text}
+        onPress={onPress}
+        onDismiss={onDismiss}
+        accessibilityLabel={accessibilityLabel}
+        wrap={wrap}
+        testID={testID}
+      />
+    );
+  }
   const live = {
     row: { backgroundColor: t.colors.primaryBg },
     accent: { backgroundColor: t.colors.primary },

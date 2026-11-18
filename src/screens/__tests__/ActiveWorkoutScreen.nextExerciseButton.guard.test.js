@@ -123,8 +123,12 @@ describe('extra sets beyond the plan stay loggable as an explicit SECONDARY acti
     expect(SECTION).toContain('testID="volyume-btn-extra-set"');
     // D220 addendum 15 (founder: no pill buttons): a glyph-and-label footer
     // action, never a boxed Button, so it can never read as a second primary.
-    expect(SECTION).toMatch(/<FooterAction\s*testID="volyume-btn-extra-set"\s*icon="add"\s*label="Add set"/);
+    // Kit trial 2 (LOC-412): the footer action is the kit's ghost Button (plain
+    // text and an icon, no fill, no border), drawn by ExerciseFooterAction.
+    expect(SECTION).toMatch(/<ExerciseFooterAction\s*testID="volyume-btn-extra-set"\s*icon=\{Plus\}\s*label="Add set"/);
     expect(SECTION).not.toContain("import Button from");
+    const KIT_CARD = fs.readFileSync(path.resolve(__dirname, '../../components/ui/exercise-card-kit.tsx'), 'utf8');
+    expect(KIT_CARD).toMatch(/function ExerciseFooterAction[\s\S]{0,300}?variant="ghost"/);
   });
 
   test('arming cancels the countdown and returns the bar to Log set (prepare-not-commit, CL-6.1)', () => {

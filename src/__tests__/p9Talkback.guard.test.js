@@ -61,7 +61,12 @@ describe('P9: logging a set is spoken', () => {
     // save is in flight.
     expect(src).toMatch(/check: 'next',[\s\S]{0,200}?busy: saving,/);
     const rowSrc = read('src/components/workout/session/SetRow.js');
-    expect(rowSrc).toMatch(/accessibilityState=\{\{ disabled, busy: !!busy \}\}/);
+    // Kit trial 2 (LOC-412): the check is the kit's SetCheck (a checkbox); the
+    // row hands it busy, and SetCheck puts it into accessibilityState with the
+    // checked and disabled state.
+    expect(rowSrc).toMatch(/busy=\{!!busy\}/);
+    const kitRowSrc = read('src/components/ui/set-row-kit.tsx');
+    expect(kitRowSrc).toMatch(/accessibilityState=\{\{ checked: logged, disabled: !!disabled, busy: !!busy \}/);
     const buttonSrc = read('src/components/Button.js');
     expect(buttonSrc).toMatch(/disabled:\s*isDisabled/);
   });

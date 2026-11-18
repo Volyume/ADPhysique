@@ -3,6 +3,7 @@ import * as Slot from '@rn-primitives/slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 import { Platform, Text as RNText, type Role } from 'react-native';
+import { fontScaleCaps } from '../../styles/theme';
 
 const textVariants = cva(
   cn(
@@ -79,6 +80,11 @@ function Text({
   return (
     <Component
       className={cn(textVariants({ variant }), textClass, className)}
+      // The house reading cap (src/components/Text.js does the same for the
+      // app's own Text): the phone's text size is honoured up to 2.0x, and a
+      // caller with a chrome or numeral need passes its own cap from
+      // fontScaleCaps.
+      maxFontSizeMultiplier={fontScaleCaps.reading}
       role={variant ? ROLE[variant] : undefined}
       aria-level={variant ? ARIA_LEVEL[variant] : undefined}
       {...props}

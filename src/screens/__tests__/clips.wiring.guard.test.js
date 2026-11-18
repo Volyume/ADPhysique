@@ -86,7 +86,10 @@ describe('ActiveWorkoutScreen: "Film" is a footer action on the exercise card, f
   });
 
   test('the card draws Film beside Add set and Swap with the words from the one rule, and nothing when onFilm is withheld', () => {
-    expect(CARD).toMatch(/\{onFilm \? \(\s*<FooterAction\s+testID="volyume-btn-film-set"\s+icon="videocam-outline"\s+label=\{CLIP_STRINGS\.filmLabel\}\s+accessibilityLabel=\{CLIP_STRINGS\.rowA11y\}\s+onPress=\{onFilm\}/);
+    // Kit trial 2 (LOC-412): the action is the kit's ExerciseFooterAction with
+    // the lucide Video glyph (was Ionicons videocam-outline); the words and the
+    // wiring are unchanged.
+    expect(CARD).toMatch(/\{onFilm \? \(\s*<ExerciseFooterAction\s+testID="volyume-btn-film-set"\s+icon=\{Video\}\s+label=\{CLIP_STRINGS\.filmLabel\}\s+accessibilityLabel=\{CLIP_STRINGS\.rowA11y\}\s+onPress=\{onFilm\}/);
     expect(CARD).toContain("import { CLIP_STRINGS } from '../../../lib/clips/rules';");
   });
 

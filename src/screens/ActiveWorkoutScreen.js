@@ -29,6 +29,7 @@ import StatusStrip from '../components/workout/StatusStrip';
 import SessionToolbar from '../components/workout/session/SessionToolbar';
 import SessionHeader from '../components/workout/session/SessionHeader';
 import ExerciseSection from '../components/workout/session/ExerciseSection';
+import { ExerciseList } from '../components/ui/exercise-card-kit';
 import RestSheet from '../components/workout/session/RestSheet';
 import SessionNotesSheet from '../components/workout/session/SessionNotesSheet';
 // Logger phase 2B (physical-device corrective redesign): the whole session
@@ -6245,6 +6246,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // y 0 would show the title and the sections above instead).
   const collapsedSectionsBefore = [];
   const collapsedSectionsAfter = [];
+  // The exercises after the active one fold into one collapsible list (kit
+  // trial 2, LOC-412, design rule 7); this counts the ones still to do.
+  let stillToDoAfter = 0;
   workoutExercises.forEach((entry, i) => {
     if (i === currentExerciseIndex) return;
     const item = outlineItemsShown[i];
@@ -6260,9 +6264,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         totalSetCount={item.total}
         groupLabel={item.groupLabel}
         skipped={item.skipped}
+        embedded={i > currentExerciseIndex}
         onPressHeader={() => handleJumpToExercise(i)}
       />
     );
+    if (i > currentExerciseIndex && !complete) stillToDoAfter += 1;
     (i < currentExerciseIndex ? collapsedSectionsBefore : collapsedSectionsAfter).push(node);
   });
 
@@ -6830,7 +6836,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
           </ExerciseSection>
           </View>
-          {collapsedSectionsAfter}
+          {collapsedSectionsAfter.length > 0 ? (
+            <ExerciseList
+              title={stillToDoAfter > 0 ? `Still to do (${stillToDoAfter})` : `Done (${collapsedSectionsAfter.length})`}
+              accessibilityLabel={stillToDoAfter > 0
+                ? `Exercises still to do, ${stillToDoAfter}`
+                : `Exercises done, ${collapsedSectionsAfter.length}`}
+            >
+              {collapsedSectionsAfter}
+            </ExerciseList>
+          ) : null}
         </ScrollView>
 
         {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar,

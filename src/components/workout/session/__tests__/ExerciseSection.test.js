@@ -1,25 +1,51 @@
 /**
  * ExerciseSection (12-BUILD-SPEC sections 1.3, 2 and 3, register D220; the
- * header redrawn on the founder render verdicts 2026-10-09, addenda 9 and 10).
+ * header redrawn on the founder render verdicts 2026-10-09, addenda 9 and 10;
+ * redrawn with the kit in kit trial 2, LOC-412).
  * Pins: the three states (active mounts the children and footer; done shows
- * the green check alone, its count in the spoken label; upcoming is the header
- * alone), the header as ONE button (24 dp badge, one-line name at the label
- * role semibold, trailing state, no chevron), that the tools row is gone (no
- * Guide, History or Rest length control, and the onDetails, onHistory and
- * onRestLength props draw nothing), the card order header, children, footer,
- * every footer callback, that the bests line is gone, the accessibility labels
- * and hints, and the token-only source guard.
+ * a plain tick alone, its count in the spoken label; upcoming is the header
+ * alone), the header as ONE button (24 dp badge, one-line name semibold,
+ * trailing state, no chevron), that the tools row is gone (no Guide, History
+ * or Rest length control, and the onDetails, onHistory and onRestLength props
+ * draw nothing), the card order header, children, footer, every footer
+ * callback, that the bests line is gone, the accessibility labels and hints,
+ * and the source guard.
+ *
+ * The look is the kit's (src/components/ui/exercise-card-kit.tsx): classes
+ * resolved through NativeWind at render time and lucide icons, so these tests
+ * render through the kit's real styling pipeline (src/components/ui/__tests__/
+ * kitTestEnv.js) and read resolved styles, as kitTrial2Surfaces.test.js does.
+ * Behaviour, props, callbacks, testIDs and spoken labels are pinned exactly as
+ * before; only the presentation pins moved to the new look.
  */
-import fs from 'fs';
-import path from 'path';
-import { Animated, Text } from 'react-native';
-import { create, act } from 'react-test-renderer';
-import { colors, type, radius, spacing, iconSize } from '../../../../styles/theme';
-import { touchTarget } from '../../../../styles/layout';
-import ExerciseSection from '../ExerciseSection';
+jest.mock('react-native-svg', () => require('../../../ui/__tests__/kitTestEnv').svgMock());
+jest.mock('react-native', () => require('../../../ui/__tests__/kitTestEnv').reactNativeMock());
+const {
+  loadNativeInteropRuntime, setUpKitStyles, setPalette, renderKit, hostNodes, normaliseColour, flatStyle,
+} = require('../../../ui/__tests__/kitTestEnv');
+
+loadNativeInteropRuntime();
+
+// Plain requires, after loadNativeInteropRuntime(): an import would be hoisted
+// above it and load the web runtime of css-interop.
+const fs = require('fs');
+const path = require('path');
+const { Animated, Text } = require('react-native');
+const { act } = require('react-test-renderer');
+const { resolveTheme, fontScaleCaps, radius, spacing } = require('../../../../styles/theme');
+const { touchTarget } = require('../../../../styles/layout');
+const ExerciseSection = require('../ExerciseSection').default;
+const { KitThemeProvider } = require('../../../ui/kit-theme-provider');
+
+// The dark palette's tokens: the kit variables resolve to these.
+const colors = resolveTheme({ theme: 'dark' }).colors;
+const hex = (c) => normaliseColour(c).hex;
+const SEMIBOLD = 'Inter-SemiBold';
+
+beforeAll(() => { setUpKitStyles(); setPalette({ theme: 'dark' }); }, 120000);
 
 // Kept from when the footer's Add set was the house Button (expo-haptics is
-// not present under Jest); harmless now that the footer actions are chromeless.
+// not present under Jest); harmless now that the footer actions are kit buttons.
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),
   notificationAsync: jest.fn(() => Promise.resolve()),
@@ -30,21 +56,25 @@ jest.mock('expo-haptics', () => ({
 
 
 function render(props, children) {
-  let tree;
-  act(() => {
-    tree = create(
-      <ExerciseSection index={2} name="Barbell Row (Bent Over)" state="active" doneSetCount={0} {...props}>
-        {children === undefined ? <Text>TABLE_CHILD</Text> : children}
-      </ExerciseSection>,
-    );
-  });
-  return tree;
+  return renderKit(
+    <ExerciseSection index={2} name="Barbell Row (Bent Over)" state="active" doneSetCount={0} {...props}>
+      {children === undefined ? <Text>TABLE_CHILD</Text> : children}
+    </ExerciseSection>,
+  );
 }
 const hosts = (tree, pred) => tree.root.findAll((n) => typeof n.type === 'string' && pred(n.props || {}));
 const byLabel = (tree, label) => hosts(tree, (p) => p.accessibilityLabel === label);
 const one = (list) => { expect(list).toHaveLength(1); return list[0]; };
 const press = (node) => act(() => { node.props.onPress(); });
-const flat = (style) => Object.assign({}, ...[].concat(style).filter(Boolean).map((s) => (Array.isArray(s) ? flat(s) : s)));
+const flat = flatStyle;
+// A lucide icon is a host node of type 'LucideIcon' (props.name is the icon).
+const icons = (tree, name) => (tree.root ?? tree).findAll((n) => n.type === 'LucideIcon' && n.props.name === name);
+const iconInk = (node) => hex(flat(node.props.style).color ?? node.props.color);
+// The kit card: the one host with the card's radius and a border.
+const cardsOf = (tree) => hostNodes(tree).filter((n) => {
+  const s = flat(n.props.style);
+  return s.borderRadius === radius.lg && s.borderWidth !== undefined;
+});
 function words(node) {
   if (node == null) return [];
   if (typeof node === 'string' || typeof node === 'number') return [String(node)];
@@ -69,21 +99,23 @@ describe('ExerciseSection states', () => {
     one(byLabel(withSwap, 'Swap exercise'));
   });
 
-  test('done: the green check alone, the count in the spoken label only', () => {
+  test('done: the tick alone, the count in the spoken label only', () => {
     const tree = render({ state: 'done', doneSetCount: 3 });
     expect(joined(tree)).not.toContain('TABLE_CHILD');
     // The text "3 sets" is no longer drawn; the badge, name and check remain.
     expect(words(tree.toJSON())).not.toContain('3 sets');
     expect(words(tree.toJSON())).toEqual(['2', 'Barbell Row (Bent Over)']);
-    // The app's "done" mark: the filled success check, as the plan detail.
-    const glyph = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'checkmark-circle');
+    // kit trial 2 (LOC-412): the done mark was the green filled check-circle; it is now a
+    // plain tick in the primary ink (the kit spends no green or amber on a finished exercise).
+    const glyph = icons(tree, 'Check');
     expect(glyph).toHaveLength(1);
-    expect(glyph[0].props.color).toBe(colors.success);
+    expect(iconInk(glyph[0])).toBe(hex(colors.textPrimary));
+    expect(tree.root.findAll((n) => n.type === 'LucideIcon')).toHaveLength(1);
     expect(byLabel(tree, 'Add set')).toHaveLength(0);
     expect(byLabel(tree, 'Rest length for Barbell Row (Bent Over)')).toHaveLength(0);
     const slot = one(byLabel(tree, '3 sets done'));
     expect(slot.props.accessible).toBe(true);
-    expect(slot.findAll((n) => n.type === 'Ionicons')).toHaveLength(1);
+    expect(slot.findAll((n) => n.type === 'LucideIcon')).toHaveLength(1);
     expect(words(slot)).toEqual([]);
     expect(glyph[0].props.size).toBe(16);
   });
@@ -120,10 +152,13 @@ describe('ExerciseSection states', () => {
 
   test('upcoming and partly done: "{done} of {total}" (no "sets" word) sits in the trailing slot at the caption role, not under the name', () => {
     const tree = render({ state: 'upcoming', doneSetCount: 2, totalSetCount: 4 });
-    const count = flat(textHost(tree, '2 of 4').props.style);
-    expect(count.color).toBe(colors.textSecondary);
-    expect(count.fontSize).toBe(type.caption.fontSize);
-    expect(count.fontFamily).toBe(type.caption.fontFamily);
+    // kit trial 2 (LOC-412): the caption is the kit's small muted text (11, textMuted, chrome cap),
+    // not the type.caption role in secondary ink.
+    const countHost = textHost(tree, '2 of 4');
+    const count = flat(countHost.props.style);
+    expect(hex(count.color)).toBe(hex(colors.textMuted));
+    expect(count.fontSize).toBe(11);
+    expect(countHost.props.maxFontSizeMultiplier).toBe(fontScaleCaps.chrome);
     expect(words(tree.toJSON())).not.toContain('2 of 4 sets');
     one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over), 2 of 4 sets done'));
     // The name block holds the name alone (no groupLabel given), so the count
@@ -156,20 +191,27 @@ describe('ExerciseSection states', () => {
   test('skipped: muted name, "Left out" in the count slot at the caption role, still tappable', () => {
     const onPressHeader = jest.fn();
     const tree = render({ state: 'upcoming', skipped: true, onPressHeader });
-    const left = flat(textHost(tree, 'Left out').props.style);
-    expect(left.fontSize).toBe(type.caption.fontSize);
-    expect(left.fontFamily).toBe(type.caption.fontFamily);
-    expect(left.color).toBe(colors.textSecondary);
+    // kit trial 2 (LOC-412): the kit caption (11, textMuted, chrome cap) replaces type.caption in secondary ink.
+    const leftHost = textHost(tree, 'Left out');
+    const left = flat(leftHost.props.style);
+    expect(left.fontSize).toBe(11);
+    expect(hex(left.color)).toBe(hex(colors.textMuted));
+    expect(leftHost.props.maxFontSizeMultiplier).toBe(fontScaleCaps.chrome);
     const title = one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over), left out for time'));
     press(title);
     expect(onPressHeader).toHaveBeenCalledTimes(1);
     const name = textHost(tree, 'Barbell Row (Bent Over)');
-    expect(flat(name.props.style).color).toBe(colors.textMuted);
+    expect(hex(flat(name.props.style).color)).toBe(hex(colors.textMuted));
   });
 
-  test('moreHint: the word sits beside the overflow glyph in amber and the label says what is behind it', () => {
+  test('moreHint: the word sits beside the overflow glyph and the label says what is behind it', () => {
     const tree = render({ moreHint: 'More' });
-    textHost(tree, 'More');
+    const hint = textHost(tree, 'More');
+    // kit trial 2 (LOC-412): the hint is the kit caption (muted) and no longer amber; the glyph
+    // takes the strong ink while a hint shows, the muted ink otherwise.
+    expect(hex(flat(hint.props.style).color)).toBe(hex(colors.textMuted));
+    expect(iconInk(one(icons(tree, 'Ellipsis')))).toBe(hex(colors.textPrimary));
+    expect(iconInk(one(icons(render({}), 'Ellipsis')))).toBe(hex(colors.textMuted));
     one(byLabel(tree, 'More options for this exercise, including how logging works'));
     expect(byLabel(render({}), 'More options for this exercise')).toHaveLength(1);
   });
@@ -180,30 +222,33 @@ describe('ExerciseSection states', () => {
 });
 
 describe('ExerciseSection header', () => {
-  test('exercise name: label role semibold in primary ink on one line, shrinking a little; the index in a 24 dp order badge', () => {
+  test('exercise name: semibold 16 in primary ink on one line, shrinking a little; the index in a 24 dp order badge', () => {
     // Amber is spent on the set you are on, not on the name.
+    // kit trial 2 (LOC-412): the name and badge are kit Text with resolved classes (16 semibold,
+    // 11 muted tabular badge, 999 radius) instead of the type.label role and the 12 dp circle.
     const tree = render({});
     const name = textHost(tree, 'Barbell Row (Bent Over)');
     const s = flat(name.props.style);
-    expect(s.color).toBe(colors.textPrimary);
+    expect(hex(s.color)).toBe(hex(colors.textPrimary));
     // One line, the whole width of the name block (founder render verdict
     // 2026-10-09); the trailing state is the only thing after it.
     expect(name.props.numberOfLines).toBe(1);
     expect(name.props.adjustsFontSizeToFit).toBe(true);
     expect(name.props.minimumFontScale).toBe(0.75);
-    expect(s.fontFamily).toBe(type.w(type.label, 'semibold').fontFamily);
-    expect(s.fontSize).toBe(type.label.fontSize);
-    const indexText = textHost(tree, '2');
-    const index = flat(indexText.props.style);
-    expect(index.color).toBe(colors.textSecondary);
+    expect(name.props.maxFontSizeMultiplier).toBe(fontScaleCaps.chrome);
+    expect(s.fontFamily).toBe(SEMIBOLD);
+    expect(s.fontSize).toBe(16);
+    const indexHost = textHost(tree, '2');
+    const index = flat(indexHost.props.style);
+    expect(hex(index.color)).toBe(hex(colors.textMuted));
     expect(index.fontVariant).toEqual(['tabular-nums']);
-    expect(index.fontSize).toBe(type.label.fontSize);
-    expect(index.fontFamily).toBe(type.w(type.label, 'bold').fontFamily);
-    const badge = flat(one(hosts(tree, (p) => flat(p.style).borderRadius === 12 && flat(p.style).width === 24)).props.style);
+    expect(index.fontSize).toBe(11);
+    expect(indexHost.props.maxFontSizeMultiplier).toBe(fontScaleCaps.chrome);
+    const badge = flat(one(hostNodes(tree).filter((n) => flat(n.props.style).borderRadius === 999 && flat(n.props.style).width === 24)).props.style);
     expect(badge.width).toBe(24);
     expect(badge.height).toBe(24);
-    expect(badge.borderRadius).toBe(12);
-    expect(badge.backgroundColor).toBe(colors.surface2);
+    expect(badge.borderRadius).toBe(999);
+    expect(hex(badge.backgroundColor)).toBe(hex(colors.surface2));
   });
 
   test('the header is ONE button: 56 dp row, badge, name block and trailing state; no chevron, no spacer, no Details or Make current button', () => {
@@ -225,7 +270,7 @@ describe('ExerciseSection header', () => {
     expect(words(header)).toEqual(['2', 'Barbell Row (Bent Over)', '1 of 3']);
     const nameBlock = one(hosts(tree, (p) => flat(p.style).flex === 1 && flat(p.style).minWidth === 0));
     expect(words(nameBlock)).toEqual(['Barbell Row (Bent Over)']);
-    expect(tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'chevron-forward')).toHaveLength(0);
+    expect(icons(tree, 'ChevronRight')).toHaveLength(0);
     expect(byLabel(tree, 'Details for Barbell Row (Bent Over)')).toHaveLength(0);
     expect(byLabel(tree, 'Make Barbell Row (Bent Over) current')).toHaveLength(0);
     expect(hosts(tree, (p) => p.accessible === false && p.importantForAccessibility === 'no')).toHaveLength(0);
@@ -236,10 +281,11 @@ describe('ExerciseSection header', () => {
   // Item 18 (option A): the active header's empty right slot carries an information
   // glyph, a cue for the tap that opens the exercise guide. Decoration only.
   test('active and pressable: an information glyph in the right-hand slot, hidden from the accessibility tree; no other state shows it', () => {
-    const glyph = (tree) => tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'information-circle-outline');
+    // kit trial 2 (LOC-412): the glyph is the lucide 'Info' (18 dp) in place of Ionicons' outline info circle.
+    const glyph = (tree) => icons(tree, 'Info');
     const active = render({ state: 'active', onPressHeader: jest.fn() });
     expect(glyph(active)).toHaveLength(1);
-    expect(glyph(active)[0].props.size).toBe(iconSize.md);
+    expect(glyph(active)[0].props.size).toBe(18);
     const cue = one(hosts(active, (p) => p.testID === 'volyume-exercise-info-cue'));
     expect(cue.props.importantForAccessibility).toBe('no-hide-descendants');
     expect(cue.props.accessibilityElementsHidden).toBe(true);
@@ -284,7 +330,12 @@ describe('ExerciseSection header', () => {
 describe('ExerciseSection card order', () => {
   test('active: header, children, footer (no tools row between)', () => {
     const tree = render({ onDetails: jest.fn(), onHistory: jest.fn(), onRestLength: jest.fn() });
-    const kids = tree.toJSON().children;
+    // renderKit mounts a KitThemeProvider view, whose one child is the card's own provider view,
+    // whose one child is the kit card.
+    const outer = tree.toJSON();
+    expect(outer.children).toHaveLength(1);
+    expect(outer.children[0].children).toHaveLength(1);
+    const kids = outer.children[0].children[0].children;
     expect(kids).toHaveLength(3);
     const [header, child, footer] = kids;
     expect(header.props.accessibilityLabel).toBe('Exercise 2, Barbell Row (Bent Over)');
@@ -304,48 +355,49 @@ describe('ExerciseSection footer', () => {
     Object.values(cb).forEach((fn) => expect(fn).toHaveBeenCalledTimes(1));
   });
 
-  test('Add set and Swap are chromeless actions (no fill, no border, 20 dp glyph and semibold label in primary ink); the overflow stays a chromeless glyph', () => {
-    // A FooterAction is a TouchableOpacity holding a glyph and a label, never
-    // a boxed Button (D220 addendum 15). Never a second primary (D8).
+  test('Add set and Swap are ghost kit buttons (no fill, no border, 48 dp, an 18 dp lucide glyph and a semibold label in primary ink); the overflow stays a chromeless glyph', () => {
+    // kit trial 2 (LOC-412): the footer actions were TouchableOpacity rows with 20 dp Ionicons;
+    // they are now the kit's ghost Button (a Pressable with role 'button') with a lucide icon and
+    // a Text label. The grammar (no fill, no border, 48 dp target, never a second primary, D8) holds.
     const tree = render({ onSwap: jest.fn() });
     const add = one(hosts(tree, (p) => p.testID === 'volyume-btn-extra-set'));
     const addStyle = flat(add.props.style);
     expect(addStyle.backgroundColor).toBeUndefined();
     expect(addStyle.borderWidth).toBeUndefined();
     expect(addStyle.borderColor).toBeUndefined();
-    expect(addStyle.borderRadius).toBeUndefined();
     expect(addStyle.minHeight).toBe(touchTarget.minimum);
     expect(addStyle.flexDirection).toBe('row');
     expect(addStyle.alignItems).toBe('center');
-    expect(addStyle.gap).toBe(spacing.xs);
-    expect(addStyle.paddingRight).toBe(spacing.sm);
-    expect(add.props.accessibilityRole).toBe('button');
-    const addGlyph = add.findAll((n) => n.type === 'Ionicons' && n.props.name === 'add');
+    expect(add.props.role).toBe('button');
+    const addGlyph = icons(add, 'Plus');
     expect(addGlyph).toHaveLength(1);
-    expect(addGlyph[0].props.size).toBe(iconSize.md);
-    expect(addGlyph[0].props.size).toBe(20);
-    expect(addGlyph[0].props.color).toBe(colors.textPrimary);
-    const label = flat(textHost(tree, 'Add set').props.style);
-    expect(label.color).toBe(colors.textPrimary);
-    expect(label.fontFamily).toBe(type.w(type.label, 'semibold').fontFamily);
-    expect(label.fontSize).toBe(type.label.fontSize);
+    expect(addGlyph[0].props.size).toBe(18);
+    expect(iconInk(addGlyph[0])).toBe(hex(colors.textPrimary));
+    const addLabel = textHost(tree, 'Add set');
+    const label = flat(addLabel.props.style);
+    expect(hex(label.color)).toBe(hex(colors.textPrimary));
+    expect(label.fontFamily).toBe(SEMIBOLD);
+    expect(addLabel.props.maxFontSizeMultiplier).toBe(fontScaleCaps.chrome);
     const swap = one(byLabel(tree, 'Swap exercise'));
     const swapStyle = flat(swap.props.style);
     expect(swapStyle.backgroundColor).toBeUndefined();
     expect(swapStyle.borderWidth).toBeUndefined();
     expect(swapStyle.minHeight).toBe(touchTarget.minimum);
-    const swapGlyph = swap.findAll((n) => n.type === 'Ionicons' && n.props.name === 'swap-horizontal');
+    const swapGlyph = icons(swap, 'ArrowLeftRight');
     expect(swapGlyph).toHaveLength(1);
-    expect(swapGlyph[0].props.size).toBe(20);
-    expect(swapGlyph[0].props.color).toBe(colors.textPrimary);
+    expect(swapGlyph[0].props.size).toBe(18);
+    expect(iconInk(swapGlyph[0])).toBe(hex(colors.textPrimary));
     const swapLabel = flat(textHost(tree, 'Swap').props.style);
-    expect(swapLabel.color).toBe(colors.textPrimary);
-    expect(swapLabel.fontFamily).toBe(type.w(type.label, 'semibold').fontFamily);
+    expect(hex(swapLabel.color)).toBe(hex(colors.textPrimary));
+    expect(swapLabel.fontFamily).toBe(SEMIBOLD);
+    // The overflow is still a TouchableOpacity, now drawing the lucide Ellipsis.
     const more = one(hosts(tree, (p) => p.testID === 'volyume-section-more'));
+    expect(more.type).toBe('TouchableOpacity');
     const moreStyle = flat(more.props.style);
     expect(moreStyle.backgroundColor).toBeUndefined();
     expect(moreStyle.borderWidth).toBeUndefined();
     expect(moreStyle.height).toBe(touchTarget.minimum);
+    expect(icons(more, 'Ellipsis')).toHaveLength(1);
   });
 });
 
@@ -360,17 +412,30 @@ describe('ExerciseSection bests line is gone', () => {
 });
 
 describe('ExerciseSection surface', () => {
-  test('the house card: surface fill, radius.lg, 1 px borderSubtle, no band of its own', () => {
-    // Card.js geometry, so the section sits in the page gap like every other
-    // card in the app rather than a full-bleed band of its own.
-    const root = render({}).toJSON();
-    const s = flat(root.props.style);
-    expect(s.backgroundColor).toBe(colors.surface);
+  test('the kit card: surface fill, radius.lg, 1 px borderSubtle, no band, no shadow, no padding of its own', () => {
+    // kit trial 2 (LOC-412): the "house card" (Card.js geometry) is now the kit Card inside a
+    // KitThemeProvider view, with the same surface, radius and hairline border resolved from
+    // classes. The card still carries no band of its own: the page gap spaces it.
+    const card = one(cardsOf(render({})));
+    const s = flat(card.props.style);
+    expect(hex(s.backgroundColor)).toBe(hex(colors.surface));
     expect(s.borderRadius).toBe(radius.lg);
     expect(s.borderWidth).toBe(1);
-    expect(s.borderColor).toBe(colors.borderSubtle);
+    expect(hex(s.borderColor)).toBe(hex(colors.borderSubtle));
     expect(s.overflow).toBe('hidden');
+    expect(s.rowGap ?? s.gap).toBe(0);
     expect(s.marginTop).toBeUndefined();
+    expect(s.paddingTop ?? 0).toBe(0);
+    expect(s.paddingBottom ?? 0).toBe(0);
+    expect(s.shadowOpacity === undefined || s.shadowColor === undefined || s.elevation === 0 || s.shadowRadius === 0).toBe(true);
+  });
+
+  test('embedded (kit trial 2): draws no card of its own, still the header and the footer', () => {
+    // New in LOC-412: a row of the "still to do" list; the list is the card.
+    const tree = render({ embedded: true });
+    expect(cardsOf(tree)).toHaveLength(0);
+    one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over)'));
+    one(byLabel(tree, 'Add set'));
   });
 });
 
@@ -384,7 +449,7 @@ describe('ExerciseSection countdown line', () => {
     expect(line(render({ countdown: { active: false, ms: 1800, reduceMotion: false } }))).toHaveLength(0);
   });
 
-  test('active: a 2 dp amber line along the top edge of the footer, hidden from the accessibility tree', () => {
+  test('active: a 2 dp quiet line along the top edge of the footer, hidden from the accessibility tree', () => {
     const tree = render({ countdown: { active: true, ms: 1800, reduceMotion: false } });
     const track = one(line(tree));
     const s = flat(track.props.style);
@@ -395,7 +460,10 @@ describe('ExerciseSection countdown line', () => {
     expect(s.right).toBe(0);
     expect(track.props.accessibilityElementsHidden).toBe(true);
     expect(track.props.importantForAccessibility).toBe('no-hide-descendants');
-    expect(flat(fill(tree).props.style).backgroundColor).toBe(colors.primary);
+    // kit trial 2 (LOC-412): the line was amber (colors.primary); amber is now reserved for "act here"
+    // (the one solid button, the field ring), so the auto-advance line is the quiet secondary ink.
+    expect(hex(flat(fill(tree).props.style).backgroundColor)).toBe(hex(colors.textSecondary));
+    expect(hex(flat(fill(tree).props.style).backgroundColor)).not.toBe(hex(colors.primary));
     expect(flat(fill(tree).props.style).height).toBe(2);
   });
 
@@ -408,8 +476,11 @@ describe('ExerciseSection countdown line', () => {
   test('it fills over ms with the width animation, and every fresh arming restarts it', () => {
     const timing = jest.spyOn(Animated, 'timing');
     try {
+      // renderKit mounts under a KitThemeProvider; update with the same root so the tree is kept.
       const section = (countdown) => (
-        <ExerciseSection index={2} name="Row" state="active" countdown={countdown}><Text>x</Text></ExerciseSection>
+        <KitThemeProvider>
+          <ExerciseSection index={2} name="Row" state="active" countdown={countdown}><Text>x</Text></ExerciseSection>
+        </KitThemeProvider>
       );
       const tree = render({ countdown: { active: true, ms: 1000, reduceMotion: false } });
       expect(timing).toHaveBeenCalledTimes(1);
@@ -430,7 +501,8 @@ describe('ExerciseSection countdown line', () => {
       const tree = render({ countdown: { active: true, ms: 1800, reduceMotion: true } });
       expect(flat(fill(tree).props.style).width).toBe('100%');
       expect(flat(fill(tree).props.style).height).toBe(2);
-      expect(flat(fill(tree).props.style).backgroundColor).toBe(colors.primary);
+      // kit trial 2 (LOC-412): quiet secondary ink, not amber (see the active test).
+      expect(hex(flat(fill(tree).props.style).backgroundColor)).toBe(hex(colors.textSecondary));
       expect(timing).not.toHaveBeenCalled();
     } finally {
       timing.mockRestore();
@@ -472,10 +544,20 @@ describe('ExerciseSection source guard (tokens only)', () => {
   test('no estimated max, plate readout, RPE or RIR', () => {
     expect(SRC).not.toMatch(/\b(e1rm|1rm|est\.? ?max|plate|rpe|rir)\b/i);
   });
+  // kit trial 2 (LOC-412): the source legitimately changed to draw with the kit and lucide, so
+  // the guard now also pins that: no Ionicons and no theme `colors` read for a fill (the only
+  // colour passed is the countdown's quiet ink, from the theme hook).
+  test('draws with the kit parts and lucide icons, not Ionicons or inline fills', () => {
+    expect(SRC).toMatch(/from '\.\.\/\.\.\/ui\/exercise-card-kit'/);
+    expect(SRC).toMatch(/from 'lucide-react-native'/);
+    expect(SRC).not.toMatch(/Ionicons/);
+    expect(SRC).not.toMatch(/colors\.(primary|success|surface)/);
+    expect(SRC).toMatch(/t\.colors\.textSecondary/);
+  });
 });
 
 // Founder request 2026-10-17 ("delete a set if you've added too many or want to
-// do less"): a Remove set action beside Add set, the same chromeless 48 dp
+// do less"): a Remove set action beside Add set, the same ghost 48 dp
 // footer action, only when the screen gives onRemoveSet.
 describe('ExerciseSection footer, Remove set', () => {
   test('absent without onRemoveSet', () => {
@@ -489,9 +571,11 @@ describe('ExerciseSection footer, Remove set', () => {
     const tree = render({ onRemoveSet });
     const remove = one(byLabel(tree, 'Remove a set from Barbell Row (Bent Over)'));
     expect(remove.props.testID).toBe('volyume-btn-remove-set');
-    expect(remove.props.accessibilityRole).toBe('button');
+    expect(remove.props.role).toBe('button');
     expect(flat(remove.props.style).minHeight).toBe(touchTarget.minimum);
     expect(flat(remove.props.style).backgroundColor).toBeUndefined();
+    expect(flat(remove.props.style).borderWidth).toBeUndefined();
+    expect(icons(remove, 'Minus')).toHaveLength(1);
     expect(textHost(tree, 'Remove set')).toBeTruthy();
     press(remove);
     expect(onRemoveSet).toHaveBeenCalledTimes(1);

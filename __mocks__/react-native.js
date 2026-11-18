@@ -166,6 +166,21 @@ const Animated = {
 
 const Easing = new Proxy({}, { get: () => () => 0 });
 
+// Inert versions of the pieces the NativeWind css-interop runtime reads when
+// it loads (kit trial, LOC-412). Screens now import kit parts, so every suite
+// that mounts them needs these; they do nothing on their own.
+const Appearance = {
+  getColorScheme: () => 'dark',
+  setColorScheme: jest.fn(),
+  addChangeListener: () => ({ remove: () => {} }),
+};
+const AccessibilityInfo = {
+  isReduceMotionEnabled: () => Promise.resolve(false),
+  addEventListener: () => ({ remove: () => {} }),
+};
+const I18nManager = { isRTL: false, getConstants: () => ({ isRTL: false }) };
+const PlatformColor = (...names) => ({ semantic: names });
+
 module.exports = {
   View, Text, ScrollView, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback,
   Pressable, TextInput, Image, ImageBackground, Switch, Modal, FlatList, SectionList,
@@ -174,4 +189,5 @@ module.exports = {
   StyleSheet, Platform, Dimensions, useWindowDimensions, Alert, Linking, AppState, BackHandler, Keyboard, Share, Vibration,
   NativeModules, NativeEventEmitter, PixelRatio, Animated, Easing,
   InteractionManager, LayoutAnimation, UIManager, PermissionsAndroid,
+  Appearance, AccessibilityInfo, I18nManager, PlatformColor,
 };

@@ -11,3 +11,22 @@ global.__DEV__ = true;
 jest.mock('expo/virtual/env', () => ({ env: process.env }));
 // react-test-renderer / React 19 expects this flag set so act() warnings behave.
 global.IS_REACT_ACT_ENVIRONMENT = true;
+
+// Kit trial (LOC-412): screens render parts of the React Native Reusables kit
+// (src/components/ui). This repo's Jest config has no React Native preset, so
+// react-native-css-interop would resolve its WEB runtime, which crashes on
+// load here and turns className into `$$css` markers. Point its four
+// platform-split modules at their `.native.js` builds, the files Metro bundles
+// for Android and iOS, for every suite. Suites that never import the kit do
+// not load them. src/components/ui/__tests__/kitTestEnv.js does the same for
+// the kit's own suites and stays compatible with this.
+for (const mod of [
+  'react-native-css-interop/dist/runtime/api',
+  'react-native-css-interop/dist/runtime/index',
+  'react-native-css-interop/dist/runtime/third-party-libs/react-native-safe-area-context',
+  'react-native-css-interop/dist/doctor',
+]) {
+  let nativePath = null;
+  try { nativePath = require.resolve(`${mod}.native.js`); } catch { nativePath = null; }
+  if (nativePath) jest.doMock(mod, () => jest.requireActual(nativePath));
+}

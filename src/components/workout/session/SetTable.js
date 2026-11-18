@@ -38,12 +38,10 @@
  * opened, "Hide earlier sets". Rows that are not logged are never folded, and a
  * row being edited is never hidden. The open or closed state lives here.
  */
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import Text from '../../Text';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import useTheme from '../../../hooks/useTheme';
-import { iconSize, spacing, fontScaleCaps } from '../../../styles/theme';
+import { SetColumnLabel, SetColumnsShell, SetFoldLabel, SetFoldShell } from '../../ui/exercise-card-kit';
+import { spacing } from '../../../styles/theme';
 import SetRow, { SET_COLUMNS } from './SetRow';
 
 // Spec section 2: the column-label row is 36 dp.
@@ -51,14 +49,15 @@ const COLUMNS_MIN_HEIGHT = 36;
 // Three logged rows are the point at which the fold appears.
 const FOLD_AT = 3;
 const FOLD_HIT_SLOP = { top: spacing.xs2, bottom: spacing.xs2, left: 0, right: 0 };
-// The 36 dp tick-all glyph reaches 48 dp with its slop.
-const TICK_ALL_HIT_SLOP = { top: 6, bottom: 6, left: 6, right: 6 };
+// The tick-all label is the check column's 48 dp wide and 36 dp high; its slop
+// takes the height to 48 dp.
+const TICK_ALL_HIT_SLOP = { top: 6, bottom: 6, left: 0, right: 0 };
 
 function plural(count, one, many) {
   return count === 1 ? one : many;
 }
 
-function FoldLine({ collapsed, hiddenCount, onPress, live, glyphColor }) {
+function FoldLine({ collapsed, hiddenCount, onPress }) {
   const label = collapsed
     ? `${hiddenCount} earlier ${plural(hiddenCount, 'set', 'sets')} logged`
     : 'Hide earlier sets';
@@ -66,17 +65,17 @@ function FoldLine({ collapsed, hiddenCount, onPress, live, glyphColor }) {
     ? `Show ${hiddenCount} earlier logged ${plural(hiddenCount, 'set', 'sets')}`
     : 'Hide earlier logged sets';
   return (
-    <TouchableOpacity
-      style={[styles.fold, live.fold]}
-      onPress={onPress}
-      hitSlop={FOLD_HIT_SLOP}
-      accessibilityRole="button"
-      accessibilityLabel={spoken}
-      accessibilityState={{ expanded: !collapsed }}
-    >
-      <Ionicons name={collapsed ? 'chevron-down' : 'chevron-up'} size={iconSize.sm} color={glyphColor} />
-      <Text style={live.foldText} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
-    </TouchableOpacity>
+    <SetFoldShell>
+      <TouchableOpacity
+        onPress={onPress}
+        hitSlop={FOLD_HIT_SLOP}
+        accessibilityRole="button"
+        accessibilityLabel={spoken}
+        accessibilityState={{ expanded: !collapsed }}
+      >
+        <SetFoldLabel collapsed={collapsed} label={label} />
+      </TouchableOpacity>
+    </SetFoldShell>
   );
 }
 
@@ -90,14 +89,6 @@ export default function SetTable({
   units = 'kg',
   onRowLayout,
 }) {
-  const t = useTheme();
-  const live = useMemo(() => ({
-    columns: { borderBottomColor: t.colors.borderSubtle },
-    // Column labels in the house overline (SectionLabel grammar).
-    label: { ...t.type.overline, color: t.colors.textSecondary },
-    fold: { borderBottomColor: t.colors.borderSubtle },
-    foldText: { ...t.type.label, color: t.colors.textSecondary },
-  }), [t]);
   const [expanded, setExpanded] = useState(false);
 
   const list = Array.isArray(rows) ? rows : [];
@@ -128,12 +119,12 @@ export default function SetTable({
 
   return (
     <View>
-      <View style={[styles.columns, live.columns]}>
-        <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>SET</Text>
-        <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>LAST</Text>
+      <SetColumnsShell>
+        <View style={styles.colMarker}><SetColumnLabel>SET</SetColumnLabel></View>
+        <View style={styles.colLast}><SetColumnLabel>LAST</SetColumnLabel></View>
         <View style={styles.colWells}>
           {wellLabels.map((label) => (
-            <Text key={label} style={[styles.label, styles.colWell, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>{label.toUpperCase()}</Text>
+            <View key={label} style={styles.colWell}><SetColumnLabel>{label.toUpperCase()}</SetColumnLabel></View>
           ))}
         </View>
         <View style={styles.colCheck}>
@@ -149,19 +140,17 @@ export default function SetTable({
               accessibilityRole="button"
               accessibilityLabel="Log remaining sets"
             >
-              <Text style={[styles.label, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>ALL</Text>
+              <SetColumnLabel chrome>ALL</SetColumnLabel>
             </TouchableOpacity>
           ) : null}
         </View>
-      </View>
+      </SetColumnsShell>
 
       {foldable ? (
         <FoldLine
           collapsed={collapsed}
           hiddenCount={hiddenCount}
           onPress={() => setExpanded((open) => !open)}
-          live={live}
-          glyphColor={t.colors.textSecondary}
         />
       ) : null}
 
@@ -181,16 +170,6 @@ export default function SetTable({
 }
 
 const styles = StyleSheet.create({
-  columns: {
-    minHeight: COLUMNS_MIN_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.sm,
-    borderBottomWidth: 1,
-  },
-  label: { textAlign: 'center' },
   colMarker: { width: SET_COLUMNS.marker },
   colLast: { width: SET_COLUMNS.last },
   colWells: { flex: 1, minWidth: 0, flexDirection: 'row', gap: spacing.sm },
@@ -201,13 +180,5 @@ const styles = StyleSheet.create({
     minHeight: COLUMNS_MIN_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  fold: {
-    minHeight: COLUMNS_MIN_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
   },
 });

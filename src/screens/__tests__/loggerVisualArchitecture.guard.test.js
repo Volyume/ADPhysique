@@ -28,6 +28,7 @@ const REST = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'Res
 const SESSION_DIR = path.join(__dirname, '..', '..', 'components', 'workout', 'session');
 const SET_TABLE = fs.readFileSync(path.join(SESSION_DIR, 'SetTable.js'), 'utf8');
 const SET_ROW = fs.readFileSync(path.join(SESSION_DIR, 'SetRow.js'), 'utf8');
+const KIT_SET_ROW = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'ui', 'set-row-kit.tsx'), 'utf8');
 const SECTION = fs.readFileSync(path.join(SESSION_DIR, 'ExerciseSection.js'), 'utf8');
 const TOOLBAR = fs.readFileSync(path.join(SESSION_DIR, 'SessionToolbar.js'), 'utf8');
 // Absence laws are about RENDERED copy and code; components' own comments
@@ -133,12 +134,18 @@ describe('the check is the one control that logs a set; the bar is gone', () => 
   });
 
   test('a quiet row: no per-row card chrome', () => {
-    const rowBlock = SET_ROW.match(/\n  row: \{[^}]*\}/s)?.[0] ?? '';
-    expect(rowBlock).toBeTruthy();
-    expect(rowBlock).not.toContain('borderWidth');
-    expect(rowBlock).not.toContain('borderRadius');
-    expect(rowBlock).not.toContain('backgroundColor');
+    // Kit trial 2 (LOC-412): the row's frame is the kit's SetRowShell (a plain
+    // flex row, then the kit Separator), drawn in set-row-kit.tsx. It carries no
+    // border, radius or fill of its own: the exercise's one card is the chrome.
+    const rowClass = KIT_SET_ROW.match(/const row = '([^']*)'/)?.[1] ?? '';
+    expect(rowClass).toBeTruthy();
+    expect(rowClass).not.toMatch(/\bborder|rounded|\bbg-/);
+    expect(KIT_SET_ROW).toContain('<Separator />');
+    expect(SET_ROW).not.toContain('borderWidth');
+    expect(SET_ROW).not.toContain('borderRadius');
+    expect(SET_ROW).not.toContain('backgroundColor');
   });
+
 });
 
 describe('the phone\'s keyboard is the input, with the step bar above it (D220 addendum 18)', () => {
@@ -151,12 +158,15 @@ describe('the phone\'s keyboard is the input, with the step bar above it (D220 a
     expect(SRC).toContain('const activeInputField = activeField ? {');
     expect(SRC).not.toContain('systemKeyboard');
     expect(SRC).not.toContain('<Keypad');
-    expect(SET_ROW).toContain('<TextInput');
+    // Kit trial 2 (LOC-412): the well's field is the kit Input (a TextInput).
+    expect(KIT_SET_ROW).toContain('<Input');
+    expect(SET_ROW).toContain('inputRef');
     // The return key and the accessory id pass through unchanged (D220
     // addendum 23): an iOS number pad gets no return key type, so the system
     // draws no return-key capsule, and the keyboard bar is its accessory.
-    expect(SET_ROW).toContain('returnKeyType={input.returnKeyType}');
-    expect(SET_ROW).toContain('inputAccessoryViewID={input.inputAccessoryViewID}');
+    // Kit trial 2 (LOC-412): SetRow.js hands them to the kit Input as props.
+    expect(SET_ROW).toContain('returnKeyType: input.returnKeyType,');
+    expect(SET_ROW).toContain('inputAccessoryViewID: input.inputAccessoryViewID,');
     expect(SRC).toContain("const LOGGER_BAR_ACCESSORY_ID = 'volyume-logger-keyboard-bar';");
     expect(SRC).toContain('returnKeyType: iosPad ? undefined :');
     // One accessory per input, named by field and row and keyed by that name

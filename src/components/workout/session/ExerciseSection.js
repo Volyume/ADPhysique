@@ -53,13 +53,23 @@
  *
  * The card carries no band of its own: the screen's page padding and gap
  * space the cards, as on every other list in the app.
+ *
+ * Look (kit trial 2, LOC-412): the card, the header marks and the footer actions
+ * are the kit parts in src/components/ui/exercise-card-kit.tsx (the middle
+ * charcoal step with a hairline border; footer actions are plain text with an
+ * icon in a 48 dp target; the countdown line is the quiet secondary ink, not
+ * amber, so the logger spends no amber on decoration). `embedded` draws the
+ * section as a row of the "still to do" list, which is the card.
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
-import Text from '../../Text';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { ArrowLeftRight, Minus, Plus, Video } from 'lucide-react-native';
 import useTheme from '../../../hooks/useTheme';
-import { circle, iconSize, radius, spacing, fontScaleCaps } from '../../../styles/theme';
+import { spacing } from '../../../styles/theme';
+import {
+  ExerciseCaption, ExerciseCard, ExerciseDoneMark, ExerciseFooterAction, ExerciseIndex, ExerciseInfoMark,
+  ExerciseMoreMark, ExerciseName,
+} from '../../ui/exercise-card-kit';
 import { SET_COLUMNS } from './SetRow';
 import { CLIP_STRINGS } from '../../../lib/clips/rules';
 import { touchTarget } from '../../../styles/layout';
@@ -68,35 +78,15 @@ import { touchTarget } from '../../../styles/layout';
 // the order badge is the set table's 24 dp marker.
 const HEADER_MIN_HEIGHT = 56;
 const FOOTER_MIN_HEIGHT = 52;
-const DONE_GLYPH = 16;
 // The longest library name is 45 characters; the name shrinks this far
 // before it would wrap or clip, never into a neighbour.
 const NAME_MIN_SCALE = 0.75;
 const COUNTDOWN_HEIGHT = 2;
-const ORDER_BADGE = 24;
 const MORE_HIT_SLOP = { top: 0, bottom: 0, left: 6, right: 6 };
 
 
 function setWord(count) {
   return count === 1 ? 'set' : 'sets';
-}
-
-// A footer action is a label and a glyph, never a boxed button (D8: never a
-// second primary; the founder's ruling against pill buttons, D220 addendum
-// 15): 20 dp glyph, semibold label, a 48 dp target.
-function FooterAction({ icon, label, accessibilityLabel, onPress, glyphColor, labelStyle, testID }) {
-  return (
-    <TouchableOpacity
-      testID={testID}
-      style={styles.action}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-    >
-      <Ionicons name={icon} size={iconSize.md} color={glyphColor} />
-      <Text style={labelStyle} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
-    </TouchableOpacity>
-  );
 }
 
 function CountdownLine({ ms, reduceMotion, color }) {
@@ -148,32 +138,19 @@ export default function ExerciseSection({
   moreHint = null,
   countdown = null,
   totalSetCount = null,
+  embedded = false,
   children,
 }) {
   const t = useTheme();
-  // The house card (Card.js geometry: surface, radius.lg, 1 px borderSubtle)
-  // with the plan detail's exercise row inside it (RoutineDetailScreen's
-  // exerciseCard: a 32 dp surface2 order badge, bodyStrong name in primary
-  // ink). Amber is spent on nothing in the header; the set you are on and a
-  // record carry it inside.
-  const live = useMemo(() => ({
-    section: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
-    indexBadge: { backgroundColor: t.colors.surface2 },
-    index: { ...t.type.w(t.type.num('label'), 'bold'), color: t.colors.textSecondary },
-    name: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
-    doneText: { ...t.type.caption, color: t.colors.textSecondary },
-    action: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
-    nameSkipped: { color: t.colors.textMuted },
-    group: { ...t.type.caption, color: t.colors.textMuted },
-    hint: { ...t.type.w(t.type.caption, 'semibold'), color: t.colors.textSecondary },
-  }), [t]);
-
   const isActive = state === 'active';
   const isDone = state === 'done';
   const doneCount = Number.isFinite(doneSetCount) ? doneSetCount : 0;
+  // An embedded section is a row of the "still to do" list: the list is the
+  // card, so the row draws no card of its own.
+  const Shell = embedded ? View : ExerciseCard;
 
   return (
-    <View style={[styles.section, live.section]}>
+    <Shell>
       <TouchableOpacity
         style={styles.header}
         onPress={onPressHeader}
@@ -183,41 +160,31 @@ export default function ExerciseSection({
         accessibilityHint={isActive ? (onPressHeader ? 'Opens the exercise guide' : undefined) : 'Makes this the current exercise'}
         accessibilityState={{ expanded: isActive }}
       >
-        <View style={[styles.indexBadge, live.indexBadge]}>
-          <Text style={live.index} maxFontSizeMultiplier={fontScaleCaps.chrome}>{index}</Text>
-        </View>
+        <ExerciseIndex index={index} />
         <View style={styles.nameBlock}>
-          <Text
-            style={[styles.name, live.name, skipped && live.nameSkipped]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={NAME_MIN_SCALE}
-            maxFontSizeMultiplier={fontScaleCaps.chrome}
-            >
-            {name}
-          </Text>
-          {groupLabel ? <Text style={live.group} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{groupLabel}</Text> : null}
+          <ExerciseName skipped={skipped} minimumFontScale={NAME_MIN_SCALE}>{name}</ExerciseName>
+          {groupLabel ? <ExerciseCaption numberOfLines={1}>{groupLabel}</ExerciseCaption> : null}
         </View>
         {isDone ? (
           <View style={styles.state} accessible accessibilityLabel={`${doneCount} ${setWord(doneCount)} done`}>
-            <Ionicons name="checkmark-circle" size={DONE_GLYPH} color={t.colors.success} />
+            <ExerciseDoneMark />
           </View>
         ) : skipped ? (
           <View style={styles.state}>
-            <Text style={live.doneText} accessible accessibilityLabel="Left out for time" maxFontSizeMultiplier={fontScaleCaps.chrome}>Left out</Text>
+            <ExerciseCaption accessible accessibilityLabel="Left out for time">Left out</ExerciseCaption>
           </View>
         ) : !isActive && doneCount > 0 && totalSetCount ? (
           <View style={styles.state}>
-            <Text style={live.doneText} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{`${doneCount} of ${totalSetCount}`}</Text>
+            <ExerciseCaption numberOfLines={1}>{`${doneCount} of ${totalSetCount}`}</ExerciseCaption>
           </View>
         ) : isActive && onPressHeader ? (
           // Item 18 (option A): the active header's right slot was empty, so the
           // tap that opens the exercise guide had no visible cue. The glyph is
           // decoration (the whole header is the button, and its hint says
-          // "Opens the exercise guide"); it sits in the same 36 dp column as the
+          // "Opens the exercise guide"); it sits in the same 48 dp column as the
           // done tick and the footer's overflow, on the same centre line.
           <View style={styles.state} testID="volyume-exercise-info-cue" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-            <Ionicons name="information-circle-outline" size={iconSize.md} color={t.colors.textSecondary} />
+            <ExerciseInfoMark />
           </View>
         ) : null}
       </TouchableOpacity>
@@ -227,47 +194,39 @@ export default function ExerciseSection({
       {isActive ? (
         <View style={styles.footer}>
           {countdown && countdown.active ? (
-            <CountdownLine ms={countdown.ms} reduceMotion={!!countdown.reduceMotion} color={t.colors.primary} />
+            <CountdownLine ms={countdown.ms} reduceMotion={!!countdown.reduceMotion} color={t.colors.textSecondary} />
           ) : null}
-          <FooterAction
+          <ExerciseFooterAction
             testID="volyume-btn-extra-set"
-            icon="add"
+            icon={Plus}
             label="Add set"
             accessibilityLabel="Add set"
             onPress={onAddSet}
-            glyphColor={t.colors.textPrimary}
-            labelStyle={live.action}
           />
           {onRemoveSet ? (
-            <FooterAction
+            <ExerciseFooterAction
               testID="volyume-btn-remove-set"
-              icon="remove"
+              icon={Minus}
               label="Remove set"
               accessibilityLabel={`Remove a set from ${name}`}
               onPress={onRemoveSet}
-              glyphColor={t.colors.textPrimary}
-              labelStyle={live.action}
             />
           ) : null}
           {onSwap ? (
-            <FooterAction
-              icon="swap-horizontal"
+            <ExerciseFooterAction
+              icon={ArrowLeftRight}
               label="Swap"
               accessibilityLabel="Swap exercise"
               onPress={onSwap}
-              glyphColor={t.colors.textPrimary}
-              labelStyle={live.action}
             />
           ) : null}
           {onFilm ? (
-            <FooterAction
+            <ExerciseFooterAction
               testID="volyume-btn-film-set"
-              icon="videocam-outline"
+              icon={Video}
               label={CLIP_STRINGS.filmLabel}
               accessibilityLabel={CLIP_STRINGS.rowA11y}
               onPress={onFilm}
-              glyphColor={t.colors.textPrimary}
-              labelStyle={live.action}
             />
           ) : null}
           <View style={styles.footerFill} />
@@ -279,17 +238,16 @@ export default function ExerciseSection({
             accessibilityRole="button"
             accessibilityLabel={moreHint ? 'More options for this exercise, including how logging works' : 'More options for this exercise'}
           >
-            {moreHint ? <Text style={live.hint} maxFontSizeMultiplier={fontScaleCaps.chrome}>{moreHint}</Text> : null}
-            <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={moreHint ? t.colors.textPrimary : t.colors.textSecondary} />
+            {moreHint ? <ExerciseCaption>{moreHint}</ExerciseCaption> : null}
+            <ExerciseMoreMark strong={!!moreHint} />
           </TouchableOpacity>
         </View>
       ) : null}
-    </View>
+    </Shell>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
   // The card grid (D220 addendum 13, the alignment pass): the header, the
   // table and the footer share one left edge (12 dp in) and one right-hand
   // column (the 36 dp check column, 8 dp in), so the order badge sits on the
@@ -304,13 +262,6 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
   },
   state: { minWidth: SET_COLUMNS.check, alignItems: 'center', justifyContent: 'center' },
-  indexBadge: {
-    width: ORDER_BADGE,
-    height: ORDER_BADGE,
-    borderRadius: circle(ORDER_BADGE),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   nameBlock: { flex: 1, minWidth: 0 },
   name: { flexShrink: 1 },
   footer: {

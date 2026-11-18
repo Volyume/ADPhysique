@@ -243,10 +243,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // detail's exercise row, bodyStrong in primary ink, not amber.
     // Addendum 10: the name is back at the founder's 2026-08-18 size, label
     // semibold, so every library name holds one line across the header.
-    expect(SECTION).toContain("name: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },");
+    // Kit trial 2 (LOC-412): the name is the kit's ExerciseName (16 px, Inter
+    // SemiBold, primary ink; muted when skipped), drawn in exercise-card-kit.tsx.
+    const KIT_CARD = fs.readFileSync(path.resolve(__dirname, '../../components/ui/exercise-card-kit.tsx'), 'utf8');
+    expect(KIT_CARD).toMatch(/function ExerciseName[\s\S]{0,700}?fontFamily: fontFamily\.semibold[\s\S]{0,200}?text-base[\s\S]{0,100}?text-foreground/);
     // D220 addendum 9 (founder render verdict): the name holds ONE line and
     // the whole header is the tap, a 56 dp row.
-    expect(SECTION).toMatch(/style=\{\[styles\.name, live\.name, skipped && live\.nameSkipped\]\}\s*numberOfLines=\{1\}\s*adjustsFontSizeToFit\s*minimumFontScale=\{NAME_MIN_SCALE\}/);
+    expect(KIT_CARD).toMatch(/function ExerciseName[\s\S]{0,400}?numberOfLines=\{1\}\s*adjustsFontSizeToFit\s*minimumFontScale=\{minimumFontScale\}/);
+    expect(SECTION).toMatch(/<ExerciseName skipped=\{skipped\} minimumFontScale=\{NAME_MIN_SCALE\}>/);
     expect(SECTION).toMatch(/header: \{[\s\S]{0,120}?minHeight: HEADER_MIN_HEIGHT,/);
     expect(SECTION).toContain('const HEADER_MIN_HEIGHT = 56;');
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.exerciseNameChevron}');

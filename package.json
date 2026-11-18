@@ -64,7 +64,9 @@
       "^@shopify/flash-list$": "<rootDir>/__mocks__/shopify-flash-list.js",
       "^@expo/vector-icons/Ionicons$": "<rootDir>/__mocks__/expo-vector-icons-ionicons.js",
       "^@react-native-community/datetimepicker$": "<rootDir>/__mocks__/datetimepicker-stub.js",
-      "\\.css$": "<rootDir>/__mocks__/css-stub.js"
+      "\\.css$": "<rootDir>/__mocks__/css-stub.js",
+      "^react-native-svg$": "<rootDir>/__mocks__/react-native-svg.js",
+      "^lucide-react-native$": "<rootDir>/__mocks__/lucide-react-native.js"
     },
     "globalSetup": "<rootDir>/jest.globalSetup.js"
   },

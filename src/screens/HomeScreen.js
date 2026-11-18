@@ -21,11 +21,8 @@ import {
 } from '../lib/community/homeFriendsRow';
 import { fetchFriendsTrainedToday } from '../lib/widgets/friends';
 import { parseIntroDismissal, nextIntroDismissal, isIntroDismissedNow } from '../lib/community/introReoffer';
-import Button from '../components/Button';
-import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import PressableCard from '../components/PressableCard';
-import SectionLabel from '../components/SectionLabel';
 import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
@@ -100,6 +97,10 @@ import { WELLBEING_KEY } from '../lib/wellbeing';
 // Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13/§17 region R2):
 // the single unified P1 "Today line" and its pure priority arbiter.
 import TodayLine from '../components/home/TodayLine';
+import {
+  TodayHeroActions, TodayHeroCard, TodayHeroEyebrow, TodayHeroLink, TodayHeroMeta, TodayHeroTitle,
+} from '../components/ui/today-hero-kit';
+import { Ellipsis, Play, Users } from 'lucide-react-native';
 import { resolveTodayLine } from '../lib/home/todayLineArbiter';
 // D231 (app layout rework, batch 1): one offer at a time under the main card.
 import { resolveOfferSlot } from '../lib/home/offerSlot';
@@ -2558,44 +2559,31 @@ export default function HomeScreen({ navigation, route }) {
              complete - three regions, two truths. Training during the wait is
              still allowed, so it stays available as the quiet secondary, never
              the primary. */
-          <Card surface="surfaceElevated" style={styles.heroCard}>
-            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
-              Block complete
-            </SectionLabel>
-            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
-              Every week of this block is done
-            </Text>
+          <TodayHeroCard>
+            <TodayHeroEyebrow numberOfLines={1}>Block complete</TodayHeroEyebrow>
+            <TodayHeroTitle numberOfLines={3}>Every week of this block is done</TodayHeroTitle>
             {readinessChipEl}
-            <View style={styles.startWorkoutRow}>
-              <View style={styles.startBtnSplit}>
-                <Button
-                  title="Choose what comes next"
-                  onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'Plans'); }}
-                  accessibilityLabel="Choose what comes after this block"
-                  style={[styles.primaryBtn, { marginTop: 0 }]}
-                />
-              </View>
-            </View>
-            <TouchableOpacity
+            <TodayHeroActions
+              primary={{
+                label: 'Choose what comes next',
+                onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'Plans'); },
+                accessibilityLabel: 'Choose what comes after this block',
+              }}
+            />
+            <TodayHeroLink
+              label="Do another session"
               onPress={() => { haptics.selection(); setShowChangeWorkout(true); }}
-              style={styles.skipSessionRow}
-              accessibilityRole="button"
               accessibilityLabel="Do another session from your plan"
-            >
-              <Text style={[styles.skipSessionText, live.skipSessionText]}>
-                Do another session
-              </Text>
-            </TouchableOpacity>
+            />
             {/* Community entry point 8 (social-discovery blueprint section
                 1): a finished block is the one thing worth telling people
-                about that is not a single session. Tertiary, so it never
+                about that is not a single session. Outlined, so it never
                 competes with the block decision above it. */}
             {currentMesoWeek?.mesocycleId ? (
-              <Button
-                title="Share this block"
-                variant="tertiary"
-                size="sm"
-                icon="people-outline"
+              <TodayHeroLink
+                outlined
+                label="Share this block"
+                icon={Users}
                 onPress={() => {
                   haptics.selection();
                   navigation.navigate('CommunityCompose', {
@@ -2605,38 +2593,27 @@ export default function HomeScreen({ navigation, route }) {
                 accessibilityLabel="Post this finished block to Community"
               />
             ) : null}
-          </Card>
+          </TodayHeroCard>
         ) : weekComplete ? (
           /* B-1 (F-18): every required session at this position is resolved.
              There is no primary action, because nothing is owed: the week's
              work is done and the next one starts on Monday. An extra session
              is a deliberate choice, so it opens the same workout-options
              sheet the training hero uses rather than starting session 1. */
-          <Card surface="surfaceElevated" style={styles.heroCard}>
-            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
-              Week complete
-            </SectionLabel>
-            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
-              Every session done this week
-            </Text>
-            <Text style={[styles.heroBody, live.heroBody]}>
-              {weekCompleteLine(planAllWorkouts[0]?.name)}
-            </Text>
+          <TodayHeroCard>
+            <TodayHeroEyebrow numberOfLines={1}>Week complete</TodayHeroEyebrow>
+            <TodayHeroTitle numberOfLines={3}>Every session done this week</TodayHeroTitle>
+            <TodayHeroMeta>{weekCompleteLine(planAllWorkouts[0]?.name)}</TodayHeroMeta>
             {/* D231 (dedupe): the chip's line on a complete week is "Every
                 session done for this week.", which repeats this card's own
                 title, so it is not shown here. */}
             {readinessSummary?.line !== WEEK_COMPLETE_CHIP_LINE ? readinessChipEl : null}
-            <TouchableOpacity
+            <TodayHeroLink
+              label="Do another session"
               onPress={() => { haptics.selection(); setShowChangeWorkout(true); }}
-              style={styles.skipSessionRow}
-              accessibilityRole="button"
               accessibilityLabel="Do another session from your plan"
-            >
-              <Text style={[styles.skipSessionText, live.skipSessionText]}>
-                Do another session
-              </Text>
-            </TouchableOpacity>
-          </Card>
+            />
+          </TodayHeroCard>
         ) : activePlan && displayWorkout ? (
           /* Founder device report 2026-10-17 (2.20.0): gated on the session
              this hero SHOWS and STARTS (displayWorkout: the options-sheet
@@ -2644,19 +2621,19 @@ export default function HomeScreen({ navigation, route }) {
              resolved week nextWorkout is null by design (B-1), so a day
              picked through "Do another session" used to fall past this
              state to "No active plan yet" with nothing to start. */
-          <Card surface="surfaceElevated" style={styles.heroCard}>
+          <TodayHeroCard>
             {/* Founder device report 2026-09-07: planProgress bakes in the
                 plan's own name (goal, phase and split can all be present),
                 so a single clamped line ellipsised mid-word on longer
                 names/larger text scales. Raised to 2 lines, the same fix
                 already applied to workoutName below for the same reason. */}
-            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={2}>
+            <TodayHeroEyebrow numberOfLines={2}>
               {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
-            </SectionLabel>
+            </TodayHeroEyebrow>
             {/* Campaign 27 Pillar A (D104): workoutName is a session NAME, an
                 identifier, so a clamp stays honest - but two lines truncated
                 real names at large text scale, so it's raised to three. */}
-            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
+            <TodayHeroTitle numberOfLines={3}>
               {/* C18: where a display name repeats inside one programme week
                   (the bikini Glute Focus split lists "Glutes" twice) the
                   session is qualified by its programme position, so the
@@ -2668,17 +2645,17 @@ export default function HomeScreen({ navigation, route }) {
                   : { name: displayWorkout?.routine?.name ?? '', order: 0 },
                 programmePosition?.sessions ?? [],
               ) || displayWorkout?.routine?.name}
-            </Text>
+            </TodayHeroTitle>
             {/* D112 R2 (closes audit T1-17): the served count, not the base
                 routine's raw row count. effectiveSessionCount is null until
                 resolved (or on a read failure), so the raw exerciseCounts
                 figure (already loaded) shows first rather than nothing. */}
             {circuitLine ? (
-              <Text style={[styles.workoutMeta, live.workoutMeta]}>{circuitLine}</Text>
+              <TodayHeroMeta>{circuitLine}</TodayHeroMeta>
             ) : (effectiveSessionCount ?? exerciseCounts[displayWorkout?.routine?.id]) ? (
-              <Text style={[styles.workoutMeta, live.workoutMeta]}>
+              <TodayHeroMeta>
                 {effectiveSessionCount ?? exerciseCounts[displayWorkout.routine.id]} exercises
-              </Text>
+              </TodayHeroMeta>
             ) : null}
             {/* S15#7: where the person is in the training block, one calm
                 line composed by buildReadinessSummary. D224: it reads no
@@ -2716,28 +2693,23 @@ export default function HomeScreen({ navigation, route }) {
                 (founder 2026-06-30: the old first-run variant highlighted a
                 cut-down "short session" with the full one demoted below, which
                 read as the wrong default, start the actual session). */}
-            <View style={styles.startWorkoutRow}>
-              <View style={styles.startBtnSplit}>
-                <Button
-                  title={isStartingWorkout ? 'Starting...' : 'Start workout'}
-                  icon="play"
-                  onPress={() => handleStartNextWorkout(false)}
-                  disabled={isStartingWorkout}
-                  accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
-                  style={[styles.primaryBtn, { marginTop: 0 }]}
-                />
-              </View>
-              <Button
-                variant="secondary"
-                title="Options"
-                icon="ellipsis-horizontal"
-                onPress={() => setShowChangeWorkout(true)}
-                accessibilityLabel="Workout options"
-                fullWidth={false}
-                style={styles.workoutOptionsBtn}
-                textStyle={[styles.workoutOptionsText, live.workoutOptionsText]}
-              />
-            </View>
+            <TodayHeroActions
+              primary={{
+                label: isStartingWorkout ? 'Starting...' : 'Start workout',
+                icon: Play,
+                // The old primary Button gave a selection tick as its press fired;
+                // the kit Button is silent, so the tick is kept here.
+                onPress: () => { haptics.selection(); handleStartNextWorkout(false); },
+                disabled: isStartingWorkout,
+                accessibilityLabel: isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`,
+              }}
+              secondary={{
+                label: 'Options',
+                icon: Ellipsis,
+                onPress: () => setShowChangeWorkout(true),
+                accessibilityLabel: 'Workout options',
+              }}
+            />
             {/* C18 ONE-TIME SKIP moved into the Options sheet (Founder device
                 order 2026-09-08: the standalone text link read badly on its
                 own) - see canSkipThisWorkout and the HomeChangeWorkoutSheet
@@ -2747,7 +2719,7 @@ export default function HomeScreen({ navigation, route }) {
                 weekly run/streak construct is rejected product-wide - it was
                 noise, not trusted as accurate, and unwanted streak framing.
                 Nothing replaces it here; no content beats low-value filler. */}
-          </Card>
+          </TodayHeroCard>
         ) : activePlan && planHasNoSessions ? (
           /* B-2 (F-18): the plan is real, it simply holds no sessions. This
              used to fall through to "No active plan yet", which was false for
