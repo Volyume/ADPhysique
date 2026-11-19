@@ -22,7 +22,7 @@ const path = require('path');
 const HOME = fs.readFileSync(path.join(__dirname, '..', 'HomeScreen.js'), 'utf8');
 const PLANS = fs.readFileSync(path.join(__dirname, '..', 'PlansScreen.js'), 'utf8');
 
-function checkScreen(name, source) {
+function checkScreen(name, source, busyPattern = /onAction=\{handleStartWithPlanPress\}[\s\S]{0,200}busy=\{preparingPlan\}/) {
   test(`${name} declares a preparingPlan state`, () => {
     expect(source).toMatch(/const \[preparingPlan, setPreparingPlan\] = useState\(false\);/);
   });
@@ -40,12 +40,14 @@ function checkScreen(name, source) {
   });
 
   test(`${name} passes preparingPlan to the no-plan EmptyState as busy`, () => {
-    expect(source).toMatch(/onAction=\{handleStartWithPlanPress\}[\s\S]{0,200}busy=\{preparingPlan\}/);
+    expect(source).toMatch(busyPattern);
   });
 }
 
 describe('HomeScreen "Start with a plan" shows it is working', () => {
-  checkScreen('HomeScreen', HOME);
+  // RE-POINTED (kit trial 2, LOC-412): Today's no-plan card is drawn with the kit's
+  // TodayHeroActions, whose `primary` carries the handler and `busy`.
+  checkScreen('HomeScreen', HOME, /onPress: handleStartWithPlanPress,[\s\S]{0,200}busy: preparingPlan/);
 });
 
 describe('PlansScreen "Start with a plan" shows it is working', () => {
@@ -56,7 +58,7 @@ describe('the secondary action stays enabled while preparingPlan is true', () =>
   test('neither screen guards "Browse plans" onSecondary behind preparingPlan (ruling: keep it enabled)', () => {
     // The onSecondary handlers must not reference preparingPlan at all --
     // guarding them would disable the one exit a stuck preview attempt has.
-    const homeSecondary = HOME.match(/onSecondary=\{[^}]*\}/);
+    const homeSecondary = HOME.match(/label: 'Browse plans',\s*onPress: \(\) => \{[^}]*\}/);
     const plansSecondary = PLANS.match(/onSecondary=\{[^}]*\}/);
     expect(homeSecondary).not.toBeNull();
     expect(plansSecondary).not.toBeNull();

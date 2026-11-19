@@ -91,8 +91,10 @@ describe('D14 + Campaign 22 Phase 2 Stage 1 + D231: the old banner cap is gone, 
   });
 
   test('plateau and activation keep their own original tap-through and dismiss handlers untouched', () => {
-    expect(HOME).toMatch(/onPress=\{dismissPlateauBanner\}/);
-    expect(HOME).toMatch(/onPress=\{dismissActivationNudge\}/);
+    // RE-POINTED (kit trial 2, LOC-412): both banners are drawn by the kit's
+    // QuietNotice, whose close control takes the same handler as `onDismiss`.
+    expect(HOME).toMatch(/onDismiss=\{dismissPlateauBanner\}/);
+    expect(HOME).toMatch(/onDismiss=\{dismissActivationNudge\}/);
   });
 
   test('dismissing the shown P3 banner never marks a waiting (unshown) banner as seen/dismissed', () => {

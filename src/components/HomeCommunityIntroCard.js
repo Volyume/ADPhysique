@@ -16,46 +16,28 @@
  * hub hero — `type.h3` title, `type.bodySm` `textSecondary` body, both
  * actions `sm`.
  */
-import { View, StyleSheet } from 'react-native';
-import Text from './Text';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { spacing, type, radius } from '../styles/theme';
-import useTheme from '../hooks/useTheme';
-import Card from './Card';
-import Button from './Button';
+import { Users } from 'lucide-react-native';
+import { TodayOfferActions, TodayOfferButton, TodayOfferCard } from './ui/today-offer-kit';
 
 export const COMMUNITY_INTRO_TITLE = 'See who is training';
 // V3a (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md): drops the
 // closing privacy sentence, matching the Community hub hero.
 export const COMMUNITY_INTRO_BODY = 'Connect with people at your gym and your friends, see each other\'s training weeks, and give respect.';
 
+// Kit trial 2 (LOC-412, rule 1): drawn with the kit's offer card, so the icon,
+// the tint and the buttons spend no amber; the words and actions are as they were.
 export default function HomeCommunityIntroCard({ onOpen, onDismiss }) {
-  const t = useTheme();
   return (
-    <Card style={styles.card} accessibilityLabel={`${COMMUNITY_INTRO_TITLE}. ${COMMUNITY_INTRO_BODY}`}>
-      <View style={styles.head}>
-        <View style={[styles.icon, { backgroundColor: t.colors.primaryBg }]}>
-          <Ionicons name="people-outline" size={20} color={t.colors.primary} />
-        </View>
-        <View style={styles.copy}>
-          <Text style={[styles.title, { color: t.colors.textPrimary }]}>{COMMUNITY_INTRO_TITLE}</Text>
-          <Text style={[styles.body, { color: t.colors.textSecondary }]}>{COMMUNITY_INTRO_BODY}</Text>
-        </View>
-      </View>
-      <View style={styles.actions}>
-        <Button title="Have a look" icon="people-outline" size="sm" onPress={onOpen} fullWidth={false} accessibilityLabel="Have a look at Community" />
-        <Button title="Not now" variant="secondary" size="sm" onPress={onDismiss} fullWidth={false} accessibilityLabel="Not now. Hides this introduction for good." />
-      </View>
-    </Card>
+    <TodayOfferCard
+      icon={Users}
+      title={COMMUNITY_INTRO_TITLE}
+      body={COMMUNITY_INTRO_BODY}
+      accessibilityLabel={`${COMMUNITY_INTRO_TITLE}. ${COMMUNITY_INTRO_BODY}`}
+    >
+      <TodayOfferActions>
+        <TodayOfferButton icon={Users} label="Have a look" onPress={onOpen} accessibilityLabel="Have a look at Community" />
+        <TodayOfferButton look="plain" label="Not now" onPress={onDismiss} accessibilityLabel="Not now. Hides this introduction for good." />
+      </TodayOfferActions>
+    </TodayOfferCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { marginBottom: spacing.md },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  icon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  copy: { flex: 1, minWidth: 0, gap: spacing.xs },
-  title: { ...type.h3 },
-  body: { ...type.bodySm },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-});

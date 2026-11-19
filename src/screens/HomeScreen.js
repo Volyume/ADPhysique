@@ -21,7 +21,6 @@ import {
 } from '../lib/community/homeFriendsRow';
 import { fetchFriendsTrainedToday } from '../lib/widgets/friends';
 import { parseIntroDismissal, nextIntroDismissal, isIntroDismissedNow } from '../lib/community/introReoffer';
-import EmptyState from '../components/EmptyState';
 import PressableCard from '../components/PressableCard';
 import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
@@ -100,7 +99,8 @@ import TodayLine from '../components/home/TodayLine';
 import {
   TodayHeroActions, TodayHeroCard, TodayHeroEyebrow, TodayHeroLink, TodayHeroMeta, TodayHeroTitle,
 } from '../components/ui/today-hero-kit';
-import { Ellipsis, Play, Users } from 'lucide-react-native';
+import { ChartLine, Dumbbell, Ellipsis, Play, Users } from 'lucide-react-native';
+import { QuietNotice } from '../components/ui/coach-notice';
 import { resolveTodayLine } from '../lib/home/todayLineArbiter';
 // D231 (app layout rework, batch 1): one offer at a time under the main card.
 import { resolveOfferSlot } from '../lib/home/offerSlot';
@@ -244,7 +244,9 @@ export default function HomeScreen({ navigation, route }) {
   };
   // S15#7 readiness chip's tone colours, built live so it stays in the same
   // theme generation as CoachBriefCard (buildBriefIconColor, imported above).
-  const BRIEF_ICON_COLOR = buildBriefIconColor(t.colors);
+  // Kit trial 2 (LOC-412, rule 1): the chip's "go" tone is plain ink, not amber;
+  // the caution and recover tones keep their own status colours.
+  const BRIEF_ICON_COLOR = { ...buildBriefIconColor(t.colors), go: t.colors.textSecondary };
 
   // WK-1: recover an in-progress workout after an app kill/crash. The store
   // holds the session in memory only, so a kill stranded the logged sets
@@ -2725,48 +2727,64 @@ export default function HomeScreen({ navigation, route }) {
              used to fall through to "No active plan yet", which was false for
              someone who owned a plan - and whose offered fix ("Start with a
              plan") would have replaced the plan they already had. */
-          <EmptyState
-            icon="barbell-outline"
-            title="Your plan has no sessions yet"
-            text="Open your plan to add a workout, or pick a different plan to follow."
-            actionLabel="Open your plan"
-            onAction={() => {
-              haptics.selection();
-              navigateCrossTab(navigation, 'PlansTab', 'PlanDetail', { planId: activePlan.id, isLibrary: false });
-            }}
-            actionAccessibilityLabel="Open your plan to add a workout"
-            secondaryLabel="Choose a different plan"
-            onSecondary={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
-            secondaryAccessibilityLabel="Choose a different plan from the library"
-          />
+          <TodayHeroCard>
+            <TodayHeroTitle>Your plan has no sessions yet</TodayHeroTitle>
+            <TodayHeroMeta>Open your plan to add a workout, or pick a different plan to follow.</TodayHeroMeta>
+            <TodayHeroActions
+              primary={{
+                label: 'Open your plan',
+                onPress: () => {
+                  haptics.selection();
+                  navigateCrossTab(navigation, 'PlansTab', 'PlanDetail', { planId: activePlan.id, isLibrary: false });
+                },
+                accessibilityLabel: 'Open your plan to add a workout',
+              }}
+              secondary={{
+                label: 'Choose a different plan',
+                onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); },
+                accessibilityLabel: 'Choose a different plan from the library',
+              }}
+            />
+          </TodayHeroCard>
         ) : (
           <View style={styles.noPlanSection}>
             {/* FOUNDER DECISION (fully free, no tier split): the free
                 no-plan branch (FreeStarter quiz) is retired -- the full-tier
-                EmptyState below is the only no-plan state now, via the
-                shared EmptyState primitive (D1 sweep, DD40). */}
-            <EmptyState
-              icon="barbell-outline"
-              title="No active plan yet"
-              /* C5-P10-01 (D96): the "Start with a plan" action creates a
-                 training block too, so it says so first. */
-              /* D141 item 10a: unified with PlansScreen's own no-plan copy.
-                 Voice rule applied: COACHING_VOICE_SYNTHESIS_LOCKED.md
-                 addendum "actor-naming rule (two registers)" (line ~836) --
-                 "Volyume" names the app only (saving, syncing, reminders),
-                 never the coaching decider; building the plan is Precision
-                 Coaching's call, so the actor here is "your coach", the
-                 locked informal actor for running prose (line ~829-830),
-                 not "Volyume" and not collaborative "we". Noun unified to
-                 "setup" (was "setup" here already, "profile" on Plans).
-                 Home's own extra clause (the cloud-arrival note) is kept. */
-              text={`Start with a plan and your coach builds one from your setup. If you just signed in on this phone, your existing plan may still be arriving. ${BLOCK_START_SENTENCE}`}
-              actionLabel="Start with a plan"
-              onAction={handleStartWithPlanPress}
-              busy={preparingPlan}
-              secondaryLabel="Browse plans"
-              onSecondary={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
-            />
+                card below is the only no-plan state now (D1 sweep, DD40;
+                drawn with the kit since trial 2). */}
+            {/* Kit trial 2 (LOC-412, rules 1 and 2): the kit's card with the
+                screen's one amber button, "Start with a plan"; "Browse plans"
+                is outlined. The words are unchanged. */}
+            <TodayHeroCard>
+              <TodayHeroTitle>No active plan yet</TodayHeroTitle>
+              {/* C5-P10-01 (D96): the "Start with a plan" action creates a
+              training block too, so it says so first.
+              D141 item 10a: unified with PlansScreen's own no-plan copy.
+              Voice rule applied: COACHING_VOICE_SYNTHESIS_LOCKED.md
+              addendum "actor-naming rule (two registers)" (line ~836) --
+              "Volyume" names the app only (saving, syncing, reminders),
+              never the coaching decider; building the plan is Precision
+              Coaching's call, so the actor here is "your coach", the
+              locked informal actor for running prose (line ~829-830),
+              not "Volyume" and not collaborative "we". Noun unified to
+              "setup" (was "setup" here already, "profile" on Plans).
+              Home's own extra clause (the cloud-arrival note) is kept. */}
+              <TodayHeroMeta>
+                {`Start with a plan and your coach builds one from your setup. If you just signed in on this phone, your existing plan may still be arriving. ${BLOCK_START_SENTENCE}`}
+              </TodayHeroMeta>
+              <TodayHeroActions
+                primary={{
+                  label: 'Start with a plan',
+                  onPress: handleStartWithPlanPress,
+                  disabled: preparingPlan,
+                  busy: preparingPlan,
+                }}
+                secondary={{
+                  label: 'Browse plans',
+                  onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); },
+                }}
+              />
+            </TodayHeroCard>
 
             {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §7/§17 R5,
                 the 3-way duplication fix): "Progress at a glance" is
@@ -2780,20 +2798,16 @@ export default function HomeScreen({ navigation, route }) {
             {/* FOUNDER DECISION (fully free, no tier split): everyone keeps
                 the quick-start escape hatch while cloud restore lands; the
                 Free-only text-link variant is retired. */}
-            <PressableCard
-              style={[styles.quickStartCard, live.quickStartCard]}
+            {/* Kit trial 2 (LOC-412, rule 1): the quiet notice, not an amber
+                tint; the words and the tap are unchanged. */}
+            <QuietNotice
+              icon={Dumbbell}
+              title="Start your first workout"
+              text="Log your sets as you go. You do not need a plan to start, and next time Volyume will start you at the weights you log today."
+              wrap
               onPress={() => startBlankSession()}
               accessibilityLabel="Start your first workout"
-            >
-              <View style={[styles.quickStartIcon, live.quickStartIcon]}>
-                <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
-                <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You do not need a plan to start, and next time Volyume will start you at the weights you log today.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-            </PressableCard>
+            />
           </View>
         )}
 
@@ -2840,35 +2854,18 @@ export default function HomeScreen({ navigation, route }) {
             stages only, cold-start is the main card's). Taps through to start
             the next session. ── */}
         {shownOfferKey === 'activation' && (
-          <TouchableOpacity
-            style={[styles.activationBanner, live.activationBanner]}
+          // Kit trial 2 (LOC-412, rule 1): the quiet notice. Same tap, same
+          // dismissal, same words (the body wraps in full, as before).
+          <QuietNotice
+            icon={Dumbbell}
+            title={activationBannerLine(activationNudge.stage)?.title}
+            text={activationBannerLine(activationNudge.stage)?.body}
+            wrap
             onPress={() => { haptics.selection(); handleStartNextWorkout(false); }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
+            onDismiss={dismissActivationNudge}
             accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
-          >
-            <View style={styles.activationBannerLeft}>
-              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
-                  {activationBannerLine(activationNudge.stage)?.title}
-                </Text>
-                {/* Campaign 27 Pillar A (D104): body is sentence-length copy,
-                    so it wraps in full rather than carrying a line clamp. */}
-                <Text style={[styles.activationBannerBody, live.activationBannerBody]}>
-                  {activationBannerLine(activationNudge.stage)?.body}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={dismissActivationNudge}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
+            dismissLabel="Dismiss"
+          />
         )}
 
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
@@ -2933,29 +2930,17 @@ export default function HomeScreen({ navigation, route }) {
             this one, so route via the parent tab navigator (F4 / NAV-1 bug
             class). D231: it stays at the bottom on its own. ── */}
         {showPlateauBanner && (
-          <TouchableOpacity
-            style={[styles.plateauBanner, live.plateauBanner]}
+          // Kit trial 2 (LOC-412, rule 1): the quiet notice; the line is
+          // sentence-length copy and wraps in full.
+          <QuietNotice
+            icon={ChartLine}
+            text={plateauBanner.line}
+            wrap
             onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
+            onDismiss={dismissPlateauBanner}
             accessibilityLabel={plateauBanner.line}
-          >
-            <View style={styles.plateauBannerLeft}>
-              <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
-              {/* Campaign 27 Pillar A (D104): sentence-length copy never carries
-                  a line clamp - it wraps, and the row grows. */}
-              <Text style={[styles.plateauBannerText, live.plateauBannerText]}>{plateauBanner.line}</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
-            </View>
-            <TouchableOpacity
-              onPress={dismissPlateauBanner}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss plateau banner"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
+            dismissLabel="Dismiss plateau banner"
+          />
         )}
 
         {/* FOUNDER DECISION (fully free, no tier split): the "worth your

@@ -22,7 +22,9 @@
  *   7. Related rows sit in one card separated by dividers; the exercises still
  *      to do fold into a collapsible list.
  *   8. The Coach check-in notice is an amber-OUTLINED alert with an icon and
- *      plain words; other occupants of the Today line keep their style.
+ *      plain words; the other occupants of the Today line are the same alert in
+ *      the neutral edge. (The whole Today screen is read for amber in
+ *      src/screens/__tests__/HomeScreen.kitAmber.test.js.)
  *
  * Font scale 2.0: Jest cannot lay text out, so this pins what makes the layout
  * hold at the phone's largest text (every Text carries a font-scale cap no
@@ -288,10 +290,20 @@ describe.each(PALETTES)('kit trial 2 surfaces, palette: $name', ({ prefs }) => {
     expect(flatStyle(dismiss.props.style)).toMatchObject({ width: 48, height: 48 });
   });
 
-  test('rule 8: other Today line occupants keep their tinted row, so no safety or recovery message is restyled', () => {
+  test('rule 1 and rule 8: every other Today line occupant is the same alert in a quiet neutral edge, with an icon, the same tap and the same words', () => {
+    // None of these is a safety message: the arbiter has no Beat UK, calm mode or
+    // ED occupant (those keep their own surfaces and are not drawn with this part).
     for (const key of ['recovery_state', 'deload_suggestion', 're_entry', 'phase_mismatch', 'limitation_decision', 'plan_choice', 'plan_note', 'block_complete']) {
       const tree = renderKit(<TodayLine item={{ ...checkItem, key }} testID="today-line" />);
-      expect(hostNodes(tree).some((n) => n.type === 'LucideIcon')).toBe(false);
+      const button = hostNodes(tree).find((n) => n.props.testID === 'today-line');
+      expect(button.props.accessibilityRole).toBe('button');
+      expect(button.props.accessibilityLabel).toBe('Your weekly check-in is ready.');
+      const alert = stylesOf(tree).find(({ style }) => style.borderWidth !== undefined && style.borderRadius !== undefined);
+      expect(hex(alert.style.borderColor)).toBe(hex(c.borderSubtle));
+      expect(hex(alert.style.backgroundColor)).toBe(hex(c.surface));
+      expect(amberUses(tree, c)).toHaveLength(0);
+      expect(hostNodes(tree).some((n) => n.type === 'LucideIcon' && n.props.name === 'Info')).toBe(true);
+      expect(textNodes(tree).map((n) => n.props.children)).toContain('Your weekly check-in is ready.');
     }
     const coach = renderKit(<TodayLine item={{ ...checkItem, key: 'coach_decision', onDismiss: null }} testID="today-line" />);
     expect(hostNodes(coach).some((n) => n.type === 'LucideIcon' && n.props.name === 'ChevronRight')).toBe(true);

@@ -36,8 +36,11 @@ function textOf(tree) {
   return out.join(' ');
 }
 
+// Kit trial 2: the actions are kit Buttons, found by their visible words.
 function pressTitled(tree, title) {
-  const node = tree.root.findAll((n) => n.props && n.props.title === title && typeof n.props.onPress === 'function')[0];
+  const words = tree.root.findAll((n) => n.type === 'Text' && n.props.children === title)[0];
+  let node = words.parent;
+  while (node && typeof node.props.onPress !== 'function') node = node.parent;
   act(() => { node.props.onPress(); });
 }
 

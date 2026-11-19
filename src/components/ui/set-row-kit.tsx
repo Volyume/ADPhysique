@@ -8,7 +8,7 @@
  * around them are smaller and quieter. A well is an OUTLINED box; the one being
  * edited takes the amber ring and is the only amber on the row. A finished set
  * fades back to the muted ink, which keeps at least 4.5:1 against the card in
- * every palette (setRowContrast.test.js computes it). The tick box is a square
+ * every palette (kitTrial2Surfaces.test.js computes it). The tick box is a square
  * with a 48 by 48 dp touch target. Related rows sit in one card, separated by
  * the kit's Separator.
  *

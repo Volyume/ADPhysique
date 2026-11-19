@@ -1,37 +1,32 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import Text from '../Text';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  colors, spacing, radius, type, iconSize,
-} from '../../styles/theme';
-import useTheme from '../../hooks/useTheme';
-import { CoachNotice } from '../ui/coach-notice';
+import { CoachNotice, QuietNotice } from '../ui/coach-notice';
 
 // The coach's own notices (the weekly check-in is due; a coaching decision is
 // ready to review) are drawn as the kit's amber-outlined alert with an icon
 // (kit trial 2, LOC-412, design rule 8). Every other occupant of the line (the
-// plan, recovery, re-entry, limitation and nutrition-phase rows) keeps the
-// quiet tinted row, and no safety message is restyled.
+// plan, recovery, re-entry, limitation and nutrition-phase rows) is the same
+// alert in the quiet neutral edge, so amber stays "act here" (rule 1). None of
+// them is a safety message: the arbiter has no Beat UK, calm mode or ED
+// occupant, and those keep their own surfaces.
 const COACH_NOTICE_KEYS = Object.freeze(['check_in', 'coach_decision']);
 
 /**
  * TodayLine — Campaign 22 Phase 2, Stage 1. The single P1 idiom.
  *
- * HOME-TODAY-UX-SPEC.md §16 (container findings) + §17 (region R2): "single
- * quiet tinted row, no border-in-border, one accent". This replaces FIVE
- * banner idioms (coach decision, trial value, deload/recovery, nutrition
- * phase, activation) plus the bottom check-in nudge card and the always-on
- * RecoveryStateCard row with ONE presentation. Which fact occupies the row on
- * any given render is decided entirely upstream by
- * `src/lib/home/todayLineArbiter.js` (a pure resolver); this component knows
- * nothing about coaching, trials or recovery — it renders whatever single
- * `item` it is handed, or nothing.
+ * HOME-TODAY-UX-SPEC.md §16 (container findings) + §17 (region R2): one quiet
+ * row, one occupant. This replaces FIVE banner idioms (coach decision, trial
+ * value, deload/recovery, nutrition phase, activation) plus the bottom
+ * check-in nudge card and the always-on RecoveryStateCard row with ONE
+ * presentation. Which fact occupies the row on any given render is decided
+ * entirely upstream by `src/lib/home/todayLineArbiter.js` (a pure resolver);
+ * this component knows nothing about coaching, trials or recovery — it renders
+ * whatever single `item` it is handed, or nothing.
  *
  * Presentation only, per the build brief: no data logic here.
  *
- * Kit trial 2 (LOC-412): the coach's check-in and coaching-decision notices
- * render through CoachNotice (src/components/ui/coach-notice.tsx).
+ * Kit trial 2 (LOC-412): every occupant renders through the kit's alert
+ * (src/components/ui/coach-notice.tsx): CoachNotice for the coach's two,
+ * QuietNotice for the rest.
  *
  * D231 (app layout rework, batch 1): an item with `wrap: true` is shown in full
  * (no two-line clamp). The three occupants that moved onto the line from
@@ -43,76 +38,20 @@ const COACH_NOTICE_KEYS = Object.freeze(['check_in', 'coach_decision']);
  *   testID?: string }} props
  */
 function TodayLine({ item, testID }) {
-  const t = useTheme();
   if (!item) return null;
 
   const { text, onPress, onDismiss, accessibilityLabel, wrap } = item;
-  if (COACH_NOTICE_KEYS.includes(item.key)) {
-    return (
-      <CoachNotice
-        text={text}
-        onPress={onPress}
-        onDismiss={onDismiss}
-        accessibilityLabel={accessibilityLabel}
-        wrap={wrap}
-        testID={testID}
-      />
-    );
-  }
-  const live = {
-    row: { backgroundColor: t.colors.primaryBg },
-    accent: { backgroundColor: t.colors.primary },
-    text: { ...t.type.bodySm, color: t.colors.textPrimary },
-  };
-
+  const Notice = COACH_NOTICE_KEYS.includes(item.key) ? CoachNotice : QuietNotice;
   return (
-    <TouchableOpacity
-      style={[styles.row, live.row]}
+    <Notice
+      text={text}
       onPress={onPress}
-      activeOpacity={0.85}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel || text}
+      onDismiss={onDismiss}
+      accessibilityLabel={accessibilityLabel}
+      wrap={wrap}
       testID={testID}
-    >
-      {/* The single accent: one dot, one colour. No per-occupant icon set —
-          that would reintroduce the "five idioms" problem this component
-          exists to close. */}
-      <View style={[styles.accent, live.accent]} />
-      <Text style={[styles.text, live.text]} numberOfLines={wrap ? undefined : 2}>{text}</Text>
-      {onDismiss ? (
-        <TouchableOpacity
-          onPress={onDismiss}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel={`Dismiss: ${accessibilityLabel || text}`}
-          testID={testID ? `${testID}-dismiss` : undefined}
-        >
-          <Ionicons name="close" size={16} color={t.colors.textMuted} />
-        </TouchableOpacity>
-      ) : (
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
-      )}
-    </TouchableOpacity>
+    />
   );
 }
 
 export default React.memo(TodayLine);
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + spacing.xxs,
-  },
-  accent: {
-    width: 6,
-    height: 6,
-    borderRadius: radius.full,
-    backgroundColor: colors.primary,
-  },
-  text: { ...type.bodySm, flex: 1, color: colors.textPrimary },
-});

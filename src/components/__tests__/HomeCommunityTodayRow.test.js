@@ -39,6 +39,18 @@ function render(props) {
   return tree;
 }
 
+
+// The pressable that carries the visible words `label` (kit trial 2: the offer
+// and row actions are kit Buttons, so they are found by their words, not by a
+// `title` prop).
+function actionNamed(tree, label) {
+  const words = tree.root.findAll((n) => n.type === 'Text' && n.props.children === label)[0];
+  if (!words) return undefined;
+  let node = words.parent;
+  while (node && typeof node.props.onPress !== 'function') node = node.parent;
+  return node || undefined;
+}
+
 describe('HomeCommunityTodayRow', () => {
   test('count 3 renders "3 people you follow trained today" with a chevron and no Invite', () => {
     const onOpen = jest.fn();
@@ -48,12 +60,11 @@ describe('HomeCommunityTodayRow', () => {
     expect(flattenText(tree.toJSON())).toContain('3 people you follow trained today');
 
     const chevrons = tree.root.findAll(
-      (n) => n.type === 'Ionicons' && n.props.name === 'chevron-forward',
+      (n) => n.type === 'LucideIcon' && n.props.name === 'ChevronRight',
     );
     expect(chevrons.length).toBe(1);
 
-    const inviteButtons = tree.root.findAll((n) => n.props && n.props.title === 'Invite');
-    expect(inviteButtons.length).toBe(0);
+    expect(actionNamed(tree, 'Invite')).toBeUndefined();
   });
 
   test('count 0 renders the zero line with an Invite button; pressing it calls onInvite, not onOpen', () => {
@@ -63,12 +74,10 @@ describe('HomeCommunityTodayRow', () => {
 
     expect(flattenText(tree.toJSON())).toContain('Nobody you follow has trained yet today');
 
-    const inviteButtons = tree.root.findAll(
-      (n) => n.props && n.props.title === 'Invite' && typeof n.props.onPress === 'function',
-    );
-    expect(inviteButtons.length).toBe(1);
+    const invite = actionNamed(tree, 'Invite');
+    expect(invite).toBeDefined();
 
-    act(() => { inviteButtons[0].props.onPress(); });
+    act(() => { invite.props.onPress(); });
     expect(onInvite).toHaveBeenCalledTimes(1);
     expect(onOpen).not.toHaveBeenCalled();
   });
@@ -104,9 +113,9 @@ describe('following nobody', () => {
 
     expect(flattenText(tree.toJSON())).toContain('Find people to follow');
     expect(flattenText(tree.toJSON())).not.toContain('Nobody you follow has trained');
-    expect(tree.root.findAll((n) => n.props && n.props.title === 'Invite').length).toBe(0);
+    expect(actionNamed(tree, 'Invite')).toBeUndefined();
 
-    const action = tree.root.findAll((n) => n.props && n.props.title === 'Find people')[0];
+    const action = actionNamed(tree, 'Find people');
     act(() => { action.props.onPress({ stopPropagation() {} }); });
     expect(onFindPeople).toHaveBeenCalledTimes(1);
     expect(onOpen).not.toHaveBeenCalled();
@@ -116,7 +125,7 @@ describe('following nobody', () => {
   test('following people who have not trained keeps the honest zero line and Invite', () => {
     const tree = render({ count: 0, followingNone: false, onOpen: jest.fn(), onInvite: jest.fn(), onFindPeople: jest.fn() });
     expect(flattenText(tree.toJSON())).toContain('Nobody you follow has trained yet today');
-    expect(tree.root.findAll((n) => n.props && n.props.title === 'Invite').length).toBe(1);
+    expect(actionNamed(tree, 'Invite')).toBeDefined();
   });
 
   test('HomeScreen opens the Community tab People segment', () => {

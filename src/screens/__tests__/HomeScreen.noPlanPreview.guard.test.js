@@ -15,7 +15,9 @@ const HOME = fs.readFileSync(path.join(__dirname, '..', 'HomeScreen.js'), 'utf8'
 describe('HomeScreen no-plan empty state previews before it commits', () => {
   test('the action prepares a preview and opens the shared sheet', () => {
     expect(HOME).toMatch(/import \{ prepareStartWithPlan, commitStartWithPlan \} from '\.\.\/lib\/startWithPlan'/);
-    expect(HOME).toMatch(/onAction=\{handleStartWithPlanPress\}/);
+    // RE-POINTED (kit trial 2, LOC-412): the no-plan card's primary action is the kit's
+    // TodayHeroActions `primary`, so the handler is its `onPress`.
+    expect(HOME).toMatch(/onPress: handleStartWithPlanPress/);
     expect(HOME).toMatch(/prepareStartWithPlan\(user\.id, userProfile, \{ mode: 'first' \}\)/);
     expect(HOME).toMatch(/setPlanPreview\(\{ preview: prep\.preview, otherPlansCount: prep\.otherPlansCount \}\)/);
     expect(HOME).toMatch(/confirmLabel="Start this plan"/);
@@ -37,7 +39,7 @@ describe('HomeScreen no-plan empty state previews before it commits', () => {
   });
 
   test('the empty state offers the library as a real second action', () => {
-    expect(HOME).toMatch(/secondaryLabel="Browse plans"/);
+    expect(HOME).toMatch(/label: 'Browse plans'/);
     expect(HOME).toMatch(/navigateCrossTab\(navigation, 'PlansTab', 'PlanLibrary'\)/);
   });
 });

@@ -65,6 +65,8 @@ type HeroActionProps = {
   icon?: LucideIcon;
   onPress?: () => void;
   disabled?: boolean;
+  /** The action is mid-attempt: shown disabled and spoken as busy. */
+  busy?: boolean;
   accessibilityLabel?: string;
   testID?: string;
 };
@@ -81,6 +83,7 @@ function TodayHeroActions({ primary, secondary }: { primary: HeroActionProps; se
         size="lg"
         onPress={primary.onPress}
         disabled={primary.disabled}
+        accessibilityState={primary.busy ? { busy: true, disabled: true } : undefined}
         accessibilityLabel={primary.accessibilityLabel}
         testID={primary.testID}
         className="h-auto min-h-12 min-w-40 flex-1 py-3">

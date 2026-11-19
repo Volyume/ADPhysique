@@ -11,44 +11,24 @@
  * moment anything is set up. The gating lives in HomeScreen.js; this file
  * renders only the card's content, on the shared Card and Button.
  */
-import { View, StyleSheet } from 'react-native';
-import Text from './Text';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { spacing, type, radius } from '../styles/theme';
-import useTheme from '../hooks/useTheme';
-import Card from './Card';
-import Button from './Button';
+import { PersonStanding } from 'lucide-react-native';
+import { TodayOfferActions, TodayOfferButton, TodayOfferCard } from './ui/today-offer-kit';
 
+// Kit trial 2 (LOC-412, rule 1): drawn with the kit's offer card, so the icon,
+// the tint and the buttons spend no amber. The words, the two actions and the
+// labels are as they were.
 export default function HomeHowYouTrainOfferCard({ onSetUp, onDismiss }) {
-  const t = useTheme();
   return (
-    <Card style={styles.card} accessibilityLabel="Anything Volyume should build your training around? Injuries, pain, long-term conditions or disabilities. Entirely optional.">
-      <View style={styles.head}>
-        <View style={[styles.icon, { backgroundColor: t.colors.primaryBg }]}>
-          <Ionicons name="body-outline" size={20} color={t.colors.primary} />
-        </View>
-        <View style={styles.copy}>
-          <Text style={[styles.title, { color: t.colors.textPrimary }]}>Anything Volyume should build your training around?</Text>
-          <Text style={[styles.body, { color: t.colors.textSecondary }]}>
-            Injuries, pain, long-term conditions or disabilities. Tell Volyume once and it takes them into account when choosing exercises and building your training. Entirely optional, and you can change it any time.
-          </Text>
-        </View>
-      </View>
-      <View style={styles.actions}>
-        <Button title="Set it up" onPress={onSetUp} fullWidth={false} style={styles.action} />
-        <Button title="No thanks" variant="secondary" onPress={onDismiss} fullWidth={false} style={styles.action} accessibilityLabel="No thanks. Hides this offer for good." />
-      </View>
-    </Card>
+    <TodayOfferCard
+      icon={PersonStanding}
+      title="Anything Volyume should build your training around?"
+      body="Injuries, pain, long-term conditions or disabilities. Tell Volyume once and it takes them into account when choosing exercises and building your training. Entirely optional, and you can change it any time."
+      accessibilityLabel="Anything Volyume should build your training around? Injuries, pain, long-term conditions or disabilities. Entirely optional."
+    >
+      <TodayOfferActions>
+        <TodayOfferButton label="Set it up" onPress={onSetUp} />
+        <TodayOfferButton look="plain" label="No thanks" onPress={onDismiss} accessibilityLabel="No thanks. Hides this offer for good." />
+      </TodayOfferActions>
+    </TodayOfferCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { marginBottom: spacing.md },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  icon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  copy: { flex: 1, minWidth: 0, gap: spacing.xs },
-  title: { ...type.h3 },
-  body: { ...type.bodySm },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  action: { flex: 1 },
-});

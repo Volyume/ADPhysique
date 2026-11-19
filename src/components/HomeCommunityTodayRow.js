@@ -17,13 +17,8 @@
  * HomeLastSessionCard already uses for a slim full-bleed row (no new
  * card pattern, no new amber).
  */
-import { StyleSheet } from 'react-native';
-import Text from './Text';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { spacing, type, iconSize } from '../styles/theme';
-import useTheme from '../hooks/useTheme';
-import Card from './Card';
-import Button from './Button';
+import { Users } from 'lucide-react-native';
+import { TodayInfoRow } from './ui/today-offer-kit';
 import { friendsTrainedTodayLine } from '../lib/community/homeFriendsRow';
 import { inviteLabel } from '../lib/community/earlyDays';
 
@@ -31,66 +26,31 @@ import { inviteLabel } from '../lib/community/earlyDays';
  * follow has trained" never greets someone with no one to follow. */
 export const FIND_PEOPLE_LINE = 'Find people to follow';
 
+// Kit trial 2 (LOC-412, rule 1): drawn with the kit's slim row, so the icon and
+// the "Find people" / "Invite" actions are neutral ink, not amber. The row and
+// the action are siblings, each its own 48 dp target.
 export default function HomeCommunityTodayRow({
   count, gymLabel, onOpen, onInvite, followingNone = false, onFindPeople,
 }) {
-  const t = useTheme();
   const n = Math.max(0, Number(count) || 0);
   const findPeople = followingNone && n === 0;
   const line = findPeople ? FIND_PEOPLE_LINE : friendsTrainedTodayLine(n);
 
+  let action = null;
+  if (n === 0) {
+    action = findPeople
+      ? { label: 'Find people', onPress: () => onFindPeople?.(), accessibilityLabel: 'Find people to follow' }
+      : { label: 'Invite', onPress: () => onInvite?.(), accessibilityLabel: inviteLabel({ gymLabel }) };
+  }
+
   return (
-    <Card
-      style={styles.row}
-      padding="none"
+    <TodayInfoRow
+      icon={Users}
+      line={line}
       onPress={findPeople ? onFindPeople : onOpen}
-      accessibilityRole="button"
       accessibilityLabel={line}
       testID="home-community-today-row"
-    >
-      <Ionicons name="people-outline" size={18} color={t.colors.primary} />
-      <Text style={[styles.line, { color: t.colors.textPrimary }]} numberOfLines={1}>
-        {line}
-      </Text>
-      {n > 0 ? (
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-      ) : findPeople ? (
-        <Button
-          variant="tertiary"
-          size="sm"
-          fullWidth={false}
-          title="Find people"
-          hitSlop={8}
-          onPress={(e) => { e?.stopPropagation?.(); onFindPeople?.(); }}
-          accessibilityLabel="Find people to follow"
-        />
-      ) : (
-        <Button
-          variant="tertiary"
-          size="sm"
-          fullWidth={false}
-          title="Invite"
-          hitSlop={8}
-          onPress={(e) => { e?.stopPropagation?.(); onInvite(); }}
-          accessibilityLabel={inviteLabel({ gymLabel })}
-        />
-      )}
-    </Card>
+      action={action}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.md,
-  },
-  line: {
-    ...type.label,
-    flex: 1,
-    minWidth: 0,
-  },
-});
