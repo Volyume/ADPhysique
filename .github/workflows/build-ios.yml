@@ -66,6 +66,13 @@ on:
         description: 'DANGER: build without Sentry symbols. A native crash will be unreadable without hand-disassembly.'
         type: boolean
         default: false
+      # Used ONLY by the build-trial job (branch trial/rn-reusables). The
+      # `submit` input above is never read there, so its default of true cannot
+      # reach TestFlight from the trial branch; this one is off unless ticked.
+      trial_testflight:
+        description: 'TRIAL BRANCH ONLY: send the finished trial build to TestFlight as the separate app "Volyume Trial". Leave off to only build.'
+        type: boolean
+        default: false
 
 concurrency:
   group: ios-${{ github.ref }}
@@ -281,6 +288,192 @@ jobs:
       # submitting, so nothing reaches TestFlight except by explicit choice.
       - name: Submit to TestFlight
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
+        env:
+          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: eas submit --platform ios --id "$EAS_BUILD_ID" --non-interactive
+
+  # ---------------------------------------------------------------------------
+  # TRIAL BUILD (LOC-413, kit trial 3). Runs ONLY from the trial branch
+  # `trial/rn-reusables`, started by hand by the founder (Actions tab -> "Build
+  # iOS (EAS)" -> Run workflow -> Branch: trial/rn-reusables). The `build` job
+  # above is untouched and still refuses every ref but main; this job refuses
+  # every ref but the trial branch, so one dispatch runs exactly one of the two.
+  #
+  # What it makes: an EAS build with the `trial` profile (eas.json), which
+  # installs as the SEPARATE app `app.volyume.trial` ("Volyume Trial"). It has
+  # its own App ID, provisioning profile and App Store Connect record, so it can
+  # never replace the live app and never lands in the live app's TestFlight.
+  #
+  # Submission: only the optional TestFlight upload, only when the founder ticks
+  # `trial_testflight` (default off), and only to the trial's own app record.
+  # There is no App Store review step and no `eas update` anywhere in this job.
+  # ---------------------------------------------------------------------------
+  build-trial:
+    if: github.ref == 'refs/heads/trial/rn-reusables'
+    name: EAS iOS trial build (separate app)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      APP_VARIANT: trial
+      TRIAL_BUNDLE_ID: app.volyume.trial
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.22.2
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # Same pinned eas-cli as the main job (see the long note there: 21.x breaks
+      # Apple capability sync).
+      - name: Setup EAS
+        uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
+        with:
+          eas-version: 20.5.1
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Check required secrets are set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          missing=0
+          for v in EXPO_TOKEN ASC_API_KEY_P8 ASC_KEY_ID ASC_ISSUER_ID APPLE_TEAM_ID EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Missing repo secret: $v"; missing=1; fi
+          done
+          [ "$missing" = "0" ] || { echo "::error::Add the missing secrets in Settings → Secrets and variables → Actions, then re-run."; exit 1; }
+          echo "✓ All required secrets present"
+
+      # The trial must never build as the store app. Evaluate the app config the
+      # way EAS will, and stop before any build credit is spent if the id is wrong.
+      - name: Verify the trial identity before building
+        run: |
+          npx expo config --json --type public > "$RUNNER_TEMP/trial-config.json"
+          node -e "
+            const c = JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/trial-config.json', 'utf8'));
+            const id = c.ios && c.ios.bundleIdentifier;
+            const pkg = c.android && c.android.package;
+            console.log('iOS bundle id:', id, '| name:', c.name, '| channel:', c.updates.requestHeaders['expo-channel-name']);
+            if (id !== process.env.TRIAL_BUNDLE_ID || pkg !== process.env.TRIAL_BUNDLE_ID || c.updates.requestHeaders['expo-channel-name'] !== 'trial') {
+              console.error('::error::The app config is not the trial identity (expected ' + process.env.TRIAL_BUNDLE_ID + ' on the trial channel). Refusing to build.');
+              process.exit(1);
+            }
+          "
+
+      - name: Write App Store Connect API key to a file
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          printf '%s' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/asc-api-key.p8"
+          test -s "$RUNNER_TEMP/asc-api-key.p8" && echo "✓ ASC API key written ($(wc -c < "$RUNNER_TEMP/asc-api-key.p8") bytes)"
+
+      # Fail BEFORE the paid build if the founder asked for TestFlight but the
+      # trial's App Store Connect record does not exist yet. Writes only a temp
+      # copy of eas.json, so the working tree stays clean for the build.
+      - name: Check the trial's App Store Connect record exists (before building)
+        if: ${{ inputs.trial_testflight }}
+        env:
+          ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          IOS_BUNDLE_ID: app.volyume.trial
+        run: |
+          cp eas.json "$RUNNER_TEMP/eas-preflight.json"
+          EAS_JSON_PATH="$RUNNER_TEMP/eas-preflight.json" node scripts/ci/resolve-asc-app-id.mjs
+
+      # Same values the main job writes, so the trial bundles real Supabase
+      # settings. The Sentry DSN and token are not touched here.
+      - name: Sync app config to EAS
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY }}
+        run: |
+          eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "$EXPO_PUBLIC_SUPABASE_URL" --type string --force
+          eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "$EXPO_PUBLIC_SUPABASE_ANON_KEY" --type string --force
+          if [ -n "$EXPO_PUBLIC_USDA_API_KEY" ]; then eas secret:create --scope project --name EXPO_PUBLIC_USDA_API_KEY --value "$EXPO_PUBLIC_USDA_API_KEY" --type string --force; fi
+          echo "✓ Config synced to EAS"
+
+      # Same non-interactive driver as the main job (EAS can still ask Apple team
+      # and push-notification questions the first time it sees a new bundle id).
+      - name: Build iOS trial (EAS, waits for completion)
+        env:
+          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CI: "false"
+          EAS_SKIP_AUTO_FINGERPRINT: "1"
+        run: |
+          sudo apt-get install -y expect -qq 2>/dev/null
+          expect <<'EOF'
+          set timeout 6600
+          spawn eas build --platform ios --profile trial --wait
+          expect {
+            -re {Select your Apple Team Type}      { send -- "\033\[B\033\[B\r"; exp_continue }
+            -re {set up Push Notifications}        { send -- "\033\[B\r";        exp_continue }
+            -re {Apple ID:}                        { puts "\n::error::EAS dropped to an interactive Apple ID login. Set up the APNs key once on expo.dev or add EXPO_APPLE_ID + EXPO_APPLE_APP_SPECIFIC_PASSWORD secrets."; exit 3 }
+            -re {\(Y/n\)}                          { send -- "\r";              exp_continue }
+            -re {\(y/N\)}                          { send -- "y\r";             exp_continue }
+            timeout { puts "\n::error::Stuck for 110 min with no progress. Check the log above for the prompt EAS was waiting on."; exit 2 }
+            eof
+          }
+          catch wait result
+          exit [lindex $result 3]
+          EOF
+
+      - name: Resolve the finished trial build for this exact Git SHA
+        if: ${{ inputs.trial_testflight }}
+        run: |
+          eas build:list --platform ios --status finished --limit 20 --json --non-interactive > "$RUNNER_TEMP/eas-builds.json"
+          node - <<'NODE'
+          const fs = require('fs');
+          const builds = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/eas-builds.json', 'utf8'));
+          const build = builds.find((item) => item.gitCommitHash === process.env.GITHUB_SHA);
+          if (!build?.id) {
+            console.error(`No finished iOS EAS build is traceable to ${process.env.GITHUB_SHA}; refusing latest-build substitution.`);
+            process.exit(1);
+          }
+          // Belt and braces: never submit a build that is not the trial app.
+          if (build.appIdentifier && build.appIdentifier !== process.env.TRIAL_BUNDLE_ID) {
+            console.error(`Build ${build.id} is ${build.appIdentifier}, not ${process.env.TRIAL_BUNDLE_ID}; refusing to submit it.`);
+            process.exit(1);
+          }
+          fs.appendFileSync(process.env.GITHUB_ENV, `EAS_BUILD_ID=${build.id}\n`);
+          NODE
+
+      - name: Self-test app-id resolver
+        if: ${{ inputs.trial_testflight }}
+        run: node scripts/ci/resolve-asc-app-id.test.mjs
+
+      - name: Resolve App Store Connect app id for the trial app
+        if: ${{ inputs.trial_testflight }}
+        env:
+          ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          IOS_BUNDLE_ID: app.volyume.trial
+        run: node scripts/ci/resolve-asc-app-id.mjs
+
+      # TestFlight only, only when ticked, and only for the trial app record
+      # resolved just above. The submit profile name `production` is eas.json's
+      # profile NAME for the ASC key fields the resolver writes; the build id
+      # pins exactly which build is uploaded.
+      - name: Submit the trial to TestFlight
+        if: ${{ inputs.trial_testflight }}
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

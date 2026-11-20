@@ -42,6 +42,17 @@
         "buildType": "app-bundle"
       }
     },
+    "trial": {
+      "channel": "trial",
+      "node": "20.19.4",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "trial",
+        "EAS_SKIP_AUTO_FINGERPRINT": "1",
+        "RCT_USE_PREBUILT_RNCORE": "0",
+        "RCT_USE_RN_DEP": "0"
+      }
+    },
     "e2e-simulator": {
       "developmentClient": false,
       "distribution": "internal",

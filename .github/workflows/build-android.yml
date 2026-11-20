@@ -686,3 +686,224 @@ jobs:
           name: build-status-${{ github.run_number }}
           path: .ci-status/latest.md
           retention-days: 3
+
+  # ---------------------------------------------------------------------------
+  # TRIAL BUILD (LOC-413, kit trial 3). Runs ONLY from the trial branch
+  # `trial/rn-reusables`, started by hand by the founder (Actions tab -> "Build
+  # Android (APK + AAB, signed)" -> Run workflow -> Branch: trial/rn-reusables).
+  # The `build` job above is untouched and still refuses every ref but main;
+  # this job refuses every ref but the trial branch, so one dispatch runs
+  # exactly one of the two.
+  #
+  # What it makes: ONE debug-signed APK for 64-bit phones, installing as
+  # `app.volyume.trial` ("Volyume Trial") beside the store app, never over it
+  # (app.config.js + scripts/ci/trial-identity.cjs, selected by APP_VARIANT).
+  #
+  # What it deliberately does NOT have, so nothing here can reach Google Play:
+  #   - no upload keystore and no signing passwords (the APK is debug-signed,
+  #     so Play would refuse it, and the upload key never meets trial code)
+  #   - no bundleRelease, so no AAB is built or uploaded
+  #   - no SENTRY_AUTH_TOKEN and no Sentry DSN (no source maps are uploaded,
+  #     and trial crashes do not go to the live Sentry project)
+  #   - no submit or publish step of any kind
+  # Keep the SDK install list below in step with the `build` job (a test checks).
+  # ---------------------------------------------------------------------------
+  build-trial:
+    if: github.ref == 'refs/heads/trial/rn-reusables'
+    name: Build trial APK (beside the store app)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      APP_VARIANT: trial
+      TRIAL_VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc /usr/local/.ghcup || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/share/chromium /usr/local/share/vcpkg || true
+          docker image prune --all --force || true
+          df -h /
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.22.2
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # Same SQLCipher guard as the main build (incident 2026-09-04): without
+      # the codec a fresh install cannot open its database.
+      - name: Pin SQLCipher on in the expo-sqlite build script
+        run: node scripts/force-sqlcipher-android.cjs
+
+      - name: Verify required secrets are set
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY is empty. The app would crash at first launch."
+            exit 1
+          fi
+          echo "✓ Supabase credentials present"
+
+      - name: Setup Java 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: 'platform-tools'
+
+      - name: Install Android SDK, NDK and CMake
+        run: |
+          set -eu
+
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [ -z "$SDK_ROOT" ]; then
+            echo "::error::ANDROID_HOME/ANDROID_SDK_ROOT is not set after setup-android."
+            exit 1
+          fi
+
+          install_sdk_package() {
+            package="$1"
+            component_path="$2"
+            for attempt in 1 2 3; do
+              echo "Installing ${package} (attempt ${attempt}/3)"
+              if sdkmanager "$package"; then
+                break
+              fi
+
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::Failed to install ${package} after 3 attempts."
+                exit 1
+              fi
+
+              rm -rf "$component_path" "$SDK_ROOT/.temp" || true
+              sleep $((attempt * 5))
+            done
+
+            if [ ! -d "$component_path" ]; then
+              echo "::error::${package} did not create expected directory: ${component_path}"
+              exit 1
+            fi
+          }
+
+          yes | sdkmanager --licenses >/dev/null || true
+          install_sdk_package "platforms;android-36" "$SDK_ROOT/platforms/android-36"
+          install_sdk_package "build-tools;36.0.0" "$SDK_ROOT/build-tools/36.0.0"
+          install_sdk_package "platforms;android-35" "$SDK_ROOT/platforms/android-35"
+          install_sdk_package "build-tools;35.0.0" "$SDK_ROOT/build-tools/35.0.0"
+          install_sdk_package "cmake;3.22.1" "$SDK_ROOT/cmake/3.22.1"
+          install_sdk_package "ndk;27.1.12297006" "$SDK_ROOT/ndk/27.1.12297006"
+          install_sdk_package "ndk;27.0.12077973" "$SDK_ROOT/ndk/27.0.12077973"
+
+      # APP_VARIANT=trial (job env) makes app.config.js change the id, name and
+      # update channel. The Sentry DSN and token are left out on purpose.
+      - name: Run Expo Prebuild (trial identity)
+        run: npx expo prebuild --platform android --clean
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY }}
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+
+      - name: Verify prebuild asked Gradle for SQLCipher
+        run: |
+          grep '^expo\.sqlite' android/gradle.properties || true
+          if ! grep -q '^expo\.sqlite\.useSQLCipher=true$' android/gradle.properties; then
+            echo "::error::android/gradle.properties has no expo.sqlite.useSQLCipher=true after prebuild."
+            exit 1
+          fi
+
+      # The trial must never be able to install over the store app. Refuse to
+      # build unless prebuild produced the trial package and no Play-signing
+      # file is anywhere in the tree.
+      - name: Verify the trial identity before compiling
+        run: |
+          if ! grep -Eq "applicationId ['\"]app\.volyume\.trial['\"]" android/app/build.gradle; then
+            echo "::error::android/app/build.gradle does not declare applicationId app.volyume.trial. Refusing to build an app that could be mistaken for the store app."
+            grep -n 'applicationId\|namespace' android/app/build.gradle || true
+            exit 1
+          fi
+          if [ -e android/app/upload.keystore ]; then
+            echo "::error::An upload keystore is present in the trial tree. The trial must be debug-signed."
+            exit 1
+          fi
+          echo "✓ applicationId is app.volyume.trial; no upload keystore present"
+
+      - name: Raise Gradle heap for the release build
+        run: |
+          echo "org.gradle.jvmargs=-Xmx5120m -XX:MaxMetaspaceSize=1024m -XX:+UseParallelGC -Dfile.encoding=UTF-8" >> android/gradle.properties
+
+      - name: Cache Gradle
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Make Gradlew executable
+        run: chmod +x android/gradlew
+
+      # arm64-v8a only: every current phone is 64-bit ARM, and one ABI keeps the
+      # build well inside the runner's time and memory. assembleRelease only.
+      - name: Build trial APK
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY }}
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+        run: |
+          cd android
+          ./gradlew assembleRelease \
+            --no-daemon --no-configuration-cache \
+            --init-script ../scripts/android-sqlcipher-diagnostic.init.gradle \
+            -Pexpo.sqlite.useSQLCipher=true \
+            -PreactNativeArchitectures=arm64-v8a \
+            -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
+
+      # Checked on the finished APK, not the config: the package it will install
+      # as, and that it carries the SQLCipher codec.
+      - name: Verify the APK installs as app.volyume.trial
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          AAPT2="$(ls "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/build-tools/36.0.0/aapt2)"
+          PKG="$("$AAPT2" dump packagename "$APK")"
+          echo "APK package: $PKG"
+          if [ "$PKG" != "app.volyume.trial" ]; then
+            echo "::error::The APK package is '$PKG', not app.volyume.trial. Do not install it."
+            exit 1
+          fi
+          "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/build-tools/36.0.0/apksigner verify --print-certs "$APK" | head -3
+          npm run verify:android:sqlcipher -- "$APK"
+
+      - name: Write immutable artifact provenance
+        run: |
+          {
+            echo "git_sha=${GITHUB_SHA}"
+            echo "package=app.volyume.trial"
+            sha256sum android/app/build/outputs/apk/release/app-release.apk
+          } > artifact-provenance.txt
+
+      - name: Upload trial APK artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: volyume-trial-apk-${{ github.sha }}
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            artifact-provenance.txt
+          retention-days: 7
