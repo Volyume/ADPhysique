@@ -19,12 +19,13 @@ function Alert({
     iconClassName?: string;
   }) {
   return (
+    // The text context carries only the alert's text styling. The container's own
+    // className (its padding, edge and fill) must never reach the sentence: with
+    // the notice's pr-14 in here the text got that padding a second time, so its
+    // column was half as wide as the room between the icon and the close control
+    // (LOC-683).
     <TextClassContext.Provider
-      value={cn(
-        'text-sm text-foreground',
-        variant === 'destructive' && 'text-destructive',
-        className
-      )}>
+      value={cn('text-sm text-foreground', variant === 'destructive' && 'text-destructive')}>
       <View
         role="alert"
         className={cn(

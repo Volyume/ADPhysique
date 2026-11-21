@@ -399,6 +399,22 @@ describe('LOC-683: a notice shows its whole sentence', () => {
     }
   });
 
+  // The text column is the room between the icon and the close control or chevron. The
+  // notice's own right padding (it keeps clear of the control) sits on the alert once;
+  // when the alert's className also reached its Text, the sentence got that padding a
+  // second time and wrapped in half the room.
+  test.each([['with a close control', noop], ['without one', null]])('%s: the sentence carries none of the alert\'s padding, edge or fill', (_how, onDismiss) => {
+    const tree = renderKit(<CoachNotice title="Weekly check-in" text={LONG} onPress={noop} onDismiss={onDismiss} testID="n" />);
+    const alert = stylesOf(tree).find(({ node }) => node.props.role === 'none');
+    expect(alert.style.paddingRight).toBe(onDismiss ? 56 : 40);
+    for (const n of textNodes(tree)) {
+      const st = flatStyle(n.props.style);
+      expect(st.paddingRight).toBeUndefined();
+      expect(st.borderColor).toBeUndefined();
+      expect(st.backgroundColor).toBeUndefined();
+    }
+  });
+
   test('no caller can put a clamp back: the part takes no wrap flag and its source sets no numberOfLines', () => {
     const fs = require('fs');
     const path = require('path');
