@@ -12,7 +12,10 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_201`, plus **203** (applied 2026-10-21 02:46:54 UTC under the
+> `migrate_201`, plus **204** (applied 2026-11-21 17:22:36 UTC under the
+> founder's "run against production 204", apply-named-sql run 15: the
+> read-only new-account outcomes view and function for the weekly growth
+> totals) and **203** (applied 2026-10-21 02:46:54 UTC under the
 > founder's "run against production 203", apply-named-sql run 14: free for
 > life written at close for a final score of 50 or more, not on join; 202 is
 > written and not applied) (200 and 201 applied 2026-10-20 03:55:09 and 03:55:14 UTC
@@ -98,7 +101,7 @@ is absolute — all user data stays in Dublin (one founder exception,
 Resend, which sends from Ireland and keeps its records in the United States
 under the standard contract clauses; the privacy policy says so). Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_204`, applied through 201 plus 203, 202 and 204 not applied, 049 HELD; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_204`, applied through 201 plus 203 and 204, 202 not applied, 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,
