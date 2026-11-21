@@ -1,0 +1,24 @@
+# Volyume UK store search phrases (LOC-662). Column 1 = phrase (read by scripts/store-position-check.cjs), column 2 = why it was chosen, column 3 = basis.
+# Basis: M-top10 = measured in the UK iTunes Search API top 10 on 20 Nov 2026 (evidence-1-store-search, section B); M-hint = returned by the UK App Store autocomplete on 20 or 21 Nov 2026; D = derived long-tail variant, not itself measured; C = control.
+hypertrophy	The head phrase for muscle-gain lifters. 5 of the top 10 UK results had 0 UK ratings and the phrase is in most of their names, so a new app can enter. Volyume plans weekly sets per muscle.	M-top10, M-hint
+hypertrophy training	Autocomplete returned "hypertrophy training" with an app name in front, so people type the two words together.	M-hint (21 Nov)
+hypertrophy tracker	Autocomplete for "hypertrophy" returned "hypertrophy tracker" twice (two different apps).	M-hint
+progressive overload	6 of the top 10 had 4 or fewer UK ratings. Volyume suggests the next weight and reps for each set.	M-top10, M-hint
+progressive overload workout	Autocomplete returned it for "progressive overload".	M-hint
+progressive overload tracker	Natural pairing of the measured phrase with the word lifters use for a log. Not measured.	D
+bodybuilding	Broad term; the top 10 held one 0-rating app at #8. Volyume has division-specific plans (men's physique, classic, bodybuilding and others).	M-top10
+bodybuilding workout	Autocomplete returned "bodybuilding workouts" and "fitness & bodybuilding workout".	M-hint (21 Nov)
+bodybuilding planner	The phrase named in the LOC-662 brief. Autocomplete returned nothing for it on 21 Nov, so treat it as a watch phrase, not a target.	D, weak
+gym log	Top 10 held 0-rating apps at #5 and #9. Volyume is a set-by-set log.	M-top10, M-hint
+workout log	Autocomplete returned "workout log free", "workout logger" and several named apps.	M-hint (21 Nov)
+workout tracker	The biggest generic phrase measured; the top 10 mixes large apps and two apps with 10 or 11 ratings.	M-top10, M-hint
+workout tracker free	Autocomplete lists the "free" variant first for most seeds; Volyume is free.	M-hint
+workout planner	Top 10 included a 26-rating app and a 1-rating app. Volyume builds a plan from goal, days and equipment.	M-top10
+gym planner	Top 10 included apps with 1, 7 and 26 ratings.	M-top10
+weight lifting log	Most of the top 10 had 0 to 12 ratings.	M-top10
+weight lifting tracker	First autocomplete result for "weight lifting".	M-hint
+strength training	Head term. No low-rating app in the top 10 on 20 Nov, so a control for how far Volyume is from a head term.	M-top10, C
+macro tracker	Top 10 held one low-rating app at #7. Volyume works out calorie and macro targets and logs food.	M-top10
+calorie counter free uk	Autocomplete returned "calorie counter free uk" (the only UK-worded hint seen). Volyume uses UK food data.	M-hint
+muscle building	Autocomplete returned nine suggestions, including "muscle building food tracker".	M-hint (21 Nov)
+volyume	Brand control. Volyume was #1 on 20 Nov. If this ever falls, something is wrong with the listing.	C

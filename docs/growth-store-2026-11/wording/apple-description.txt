@@ -1,0 +1,35 @@
+Volyume is a free workout tracker, food diary and weekly coach for lifters who plan their own training. It builds your hypertrophy training plan, logs every set, tracks your food, and every week makes the training and nutrition decision and shows you why.
+
+It runs on fixed rules, not AI. The same numbers give the same decision every time, and the reason is written down.
+
+TRAIN
+• Build a workout planner from your goal, 2 to 6 training days a week, session length, equipment and experience. Or pick a ready-made plan from the library, or build your own.
+• Six training styles for building muscle: Balanced, V-taper, X-frame, Upper-body density, Powerbuilder and Minimalist.
+• Competing in bodybuilding or physique? Choose your division and the plan puts the priority on the muscles that matter for it.
+• A gym log for every set: working sets, warm-ups, drop sets, myo-reps, rest-pause and AMRAP, with a rest timer. It works without a signal.
+• Progressive overload built in. From your second session, Volyume suggests a weight and a rep target for each set from your last comparable session. You can type over it.
+• Plans for hypertrophy and strength training, with the weekly sets set for each muscle.
+
+WEEKLY CHECK-IN
+• Tell Volyume how your week went: energy, sleep, stress, soreness, joint pain and how closely you followed the plan.
+• It proposes changes to your training volume, your daily calories and your steps target, and writes down why. When it holds a change back, it says why.
+• You stay in charge. Nothing applies itself unless you choose Coached mode, and even then anything safety-related waits for you.
+
+NUTRITION
+• A calorie counter and macro tracker: search foods, scan barcodes, scan nutrition labels, save meals, build recipes and log water.
+• Built on UK food data.
+• Calorie and macro targets worked out from your body, your goal and your activity level.
+• Meal plans built by fixed rules from UK meals, your saved meals and your recipes, with a shopping list.
+
+PROGRESS
+• Lifts, personal bests, volume and recovery for each muscle, weight trend, body measurements and progress photos.
+• Your progress photos and workout videos stay on your phone.
+
+COMMUNITY
+• Follow other lifters, share sessions, join groups and send messages.
+
+MADE FOR LIFTERS IN THE UK
+• Lifts in kg, body weight in stone, kg or pounds, British English.
+• No ads.
+
+Questions: support@volyume.app
