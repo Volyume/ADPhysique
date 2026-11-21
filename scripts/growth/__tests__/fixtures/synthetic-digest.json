@@ -1,0 +1,2229 @@
+{
+    "weeks": 8,
+    "releases": [
+        {
+            "notes": "Android setup fix: setup no longer waits on reminders or food import.",
+            "version": "3.1.0",
+            "released_on": "2026-10-18"
+        },
+        {
+            "notes": "Coaching-first onboarding with quick start; physique archetypes; warm-up chip; raw/cooked weights and shopping list days; kitchen rounding; growth telemetry.",
+            "version": "3.2.0",
+            "released_on": "2026-10-19"
+        }
+    ],
+    "catalogue": [
+        {
+            "area": "app",
+            "name": "error_shown",
+            "signal": "friction",
+            "description": "The person saw a failure: an error message, an alert or an error screen."
+        },
+        {
+            "area": "app",
+            "name": "exit_reason_given",
+            "signal": "retention",
+            "description": "An optional one-tap reason at a moment of leaving."
+        },
+        {
+            "area": "app",
+            "name": "experiment_exposed",
+            "signal": "exposure",
+            "description": "The person was placed in one arm of an A/B test (once per test)."
+        },
+        {
+            "area": "app",
+            "name": "feature_seen",
+            "signal": "exposure",
+            "description": "A new feature was seen for the first time."
+        },
+        {
+            "area": "app",
+            "name": "help_opened",
+            "signal": "confusion",
+            "description": "An explanation (info tooltip or help) was opened."
+        },
+        {
+            "area": "app",
+            "name": "notification_permission_result",
+            "signal": "retention",
+            "description": "The answer to the system notification prompt."
+        },
+        {
+            "area": "app",
+            "name": "reminders_turned_off",
+            "signal": "retention",
+            "description": "A reminder category was switched off."
+        },
+        {
+            "area": "app",
+            "name": "screen_viewed",
+            "signal": "progression",
+            "description": "A screen opened, with the screen before it and how long the person stayed there."
+        },
+        {
+            "area": "app",
+            "name": "session_ended",
+            "signal": "retention",
+            "description": "The app went to the background: how long the visit lasted, how many screens, how many errors were shown, and what was achieved."
+        },
+        {
+            "area": "challenge",
+            "name": "challenge_join_viewed",
+            "signal": "exposure",
+            "description": "The gym challenge join screen showed a challenge."
+        },
+        {
+            "area": "challenge",
+            "name": "challenge_joined",
+            "signal": "progression",
+            "description": "A person joined a gym challenge."
+        },
+        {
+            "area": "challenge",
+            "name": "challenge_viewed",
+            "signal": "retention",
+            "description": "An entrant opened their gym challenge."
+        },
+        {
+            "area": "challenge",
+            "name": "challenge_withdrawn",
+            "signal": "retention",
+            "description": "An entrant left a gym challenge."
+        },
+        {
+            "area": "coach",
+            "name": "checkin_abandoned",
+            "signal": "friction",
+            "description": "A weekly check-in was left before submitting."
+        },
+        {
+            "area": "coach",
+            "name": "checkin_completed",
+            "signal": "progression",
+            "description": "A weekly check-in was submitted."
+        },
+        {
+            "area": "coach",
+            "name": "coach_recommendation_dismissed",
+            "signal": "progression",
+            "description": "A coach recommendation of any kind was declined."
+        },
+        {
+            "area": "coach",
+            "name": "coach_recommendation_held",
+            "signal": "progression",
+            "description": "A coach recommendation was held (kept as it was)."
+        },
+        {
+            "area": "community",
+            "name": "share_attempted",
+            "signal": "retention",
+            "description": "The person started sharing something."
+        },
+        {
+            "area": "community",
+            "name": "share_completed",
+            "signal": "retention",
+            "description": "A share went out."
+        },
+        {
+            "area": "food",
+            "name": "diary_entries_moved",
+            "signal": "progression",
+            "description": "Diary entries were copied or moved."
+        },
+        {
+            "area": "food",
+            "name": "food_plate_logged",
+            "signal": "progression",
+            "description": "Several foods were logged in one go from search."
+        },
+        {
+            "area": "food",
+            "name": "food_scan_result",
+            "signal": "progression",
+            "description": "A barcode or label scan ended."
+        },
+        {
+            "area": "food",
+            "name": "food_search_empty",
+            "signal": "friction",
+            "description": "A food search found nothing."
+        },
+        {
+            "area": "food",
+            "name": "planned_meal_confirmed",
+            "signal": "progression",
+            "description": "Planned food was confirmed as eaten."
+        },
+        {
+            "area": "onboarding",
+            "name": "coaching_setup_card_shown",
+            "signal": "retention",
+            "description": "A \"Set up coaching\" card was shown to a quick-start person (once a day per surface)."
+        },
+        {
+            "area": "onboarding",
+            "name": "coaching_setup_finished",
+            "signal": "progression",
+            "description": "Coaching setup finished: kept the plan or rebuilt it, and how a rebuild ended."
+        },
+        {
+            "area": "onboarding",
+            "name": "coaching_setup_started",
+            "signal": "progression",
+            "description": "A quick-start person opened coaching setup."
+        },
+        {
+            "area": "onboarding",
+            "name": "onboarding_completed",
+            "signal": "progression",
+            "description": "Setup finished."
+        },
+        {
+            "area": "onboarding",
+            "name": "onboarding_path_chosen",
+            "signal": "progression",
+            "description": "After consent, the person chose full coaching setup or a quick start (and, for a quick start, a ready-made plan or their own)."
+        },
+        {
+            "area": "onboarding",
+            "name": "onboarding_step_viewed",
+            "signal": "progression",
+            "description": "A setup step was shown."
+        },
+        {
+            "area": "onboarding",
+            "name": "onboarding_validation_blocked",
+            "signal": "friction",
+            "description": "Continue was tapped with a required answer missing."
+        },
+        {
+            "area": "performance",
+            "name": "screen_ready",
+            "signal": "performance",
+            "description": "How long a key screen took to show its content."
+        },
+        {
+            "area": "performance",
+            "name": "setup_stage_stalled",
+            "signal": "performance",
+            "description": "A setup or start-up stage took far longer than it should (report only)."
+        },
+        {
+            "area": "plan",
+            "name": "archetype_chosen",
+            "signal": "progression",
+            "description": "A training style was chosen."
+        },
+        {
+            "area": "plan",
+            "name": "plan_generation_finished",
+            "signal": "progression",
+            "description": "A plan build finished: built, refused by the rules, or failed, and how long it took."
+        },
+        {
+            "area": "workout",
+            "name": "exercise_swapped",
+            "signal": "friction",
+            "description": "An exercise was swapped during a workout."
+        },
+        {
+            "area": "workout",
+            "name": "workout_abandoned",
+            "signal": "friction",
+            "description": "A workout was left open and found unfinished at a later launch."
+        },
+        {
+            "area": "workout",
+            "name": "workout_discarded",
+            "signal": "friction",
+            "description": "A started workout was thrown away."
+        },
+        {
+            "area": "workout",
+            "name": "workout_session_summary",
+            "signal": "progression",
+            "description": "A finished workout, as counts of what happened in it."
+        }
+    ],
+    "core_loops": [
+        {
+            "week": "2026-09-28",
+            "shares": 0,
+            "coach_held": 0,
+            "errors_shown": 0,
+            "foods_logged": 0,
+            "coach_accepted": 0,
+            "coach_declined": 0,
+            "checkins_started": 0,
+            "workouts_started": 0,
+            "users_with_events": 12,
+            "checkins_abandoned": 0,
+            "checkins_completed": 0,
+            "workouts_abandoned": 0,
+            "workouts_completed": 20,
+            "workouts_discarded": 0,
+            "food_searches_empty": 0
+        },
+        {
+            "week": "2026-10-05",
+            "shares": 0,
+            "coach_held": 0,
+            "errors_shown": 0,
+            "foods_logged": 0,
+            "coach_accepted": 0,
+            "coach_declined": 0,
+            "checkins_started": 0,
+            "workouts_started": 0,
+            "users_with_events": 17,
+            "checkins_abandoned": 0,
+            "checkins_completed": 0,
+            "workouts_abandoned": 0,
+            "workouts_completed": 25,
+            "workouts_discarded": 0,
+            "food_searches_empty": 0
+        },
+        {
+            "week": "2026-10-12",
+            "shares": 0,
+            "coach_held": 0,
+            "errors_shown": 0,
+            "foods_logged": 0,
+            "coach_accepted": 0,
+            "coach_declined": 0,
+            "checkins_started": 0,
+            "workouts_started": 0,
+            "users_with_events": 21,
+            "checkins_abandoned": 0,
+            "checkins_completed": 0,
+            "workouts_abandoned": 0,
+            "workouts_completed": 31,
+            "workouts_discarded": 0,
+            "food_searches_empty": 0
+        },
+        {
+            "week": "2026-10-19",
+            "shares": 0,
+            "coach_held": 0,
+            "errors_shown": 0,
+            "foods_logged": 0,
+            "coach_accepted": 0,
+            "coach_declined": 0,
+            "checkins_started": 0,
+            "workouts_started": 0,
+            "users_with_events": 26,
+            "checkins_abandoned": 0,
+            "checkins_completed": 0,
+            "workouts_abandoned": 0,
+            "workouts_completed": 36,
+            "workouts_discarded": 0,
+            "food_searches_empty": 0
+        },
+        {
+            "week": "2026-10-26",
+            "shares": 0,
+            "coach_held": 0,
+            "errors_shown": 0,
+            "foods_logged": 0,
+            "coach_accepted": 0,
+            "coach_declined": 0,
+            "checkins_started": 0,
+            "workouts_started": 0,
+            "users_with_events": 28,
+            "checkins_abandoned": 0,
+            "checkins_completed": 0,
+            "workouts_abandoned": 0,
+            "workouts_completed": 37,
+            "workouts_discarded": 0,
+            "food_searches_empty": 0
+        },
+        {
+            "week": "2026-11-02",
+            "shares": 0,
+            "coach_held": 0,
+            "errors_shown": 0,
+            "foods_logged": 0,
+            "coach_accepted": 0,
+            "coach_declined": 0,
+            "checkins_started": 0,
+            "workouts_started": 0,
+            "users_with_events": 32,
+            "checkins_abandoned": 0,
+            "checkins_completed": 0,
+            "workouts_abandoned": 0,
+            "workouts_completed": 38,
+            "workouts_discarded": 0,
+            "food_searches_empty": 0
+        },
+        {
+            "week": "2026-11-09",
+            "shares": 0,
+            "coach_held": 0,
+            "errors_shown": 0,
+            "foods_logged": 0,
+            "coach_accepted": 0,
+            "coach_declined": 0,
+            "checkins_started": 0,
+            "workouts_started": 0,
+            "users_with_events": 35,
+            "checkins_abandoned": 0,
+            "checkins_completed": 0,
+            "workouts_abandoned": 0,
+            "workouts_completed": 39,
+            "workouts_discarded": 0,
+            "food_searches_empty": 0
+        },
+        {
+            "week": "2026-11-16",
+            "shares": 0,
+            "coach_held": 0,
+            "errors_shown": 0,
+            "foods_logged": 0,
+            "coach_accepted": 0,
+            "coach_declined": 0,
+            "checkins_started": 0,
+            "workouts_started": 0,
+            "users_with_events": 45,
+            "checkins_abandoned": 0,
+            "checkins_completed": 0,
+            "workouts_abandoned": 0,
+            "workouts_completed": 28,
+            "workouts_discarded": 0,
+            "food_searches_empty": 0
+        }
+    ],
+    "exit_reasons": [
+        {
+            "week": "2026-11-16",
+            "users": 1,
+            "moment": "setup_leave",
+            "reason": "call me on 07700 900123",
+            "answers": 1
+        },
+        {
+            "week": "2026-11-16",
+            "users": 14,
+            "moment": "workout_discard",
+            "reason": "felt_off",
+            "answers": 14
+        },
+        {
+            "week": "2026-11-16",
+            "users": 13,
+            "moment": "workout_discard",
+            "reason": "no_time",
+            "answers": 13
+        },
+        {
+            "week": "2026-11-16",
+            "users": 13,
+            "moment": "workout_discard",
+            "reason": "other",
+            "answers": 13
+        }
+    ],
+    "generated_at": "2026-11-21T06:44:23.274324+00:00",
+    "release_compare": [
+        {
+            "notes": "Coaching-first onboarding with quick start; physique archetypes; warm-up chip; raw/cooked weights and shopping list days; kitchen rounding; growth telemetry.",
+            "users": 33,
+            "visits": 33,
+            "first_seen": "2026-09-20",
+            "app_version": "3.2.0",
+            "released_on": "2026-10-19",
+            "errors_per_visit": 0.000,
+            "workouts_per_user": 5.00,
+            "workout_discard_pct": 0.0
+        },
+        {
+            "notes": null,
+            "users": 3,
+            "visits": 3,
+            "first_seen": "2026-10-01",
+            "app_version": "Allan's phone",
+            "released_on": null,
+            "errors_per_visit": 0.000,
+            "workouts_per_user": 4.67,
+            "workout_discard_pct": 0.0
+        },
+        {
+            "notes": null,
+            "users": 28,
+            "visits": 28,
+            "first_seen": "2026-10-24",
+            "app_version": "3.4.0",
+            "released_on": null,
+            "errors_per_visit": 0.000,
+            "workouts_per_user": 3.11,
+            "workout_discard_pct": 0.0
+        }
+    ],
+    "session_summary": [
+        {
+            "week": "2026-09-28",
+            "errors": "0",
+            "visits": 6,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.2.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 83.3
+        },
+        {
+            "week": "2026-09-28",
+            "errors": "0",
+            "visits": 1,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "Allan's phone",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 100.0
+        },
+        {
+            "week": "2026-10-05",
+            "errors": "0",
+            "visits": 7,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.2.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 85.7
+        },
+        {
+            "week": "2026-10-12",
+            "errors": "0",
+            "visits": 8,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.2.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 75.0
+        },
+        {
+            "week": "2026-10-19",
+            "errors": "0",
+            "visits": 4,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.2.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 100.0
+        },
+        {
+            "week": "2026-10-19",
+            "errors": "0",
+            "visits": 2,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.4.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 50.0
+        },
+        {
+            "week": "2026-10-19",
+            "errors": "0",
+            "visits": 1,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "Allan's phone",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 100.0
+        },
+        {
+            "week": "2026-10-26",
+            "errors": "0",
+            "visits": 7,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.4.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 85.7
+        },
+        {
+            "week": "2026-11-02",
+            "errors": "0",
+            "visits": 8,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.4.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 87.5
+        },
+        {
+            "week": "2026-11-09",
+            "errors": "0",
+            "visits": 6,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.4.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 100.0
+        },
+        {
+            "week": "2026-11-09",
+            "errors": "0",
+            "visits": 1,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "Allan's phone",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 0.0
+        },
+        {
+            "week": "2026-11-16",
+            "errors": "0",
+            "visits": 5,
+            "screens": "2-3",
+            "duration": "5-15m",
+            "app_version": "3.4.0",
+            "with_food_pct": 0.0,
+            "with_checkin_pct": 0.0,
+            "with_workout_pct": 100.0
+        }
+    ],
+    "confusion_topics": [
+        {
+            "week": "2026-11-09",
+            "opens": 6,
+            "topic": "rir",
+            "users": 6,
+            "screen": "Today"
+        },
+        {
+            "week": "2026-11-02",
+            "opens": 6,
+            "topic": "unlisted",
+            "users": 6,
+            "screen": "Today"
+        },
+        {
+            "week": "2026-11-16",
+            "opens": 4,
+            "topic": "rir",
+            "users": 4,
+            "screen": "Today"
+        },
+        {
+            "week": "2026-11-16",
+            "opens": 4,
+            "topic": "unlisted",
+            "users": 4,
+            "screen": "Today"
+        },
+        {
+            "week": "2026-11-09",
+            "opens": 3,
+            "topic": "unlisted",
+            "users": 3,
+            "screen": null
+        },
+        {
+            "week": "2026-11-09",
+            "opens": 3,
+            "topic": "unlisted",
+            "users": 3,
+            "screen": "Today"
+        },
+        {
+            "week": "2026-11-02",
+            "opens": 3,
+            "topic": "rir",
+            "users": 3,
+            "screen": "Today"
+        },
+        {
+            "week": "2026-11-16",
+            "opens": 3,
+            "topic": "rir",
+            "users": 3,
+            "screen": null
+        }
+    ],
+    "onboarding_funnel": [
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "week": "2026-09-28",
+            "drop_pct": 20.0,
+            "users_reached": 5,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 1,
+            "week": "2026-09-28",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "week": "2026-09-28",
+            "drop_pct": 25.0,
+            "users_reached": 4,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 2,
+            "week": "2026-09-28",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 3,
+            "week": "2026-09-28",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "week": "2026-09-28",
+            "drop_pct": 0.0,
+            "users_reached": 3,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 4,
+            "week": "2026-09-28",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 4,
+            "week": "2026-09-28",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 5,
+            "week": "2026-09-28",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 5,
+            "week": "2026-09-28",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 6,
+            "week": "2026-09-28",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 6,
+            "week": "2026-09-28",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 7,
+            "week": "2026-09-28",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 1,
+            "week": "2026-10-05",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "week": "2026-10-05",
+            "drop_pct": 0.0,
+            "users_reached": 5,
+            "users_completed": 5
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "week": "2026-10-05",
+            "drop_pct": 20.0,
+            "users_reached": 5,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 2,
+            "week": "2026-10-05",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 3,
+            "week": "2026-10-05",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "week": "2026-10-05",
+            "drop_pct": 25.0,
+            "users_reached": 4,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 4,
+            "week": "2026-10-05",
+            "drop_pct": 0.0,
+            "users_reached": 3,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 4,
+            "week": "2026-10-05",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 5,
+            "week": "2026-10-05",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 6,
+            "week": "2026-10-05",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 7,
+            "week": "2026-10-05",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 8,
+            "week": "2026-10-05",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "week": "2026-10-12",
+            "drop_pct": 20.0,
+            "users_reached": 5,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 1,
+            "week": "2026-10-12",
+            "drop_pct": 0.0,
+            "users_reached": 3,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "week": "2026-10-12",
+            "drop_pct": 0.0,
+            "users_reached": 4,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 2,
+            "week": "2026-10-12",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "week": "2026-10-12",
+            "drop_pct": 25.0,
+            "users_reached": 4,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 3,
+            "week": "2026-10-12",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 4,
+            "week": "2026-10-12",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 4,
+            "week": "2026-10-12",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 5,
+            "week": "2026-10-12",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 5,
+            "week": "2026-10-12",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 6,
+            "week": "2026-10-12",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 6,
+            "week": "2026-10-12",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 7,
+            "week": "2026-10-12",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 7,
+            "week": "2026-10-12",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 8,
+            "week": "2026-10-12",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "week": "2026-10-19",
+            "drop_pct": 20.0,
+            "users_reached": 5,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 1,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "week": "2026-10-19",
+            "drop_pct": 25.0,
+            "users_reached": 4,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 2,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 3,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 3,
+            "week": "2026-10-19",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 4,
+            "week": "2026-10-19",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 4,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 5,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 5,
+            "week": "2026-10-19",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 6,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 6,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 7,
+            "week": "2026-10-19",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 7,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 8,
+            "week": "2026-10-19",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 1,
+            "week": "2026-10-26",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "week": "2026-10-26",
+            "drop_pct": 0.0,
+            "users_reached": 4,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "week": "2026-10-26",
+            "drop_pct": 25.0,
+            "users_reached": 4,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 2,
+            "week": "2026-10-26",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "week": "2026-10-26",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 3,
+            "week": "2026-10-26",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 4,
+            "week": "2026-10-26",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 4,
+            "week": "2026-10-26",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 5,
+            "week": "2026-10-26",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 5,
+            "week": "2026-10-26",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 6,
+            "week": "2026-10-26",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 6,
+            "week": "2026-10-26",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 7,
+            "week": "2026-10-26",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 8,
+            "week": "2026-10-26",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 1,
+            "week": "2026-11-02",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "week": "2026-11-02",
+            "drop_pct": 16.7,
+            "users_reached": 6,
+            "users_completed": 5
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "week": "2026-11-02",
+            "drop_pct": 0.0,
+            "users_reached": 5,
+            "users_completed": 5
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 2,
+            "week": "2026-11-02",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 3,
+            "week": "2026-11-02",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "week": "2026-11-02",
+            "drop_pct": 20.0,
+            "users_reached": 5,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 4,
+            "week": "2026-11-02",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 4,
+            "week": "2026-11-02",
+            "drop_pct": 25.0,
+            "users_reached": 4,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 5,
+            "week": "2026-11-02",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 5,
+            "week": "2026-11-02",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 6,
+            "week": "2026-11-02",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 6,
+            "week": "2026-11-02",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 7,
+            "week": "2026-11-02",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 7,
+            "week": "2026-11-02",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 8,
+            "week": "2026-11-02",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "week": "2026-11-09",
+            "drop_pct": 25.0,
+            "users_reached": 4,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 1,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 3,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "week": "2026-11-09",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 2,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 3,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 3,
+            "week": "2026-11-09",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 4,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 4,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 5,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 5,
+            "week": "2026-11-09",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 6,
+            "week": "2026-11-09",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 6,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 7,
+            "week": "2026-11-09",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 7,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 8,
+            "week": "2026-11-09",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 4,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 1,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 2,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 4,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 3,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 4,
+            "users_completed": 4
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 4,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 4,
+            "week": "2026-11-16",
+            "drop_pct": 25.0,
+            "users_reached": 4,
+            "users_completed": 3
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 5,
+            "week": "2026-11-16",
+            "drop_pct": 33.3,
+            "users_reached": 3,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 5,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "quick_start",
+            "step": 6,
+            "week": "2026-11-16",
+            "drop_pct": 100.0,
+            "users_reached": 1,
+            "users_completed": 0
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 6,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 2,
+            "users_completed": 2
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 7,
+            "week": "2026-11-16",
+            "drop_pct": 50.0,
+            "users_reached": 2,
+            "users_completed": 1
+        },
+        {
+            "mode": "full",
+            "path": "coaching",
+            "step": 8,
+            "week": "2026-11-16",
+            "drop_pct": 0.0,
+            "users_reached": 1,
+            "users_completed": 1
+        }
+    ],
+    "retention_cohorts": [
+        {
+            "active_pct": 100.0,
+            "cohort_size": 7,
+            "cohort_week": "2026-09-28",
+            "week_number": 0,
+            "active_users": 7
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-09-28",
+            "week_number": 1,
+            "active_users": 4
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-09-28",
+            "week_number": 2,
+            "active_users": 4
+        },
+        {
+            "active_pct": 71.4,
+            "cohort_size": 7,
+            "cohort_week": "2026-09-28",
+            "week_number": 3,
+            "active_users": 5
+        },
+        {
+            "active_pct": 42.9,
+            "cohort_size": 7,
+            "cohort_week": "2026-09-28",
+            "week_number": 4,
+            "active_users": 3
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-09-28",
+            "week_number": 5,
+            "active_users": 4
+        },
+        {
+            "active_pct": 100.0,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-05",
+            "week_number": 0,
+            "active_users": 7
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-05",
+            "week_number": 1,
+            "active_users": 4
+        },
+        {
+            "active_pct": 71.4,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-05",
+            "week_number": 2,
+            "active_users": 5
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-05",
+            "week_number": 3,
+            "active_users": 4
+        },
+        {
+            "active_pct": 42.9,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-05",
+            "week_number": 4,
+            "active_users": 3
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-05",
+            "week_number": 5,
+            "active_users": 4
+        },
+        {
+            "active_pct": 100.0,
+            "cohort_size": 8,
+            "cohort_week": "2026-10-12",
+            "week_number": 0,
+            "active_users": 8
+        },
+        {
+            "active_pct": 50.0,
+            "cohort_size": 8,
+            "cohort_week": "2026-10-12",
+            "week_number": 1,
+            "active_users": 4
+        },
+        {
+            "active_pct": 75.0,
+            "cohort_size": 8,
+            "cohort_week": "2026-10-12",
+            "week_number": 2,
+            "active_users": 6
+        },
+        {
+            "active_pct": 62.5,
+            "cohort_size": 8,
+            "cohort_week": "2026-10-12",
+            "week_number": 3,
+            "active_users": 5
+        },
+        {
+            "active_pct": 50.0,
+            "cohort_size": 8,
+            "cohort_week": "2026-10-12",
+            "week_number": 4,
+            "active_users": 4
+        },
+        {
+            "active_pct": 50.0,
+            "cohort_size": 8,
+            "cohort_week": "2026-10-12",
+            "week_number": 5,
+            "active_users": 4
+        },
+        {
+            "active_pct": 100.0,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-19",
+            "week_number": 0,
+            "active_users": 7
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-19",
+            "week_number": 1,
+            "active_users": 4
+        },
+        {
+            "active_pct": 71.4,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-19",
+            "week_number": 2,
+            "active_users": 5
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-19",
+            "week_number": 3,
+            "active_users": 4
+        },
+        {
+            "active_pct": 28.6,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-19",
+            "week_number": 4,
+            "active_users": 2
+        },
+        {
+            "active_pct": 100.0,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-26",
+            "week_number": 0,
+            "active_users": 7
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-26",
+            "week_number": 1,
+            "active_users": 4
+        },
+        {
+            "active_pct": 71.4,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-26",
+            "week_number": 2,
+            "active_users": 5
+        },
+        {
+            "active_pct": 57.1,
+            "cohort_size": 7,
+            "cohort_week": "2026-10-26",
+            "week_number": 3,
+            "active_users": 4
+        },
+        {
+            "active_pct": 100.0,
+            "cohort_size": 8,
+            "cohort_week": "2026-11-02",
+            "week_number": 0,
+            "active_users": 8
+        },
+        {
+            "active_pct": 62.5,
+            "cohort_size": 8,
+            "cohort_week": "2026-11-02",
+            "week_number": 1,
+            "active_users": 5
+        },
+        {
+            "active_pct": 37.5,
+            "cohort_size": 8,
+            "cohort_week": "2026-11-02",
+            "week_number": 2,
+            "active_users": 3
+        },
+        {
+            "active_pct": 100.0,
+            "cohort_size": 7,
+            "cohort_week": "2026-11-09",
+            "week_number": 0,
+            "active_users": 7
+        },
+        {
+            "active_pct": 71.4,
+            "cohort_size": 7,
+            "cohort_week": "2026-11-09",
+            "week_number": 1,
+            "active_users": 5
+        },
+        {
+            "active_pct": 100.0,
+            "cohort_size": 5,
+            "cohort_week": "2026-11-16",
+            "week_number": 0,
+            "active_users": 5
+        }
+    ],
+    "activation_by_path": [
+        {
+            "path": "coaching",
+            "users": 5,
+            "plan_source": "none",
+            "signup_week": "2026-09-28",
+            "active_after_day_1_pct": 80.0,
+            "active_after_day_7_pct": 60.0,
+            "active_after_day_14_pct": 60.0,
+            "active_after_day_30_pct": 60.0,
+            "first_workout_within_7d_pct": 80.0,
+            "quick_start_later_set_up_pct": null
+        },
+        {
+            "path": "quick_start",
+            "users": 2,
+            "plan_source": "none",
+            "signup_week": "2026-09-28",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 100.0,
+            "active_after_day_14_pct": 100.0,
+            "active_after_day_30_pct": 100.0,
+            "first_workout_within_7d_pct": 100.0,
+            "quick_start_later_set_up_pct": 0.0
+        },
+        {
+            "path": "coaching",
+            "users": 5,
+            "plan_source": "none",
+            "signup_week": "2026-10-05",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 80.0,
+            "active_after_day_14_pct": 80.0,
+            "active_after_day_30_pct": 80.0,
+            "first_workout_within_7d_pct": 80.0,
+            "quick_start_later_set_up_pct": null
+        },
+        {
+            "path": "quick_start",
+            "users": 2,
+            "plan_source": "none",
+            "signup_week": "2026-10-05",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 50.0,
+            "active_after_day_14_pct": 50.0,
+            "active_after_day_30_pct": 50.0,
+            "first_workout_within_7d_pct": 100.0,
+            "quick_start_later_set_up_pct": 0.0
+        },
+        {
+            "path": "coaching",
+            "users": 5,
+            "plan_source": "none",
+            "signup_week": "2026-10-12",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 100.0,
+            "active_after_day_14_pct": 80.0,
+            "active_after_day_30_pct": 80.0,
+            "first_workout_within_7d_pct": 80.0,
+            "quick_start_later_set_up_pct": null
+        },
+        {
+            "path": "quick_start",
+            "users": 3,
+            "plan_source": "none",
+            "signup_week": "2026-10-12",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 100.0,
+            "active_after_day_14_pct": 66.7,
+            "active_after_day_30_pct": 66.7,
+            "first_workout_within_7d_pct": 66.7,
+            "quick_start_later_set_up_pct": 0.0
+        },
+        {
+            "path": "coaching",
+            "users": 5,
+            "plan_source": "none",
+            "signup_week": "2026-10-19",
+            "active_after_day_1_pct": 80.0,
+            "active_after_day_7_pct": 80.0,
+            "active_after_day_14_pct": 60.0,
+            "active_after_day_30_pct": 0.0,
+            "first_workout_within_7d_pct": 80.0,
+            "quick_start_later_set_up_pct": null
+        },
+        {
+            "path": "quick_start",
+            "users": 2,
+            "plan_source": "none",
+            "signup_week": "2026-10-19",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 100.0,
+            "active_after_day_14_pct": 100.0,
+            "active_after_day_30_pct": 0.0,
+            "first_workout_within_7d_pct": 100.0,
+            "quick_start_later_set_up_pct": 0.0
+        },
+        {
+            "path": "coaching",
+            "users": 4,
+            "plan_source": "none",
+            "signup_week": "2026-10-26",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 100.0,
+            "active_after_day_14_pct": 100.0,
+            "active_after_day_30_pct": null,
+            "first_workout_within_7d_pct": 100.0,
+            "quick_start_later_set_up_pct": null
+        },
+        {
+            "path": "quick_start",
+            "users": 3,
+            "plan_source": "none",
+            "signup_week": "2026-10-26",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 66.7,
+            "active_after_day_14_pct": 66.7,
+            "active_after_day_30_pct": null,
+            "first_workout_within_7d_pct": 66.7,
+            "quick_start_later_set_up_pct": 0.0
+        },
+        {
+            "path": "coaching",
+            "users": 6,
+            "plan_source": "none",
+            "signup_week": "2026-11-02",
+            "active_after_day_1_pct": 83.3,
+            "active_after_day_7_pct": 33.3,
+            "active_after_day_14_pct": 50.0,
+            "active_after_day_30_pct": null,
+            "first_workout_within_7d_pct": 83.3,
+            "quick_start_later_set_up_pct": null
+        },
+        {
+            "path": "quick_start",
+            "users": 2,
+            "plan_source": "none",
+            "signup_week": "2026-11-02",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 100.0,
+            "active_after_day_14_pct": 50.0,
+            "active_after_day_30_pct": null,
+            "first_workout_within_7d_pct": 100.0,
+            "quick_start_later_set_up_pct": 0.0
+        },
+        {
+            "path": "coaching",
+            "users": 4,
+            "plan_source": "none",
+            "signup_week": "2026-11-09",
+            "active_after_day_1_pct": 75.0,
+            "active_after_day_7_pct": 66.7,
+            "active_after_day_14_pct": null,
+            "active_after_day_30_pct": null,
+            "first_workout_within_7d_pct": 75.0,
+            "quick_start_later_set_up_pct": null
+        },
+        {
+            "path": "quick_start",
+            "users": 3,
+            "plan_source": "none",
+            "signup_week": "2026-11-09",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": 50.0,
+            "active_after_day_14_pct": null,
+            "active_after_day_30_pct": null,
+            "first_workout_within_7d_pct": 100.0,
+            "quick_start_later_set_up_pct": 0.0
+        },
+        {
+            "path": "coaching",
+            "users": 4,
+            "plan_source": "none",
+            "signup_week": "2026-11-16",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": null,
+            "active_after_day_14_pct": null,
+            "active_after_day_30_pct": null,
+            "first_workout_within_7d_pct": 75.0,
+            "quick_start_later_set_up_pct": null
+        },
+        {
+            "path": "quick_start",
+            "users": 1,
+            "plan_source": "none",
+            "signup_week": "2026-11-16",
+            "active_after_day_1_pct": 100.0,
+            "active_after_day_7_pct": null,
+            "active_after_day_14_pct": null,
+            "active_after_day_30_pct": null,
+            "first_workout_within_7d_pct": 100.0,
+            "quick_start_later_set_up_pct": 0.0
+        }
+    ],
+    "experiment_results": null,
+    "friction_vs_return": [
+        {
+            "users_hit": 2,
+            "users_not_hit": 48,
+            "friction_event": "help_opened",
+            "return_gap_pct": 6.3,
+            "return_pct_hit": 50.0,
+            "return_pct_not_hit": 43.8
+        }
+    ],
+    "lapse_last_screens": [
+        {
+            "last_screen": "Nutrition",
+            "active_users": 3,
+            "lapsed_users": 7,
+            "active_share_pct": 15.0,
+            "lapsed_share_pct": 28.0
+        },
+        {
+            "last_screen": "ActiveWorkout",
+            "active_users": 1,
+            "lapsed_users": 5,
+            "active_share_pct": 5.0,
+            "lapsed_share_pct": 20.0
+        },
+        {
+            "last_screen": "Today",
+            "active_users": 3,
+            "lapsed_users": 5,
+            "active_share_pct": 15.0,
+            "lapsed_share_pct": 20.0
+        },
+        {
+            "last_screen": "Train",
+            "active_users": 3,
+            "lapsed_users": 3,
+            "active_share_pct": 15.0,
+            "lapsed_share_pct": 12.0
+        },
+        {
+            "last_screen": "Coach",
+            "active_users": 5,
+            "lapsed_users": 3,
+            "active_share_pct": 25.0,
+            "lapsed_share_pct": 12.0
+        },
+        {
+            "last_screen": "Settings",
+            "active_users": 4,
+            "lapsed_users": 2,
+            "active_share_pct": 20.0,
+            "lapsed_share_pct": 8.0
+        },
+        {
+            "last_screen": "my private notes",
+            "active_users": 1,
+            "lapsed_users": 0,
+            "active_share_pct": 5.0,
+            "lapsed_share_pct": 0.0
+        }
+    ],
+    "performance_by_version": null,
+    "safety_activity_groups": [
+        {
+            "week": "2026-09-28",
+            "users": 12,
+            "safety_group": "no_flag",
+            "workouts_per_user": 1.67,
+            "active_days_per_user": 2.25
+        },
+        {
+            "week": "2026-10-05",
+            "users": 17,
+            "safety_group": "no_flag",
+            "workouts_per_user": 1.47,
+            "active_days_per_user": 1.88
+        },
+        {
+            "week": "2026-10-12",
+            "users": 21,
+            "safety_group": "no_flag",
+            "workouts_per_user": 1.48,
+            "active_days_per_user": 1.86
+        },
+        {
+            "week": "2026-10-19",
+            "users": 26,
+            "safety_group": "no_flag",
+            "workouts_per_user": 1.38,
+            "active_days_per_user": 1.65
+        },
+        {
+            "week": "2026-10-26",
+            "users": 21,
+            "safety_group": "no_flag",
+            "workouts_per_user": 1.33,
+            "active_days_per_user": 1.57
+        },
+        {
+            "week": "2026-11-02",
+            "users": 20,
+            "safety_group": "no_flag",
+            "workouts_per_user": 1.35,
+            "active_days_per_user": 1.65
+        },
+        {
+            "week": "2026-11-09",
+            "users": 21,
+            "safety_group": "no_flag",
+            "workouts_per_user": 1.38,
+            "active_days_per_user": 1.67
+        },
+        {
+            "week": "2026-11-16",
+            "users": 16,
+            "safety_group": "no_flag",
+            "workouts_per_user": 1.31,
+            "active_days_per_user": 1.50
+        }
+    ],
+    "feature_exposure_effect": null,
+    "engagement_status_counts": {
+        "new": 7,
+        "active": 20,
+        "lapsed": 25,
+        "slipping": 12
+    }
+}

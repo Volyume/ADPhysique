@@ -1,0 +1,122 @@
+name: Weekly growth totals
+
+# LOC-661 (plan LOC-583 revision 7, section 8 row 1; brief and figures in
+# docs/growth-totals/). Every Monday, and on a manual click of "Run
+# workflow", this job:
+#   1. reads the growth digest (telemetry_weekly_digest) and, once
+#      migrate_204 is applied, telemetry_new_account_outcomes, by GET only:
+#      PostgREST runs every GET in a READ ONLY transaction, so nothing here
+#      can write to the database;
+#   2. reads crash counts per app version from Sentry with a read-only token,
+#      or marks them "not_configured" when the token is not set;
+#   3. passes everything through the allow-list filter
+#      (scripts/growth/totalsFilter.js): totals only, groups under five
+#      folded into "other", nothing about safety flags, no free text, no
+#      identifiers;
+#   4. commits ONLY the filtered totals to the weekly-totals branch of the
+#      PRIVATE repository Volyume/volyume-growth-totals.
+#
+# This repository is public, and so are its Actions logs and artifacts. The
+# totals therefore never go to a branch, an artifact, the run summary or the
+# log here: the log says which sources worked, never a figure.
+#
+# It never writes to this repository: the job's GitHub token is read-only
+# (permissions: contents: read), and the only push is to the private
+# repository, with a token that can reach that one repository only.
+#
+# Founder setup (one time), see docs/growth-totals/SETUP.md:
+#   - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY: already set (weekly food job).
+#   - GROWTH_TOTALS_TOKEN: fine-grained token, only the repository
+#     Volyume/volyume-growth-totals, Contents: Read and write, nothing else.
+#   - SENTRY_READ_TOKEN (optional): Sentry internal integration token with
+#     Organization: Read only. Without it the crash section says
+#     "not_configured" and the run still succeeds.
+#   - SENTRY_API_URL (optional repository variable, not a secret): the Sentry
+#     API host when the organisation is not on https://sentry.io.
+#
+# Free: about one minute a week of the GitHub Actions free allowance.
+
+on:
+  schedule:
+    # Monday 06:00 UTC: the Monday-to-Sunday week before is complete.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: growth-weekly-totals
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  totals:
+    # Only the reviewed program on main may run with the database key; a
+    # dispatch from any other branch does nothing.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.22.2'
+
+      # Before the database is read: with no place to deliver to, nothing is read.
+      - name: Check out the private totals repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: Volyume/volyume-growth-totals
+          token: ${{ secrets.GROWTH_TOTALS_TOKEN }}
+          path: totals-repo
+          fetch-depth: 0
+
+      - name: Switch to the weekly-totals branch
+        working-directory: totals-repo
+        run: |
+          if git ls-remote --exit-code --heads origin weekly-totals >/dev/null; then
+            git checkout -B weekly-totals origin/weekly-totals
+          else
+            git checkout --orphan weekly-totals
+            git rm -r -f --quiet --ignore-unmatch .
+          fi
+
+      - name: Build the totals
+        id: build
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SENTRY_READ_TOKEN: ${{ secrets.SENTRY_READ_TOKEN }}
+          SENTRY_API_URL: ${{ vars.SENTRY_API_URL }}
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/growth/run.mjs totals-repo
+
+      - name: Commit the totals to the private repository
+        working-directory: totals-repo
+        env:
+          TOTALS_DATE: ${{ steps.build.outputs.date }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add latest.json weekly
+          if git diff --cached --quiet; then
+            echo "No change to commit"
+            exit 0
+          fi
+          git commit --quiet -m "Weekly growth totals ${TOTALS_DATE}"
+          git push --quiet origin HEAD:refs/heads/weekly-totals
+
+      # A configured source that failed (the outcomes function or Sentry)
+      # fails the run after the week's totals are saved, so it is seen.
+      - name: Fail when a configured source failed
+        if: steps.build.outputs.problems != '0'
+        run: |
+          echo "::error::A configured source failed this week; see the Build the totals step."
+          exit 1

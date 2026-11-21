@@ -98,7 +98,7 @@ is absolute — all user data stays in Dublin (one founder exception,
 Resend, which sends from Ireland and keeps its records in the United States
 under the standard contract clauses; the privacy policy says so). Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_203`, applied through 201 plus 203, 202 not applied, 049 HELD; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_204`, applied through 201 plus 203, 202 and 204 not applied, 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

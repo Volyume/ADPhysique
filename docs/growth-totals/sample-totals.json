@@ -1,0 +1,711 @@
+{
+  "format": "volyume-growth-totals/1",
+  "generated_at": "2026-11-21T06:44:23.274Z",
+  "window_weeks": 8,
+  "minimum_group": 5,
+  "active_people_by_week": {
+    "weeks": [
+      {
+        "week": "2026-09-28",
+        "complete": true,
+        "active_people": 12
+      },
+      {
+        "week": "2026-10-05",
+        "complete": true,
+        "active_people": 17
+      },
+      {
+        "week": "2026-10-12",
+        "complete": true,
+        "active_people": 21
+      },
+      {
+        "week": "2026-10-19",
+        "complete": true,
+        "active_people": 26
+      },
+      {
+        "week": "2026-10-26",
+        "complete": true,
+        "active_people": 28
+      },
+      {
+        "week": "2026-11-02",
+        "complete": true,
+        "active_people": 32
+      },
+      {
+        "week": "2026-11-09",
+        "complete": true,
+        "active_people": 35
+      },
+      {
+        "week": "2026-11-16",
+        "complete": false,
+        "active_people": 45
+      }
+    ],
+    "rows_not_counted": 0
+  },
+  "sign_ups_by_week": {
+    "weeks": [
+      {
+        "signup_week": "2026-09-28",
+        "new_accounts": 7,
+        "first_workout_within_7_days": 6,
+        "first_7_days_over_for_everyone": true,
+        "still_using_app_after": {
+          "day_7": 5,
+          "day_14": 5,
+          "day_30": 5
+        }
+      },
+      {
+        "signup_week": "2026-10-05",
+        "new_accounts": 7,
+        "first_workout_within_7_days": 6,
+        "first_7_days_over_for_everyone": true,
+        "still_using_app_after": {
+          "day_7": 5,
+          "day_14": 5,
+          "day_30": 5
+        }
+      },
+      {
+        "signup_week": "2026-10-12",
+        "new_accounts": 8,
+        "first_workout_within_7_days": 6,
+        "first_7_days_over_for_everyone": true,
+        "still_using_app_after": {
+          "day_7": 8,
+          "day_14": 6,
+          "day_30": 6
+        }
+      },
+      {
+        "signup_week": "2026-10-19",
+        "new_accounts": 7,
+        "first_workout_within_7_days": 6,
+        "first_7_days_over_for_everyone": true,
+        "still_using_app_after": {
+          "day_7": 6,
+          "day_14": 5,
+          "day_30": null
+        }
+      },
+      {
+        "signup_week": "2026-10-26",
+        "new_accounts": 7,
+        "first_workout_within_7_days": 6,
+        "first_7_days_over_for_everyone": true,
+        "still_using_app_after": {
+          "day_7": 6,
+          "day_14": 6,
+          "day_30": null
+        }
+      },
+      {
+        "signup_week": "2026-11-02",
+        "new_accounts": 8,
+        "first_workout_within_7_days": 7,
+        "first_7_days_over_for_everyone": true,
+        "still_using_app_after": {
+          "day_7": 4,
+          "day_14": null,
+          "day_30": null
+        }
+      },
+      {
+        "signup_week": "2026-11-09",
+        "new_accounts": 7,
+        "first_workout_within_7_days": 6,
+        "first_7_days_over_for_everyone": false,
+        "still_using_app_after": {
+          "day_7": null,
+          "day_14": null,
+          "day_30": null
+        }
+      },
+      {
+        "signup_week": "2026-11-16",
+        "new_accounts": 5,
+        "first_workout_within_7_days": 4,
+        "first_7_days_over_for_everyone": false,
+        "still_using_app_after": {
+          "day_7": null,
+          "day_14": null,
+          "day_30": null
+        }
+      }
+    ],
+    "rows_not_counted": 0
+  },
+  "people_by_status_today": {
+    "rows": [
+      {
+        "status": "lapsed",
+        "people": 25
+      },
+      {
+        "status": "active",
+        "people": 20
+      },
+      {
+        "status": "slipping",
+        "people": 12
+      },
+      {
+        "status": "new",
+        "people": 7
+      }
+    ],
+    "other": null
+  },
+  "sign_up_steps_by_week": {
+    "weeks": [
+      {
+        "week": "2026-09-28",
+        "complete": true,
+        "rows": [
+          {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "people": 5,
+            "people_completed": 4
+          }
+        ],
+        "other": {
+          "people": 23,
+          "rows_folded": 12,
+          "people_completed": 17
+        }
+      },
+      {
+        "week": "2026-10-05",
+        "complete": true,
+        "rows": [
+          {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "people": 5,
+            "people_completed": 5
+          },
+          {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "people": 5,
+            "people_completed": 4
+          }
+        ],
+        "other": {
+          "people": 19,
+          "rows_folded": 10,
+          "people_completed": 14
+        }
+      },
+      {
+        "week": "2026-10-12",
+        "complete": true,
+        "rows": [
+          {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "people": 5,
+            "people_completed": 4
+          }
+        ],
+        "other": {
+          "people": 31,
+          "rows_folded": 14,
+          "people_completed": 25
+        }
+      },
+      {
+        "week": "2026-10-19",
+        "complete": true,
+        "rows": [
+          {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "people": 5,
+            "people_completed": 4
+          }
+        ],
+        "other": {
+          "people": 25,
+          "rows_folded": 14,
+          "people_completed": 20
+        }
+      },
+      {
+        "week": "2026-10-26",
+        "complete": true,
+        "rows": [],
+        "other": {
+          "people": 31,
+          "rows_folded": 14,
+          "people_completed": 25
+        }
+      },
+      {
+        "week": "2026-11-02",
+        "complete": true,
+        "rows": [
+          {
+            "mode": "full",
+            "path": "coaching",
+            "step": 1,
+            "people": 6,
+            "people_completed": 5
+          },
+          {
+            "mode": "full",
+            "path": "coaching",
+            "step": 2,
+            "people": 5,
+            "people_completed": 5
+          },
+          {
+            "mode": "full",
+            "path": "coaching",
+            "step": 3,
+            "people": 5,
+            "people_completed": 4
+          }
+        ],
+        "other": {
+          "people": 20,
+          "rows_folded": 12,
+          "people_completed": 15
+        }
+      },
+      {
+        "week": "2026-11-09",
+        "complete": true,
+        "rows": [],
+        "other": {
+          "people": 32,
+          "rows_folded": 15,
+          "people_completed": 26
+        }
+      },
+      {
+        "week": "2026-11-16",
+        "complete": false,
+        "rows": [],
+        "other": {
+          "people": 30,
+          "rows_folded": 14,
+          "people_completed": 26
+        }
+      }
+    ],
+    "rows_not_counted": 0
+  },
+  "last_screen_before_leaving": {
+    "rows": [
+      {
+        "screen": "Nutrition",
+        "people": 7
+      },
+      {
+        "screen": "ActiveWorkout",
+        "people": 5
+      },
+      {
+        "screen": "Today",
+        "people": 5
+      }
+    ],
+    "other": {
+      "people": 8,
+      "rows_folded": 3
+    },
+    "rows_not_counted": 0
+  },
+  "leaving_reasons_by_week": {
+    "weeks": [
+      {
+        "week": "2026-11-16",
+        "complete": false,
+        "rows": [
+          {
+            "moment": "workout_discard",
+            "reason": "felt_off",
+            "people": 14,
+            "answers": 14
+          },
+          {
+            "moment": "workout_discard",
+            "reason": "no_time",
+            "people": 13,
+            "answers": 13
+          },
+          {
+            "moment": "workout_discard",
+            "reason": "other",
+            "people": 13,
+            "answers": 13
+          }
+        ],
+        "other": {
+          "people": 1,
+          "rows_folded": 1,
+          "answers": 1
+        }
+      }
+    ],
+    "rows_not_counted": 0
+  },
+  "help_topics_by_week": {
+    "weeks": [
+      {
+        "week": "2026-11-02",
+        "complete": true,
+        "rows": [
+          {
+            "topic": "unlisted",
+            "screen": "Today",
+            "people": 6,
+            "opens": 6
+          }
+        ],
+        "other": {
+          "people": 3,
+          "rows_folded": 1,
+          "opens": 3
+        }
+      },
+      {
+        "week": "2026-11-09",
+        "complete": true,
+        "rows": [
+          {
+            "topic": "rir",
+            "screen": "Today",
+            "people": 6,
+            "opens": 6
+          }
+        ],
+        "other": {
+          "people": 6,
+          "rows_folded": 2,
+          "opens": 6
+        }
+      },
+      {
+        "week": "2026-11-16",
+        "complete": false,
+        "rows": [],
+        "other": {
+          "people": 11,
+          "rows_folded": 3,
+          "opens": 11
+        }
+      }
+    ],
+    "rows_not_counted": 0
+  },
+  "by_app_version": {
+    "rows": [
+      {
+        "app_version": "3.2.0",
+        "first_seen": "2026-09-20",
+        "workouts_per_person": 5,
+        "workout_discard_pct": 0,
+        "errors_per_visit": 0,
+        "people": 33,
+        "visits": 33
+      },
+      {
+        "app_version": "3.4.0",
+        "first_seen": "2026-10-24",
+        "workouts_per_person": 3.11,
+        "workout_discard_pct": 0,
+        "errors_per_visit": 0,
+        "people": 28,
+        "visits": 28
+      }
+    ],
+    "other": {
+      "people": 3,
+      "rows_folded": 1,
+      "visits": 3
+    },
+    "rows_not_counted": 0
+  },
+  "new_account_outcomes": {
+    "status": "ok",
+    "the_one_measure": {
+      "judged_14_days": 42,
+      "three_workouts_in_14_days": 24
+    },
+    "weeks": [
+      {
+        "signup_week": "2026-09-28",
+        "new_accounts": 7,
+        "first_workout_in_14_days": 6,
+        "judged_14_days": 7,
+        "three_workouts_in_14_days": 4,
+        "still_training_after": {
+          "day_7": {
+            "judged": 7,
+            "still_training": 5
+          },
+          "day_14": {
+            "judged": 7,
+            "still_training": 5
+          },
+          "day_30": {
+            "judged": 7,
+            "still_training": 5
+          }
+        }
+      },
+      {
+        "signup_week": "2026-10-05",
+        "new_accounts": 7,
+        "first_workout_in_14_days": 6,
+        "judged_14_days": 7,
+        "three_workouts_in_14_days": 4,
+        "still_training_after": {
+          "day_7": {
+            "judged": 7,
+            "still_training": 5
+          },
+          "day_14": {
+            "judged": 7,
+            "still_training": 5
+          },
+          "day_30": {
+            "judged": 7,
+            "still_training": 5
+          }
+        }
+      },
+      {
+        "signup_week": "2026-10-12",
+        "new_accounts": 8,
+        "first_workout_in_14_days": 6,
+        "judged_14_days": 8,
+        "three_workouts_in_14_days": 4,
+        "still_training_after": {
+          "day_7": {
+            "judged": 8,
+            "still_training": 8
+          },
+          "day_14": {
+            "judged": 8,
+            "still_training": 6
+          },
+          "day_30": {
+            "judged": 8,
+            "still_training": 6
+          }
+        }
+      },
+      {
+        "signup_week": "2026-10-19",
+        "new_accounts": 7,
+        "first_workout_in_14_days": 6,
+        "judged_14_days": 7,
+        "three_workouts_in_14_days": 4,
+        "still_training_after": {
+          "day_7": {
+            "judged": 7,
+            "still_training": 6
+          },
+          "day_14": {
+            "judged": 7,
+            "still_training": 5
+          },
+          "day_30": {
+            "judged": 3,
+            "still_training": 0
+          }
+        }
+      },
+      {
+        "signup_week": "2026-10-26",
+        "new_accounts": 7,
+        "first_workout_in_14_days": 6,
+        "judged_14_days": 7,
+        "three_workouts_in_14_days": 4,
+        "still_training_after": {
+          "day_7": {
+            "judged": 7,
+            "still_training": 6
+          },
+          "day_14": {
+            "judged": 7,
+            "still_training": 6
+          },
+          "day_30": {
+            "judged": 0,
+            "still_training": 0
+          }
+        }
+      },
+      {
+        "signup_week": "2026-11-02",
+        "new_accounts": 8,
+        "first_workout_in_14_days": 7,
+        "judged_14_days": 6,
+        "three_workouts_in_14_days": 4,
+        "still_training_after": {
+          "day_7": {
+            "judged": 8,
+            "still_training": 4
+          },
+          "day_14": {
+            "judged": 6,
+            "still_training": 3
+          },
+          "day_30": {
+            "judged": 0,
+            "still_training": 0
+          }
+        }
+      },
+      {
+        "signup_week": "2026-11-09",
+        "new_accounts": 7,
+        "first_workout_in_14_days": 6,
+        "judged_14_days": 0,
+        "three_workouts_in_14_days": 0,
+        "still_training_after": {
+          "day_7": {
+            "judged": 5,
+            "still_training": 3
+          },
+          "day_14": {
+            "judged": 0,
+            "still_training": 0
+          },
+          "day_30": {
+            "judged": 0,
+            "still_training": 0
+          }
+        }
+      },
+      {
+        "signup_week": "2026-11-16",
+        "new_accounts": 5,
+        "first_workout_in_14_days": 4,
+        "judged_14_days": 0,
+        "three_workouts_in_14_days": 0,
+        "still_training_after": {
+          "day_7": {
+            "judged": 0,
+            "still_training": 0
+          },
+          "day_14": {
+            "judged": 0,
+            "still_training": 0
+          },
+          "day_30": {
+            "judged": 0,
+            "still_training": 0
+          }
+        }
+      }
+    ],
+    "by_app_version_at_sign_up": {
+      "rows": [
+        {
+          "app_version": "3.4.0",
+          "new_accounts": 28,
+          "first_workout_in_14_days": 24,
+          "judged_14_days": 15,
+          "three_workouts_in_14_days": 9,
+          "still_training_after": {
+            "day_7": {
+              "judged": 22,
+              "still_training": 14
+            },
+            "day_14": {
+              "judged": 15,
+              "still_training": 10
+            },
+            "day_30": {
+              "judged": 0,
+              "still_training": 0
+            }
+          }
+        },
+        {
+          "app_version": "3.2.0",
+          "new_accounts": 25,
+          "first_workout_in_14_days": 21,
+          "judged_14_days": 25,
+          "three_workouts_in_14_days": 13,
+          "still_training_after": {
+            "day_7": {
+              "judged": 25,
+              "still_training": 21
+            },
+            "day_14": {
+              "judged": 25,
+              "still_training": 18
+            },
+            "day_30": {
+              "judged": 24,
+              "still_training": 15
+            }
+          }
+        }
+      ],
+      "other": {
+        "rows_folded": 1,
+        "new_accounts": 3,
+        "first_workout_in_14_days": 2,
+        "judged_14_days": 2,
+        "three_workouts_in_14_days": 2,
+        "still_training_after": {
+          "day_7": {
+            "judged": 2,
+            "still_training": 2
+          },
+          "day_14": {
+            "judged": 2,
+            "still_training": 2
+          },
+          "day_30": {
+            "judged": 1,
+            "still_training": 1
+          }
+        }
+      }
+    },
+    "rows_not_counted": 0
+  },
+  "crashes": {
+    "status": "ok",
+    "period_days": 7,
+    "total": {
+      "crashes": 33,
+      "people": 12
+    },
+    "by_app_version": {
+      "rows": [
+        {
+          "app_version": "3.4.0",
+          "people": 11,
+          "crashes": 29
+        }
+      ],
+      "other": {
+        "people": 2,
+        "rows_folded": 1,
+        "crashes": 4
+      }
+    },
+    "rows_not_counted": 0
+  }
+}
