@@ -48,6 +48,7 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "trial",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "EAS_SKIP_AUTO_FINGERPRINT": "1",
         "RCT_USE_PREBUILT_RNCORE": "0",
         "RCT_USE_RN_DEP": "0"

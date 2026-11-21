@@ -371,6 +371,13 @@ jobs:
               console.error('::error::The app config is not the trial identity (expected ' + process.env.TRIAL_BUNDLE_ID + ' on the trial channel). Refusing to build.');
               process.exit(1);
             }
+            // LOC-648: no source-map upload to the live app's error tracking, and
+            // the app knows it is the trial (so it starts no error-tracking client).
+            const plugins = (c.plugins || []).map((p) => (Array.isArray(p) ? p[0] : p));
+            if (plugins.some((p) => /sentry/i.test(String(p))) || !c.extra || c.extra.appVariant !== 'trial') {
+              console.error('::error::The trial config still carries the error-tracking upload plugin, or is not marked as the trial. Refusing to build.');
+              process.exit(1);
+            }
           "
 
       - name: Write App Store Connect API key to a file

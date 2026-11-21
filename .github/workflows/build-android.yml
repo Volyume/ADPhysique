@@ -842,6 +842,15 @@ jobs:
             exit 1
           fi
           echo "✓ applicationId is app.volyume.trial; no upload keystore present"
+          # LOC-648: the trial must not carry the Sentry build step that uploads
+          # source maps and symbols to the live app's project. The trial config
+          # drops the plugin (scripts/ci/trial-identity.cjs); prebuild must show it.
+          if grep -rli sentry android --include='*.gradle' --include='*.properties' --include='*.xml' >/dev/null 2>&1; then
+            echo "::error::The prebuilt Android project mentions Sentry. The trial must upload nothing to the live app's error tracking."
+            grep -rli sentry android --include='*.gradle' --include='*.properties' --include='*.xml' || true
+            exit 1
+          fi
+          echo "✓ no Sentry build step in the trial's Android project"
 
       - name: Raise Gradle heap for the release build
         run: |

@@ -14,6 +14,13 @@
  *      hold no store-signing or Play material, and cannot submit anywhere unless
  *      the founder ticks the TestFlight box, and then only to the trial app.
  *
+ *   4. (LOC-648) The trial reports nothing to the live app's error tracking and
+ *      uploads no source maps, whatever the EAS project or the CI environment
+ *      holds. The guard is in the app's own config (the Sentry plugin is dropped
+ *      and the manifest says `appVariant: trial`, which src/lib/sentry.js reads),
+ *      so it holds even if EXPO_PUBLIC_SENTRY_DSN or SENTRY_AUTH_TOKEN reaches the
+ *      build; the eas.json profile only adds a second, non-load-bearing switch.
+ *
  * Main's own jobs keep their main-only guard (also pinned in
  * workflowTrustBoundary.guard.test.js). Source-level checks parse the workflow
  * YAML, so comments cannot satisfy or break them.
@@ -30,13 +37,14 @@ const ANDROID = YAML.parse(read('.github/workflows/build-android.yml'));
 const IOS = YAML.parse(read('.github/workflows/build-ios.yml'));
 
 const {
-  applyTrialIdentity, TRIAL_APP_ID, TRIAL_NAME, TRIAL_CHANNEL,
+  applyTrialIdentity, TRIAL_APP_ID, TRIAL_NAME, TRIAL_CHANNEL, SENTRY_PLUGIN,
 } = require('../../scripts/ci/trial-identity.cjs');
 const appConfig = require('../../app.config.js');
 
 const TRIAL_REF = "github.ref == 'refs/heads/trial/rn-reusables'";
 const MAIN_REF = "github.ref == 'refs/heads/main'";
 const clone = (o) => JSON.parse(JSON.stringify(o));
+const pluginNames = (config) => (config.plugins || []).map((p) => (Array.isArray(p) ? p[0] : p));
 
 describe('app config: only APP_VARIANT=trial changes anything', () => {
   test.each([[{}], [{ APP_VARIANT: 'production' }], [{ APP_VARIANT: 'preview' }],
@@ -101,9 +109,112 @@ describe('the trial identity is a different app', () => {
     expect(trial.slug).toBe(APP.slug);
     expect(trial.scheme).toBe(APP.scheme);
     expect(trial.extra.eas.projectId).toBe(APP.extra.eas.projectId);
-    expect(trial.plugins).toEqual(APP.plugins);
+    // Every plugin but the Sentry upload plugin (LOC-648, see the error-tracking block below).
+    expect(trial.plugins).toEqual(APP.plugins.filter((p) => (Array.isArray(p) ? p[0] : p) !== SENTRY_PLUGIN));
     expect(trial.runtimeVersion).toEqual(APP.runtimeVersion);
     expect(trial.updates.url).toBe(APP.updates.url);
+  });
+});
+
+describe('the trial reports nothing to the live app\'s error tracking (LOC-648)', () => {
+  const trial = applyTrialIdentity(clone(APP), { APP_VARIANT: 'trial' });
+
+  test('the live app really does carry the Sentry upload plugin, so dropping it is trial-only', () => {
+    expect(pluginNames(APP)).toContain(SENTRY_PLUGIN);
+    for (const env of [{}, { APP_VARIANT: 'production' }, { APP_VARIANT: 'preview' }]) {
+      expect(pluginNames(applyTrialIdentity(clone(APP), env))).toContain(SENTRY_PLUGIN);
+      expect(applyTrialIdentity(clone(APP), env).extra.appVariant).toBeUndefined();
+    }
+  });
+
+  test('the trial config drops the Sentry plugin, so no native build step can upload source maps or symbols', () => {
+    expect(pluginNames(trial)).not.toContain(SENTRY_PLUGIN);
+    expect(JSON.stringify(trial.plugins)).not.toMatch(/sentry/i);
+    expect(pluginNames(trial)).toHaveLength(pluginNames(APP).length - 1);
+  });
+
+  test('the manifest says this is the trial, and nothing else in extra changes', () => {
+    expect(trial.extra.appVariant).toBe('trial');
+    expect({ ...trial.extra, appVariant: undefined }).toEqual({ ...APP.extra, appVariant: undefined });
+  });
+
+  test('a leaked token or DSN in the build environment changes nothing: the config is the same', () => {
+    const leaky = applyTrialIdentity(clone(APP), {
+      APP_VARIANT: 'trial',
+      SENTRY_AUTH_TOKEN: 'sntrys_leaked',
+      EXPO_PUBLIC_SENTRY_DSN: 'https://key@o0.ingest.sentry.io/1',
+      SENTRY_DISABLE_AUTO_UPLOAD: 'false',
+    });
+    expect(leaky).toEqual(trial);
+  });
+
+  test('app.config.js applies it end to end', () => {
+    const before = process.env.APP_VARIANT;
+    process.env.APP_VARIANT = 'trial';
+    try {
+      const evaluated = appConfig({ config: clone(APP) });
+      expect(pluginNames(evaluated)).not.toContain(SENTRY_PLUGIN);
+      expect(evaluated.extra.appVariant).toBe('trial');
+    } finally {
+      if (before === undefined) delete process.env.APP_VARIANT; else process.env.APP_VARIANT = before;
+    }
+  });
+
+  test('eas.json: the trial profile also switches the upload off; the production profile is untouched', () => {
+    expect(EAS.build.trial.env.SENTRY_DISABLE_AUTO_UPLOAD).toBe('true');
+    expect(EAS.build.production.env).toEqual({
+      APP_VARIANT: 'production',
+      EAS_SKIP_AUTO_FINGERPRINT: '1',
+      RCT_USE_PREBUILT_RNCORE: '0',
+      RCT_USE_RN_DEP: '0',
+    });
+  });
+
+  test('both trial jobs refuse to build if the prebuilt or evaluated config still carries Sentry', () => {
+    const androidVerify = ANDROID.jobs['build-trial'].steps.find((s) => /Verify the trial identity before compiling/.test(s.name));
+    expect(androidVerify.run).toMatch(/grep -rli sentry android/);
+    const iosVerify = IOS.jobs['build-trial'].steps.find((s) => /Verify the trial identity before building/.test(s.name));
+    expect(iosVerify.run).toMatch(/sentry/i);
+    expect(iosVerify.run).toContain("c.extra.appVariant !== 'trial'");
+  });
+});
+
+describe('the trial starts no error-tracking client, even if a DSN reaches the bundle (LOC-648)', () => {
+  const DSN = 'https://publicKey@o0.ingest.sentry.io/123';
+  let init;
+  let manifestExtra;
+
+  function loadSentry() {
+    jest.resetModules();
+    init = jest.fn();
+    jest.doMock('@sentry/react-native', () => ({
+      init, setUser: jest.fn(), withScope: jest.fn(), captureException: jest.fn(),
+      captureMessage: jest.fn(), addBreadcrumb: jest.fn(),
+    }));
+    jest.doMock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { extra: manifestExtra } } }));
+    return require('../lib/sentry');
+  }
+
+  beforeEach(() => { process.env.EXPO_PUBLIC_SENTRY_DSN = DSN; });
+  afterEach(() => { delete process.env.EXPO_PUBLIC_SENTRY_DSN; jest.dontMock('@sentry/react-native'); jest.dontMock('expo-constants'); });
+
+  test('a trial manifest with a valid DSN present: initSentry never calls the SDK', () => {
+    manifestExtra = { appVariant: 'trial' };
+    const sentry = loadSentry();
+    expect(sentry.isTrialBuild()).toBe(true);
+    sentry.initSentry({ environment: 'test' });
+    expect(init).not.toHaveBeenCalled();
+  });
+
+  test('a normal build, same DSN: initSentry starts the client exactly as before', () => {
+    for (const extra of [{}, { appVariant: 'production' }, undefined]) {
+      manifestExtra = extra;
+      const sentry = loadSentry();
+      expect(sentry.isTrialBuild()).toBe(false);
+      sentry.initSentry({ environment: 'test' });
+      expect(init).toHaveBeenCalledTimes(1);
+      expect(init.mock.calls[0][0].dsn).toBe(DSN);
+    }
   });
 });
 

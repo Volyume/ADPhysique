@@ -19,6 +19,16 @@
  *     `app.volyume` (apple-app-site-association / assetlinks list that id)
  *   - TRIAL_VERSION_CODE (CI run number) sets the Android versionCode, so a
  *     newer trial APK installs over an older trial APK
+ *   - the trial reports nothing to the live app's error tracking (LOC-648):
+ *     the Sentry config plugin is dropped, so no native build step uploads
+ *     source maps or debug symbols to the live Sentry project, and
+ *     `extra.appVariant` is `trial`, which src/lib/sentry.js reads to start no
+ *     Sentry client even if EXPO_PUBLIC_SENTRY_DSN reached the bundle. This is
+ *     done HERE, in the app's own config, because Expo's documentation does not
+ *     say whether an eas.json `env` value or a variable stored on expo.dev wins
+ *     when both name the same variable, and the production workflow stores the
+ *     DSN and token as project secrets that a trial build on the same project
+ *     could receive. A guard that does not depend on that order holds either way.
  *
  * Deliberately unchanged: slug and EAS project id (they tie the build to the
  * project), the `volyume` link scheme (the auth redirects expect it), and
@@ -29,6 +39,9 @@ const TRIAL_VARIANT = 'trial';
 const TRIAL_APP_ID = 'app.volyume.trial';
 const TRIAL_NAME = 'Volyume Trial';
 const TRIAL_CHANNEL = 'trial';
+// The Expo config plugin that adds the Sentry source-map and symbol upload to the
+// native build (Gradle plugin on Android, build phases on iOS).
+const SENTRY_PLUGIN = '@sentry/react-native/expo';
 
 function applyTrialIdentity(config, env = {}) {
   if (!env || env.APP_VARIANT !== TRIAL_VARIANT) return config;
@@ -45,11 +58,17 @@ function applyTrialIdentity(config, env = {}) {
   const { associatedDomains, ...ios } = config.ios || {}; // eslint-disable-line no-unused-vars
   ios.bundleIdentifier = TRIAL_APP_ID;
 
+  const plugins = Array.isArray(config.plugins)
+    ? config.plugins.filter((plugin) => (Array.isArray(plugin) ? plugin[0] : plugin) !== SENTRY_PLUGIN)
+    : config.plugins;
+
   return {
     ...config,
     name: TRIAL_NAME,
     ios,
     android,
+    plugins,
+    extra: { ...(config.extra || {}), appVariant: TRIAL_VARIANT },
     updates: {
       ...(config.updates || {}),
       requestHeaders: {
@@ -60,4 +79,6 @@ function applyTrialIdentity(config, env = {}) {
   };
 }
 
-module.exports = { applyTrialIdentity, TRIAL_VARIANT, TRIAL_APP_ID, TRIAL_NAME, TRIAL_CHANNEL };
+module.exports = {
+  applyTrialIdentity, TRIAL_VARIANT, TRIAL_APP_ID, TRIAL_NAME, TRIAL_CHANNEL, SENTRY_PLUGIN,
+};

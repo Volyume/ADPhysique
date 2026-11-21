@@ -33,6 +33,27 @@ export function isSentryAvailable() {
 }
 
 /**
+ * True in the founder's trial build (scripts/ci/trial-identity.cjs sets
+ * `extra.appVariant` to 'trial' in the app config, from APP_VARIANT=trial).
+ * The trial installs beside the live app and must report nothing to the live
+ * app's Sentry project, whatever EXPO_PUBLIC_SENTRY_DSN holds: on the same EAS
+ * project a build can receive the DSN stored as a project secret for the
+ * production build, and Expo's documentation does not say which value wins
+ * when eas.json and the stored one both name it (LOC-648). The flag is read
+ * from the baked manifest, so it holds even if the variable leaks. A build
+ * from main never sets it and behaves as before.
+ */
+export function isTrialBuild() {
+  try {
+    // eslint-disable-next-line global-require
+    const Constants = require('expo-constants').default;
+    return Constants?.expoConfig?.extra?.appVariant === 'trial';
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Initialise the Sentry SDK. Safe to call multiple times, guards
  * against double-init. No-op if the package isn't installed or the
  * DSN env var is missing.
@@ -49,6 +70,7 @@ export function isSentryAvailable() {
  */
 export function initSentry({ environment } = {}) {
   if (!SentryNative || initialised) return;
+  if (isTrialBuild()) return;
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
   if (!dsn) return;
 
