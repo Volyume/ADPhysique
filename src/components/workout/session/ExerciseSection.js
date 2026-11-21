@@ -73,6 +73,7 @@ import {
 import { SET_COLUMNS } from './SetRow';
 import { CLIP_STRINGS } from '../../../lib/clips/rules';
 import { touchTarget } from '../../../styles/layout';
+import memoByValue from './memoByValue';
 
 // Section header 56, footer 52; the done mark 16 (the list's small glyph);
 // the order badge is the set table's 24 dp marker.
@@ -122,7 +123,7 @@ function CountdownLine({ ms, reduceMotion, color }) {
 }
 
 
-export default function ExerciseSection({
+function ExerciseSectionView({
   index,
   name,
   state = 'upcoming',
@@ -298,3 +299,7 @@ const styles = StyleSheet.create({
   },
   moreHinted: { paddingHorizontal: spacing.sm },
 });
+
+// A section draws again only when what it shows changes (LOC-648). The screen builds every
+// section's props afresh on each render, which used to redraw all of them on every tap.
+export default memoByValue(ExerciseSectionView);

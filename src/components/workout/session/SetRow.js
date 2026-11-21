@@ -87,6 +87,7 @@ import { SetCheck, SetLastText, SetMarkerBadge, SetRowShell, SetWell } from '../
 import { spacing } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 import { formatSeconds } from '../../../lib/workoutHelpers';
+import memoByValue from './memoByValue';
 
 // The grid, sized for the house card (a 360 dp phone's card is 326 dp inside
 // its border). Marker 24, Last 80 and the check column 48 (the tick box's
@@ -335,7 +336,7 @@ function CheckButton({ check, onPress, testID, label, busy, onMore }) {
   );
 }
 
-export default function SetRow({
+function SetRowView({
   marker,
   last,
   wells,
@@ -434,3 +435,7 @@ const styles = StyleSheet.create({
   // between them.
   wells: { flex: 1, minWidth: 0, flexDirection: 'row', gap: spacing.sm },
 });
+
+// A row draws again only when what it shows changes (LOC-648). The screen builds every
+// row's props afresh on each render, which used to redraw every row on every tap.
+export default memoByValue(SetRowView);
