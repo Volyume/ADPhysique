@@ -42,6 +42,9 @@ jobs:
   test:
     name: Jest unit + integration tests
     runs-on: ubuntu-latest
+    # Hang bound. The suite takes about 25 minutes on GitHub's runner; the
+    # default limit is 6 hours, which is how a stuck job sat for hours.
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -72,14 +75,19 @@ jobs:
         # `jest --detectOpenHandles` on the full suite now reports
         # zero leaks and exit code is 0.
         #
-        # --runInBand still emits a soft "Jest did not exit one
-        # second after" advisory after the run because of slow
-        # module destruction (Supabase realtime client + similar
-        # singletons hold references to the worker process until
-        # GC sweeps them). It is informational; exit code is 0.
-        # Dropping --runInBand would silence it but reintroduces
-        # parallel-state pollution flakes we saw earlier — keep
-        # it for determinism.
+        # --runInBand is kept for determinism: dropping it reintroduces the
+        # parallel-state pollution flakes seen earlier.
+        #
+        # The old note here called "Jest did not exit one second after the test
+        # run has completed" a soft advisory with exit code 0. It is not: on
+        # 21 November 2026 every suite had passed (1819 of 1819) and the job
+        # then waited for hours, until GitHub cancelled it, because two
+        # Community screen tests left a real 20 s setInterval running (LOC-697;
+        # last green run was 1 October). scripts/ci/jestCiReporter.js now
+        # names any such timer, fails the run and ends the process within
+        # seconds, and prints a START/END line per test file so a stall names
+        # its file. The fix itself is in the tests (unmount what they mount);
+        # --forceExit is deliberately NOT used, because it would hide leaks.
         #
         # `tee` captures the full Jest output to jest.log so the
         # "Surface Jest failure" step below can tail the relevant
@@ -92,7 +100,7 @@ jobs:
         # output text; unauth API rate-limits this container).
         run: |
           set -o pipefail
-          npx jest --runInBand --ci 2>&1 | tee jest.log
+          npx jest --runInBand --ci --reporters=default --reporters=./scripts/ci/jestCiReporter.js 2>&1 | tee jest.log
 
       - name: Surface Jest failure into the run summary
         # Only fires when the Jest step failed. Extracts the

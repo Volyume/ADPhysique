@@ -137,6 +137,12 @@ async function flush() {
   });
 }
 
+// Every tree mount() builds is unmounted after the test, pass or fail. The
+// screen polls on a real 20 s setInterval while it is focused; a tree left
+// mounted keeps that timer alive, and Jest then never exits after the last
+// test (the Main CI job ran for hours on it, LOC-697).
+const mountedTrees = [];
+
 async function mount(params) {
   const navigation = { navigate: jest.fn(), goBack: jest.fn(), replace: jest.fn() };
   let tree = null;
@@ -149,6 +155,7 @@ async function mount(params) {
     );
   });
   await flush();
+  mountedTrees.push(tree);
   return { tree, navigation };
 }
 
@@ -168,6 +175,12 @@ async function press(tree, label) {
   await act(async () => { await node.props.onPress(); });
   await flush();
 }
+
+afterEach(() => {
+  // Unmounting a tree the test already unmounted is a no-op.
+  const trees = mountedTrees.splice(0);
+  act(() => { trees.forEach((t) => t.unmount()); });
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
