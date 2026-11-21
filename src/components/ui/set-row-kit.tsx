@@ -6,8 +6,11 @@
  * loudest thing on the row: the weight and reps wells use the screen's largest
  * type in tabular figures (so a changing value never jiggles) and the labels
  * around them are smaller and quieter. A well is an OUTLINED box; the one being
- * edited takes the amber ring and is the only amber on the row. A finished set
- * fades back to the muted ink, which keeps at least 4.5:1 against the card in
+ * edited takes the amber ring and is the only amber on the row. The set you are
+ * on (state 'next', or 'editing' for the one being typed into) is full-strength
+ * ink whether its numbers are typed or the coach's suggestion, so it is the
+ * loudest row on the screen (LOC-683). A finished set and the sets still to come
+ * fade back to the muted ink, which keeps at least 4.5:1 against the card in
  * every palette (kitTrial2Surfaces.test.js computes it). The tick box is a square
  * with a 48 by 48 dp touch target. Related rows sit in one card, separated by
  * the kit's Separator.
@@ -134,8 +137,6 @@ type WellState = 'logged' | 'next' | 'pending' | 'editing';
 type SetWellProps = {
   text: string;
   state: WellState;
-  /** The coach's numbers, not yet touched. */
-  ghost?: boolean;
   isEditing: boolean;
   onPress?: () => void;
   testID?: string;
@@ -153,7 +154,6 @@ const WELL_BOX = 'h-12 min-w-0 flex-1 items-center justify-center rounded-md bg-
 function SetWell({
   text,
   state,
-  ghost,
   isEditing,
   onPress,
   testID,
@@ -180,7 +180,10 @@ function SetWell({
       </View>
     );
   }
-  const faded = state === 'logged' || state === 'pending' || !!ghost;
+  // Only a finished set and a set still to come fade. The set you are on stays
+  // full-strength, suggested or typed: a suggestion is what the person is about
+  // to lift.
+  const faded = state === 'logged' || state === 'pending';
   return (
     <Pressable
       testID={testID}
@@ -199,7 +202,7 @@ function SetWell({
         numberOfLines={1}
         maxFontSizeMultiplier={fontScaleCaps.numeral}
         style={NUMERAL}
-        className={cn('text-xl leading-8', faded && !isEditing ? 'text-muted-foreground' : 'text-foreground')}>
+        className={cn('text-xl leading-8', faded ? 'text-muted-foreground' : 'text-foreground')}>
         {text}
       </Text>
     </Pressable>

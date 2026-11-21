@@ -620,11 +620,12 @@ describe('SetRow exercise kinds', () => {
 });
 
 describe('SetRow ghost seed', () => {
-  // kit trial 2 (LOC-412): ghost values fade to the muted ink (was secondary).
-  test('ghost values read in muted ink, not primary', () => {
+  // LOC-683: the set you are on is the loudest row. The coach's numbers on it read in
+  // full-strength ink like typed ones; only a finished or pending row fades.
+  test('ghost values on the set you are on stay primary ink', () => {
     const tree = render({ wells: { weight: 70, reps: 8, state: 'next', ghost: true } });
-    expect(hex(wellText(tree, 'Set 2 weight').color)).toBe(hex(colors.textMuted));
-    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(colors.textMuted));
+    expect(hex(wellText(tree, 'Set 2 weight').color)).toBe(hex(colors.textPrimary));
+    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(colors.textPrimary));
     expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityValue).toEqual({ text: '70' });
   });
 
@@ -634,15 +635,22 @@ describe('SetRow ghost seed', () => {
       .toBe(hex(colors.textPrimary));
   });
 
-  test('primary editing ink wins over ghost on the field being edited only', () => {
+  test('while one field is edited the other well of the set you are on is primary ink too', () => {
     const tree = render({ wells: { weight: 70, reps: 8, state: 'editing', editingField: 'weight', ghost: true } });
     expect(hex(wellText(tree, 'Set 2 weight').color)).toBe(hex(colors.textPrimary));
-    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(colors.textMuted));
+    expect(hex(wellText(tree, 'Set 2 reps').color)).toBe(hex(colors.textPrimary));
+  });
+
+  test('a pending row stays muted whether or not its numbers are the coach\'s', () => {
+    for (const ghost of [false, true]) {
+      const tree = render({ wells: { weight: 70, reps: 8, state: 'pending', ghost }, check: 'pending' });
+      expect(hex(wellText(tree, 'Set 2 weight').color)).toBe(hex(colors.textMuted));
+    }
   });
 
   test('ghost applies to every kind', () => {
     const tree = render({ kind: 'duration', wells: { reps: 60, state: 'next', ghost: true } });
-    expect(hex(wellText(tree, 'Set 2 time').color)).toBe(hex(colors.textMuted));
+    expect(hex(wellText(tree, 'Set 2 time').color)).toBe(hex(colors.textPrimary));
   });
 });
 

@@ -19,8 +19,9 @@
  *   wells      { weight, reps, state, editingField, ghost }. state is 'logged',
  *              'next', 'pending' (placeholder ink) or 'editing' (amber edge,
  *              and the field named by editingField, 'weight' or 'reps', in amber).
- *              ghost true renders the values in secondary ink: the coach's
- *              numbers, not yet touched (amber editing ink wins over it)
+ *              ghost marks the coach's numbers, not yet touched; the set you
+ *              are on shows them in full-strength ink all the same (LOC-683),
+ *              only a finished or pending row fades
  *   kind       'weight_reps' (default, and 'weighted_bodyweight'), 'reps_only',
  *              'duration' or 'distance'. The screen keeps seconds in `reps` and
  *              distance in `weight`, so the wells keep their weight and reps
@@ -262,7 +263,7 @@ function LastCell({ last, onPress, testID }) {
   );
 }
 
-function WellCell({ field, word, text, spoken, wellState, editingField, ghost, input, onPress, testID, name }) {
+function WellCell({ field, word, text, spoken, wellState, editingField, input, onPress, testID, name }) {
   const isEditingThis = wellState === 'editing' && editingField === field;
   // Focus through the input's own focus method, not autoFocus: on the new
   // architecture autoFocus makes the field first responder directly and never
@@ -302,7 +303,6 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
     <SetWell
       text={text}
       state={wellState}
-      ghost={ghost}
       isEditing={isEditingThis}
       onPress={onPress}
       testID={testID}
@@ -385,7 +385,6 @@ function SetRowView({
               spoken={spec.spoken(value)}
               wellState={wellState}
               editingField={w.editingField}
-              ghost={!!w.ghost}
               input={editingInput && editingInput.field === spec.field ? editingInput : null}
               onPress={onPressWell ? () => onPressWell(spec.field) : undefined}
               testID={spec.field === 'weight' ? ids.weight : ids.reps}

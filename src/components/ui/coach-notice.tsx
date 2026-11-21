@@ -13,6 +13,11 @@
  * row); a notice that can be dismissed has its own 48 dp close control beside
  * it, never nested inside the button, and one that cannot shows a chevron.
  *
+ * A notice never cuts its sentence short (LOC-683, design rules 6 and 8):
+ * the title and the sentence carry no line limit at any text size, so the
+ * notice grows in height instead. Never put numberOfLines on them here or in
+ * a caller; a notice that cannot show its whole sentence is the wrong part.
+ *
  * Presentation only: the words, the tap and the dismissal come from the
  * caller, unchanged. Safety messages (Beat UK signposting, calm mode,
  * ED-related copy) do not use these parts in the trial.
@@ -35,8 +40,6 @@ type NoticeProps = {
   accessibilityLabel?: string;
   /** The close control's spoken label; defaults to "Dismiss: <label>". */
   dismissLabel?: string;
-  /** Show the sentence in full instead of clamping it at two lines. */
-  wrap?: boolean;
   testID?: string;
 };
 
@@ -49,7 +52,6 @@ function Notice({
   onDismiss,
   accessibilityLabel,
   dismissLabel,
-  wrap,
   testID,
 }: NoticeProps & { tone: 'coach' | 'quiet' }) {
   const label = accessibilityLabel || text;
@@ -67,11 +69,11 @@ function Notice({
             role="none"
             className={cn(coach ? 'border-ring bg-card' : 'border-border bg-card', onDismiss ? 'pr-14' : 'pr-10')}>
             {title ? (
-              <AlertTitle className="text-foreground" numberOfLines={wrap ? undefined : 2}>
+              <AlertTitle className="text-foreground">
                 {title}
               </AlertTitle>
             ) : null}
-            <AlertDescription className="text-foreground" numberOfLines={wrap ? undefined : 2}>
+            <AlertDescription className="text-foreground">
               {text}
             </AlertDescription>
           </Alert>

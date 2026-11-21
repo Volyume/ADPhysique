@@ -30,7 +30,7 @@
  * hold at the phone's largest text (every Text carries a font-scale cap no
  * higher than the house reading cap of 2.0 and numerals the 1.15 numeral cap;
  * the card, rows and notice have no fixed height; the action row wraps; the
- * notice sentence is never clamped when it asks to wrap). The actual 2.0x
+ * notice sentence is never clamped). The actual 2.0x
  * render is a device check (the manual checklist on LOC-412).
  */
 jest.mock('react-native-svg', () => require('./kitTestEnv').svgMock());
@@ -224,6 +224,35 @@ describe.each(PALETTES)('kit trial 2 surfaces, palette: $name', ({ prefs }) => {
     for (const n of wellsText) expect(hex(flatStyle(n.props.style).color)).toBe(hex(c.textMuted));
   });
 
+  // ── Rule 3 (LOC-683): the set you are on is the loudest row ────────────────
+  // Fails when a suggested set, or a row whose other well is not the one being typed
+  // into, fades like a finished one.
+  test('rule 3: the set you are on has full-strength numbers, suggested or typed; finished and later sets fade', () => {
+    const wellInk = (tree) => tree.root.findAll((n) => n.type === 'Pressable' && /^Set .* (weight|reps)$/.test(n.props.accessibilityLabel || ''))
+      .map((box) => hex(flatStyle(box.findAll((n) => n.type === 'Text')[0].props.style).color));
+    const strong = hex(c.textPrimary);
+    const faded = hex(c.textMuted);
+    expect(strong).not.toBe(faded);
+    for (const ghost of [false, true]) {
+      const next = renderKit(<SetRow {...ROW} check="next" wells={{ weight: 70, reps: 9, state: 'next', ghost }} />);
+      expect(wellInk(next)).toEqual([strong, strong]);
+      // One well being typed into: the other well is still the set you are on.
+      const editing = renderKit(<SetRow {...ROW} check="next" wells={{ weight: 70, reps: 9, state: 'editing', editingField: 'weight', ghost }} inputField={{ field: 'weight', value: '70', onChangeText: noop, keyboardType: 'decimal-pad' }} />);
+      expect(wellInk(editing)).toEqual([strong]);
+      const logged = renderKit(<SetRow {...ROW} check="logged" wells={{ weight: 70, reps: 9, state: 'logged', ghost }} />);
+      expect(wellInk(logged)).toEqual([faded, faded]);
+      const later = renderKit(<SetRow {...ROW} check="pending" wells={{ weight: 70, reps: 9, state: 'pending', ghost }} />);
+      expect(wellInk(later)).toEqual([faded, faded]);
+    }
+    // Every kind of well on the set you are on, not only weight and reps.
+    for (const kind of ['reps_only', 'duration', 'distance']) {
+      const tree = renderKit(<SetRow {...ROW} kind={kind} check="next" wells={{ weight: 70, reps: 60, state: 'next', ghost: true }} />);
+      for (const ink of wellInk(tree)) expect(ink).toBe(strong);
+    }
+    // Nothing amber was added to the row to make it loud.
+    expect(amberUses(renderKit(<SetRow {...ROW} check="next" wells={{ weight: 70, reps: 9, state: 'next', ghost: true }} />), c)).toHaveLength(0);
+  });
+
   // ── Rule 6 ────────────────────────────────────────────────────────────────
   test('rule 6: the tick is a square box in a 48 by 48 dp target, a checkbox that speaks its state', () => {
     for (const check of ['logged', 'next', 'pending']) {
@@ -339,13 +368,43 @@ describe.each(PALETTES)('kit trial 2 surfaces, palette: $name', ({ prefs }) => {
       }
     }
     expect(stylesOf(hero).some(({ style }) => style.flexWrap === 'wrap')).toBe(true);
-    const notice = renderKit(<TodayLine item={{ ...checkItem, wrap: true }} testID="t" />);
+    const notice = renderKit(<TodayLine item={checkItem} testID="t" />);
     expect(textNodes(notice).find((n) => n.props.children === checkItem.text).props.numberOfLines).toBeUndefined();
-    const clamped = renderKit(<TodayLine item={checkItem} testID="t" />);
-    expect(textNodes(clamped).find((n) => n.props.children === checkItem.text).props.numberOfLines).toBe(2);
     for (const { style } of stylesOf(notice)) {
       if (style.height !== undefined) expect(style.height).toBe(48);
     }
+  });
+});
+
+// LOC-683: a notice never cuts its sentence short. Fails when the Notice part puts a
+// line limit on the title or the sentence, with or without a close control.
+describe('LOC-683: a notice shows its whole sentence', () => {
+  const { CoachNotice, QuietNotice } = require('../coach-notice');
+  const LONG = 'Your weekly check-in is ready. It shapes this week\'s coaching decision and takes about a minute.';
+  const cases = [
+    ['CoachNotice', CoachNotice, 'with a close control'],
+    ['CoachNotice', CoachNotice, 'without one'],
+    ['QuietNotice', QuietNotice, 'with a close control'],
+    ['QuietNotice', QuietNotice, 'without one'],
+  ];
+  test.each(cases.map(([name, Part, how]) => ({ name, Part, how })))('$name $how: neither the title nor the sentence carries a line limit', ({ Part, how }) => {
+    const tree = renderKit(
+      <Part title="Weekly check-in" text={LONG} onPress={noop} onDismiss={how === 'without one' ? null : noop} testID="n" />
+    );
+    const texts = textNodes(tree);
+    expect(texts.map((n) => n.props.children)).toEqual(expect.arrayContaining(['Weekly check-in', LONG]));
+    for (const n of texts) {
+      expect(n.props.numberOfLines).toBeUndefined();
+      expect(n.props.ellipsizeMode).toBeUndefined();
+    }
+  });
+
+  test('no caller can put a clamp back: the part takes no wrap flag and its source sets no numberOfLines', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'coach-notice.tsx'), 'utf8');
+    expect(src.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/numberOfLines/);
+    expect(src.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/\bwrap\b/);
   });
 });
 

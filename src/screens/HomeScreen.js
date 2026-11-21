@@ -2804,7 +2804,6 @@ export default function HomeScreen({ navigation, route }) {
               icon={Dumbbell}
               title="Start your first workout"
               text="Log your sets as you go. You do not need a plan to start, and next time Volyume will start you at the weights you log today."
-              wrap
               onPress={() => startBlankSession()}
               accessibilityLabel="Start your first workout"
             />
@@ -2855,12 +2854,11 @@ export default function HomeScreen({ navigation, route }) {
             the next session. ── */}
         {shownOfferKey === 'activation' && (
           // Kit trial 2 (LOC-412, rule 1): the quiet notice. Same tap, same
-          // dismissal, same words (the body wraps in full, as before).
+          // dismissal, same words (the body shows in full).
           <QuietNotice
             icon={Dumbbell}
             title={activationBannerLine(activationNudge.stage)?.title}
             text={activationBannerLine(activationNudge.stage)?.body}
-            wrap
             onPress={() => { haptics.selection(); handleStartNextWorkout(false); }}
             onDismiss={dismissActivationNudge}
             accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
@@ -2931,11 +2929,10 @@ export default function HomeScreen({ navigation, route }) {
             class). D231: it stays at the bottom on its own. ── */}
         {showPlateauBanner && (
           // Kit trial 2 (LOC-412, rule 1): the quiet notice; the line is
-          // sentence-length copy and wraps in full.
+          // sentence-length copy and shows in full.
           <QuietNotice
             icon={ChartLine}
             text={plateauBanner.line}
-            wrap
             onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
             onDismiss={dismissPlateauBanner}
             accessibilityLabel={plateauBanner.line}

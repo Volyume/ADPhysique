@@ -28,19 +28,18 @@ const COACH_NOTICE_KEYS = Object.freeze(['check_in', 'coach_decision']);
  * (src/components/ui/coach-notice.tsx): CoachNotice for the coach's two,
  * QuietNotice for the rest.
  *
- * D231 (app layout rework, batch 1): an item with `wrap: true` is shown in full
- * (no two-line clamp). The three occupants that moved onto the line from
- * unclamped cards and rows set it, so a long limitation sentence or a large
- * system text size never cuts a question off. Every other item keeps the clamp.
+ * LOC-683: every occupant is shown in full, whatever its `wrap` flag says. The
+ * kit's notice carries no line limit, so a long sentence or a large system
+ * text size never cuts it short; the row grows in height instead.
  *
  * @param {{ item: { key: string, text: string, onPress: Function,
- *   onDismiss?: Function|null, accessibilityLabel?: string, wrap?: boolean } | null,
+ *   onDismiss?: Function|null, accessibilityLabel?: string } | null,
  *   testID?: string }} props
  */
 function TodayLine({ item, testID }) {
   if (!item) return null;
 
-  const { text, onPress, onDismiss, accessibilityLabel, wrap } = item;
+  const { text, onPress, onDismiss, accessibilityLabel } = item;
   const Notice = COACH_NOTICE_KEYS.includes(item.key) ? CoachNotice : QuietNotice;
   return (
     <Notice
@@ -48,7 +47,6 @@ function TodayLine({ item, testID }) {
       onPress={onPress}
       onDismiss={onDismiss}
       accessibilityLabel={accessibilityLabel}
-      wrap={wrap}
       testID={testID}
     />
   );
