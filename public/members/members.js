@@ -1861,7 +1861,7 @@
 
     body.appendChild(h("h2", { text: "Content" }));
     if (a.key === "weekly_summary") {
-      body.appendChild(h("p", { class: "muted", text: "The summary itself is built for each member each week: their workout count, sessions and streak. Never weights, food or body. Anything you add below goes after it." }));
+      body.appendChild(h("p", { class: "muted", text: "The summary itself is built for each member each week: the number of sessions they trained last week. Never weights, food or body. Anything you add below goes after it." }));
     }
     body.appendChild(blockEditor(a.blocks, { onChange: dirty, allowSurvey: false, allowEmpty: a.key === "weekly_summary" }));
 

@@ -60,7 +60,7 @@
   .hero .sub{color:var(--textSecondary); font-size:clamp(18px,2.4vw,21px); line-height:1.6; margin:26px 0 0; max-width:60ch;}
   .hero .cta-row{display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin:38px 0 0;}
   .play-badge{height:60px; width:auto; display:block;}
-  .ios-note{color:var(--text); font-size:15px; font-weight:600; text-decoration:underline; text-underline-offset:3px;}
+  .store-link{color:var(--text); font-size:15px; font-weight:600; text-decoration:underline; text-underline-offset:3px;}
 
   /* Device frame */
   .device{background:var(--surface); border:1px solid var(--border); border-radius:36px; padding:12px;
@@ -92,7 +92,6 @@
   .plan{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:18px; padding:30px;}
   .plan .kicker{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
   .plan h3{font-weight:800; font-size:22px; margin:0; letter-spacing:-0.3px;}
-  .plan .price{color:var(--amber); font-weight:700; font-size:16px;}
   .plan .desc{color:var(--textMuted); font-size:14px; margin:8px 0 18px;}
   .plan ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:11px;}
   .plan li{display:flex; gap:11px; align-items:flex-start; color:var(--textSecondary); font-size:15px; line-height:1.5;}
@@ -160,10 +159,10 @@
         <h1>You have the data. Volyume makes the weekly decision, and shows you why.</h1>
         <p class="sub">Training, nutrition, progress and a weekly check-in in one connected system for serious self-coached lifters. Each week it decides whether to change or hold, and writes down the reason.</p>
         <div class="cta-row" id="get">
-          <a href="https://play.google.com/store/apps/details?id=app.volyume" aria-label="Get Volyume on Google Play">
+          <a href="https://play.google.com/store/apps/details?id=app.volyume&referrer=utm_source%3Dvolyume.app%26utm_medium%3Dwebsite%26utm_campaign%3Dhome" aria-label="Get Volyume on Google Play">
             <img class="play-badge" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
           </a>
-          <a class="ios-note" href="https://apps.apple.com/gb/app/volyume/id6777083702">Download on the App Store</a>
+          <a class="store-link" href="https://apps.apple.com/gb/app/volyume/id6777083702?ct=home&mt=8">Download on the App Store</a>
         </div>
       </div>
       <div class="hero-phone-col">
@@ -251,22 +250,21 @@
       <p class="lead">Volyume is free. Training, nutrition and the weekly coaching decision are all included in one app.</p>
       <div class="plans">
         <div class="plan">
-          <div class="kicker"><h3>Free</h3></div>
+          <div class="kicker"><h3>In the app</h3></div>
           <p class="desc">Everything in Volyume, in one app.</p>
           <ul>
             <li>Full workout logging</li>
-            <li>Plan library, 31 built-in training plans</li>
+            <li>Plan library, over 30 built-in training plans</li>
             <li>Custom plan building</li>
-            <li>Exercise library, 551 exercises plus your own</li>
+            <li>Exercise library, over 500 exercises plus your own</li>
             <li>Training history</li>
             <li>Personal bests and progress tracking</li>
             <li>Nutrition, macros and food diary</li>
             <li>Barcode scanning</li>
             <li>Over 29,000 UK foods, searchable offline</li>
             <li>Meal planning</li>
-            <li>Progress Scan, a progress score from your own photos</li>
+            <li>Progress photos, kept on your device unless you share them</li>
             <li>Weekly Precision Coaching, the change-or-hold decision</li>
-            <li>Advanced progression</li>
           </ul>
         </div>
       </div>
@@ -295,13 +293,6 @@
     </div>
   </section>
 
-  <!-- iOS NOTE -->
-  <section class="section-pad">
-    <div class="wrap">
-      <h2 class="title">On iPhone?</h2>
-      <p class="lead">Volyume for iOS is coming to the App Store very soon.</p>
-    </div>
-  </section>
 </main>
 
 <footer>
@@ -313,7 +304,8 @@
       <a href="/privacy/">Privacy</a>
       <a href="/support/">Support</a>
       <a href="/articles/">Articles</a>
-      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+      <a href="https://apps.apple.com/gb/app/volyume/id6777083702?ct=home&mt=8">Download on the App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume&referrer=utm_source%3Dvolyume.app%26utm_medium%3Dwebsite%26utm_campaign%3Dhome">Get it on Google Play</a>
     </div>
     <p class="copy">© 2026 Volyume</p>
   </div>
@@ -330,12 +322,13 @@
      targets, rationale, first check-in date" .............. §A
   "holds decisions when data is insufficient / never guesses" §A, §F
   "live on Google Play, package app.volyume" ............... §A
-  "iOS coming soon" (never App Store availability) ......... §A, §E, §F
-  "31 built-in training plans" ............................. §D
-  "551 exercises plus custom" .............................. §D
-  "over 29,000 UK foods, searchable offline" ............... §D, §E
-  "Progress Scan, a progress score from your own photos"
-     (not body-fat, not medical) ........................... §A, §F
+  "Download on the App Store" (UK App Store, id 6777083702) .. LOC-663 brief (store link, live)
+  "over 30 built-in training plans" ........................ src/lib/seedRoutines.js LIBRARY_PLANS (58 at 942a44e0d)
+  "over 500 exercises plus your own" ....................... src/lib/exerciseCorpus (923 live entries at 942a44e0d)
+  "over 29,000 UK foods, searchable offline" ............... assets/seed/off_uk_snapshot.dat 26,427 rows +
+                                                              assets/seed/cofid_uk.dat 2,852 rows = 29,279
+  "Progress photos, kept on your device unless you share
+     them" ................................................. src/screens/ProgressPhotosScreen.js; public/support/index.html
   "deterministic coaching, not generative coaching /
      same inputs same decision / reason written down /
      not a chat assistant / no model of you" ............... §A, CLAIMS-STANDARDS §6

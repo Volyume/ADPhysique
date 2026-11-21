@@ -116,8 +116,8 @@
     (function () {
       var SUPABASE_URL = 'https://sujrylzzxcqxxfygptns.supabase.co';
       var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1anJ5bHp6eGNxeHhmeWdwdG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODIxODksImV4cCI6MjA5NDc1ODE4OX0.NjRsRu8pL1UEJe3z9TTfSrvpruKqQYQ-HrN4zXvsVVY';
-      var PLAY = 'https://play.google.com/store/apps/details?id=app.volyume';
-      var APPLE = 'https://apps.apple.com/gb/app/volyume/id6777083702';
+      var PLAY = 'https://play.google.com/store/apps/details?id=app.volyume&referrer=utm_source%3Dvolyume.app%26utm_medium%3Dwebsite%26utm_campaign%3Dchallenge';
+      var APPLE = 'https://apps.apple.com/gb/app/volyume/id6777083702?ct=challenge&mt=8';
       var FINISHED = ['ended', 'closed', 'cancelled'];
       var FINISHED_LINE = 'This challenge has finished. Thank you to everyone who took part.';
       var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -146,9 +146,10 @@
       var code = readCode();
       if (!code) { showNotFound(); return; }
 
-      // The Play link carries the code as the install referrer, so the app
-      // can join the person on first launch (SPEC section 2 step 4).
-      var store = PLAY + '&referrer=' + encodeURIComponent('challenge=' + code);
+      // The Play link carries the code as the install referrer, after the
+      // marking the link already has, so the app can join the person on first
+      // launch (SPEC section 2 step 4): it reads the challenge=<code> part.
+      var store = PLAY + encodeURIComponent('&challenge=' + code);
       if (/iPad|iPhone|iPod/i.test(navigator.userAgent)) store = APPLE;
       $('store').setAttribute('href', store);
       $('open').setAttribute('href', 'volyume://c/' + encodeURIComponent(code));

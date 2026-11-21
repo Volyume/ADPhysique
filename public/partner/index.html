@@ -3,23 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Training partner invite · Volyume</title>
-<meta name="description" content="Someone invited you to be their training partner on Volyume. It shows whether they trained — and literally nothing else.">
+<title>Volyume Community</title>
+<meta name="description" content="Partner invites now open Volyume Community, where you can follow each other.">
 <link rel="icon" type="image/png" href="/favicon.png">
 <meta name="theme-color" content="#0D0D0D">
 <meta name="robots" content="noindex, nofollow">
 <!--
-  NEW-002 training-partner invite landing.
+  Legacy partner invite landing. The Partners feature is retired: the app now
+  opens the Community tab for a /partner/ link and no longer carries the code
+  (src/navigation/RootNavigator.js, LEGACY_PARTNER_PATH and its comment). Old
+  share links still land here, so the page says only that, and offers the app
+  and the store. Following each other: src/screens/CommunityFindPeopleScreen.js,
+  src/screens/CommunityFollowersScreen.js.
 
-  When the app is installed, the OS intercepts https://volyume.app/partner/<code>
-  via the verified app link (app.json autoVerify, host volyume.app) and this page
-  never renders. It exists for the partner who does NOT have the app yet — it
-  states the derived-signals-only promise (a word-of-mouth asset) and links to the
-  store, carrying the code through so redemption works after install.
-
-  Hosting note: a static host must route /partner/<code> to this file. On a host
-  without path rewriting, the page also reads the code from ?c=<code> or #<code>,
-  so https://volyume.app/partner/?c=<code> works as a fallback share form.
+  A static host cannot route /partner/<code> to this file; public/404.html
+  sends that form here.
 -->
 <style>
   :root{
@@ -37,18 +35,9 @@
   .brand img{height:36px; width:auto;}
   h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(28px,7vw,38px); line-height:1.1; margin:0 0 8px;}
   .lede{color:var(--textSecondary); font-size:18px; margin:0 0 32px;}
-  .card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; margin:0 0 24px;}
-  .card h2{font-size:15px; text-transform:uppercase; letter-spacing:0.06em; color:var(--textSecondary); margin:0 0 14px;}
-  ul{margin:0; padding:0; list-style:none;}
-  li{display:flex; gap:10px; padding:7px 0; font-size:16px;}
-  li .mk{flex:0 0 22px; font-weight:700;}
-  .yes .mk{color:var(--good);}
-  .no .mk{color:#C75D5D;}
   .cta{display:block; text-align:center; background:var(--amberFill); color:#0D0D0D; font-weight:800;
     font-size:17px; padding:16px; border-radius:14px; margin:0 0 12px; text-decoration:none;}
   .cta.secondary{background:transparent; color:var(--text); border:1px solid var(--border); font-weight:600;}
-  .code{font-variant-numeric:tabular-nums; letter-spacing:0.12em; font-weight:800; font-size:20px;
-    background:var(--amberBg); color:var(--amber); border-radius:10px; padding:10px 14px; display:inline-block; margin-top:8px;}
   .muted{color:var(--textSecondary); font-size:14px; margin-top:24px;}
   a{color:var(--amber);}
 </style>
@@ -57,63 +46,26 @@
   <div class="wrap">
     <div class="brand"><img src="/volyume-wordmark.png" alt="Volyume"></div>
 
-    <h1>Partner invites have moved into Community</h1>
-    <p class="lede">Training partners are now part of Volyume Community. Get the app and follow each other.</p>
-
-    <div class="card">
-      <h2>What you'll each see</h2>
-      <ul>
-        <li class="yes"><span class="mk">✓</span><span>Whether each of you trained this week, shown as a simple count like three of four. Never the numbers behind it.</span></li>
-        <li class="yes"><span class="mk">✓</span><span>A shared streak that you build together, counted in weeks rather than days.</span></li>
-        <li class="yes"><span class="mk">✓</span><span>A rest week or a quiet week, which simply shows as "Resting". It never counts against either of you and it never breaks the streak.</span></li>
-        <li class="yes"><span class="mk">✓</span><span>A cheer you can send each other once a day, so a good week never goes unnoticed.</span></li>
-      </ul>
-    </div>
-
-    <div class="card">
-      <h2>What neither of you will ever see</h2>
-      <ul>
-        <li class="no"><span class="mk">✕</span><span>The weights you lifted, your sets and reps, or anything else from a session.</span></li>
-        <li class="no"><span class="mk">✕</span><span>Your body weight, your measurements, or any photos.</span></li>
-        <li class="no"><span class="mk">✕</span><span>Your food, your calories, or anything you logged in the diary.</span></li>
-        <li class="no"><span class="mk">✕</span><span>Your check-ins, or anything you told the coach.</span></li>
-        <li class="no"><span class="mk">✕</span><span>Where you are. Your location is never shared.</span></li>
-      </ul>
-    </div>
+    <h1>Partner invites now open Community</h1>
+    <p class="lede">Partner invites now open Volyume Community, where you can follow each other. Get the app to see it.</p>
 
     <a class="cta" id="open" href="#">Open in Volyume</a>
-    <a class="cta secondary" id="store" href="https://play.google.com/store/apps/details?id=app.volyume">Get Volyume</a>
+    <a class="cta secondary" id="store" href="https://play.google.com/store/apps/details?id=app.volyume&referrer=utm_source%3Dvolyume.app%26utm_medium%3Dwebsite%26utm_campaign%3Dpartner">Get Volyume</a>
 
-    <p class="muted">Your invite code:<br><span class="code" id="code">—</span><br><br>
-      Either of you can end the partnership whenever you want. The moment you do, sharing stops and everything that was shared between you is deleted.
-      See our <a href="/privacy/">privacy policy</a>.</p>
+    <p class="muted">See our <a href="/privacy/">privacy policy</a>.</p>
   </div>
 
   <script>
-    // Resolve the code from the path (/partner/<code>), or ?c=, or #fragment.
     (function () {
-      function fromPath() {
-        var m = location.pathname.match(/\/partner\/([A-Za-z0-9]{8,})/);
-        return m ? m[1] : null;
-      }
-      var params = new URLSearchParams(location.search);
-      var code = fromPath()
-        || (params.get('c') || '').trim()
-        || (location.hash || '').replace(/^#/, '').trim();
-      code = (code || '').toUpperCase();
-      if (/^[A-Z0-9]{8,}$/.test(code)) {
-        document.getElementById('code').textContent = code;
-        document.getElementById('open').setAttribute('href', 'volyume://partner/' + code);
-      } else {
-        document.getElementById('open').style.display = 'none';
-      }
+      // The app opens Community for this link and no longer reads a code.
+      document.getElementById('open').setAttribute('href', 'volyume://partner');
 
       // Store link: send iOS users to the App Store, everyone else to Google
       // Play (the default href in the markup).
       if (/iPad|iPhone|iPod/i.test(navigator.userAgent)) {
         // The same App Store link the get page carries.
         document.getElementById('store')
-          .setAttribute('href', 'https://apps.apple.com/gb/app/volyume/id6777083702');
+          .setAttribute('href', 'https://apps.apple.com/gb/app/volyume/id6777083702?ct=partner&mt=8');
       }
     })();
   </script>

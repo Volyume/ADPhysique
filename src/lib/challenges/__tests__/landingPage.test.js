@@ -17,6 +17,9 @@
 import fs from 'fs';
 import path from 'path';
 import { CHALLENGE_FINISHED_LINE } from '../copy';
+import { parseChallengeFromReferrer } from '../pending';
+
+const { appleLink, playLink } = require('../../../../scripts/site/storeLinks.cjs');
 
 const html = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'public', 'c', 'index.html'), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
@@ -68,7 +71,10 @@ test('an active challenge shows its prizes, the scoring table, the free-for-life
   expect(els.finished.style.display).not.toBe('block');
   for (const id of ['prizes', 'scoring', 'free', 'open', 'again']) expect(shown(els[id])).toBe(true);
   expect(els.content.style.display).toBe('block');
-  expect(els.store.attrs.href).toContain(`referrer=${encodeURIComponent(`challenge=${CODE}`)}`);
+  // The marked link keeps its marking and adds the code, and the app reads the code back.
+  const href = els.store.attrs.href;
+  expect(href.startsWith(playLink('challenge'))).toBe(true);
+  expect(parseChallengeFromReferrer(decodeURIComponent(href.split('&referrer=')[1]))).toBe(CODE);
   expect(els.terms.attrs.href).toBe(PUBLIC.terms_url);
 });
 
@@ -93,13 +99,13 @@ test.each(['ended', 'closed', 'cancelled'])('the %s challenge: a calm sentence, 
   for (const id of ['prizes', 'scoring', 'free', 'open', 'again']) expect(els[id].style.display).toBe('none');
   expect(els.title.textContent).toBe('Volt Gym November');
   expect(els.content.style.display).toBe('block');
-  // The store link stays, without the challenge referrer.
-  expect(els.store.attrs.href).toBe('https://play.google.com/store/apps/details?id=app.volyume');
+  // The store link stays, marked, without the challenge code.
+  expect(els.store.attrs.href).toBe(playLink('challenge'));
 });
 
 test('a finished challenge on an iPhone keeps the App Store link', async () => {
   const { els } = await run({ ...PUBLIC, status: 'closed' }, { ua: 'iPhone' });
-  expect(els.store.attrs.href).toBe('https://apps.apple.com/gb/app/volyume/id6777083702');
+  expect(els.store.attrs.href).toBe(appleLink('challenge'));
 });
 
 test('an upcoming challenge behaves as an active one', async () => {
