@@ -463,7 +463,14 @@ function pillarRow(tree, label) {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = Date.now();
 
-function daysAgo(n, hourOffset = 0) { return NOW - n * DAY_MS + hourOffset * 3600000; }
+// n LOCAL calendar days before NOW, same wall-clock time. The screen counts
+// calendar days ("Last session 60 days ago"); NOW - n x 24 h is a day out near
+// midnight after a UK clock change (LOC-697).
+function daysAgo(n, hourOffset = 0) {
+  const d = new Date(NOW);
+  d.setDate(d.getDate() - n);
+  return d.getTime() + hourOffset * 3600000;
+}
 
 function workout(id, { daysAgoN = 1, durationMinutes = 45, sessionDifficulty = null, isCompleted = true } = {}) {
   const at = daysAgo(daysAgoN);

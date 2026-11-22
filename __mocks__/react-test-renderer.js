@@ -12,6 +12,12 @@
 // working: a nested act() just flushes and returns.
 const actual = jest.requireActual('react-test-renderer');
 
+// Every tree create() makes is remembered so jest.afterEnv.js can unmount what a
+// test file left mounted. A forgotten tree keeps its screen's timers alive (a
+// 20 s poll interval stopped Jest exiting, and a 900 ms timer logging after the
+// file finished made it exit 1 with every test green; LOC-697).
+const trees = (global.__volyumeTrees = global.__volyumeTrees || []);
+
 module.exports = {
   ...actual,
   create(element, options) {
@@ -19,6 +25,7 @@ module.exports = {
     actual.act(() => {
       tree = actual.create(element, options);
     });
+    trees.push(tree);
     return tree;
   },
 };

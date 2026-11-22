@@ -139,6 +139,13 @@ function row(workoutId, weight, reps, createdAt, extra = {}) {
   };
 }
 
+// Every tree mount() builds is unmounted after its test. A tree left mounted
+// keeps rendering from its own timers and promises after Jest has torn the
+// environment down; Jest then reports "You are trying to `import` a file after
+// the Jest environment has been torn down" and sets process.exitCode to 1, so
+// the whole run exits red with every test green (LOC-697).
+const mountedTrees = [];
+
 async function mount({ exercise, sets, goal = null, routeId = 'e1' }) {
   getExerciseById.mockResolvedValue(exercise);
   getCompletedSetHistoryForExercise.mockResolvedValue(sets);
@@ -153,8 +160,14 @@ async function mount({ exercise, sets, goal = null, routeId = 'e1' }) {
     );
   });
   await flush();
+  mountedTrees.push(tree);
   return tree;
 }
+
+afterEach(async () => {
+  const trees = mountedTrees.splice(0);
+  await act(async () => { trees.forEach((t) => t.unmount()); });
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

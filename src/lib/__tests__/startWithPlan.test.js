@@ -76,7 +76,11 @@ describe('prepareStartWithPlan', () => {
   });
 
   test('carries the block position so the sheet and the confirm dialogue agree', async () => {
-    getActiveBlock.mockResolvedValue({ startDate: Date.now() - (14 * 86400000), plannedWeeks: 6 });
+    // 14 LOCAL calendar days ago: a block counts calendar days, and 14 x 24 h
+    // lands a day out near midnight after a UK clock change (LOC-697).
+    const start = new Date();
+    start.setDate(start.getDate() - 14);
+    getActiveBlock.mockResolvedValue({ startDate: start.getTime(), plannedWeeks: 6 });
     const res = await prepareStartWithPlan('u1', {});
     expect(res.preview.blockStatus.currentWeek).toBe(3);
     expect(res.preview.blockStatus.totalWeeks).toBe(6);

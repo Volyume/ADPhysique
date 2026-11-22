@@ -122,9 +122,18 @@ const localDay = (ms) => {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
+// The same wall-clock time, n LOCAL calendar days ago. `Date.now() - n * DAY`
+// is wrong here: the block counts local calendar days, so across the October
+// clock change, between 23:00 and midnight UK time, 35 x 24 hours back lands on
+// the wrong calendar day and the block reads a week early (LOC-697).
+const calendarDaysAgo = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.getTime();
+};
 // Put "now" in week n of the block.
 async function setWeek(blockId, n) {
-  await conn.runAsync('UPDATE mesocycles SET start_date = ? WHERE id = ?', [localDay(Date.now() - (n - 1) * 7 * DAY), blockId]);
+  await conn.runAsync('UPDATE mesocycles SET start_date = ? WHERE id = ?', [localDay(calendarDaysAgo((n - 1) * 7)), blockId]);
 }
 const activeBlockId = async (userId) => (await conn.getFirstAsync('SELECT id FROM mesocycles WHERE user_id = ? AND is_active = 1', [userId])).id;
 
@@ -426,7 +435,7 @@ test('G1 addendum (lead ruling): a side-delt episode is held by the capability l
   const plan = await copyPlanFromLibrary(libPlan.id, E);
   const blockId = await activatePlanWithBlock(E, plan.id, NAME, { allowLearnedCarry: false });
   const weeks = await getMesocycleWeeks(blockId);
-  await conn.runAsync('UPDATE mesocycles SET start_date = ? WHERE id = ?', [localDay(Date.now() - 2 * 7 * DAY), blockId]); // week 3, Growth
+  await conn.runAsync('UPDATE mesocycles SET start_date = ? WHERE id = ?', [localDay(calendarDaysAgo(2 * 7)), blockId]); // week 3, Growth
   const facts = await getProgrammePlanFacts(plan.id);
   const lateralIds = [...new Set(facts.authored.sessions.flatMap((s) => s.exercises).filter((x) => x.muscle === 'side_delts').map((x) => x.exerciseId))];
   const routines = [];
@@ -470,7 +479,7 @@ test('G1 addendum (lead ruling): a side-delt episode is held by the capability l
   // Every other muscle stays on the ladder (A5 minus side delts: 55, 62, 73 x 5, 37).
   expect(table.map((x) => x.other)).toEqual([55, 62, 73, 73, 73, 73, 73, 37]);
   // A check-in raise in week 4 keeps the ramp rows: side delts still capped.
-  await conn.runAsync('UPDATE mesocycles SET start_date = ? WHERE id = ?', [localDay(Date.now() - 3 * 7 * DAY), blockId]);
+  await conn.runAsync('UPDATE mesocycles SET start_date = ? WHERE id = ?', [localDay(calendarDaysAgo(3 * 7)), blockId]);
   weekStartSeq += 7 * DAY;
   const resolved = await resolveCheckinPlan({ userId: E, signal: 3, holdMuscles: [] });
   await writeCheckinPlan(resolved);

@@ -23,8 +23,14 @@ const { appAlert } = require('../../components/AppAlert');
 const { confirmPlanSwitchMidBlock, readActiveBlockStatus } = require('../planSwitch');
 const { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } = require('../blockExplain');
 
-const DAY = 86400000;
-const weeksAgo = (n) => Date.now() - (n * 7 * DAY);
+// n whole weeks ago by LOCAL calendar days, which is how a block counts weeks.
+// `Date.now() - n * 7 * DAY` lands a day out between 23:00 and midnight UK time
+// after the October clock change, so week 6 read as week 5 (LOC-697).
+const weeksAgo = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n * 7);
+  return d.getTime();
+};
 
 // Answer the next dialogue by pressing the button whose text matches.
 function answerWith(text) {
@@ -186,5 +192,29 @@ describe('D140: the recovery week gets its own dialogue (the branch matched the 
     getActiveBlock.mockResolvedValue({ startDate: weeksAgo(5), plannedWeeks: 6 });
     answerWith('Switch plan');
     await expect(confirmPlanSwitchMidBlock('u1', {})).resolves.toBe(true);
+  });
+});
+
+// The clock the real CI run hit on 21 November 2026 (LOC-697): 23:30 UK time,
+// five weeks after the October clock change. Only Date is faked; timers and
+// promises stay real so the awaits below behave as everywhere else.
+describe('block weeks count calendar days, at 23:30 UK time too', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({
+      now: new Date('2026-11-21T23:30:00Z'),
+      doNotFake: [
+        'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame',
+        'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback',
+        'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout',
+      ],
+    });
+  });
+  afterEach(() => { jest.useRealTimers(); });
+
+  test('a block started five weeks ago is in its recovery week', async () => {
+    getActiveBlock.mockResolvedValue({ startDate: weeksAgo(5), plannedWeeks: 6 });
+    const status = await readActiveBlockStatus('u1');
+    expect(status.currentWeek).toBe(6);
+    expect(status.status).toBe('recovery');
   });
 });

@@ -42,9 +42,12 @@ jobs:
   test:
     name: Jest unit + integration tests
     runs-on: ubuntu-latest
-    # Hang bound. The suite takes about 25 minutes on GitHub's runner; the
-    # default limit is 6 hours, which is how a stuck job sat for hours.
-    timeout-minutes: 45
+    # Hang bound. The suite took 21 to 39 minutes on GitHub's runner across the
+    # runs recorded in docs/ci-repair-2026-11-21/LOC-697-spec-and-evidence.md
+    # (worst 38.9 minutes, run 44977585863); the default limit is 6 hours, which is how a stuck
+    # job sat for hours. A leaked timer is reported within seconds by
+    # scripts/ci/jestCiReporter.js, so this only backs that up.
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -140,6 +143,67 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: jest-log
+          path: jest.log
+          if-no-files-found: warn
+
+  # The same Jest suite with the clock set to a moment when a test that counts
+  # days as 24 hours is wrong. Blocks and weeks count LOCAL calendar days and UK
+  # clocks change twice a year, so "n weeks ago" built as n x 7 x 24 hours is a
+  # day out between 23:00 and midnight UK time after the October change and
+  # between 00:00 and 01:00 after the March change. Two tests failed Main CI that
+  # way on 21 November 2026 and three more were found by the sweep (LOC-697).
+  # libfaketime moves the whole process clock (it keeps running), so nothing in
+  # the tests changes and no test sees a frozen clock.
+  #
+  # The clock keeps running, so each job starts at the OPENING of its 60-minute
+  # window (23:00:05 UTC in both rows) and the suite, which takes 21 to 39
+  # minutes, stays inside it. scripts/ci/jestCiReporter.js reads CLOCK_WINDOW_END
+  # and fails the job if any test file starts after the window ends, so a slow
+  # runner turns the job red and says so instead of shrinking the check.
+  test-clock:
+    name: Jest at ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 23:00 to 24:00 UK time, 5 days after the October 2026 clock change
+            now: '2026-10-30 23:00:05'
+            end: '2026-10-31T00:00:00Z'
+          - label: 00:00 to 01:00 UK summer time, 6 days after the March 2027 clock change
+            now: '2027-04-02 23:00:05'
+            end: '2027-04-03T00:00:00Z'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.22.2
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install libfaketime
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq faketime
+
+      - name: Run Jest with the clock at ${{ matrix.now }} UTC
+        env:
+          FAKETIME_DONT_FAKE_MONOTONIC: '1'
+          CLOCK_WINDOW_END: ${{ matrix.end }}
+        run: |
+          set -o pipefail
+          faketime -f "@${{ matrix.now }}" node -e "console.log('CLOCK', new Date().toISOString())"
+          faketime -f "@${{ matrix.now }}" npx jest --runInBand --ci --reporters=default --reporters=./scripts/ci/jestCiReporter.js 2>&1 | tee jest.log
+
+      - name: Upload Jest log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jest-log-clock-${{ strategy.job-index }}
           path: jest.log
           if-no-files-found: warn
 

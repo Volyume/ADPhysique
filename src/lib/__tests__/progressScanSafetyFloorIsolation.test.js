@@ -5,11 +5,15 @@ import { computeFFMFloor, isAuthoritativeBodyFatSource, isBaselineBodyFatSource 
 import { safeDayFloorKcal } from '../food/calorieBank';
 import { runWeeklyCoach } from '../weeklyCoach';
 
+// One weight per LOCAL calendar day for 28 days, the last one today. The coach
+// groups weights by calendar day, and `Date.now() - n x 24 h` is a day out near
+// midnight after a UK clock change (LOC-697).
 function risingWeights(start = 80, perDayKg = 0.08) {
-  return Array.from({ length: 28 }, (_, i) => ({
-    weightKg: start + perDayKg * i,
-    loggedAt: Date.now() - (27 - i) * 86400000,
-  }));
+  return Array.from({ length: 28 }, (_, i) => {
+    const at = new Date();
+    at.setDate(at.getDate() - (27 - i));
+    return { weightKg: start + perDayKg * i, loggedAt: at.getTime() };
+  });
 }
 
 function coachCutInputs(over = {}) {
